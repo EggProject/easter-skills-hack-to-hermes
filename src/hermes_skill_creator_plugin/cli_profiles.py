@@ -160,41 +160,6 @@ def _bilingual(key: str, **values: Any) -> str:
     return f"{en_part} / {hu_part}"
 
 
-def _resolve_hermes_home(apply: bool, yes: bool) -> Path | None:
-    """Return the scoped HERMES_HOME when the call should proceed, or
-    ``None`` to refuse.
-
-    The caller (``run_audit``) calls this early. The function returns
-    ``None`` to signal refusal in BOTH cases:
-    - refusal is warranted (apply=True AND not yes AND env == LIVE) — the
-      caller must print the bilingual refusal and exit 5.
-    - refusal is not warranted (apply=False OR yes=True OR env unset) —
-      the caller proceeds with the run.
-
-    The return value is meaningful only as a refusal signal: the
-    caller uses ``os.environ['HERMES_HOME']`` directly for the actual
-    scope. Kept as a separate function to make the safety contract
-    testable in isolation.
-    """
-    if not apply or yes:
-        return None
-    env = os.environ.get("HERMES_HOME")
-    if env is None:
-        return None
-    p = Path(env).resolve()
-    if p == LIVE_HERMES_HOME.resolve():
-        return None
-    return p
-
-
-def _is_tty() -> bool:
-    """Return True if stdout is a TTY."""
-    try:
-        return sys.stdout.isatty()
-    except (AttributeError, ValueError):
-        return False
-
-
 def _now_iso(frozen_time: str | None) -> str:
     """Return the report timestamp (stable when ``frozen_time`` is set)."""
     if frozen_time is not None:
@@ -406,16 +371,15 @@ def run_audit(
     """
     from hermes_cli.profiles import list_profiles
 
-    # 0. Live-install refusal (safety contract).
-    if apply and not yes and json_path is None:
-        # We only refuse when the call would target the LIVE install
-        # AND stdout is not a TTY. CLI callers (under a TTY) are
-        # prompted by the click layer; non-TTY callers exit 5.
-        if os.environ.get("HERMES_HOME"):
-            resolved = Path(os.environ["HERMES_HOME"]).resolve()
-            if resolved == LIVE_HERMES_HOME.resolve() and not _is_tty():
-                click.echo(_bilingual("profiles_msg_refuse_no_yes"))
-                sys.exit(5)
+    # 0. Live-install refusal (safety contract). The refusal fires
+    #    whenever HERMES_HOME resolves to the LIVE install AND --yes is
+    #    absent — TTY or not, CI or interactive. Operators who really
+    #    want to write to the live install must pass --yes.
+    if apply and not yes:
+        env = os.environ.get("HERMES_HOME")
+        if env is not None and Path(env).resolve() == LIVE_HERMES_HOME.resolve():
+            click.echo(_bilingual("profiles_msg_refuse_no_yes"))
+            sys.exit(5)
 
     click.echo(_bilingual("profiles_msg_scanning"))
     all_profiles = list_profiles()

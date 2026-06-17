@@ -40,10 +40,6 @@ from typing import Any
 
 import pytest
 
-# Module-level alias so tests that patch ``os.environ`` use the real ``os``.
-os = os  # silence linter
-
-
 # ---------------------------------------------------------------------------
 # Shared fakes for the Hermes-side APIs.
 # ---------------------------------------------------------------------------
@@ -1123,84 +1119,6 @@ def test_audit_audit_only_flag(installed, tmp_path: Path) -> None:
     assert log.save_config_calls == []
 
 
-def test_resolve_hermes_home_allows_when_not_live(installed, tmp_path: Path) -> None:
-    """When HERMES_HOME does NOT resolve to the live install, the
-    function returns the scoped path (refusal is skipped)."""
-    import os
-
-    from hermes_skill_creator_plugin.cli_profiles import _resolve_hermes_home
-
-    prev = os.environ.get("HERMES_HOME")
-    scoped = tmp_path / "scoped"
-    os.environ["HERMES_HOME"] = str(scoped)
-    try:
-        # apply=True, yes=False, NOT live → returns the scoped path.
-        assert _resolve_hermes_home(apply=True, yes=False) == scoped.resolve()
-    finally:
-        if prev is None:
-            os.environ.pop("HERMES_HOME", None)
-        else:
-            os.environ["HERMES_HOME"] = prev
-
-
-def test_resolve_hermes_home_skipped_when_not_apply(installed) -> None:
-    """``apply=False`` always short-circuits the refusal check."""
-    from hermes_skill_creator_plugin.cli_profiles import _resolve_hermes_home
-
-    # Even when the env is set to live, apply=False never refuses.
-    assert _resolve_hermes_home(apply=False, yes=False) is None
-
-
-def test_resolve_hermes_home_skipped_when_yes(installed, tmp_path: Path) -> None:
-    """``yes=True`` always short-circuits the refusal check."""
-    from hermes_skill_creator_plugin.cli_profiles import _resolve_hermes_home
-
-    assert _resolve_hermes_home(apply=True, yes=True) is None
-
-
-def test_resolve_hermes_home_skipped_when_no_env(installed) -> None:
-    """When HERMES_HOME is unset, refusal is skipped (nothing to refuse)."""
-    import os
-
-    from hermes_skill_creator_plugin.cli_profiles import _resolve_hermes_home
-
-    prev = os.environ.get("HERMES_HOME")
-    os.environ.pop("HERMES_HOME", None)
-    try:
-        assert _resolve_hermes_home(apply=True, yes=False) is None
-    finally:
-        if prev is not None:
-            os.environ["HERMES_HOME"] = prev
-
-
-def test_resolve_hermes_home_refuses_live(
-    installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """When HERMES_HOME resolves to the live install AND no --yes → return None."""
-    from hermes_skill_creator_plugin.cli_profiles import _resolve_hermes_home
-
-    real = Path.home() / ".hermes"
-    if not real.exists():
-        pytest.skip("~/.hermes not present on this host")
-    prev = os.environ.get("HERMES_HOME")
-    monkeypatch.setenv("HERMES_HOME", str(real))
-    try:
-        assert _resolve_hermes_home(apply=True, yes=False) is None
-    finally:
-        if prev is None:
-            os.environ.pop("HERMES_HOME", None)
-        else:
-            os.environ["HERMES_HOME"] = prev
-
-
-def test_is_tty_handles_attribute_error(installed, monkeypatch) -> None:
-    """``_is_tty()`` returns False when ``isatty`` raises AttributeError."""
-    from hermes_skill_creator_plugin.cli_profiles import _is_tty
-
-    monkeypatch.setattr("sys.stdout.isatty", lambda: (_ for _ in ()).throw(AttributeError))
-    assert _is_tty() is False
-
-
 def test_walk_skills_skips_files(fake_agent_module, tmp_path: Path) -> None:
     """A regular file (not a directory) in ``skills/`` is skipped (line 225)."""
     from hermes_skill_creator_plugin.cli_profiles import _walk_skills
@@ -1322,14 +1240,6 @@ def test_run_audit_continues_when_not_live(
 
 
 # Helper for the LIVE test fixtures
-
-
-def test_is_tty_handles_non_tty(installed) -> None:
-    """``_is_tty()`` returns False when stdout is not a tty."""
-    from hermes_skill_creator_plugin.cli_profiles import _is_tty
-
-    # In test env, stdout is not a tty.
-    assert _is_tty() is False
 
 
 def test_now_iso_uses_frozen_time(installed) -> None:
