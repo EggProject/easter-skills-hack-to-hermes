@@ -45,7 +45,7 @@
 ### Q6 — Per-file line budget table
 
 - **Question**: is the per-file line budget approved?
-- **Proposed default**: yes. See `plans/00-index.md` for the per-file budget table (single source of truth; live values auto-generated from `wc -l`). The default sum-budget is 4050 (per the 00-index budget column); the hard cap is 500 lines per file and 4500 lines total.
+- **Proposed default**: yes. See `plans/00-index.md` for the per-file budget table (single source of truth; live values sourced from `wc -l` at file-finalization time (the extended `check_line_count.py` hook — see 10 §Extended check_line_count.py spec — asserts the 00-index Total cell equals the live sum at pre-commit time; the cells are hand-maintained, not auto-generated — see 00-index D2 for the retracted auto-generated claim)). The default sum-budget is 4050 (per the 00-index budget column); the hard cap is 500 lines per file and 4500 lines total.
 - **Resolution path**: HITL gate. Pre-commit hook `check_line_count.py` enforces it.
 - **Escalation**: if any file blows the budget, the plan is rejected and that file is split or trimmed.
 

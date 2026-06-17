@@ -1,5 +1,5 @@
 <!-- title: Script #3 — read-only profile-skill token + usage reporter -->
-<!-- scope: Sec 5.7 (NEW in V3). REUSES Script #2's enabled-detection module. -->
+<!-- scope: Sec 5.X (extra-brief feature WE requested — V6 S6 renamed from §5.7 to free §5.7 for the brief's original Todo list deliverable). REUSES Script #2's enabled-detection module. -->
 <!-- ACs covered: AC-7.1 .. AC-7.7 -->
 
 # 13 — Script #3: Profile Skill Token + Usage Reporter

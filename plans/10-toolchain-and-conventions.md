@@ -330,4 +330,4 @@ Pre-commit entry passes `--enforce-footer --enforce-budget-table` (both on by de
 - **Rationale**: docstrings target the next developer (English); the bilingual surface is reserved for `--help` and console/log lines (operator-facing).
 - **Evidence**: 10 §Documentation in code. Confidence: inferred.
 
-<!-- end of file: 333 lines (budget 310) -->
+<!-- end of file: 333 lines (budget 340) -->

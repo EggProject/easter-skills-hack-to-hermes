@@ -389,4 +389,4 @@ def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checko
 - **Decision + Rationale**: the `hermes_checkout` fixture calls `seed_minimal(checkout)` to lay down the minimum tree Script #1's pre-validation can resolve. The fixture writes exactly 6 files (4 anchor + 2 empty `__init__.py`). A patched variant replaces `60` with `MAX_DESCRIPTION_LENGTH` and the slice `desc[:57]` with `desc[:MAX_DESCRIPTION_LENGTH - 3]`. The `MAX_DESCRIPTION_LENGTH` constant in `tools/skills_tool.py` is at line 98 (line 95 is blank in the pinned checkout). A fixture that drifts from the real Hermes anchors would let integration tests report a false PASS — the meta-test `test_seed_minimal_matches_patch_anchors` catches the drift.
 - **Evidence**: 09 §Seed-minimal-fixture contract; 09 §Coverage matrix; `test_seed_minimal_matches_patch_anchors` + `test_seed_minimal_patched_variant_completes_cap_raise` in this file. Confidence: verified-from-source.
 
-<!-- end of file: 392 lines (budget 360) -->
+<!-- end of file: 392 lines (budget 400) -->

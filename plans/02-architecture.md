@@ -108,7 +108,7 @@ The runtime monkey-patch path is GONE. The plugin is purely advisory (static AST
   1. Reads the enabled-skill set via `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, platform=None)` — the CANONICAL helper shared with Script #3. Returns a `frozenset[str]`.
   2. Reads the disabled-skill set via `agent.skill_utils.get_disabled_skill_names(platform=None)` — takes a `platform: str`, NOT a `config` dict.
   3. Walks the `_PROFILE_DIRS` set: `{memories, sessions, skills, skins, logs, plans, workspace, cron, home}`. `gateway.pid` is a flat file in the profile root (read stat-only).
-  4. Computes the desired state: `{openai: disabled, skills: disabled-if-present, skill-creator: installed-or-updated}`.
+  4. Computes the desired state: `{skill-creator: replaced-in-place}` (the factory skill-creator, installed from `openai/skills/skill-creator`, is REPLACED IN-PLACE by the migrated skill-creator via `do_install(force=True, skip_confirm=True, invalidate_cache=True, name_override="")` into `~/.hermes/skills/skill-creator/` — same dir/name as the factory). There is NO separate disable step for `openai` (no skill is named `openai`; disabling is keyed by skill NAME per `tools/skills_tool.py:597`). The factory skill is effectively replaced because `do_install` overwrites the directory. The plan must reason about the name collision (the `skill-creator` name is shared between factory and migrated).
   5. In `--apply`, writes the new disabled set via `hermes_cli.skills_config.save_disabled_skills(config, disabled, platform=None)` (positional); calls `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)` from `hermes_cli.skills_hub`.
   6. Calls `clear_skills_system_prompt_cache(clear_snapshot=True)` — the function lives at symbol `agent.prompt_builder.clear_skills_system_prompt_cache` with sig `(*, clear_snapshot=False)`. It EXISTS; there is no fallback.
 - Emits a deterministic JSON report per profile; exits 0 on success.
@@ -150,7 +150,7 @@ Operator
   v
 Hermes next session
   |  plugin on_session_start: static AST read of target; one-time advisory if unpatched
-  |  script_2 do_install wrote ~/.hermes/skills/skill-creator/ flat path
+  |  script_2 do_install wrote ~/.hermes/skills/skill-creator/ flat path (replacement-in-place)
   |  LLM sees <available_skills> index with up-to-1024-char descriptions (patched cap)
   v
 LLM authoring a new skill
@@ -186,6 +186,7 @@ Hermes persists the new skill; plugin re-validates on next session.
 - Script #2 is non-interactive (`skip_confirm=True`); refuses the resolved `~/.hermes` write target by going through `hermes_home_scope`, which restores both `set_hermes_home_override` and `os.environ['HERMES_HOME']` on exit.
 - Script #3 is READ-ONLY end-to-end: no writes, no installs, no setattr, no env mutations beyond the same `hermes_home_scope` read-scope used by Script #2.
 - All file writes (Script #2 only — Script #1 writes to the user-owned `--target` checkout, NOT `~/.hermes`) go through `hermes_home_scope` which restores both `set_hermes_home_override` and `os.environ['HERMES_HOME']` on exit.
+- Script #2's disable-set is name-keyed (`tools/skills_tool.py:597`): a name like `"openai"` matches no skill and is therefore a no-op. The factory→migrated swap is REPLACEMENT-IN-PLACE via `do_install(force=True, ...)` — no separate disable step is performed for the factory skill, because both copies share the same NAME and the migrated copy overwrites the factory at the same flat path.
 
 ## Fix ledger
 
@@ -199,6 +200,7 @@ Hermes persists the new skill; plugin re-validates on next session.
 - Fixes [V4-R1] `clear_skills_system_prompt_cache` source-of-truth is `agent.prompt_builder`; the "if the function does not exist" fallback is DROPPED.
 - Fixes [V4-R4] ONE canonical enabled-detection name: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills` — shared by Script #2 (writes) and Script #3 (reads).
 - Fixes [V4-R11] Script #3 has NO `--emit-migration-note`, NO `MIGRATION.report.md`. It is STDOUT + `--json PATH` only.
+- Fixes [V4-R5] desired-state model is REPLACEMENT-IN-PLACE — there is NO `"openai": disabled` step (no skill is named `openai`; name-keyed disable is a no-op). The factory `skill-creator` is overwritten by the migrated `skill-creator` at the same flat path via `do_install(force=True, ...)`. The disable set is rewritten to the current disabled set (plus any name-keyed additions), never unioned with `"openai"`.
 
 ## Decisions & evidence
 
@@ -232,4 +234,9 @@ Hermes persists the new skill; plugin re-validates on next session.
 - **Rationale**: the function EXISTS in the installed Hermes at `agent/prompt_builder.py:~1022` (sig `(*, clear_snapshot: bool = False)`); a literal-path fallback to `~/.hermes/...` violates the "never touch the real install" rule.
 - **Evidence**: V4-R1; 06 §Apply path step 6c; AC-3.8 in 01. Confidence: verified-from-source.
 
-<!-- end of file: 234 lines (budget 240) -->
+### D7. Desired-state is REPLACEMENT-IN-PLACE, not name-keyed disable of `"openai"` (V4-R5 S5)
+- **Decision**: Script #2's desired state contains exactly one swap: `skill-creator` REPLACED IN-PLACE at the flat path `~/.hermes/skills/skill-creator/` via `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)`. The disabled set is rewritten to the current disabled set (with no union of `"openai"`).
+- **Rationale**: disabling is keyed by skill NAME (`tools/skills_tool.py:597` `return name in global_disabled`; `:644` `name = frontmatter.get("name", skill_dir.name)`). There is no skill named `"openai"` — `openai` is only the upstream HUB INSTALL PATH (`hermes_cli/skills_hub.py:1671`), not a skill name. Unioning `"openai"` to the disabled set is a no-op that would mislead operators. The factory `skill-creator` and the migrated `skill-creator` share the same NAME (`skill-creator`); disabling by that name would break the migrated skill's own `<available_skills>` index entry — the exact opposite of intent. The correct swap is byte-for-byte overwrite at the same flat path.
+- **Evidence**: 06 §S5 (V4 RR2/REC-3 fix); AC-3.2 in 01. Confidence: verified-from-source.
+
+<!-- end of file: 234 lines (budget 210) -->
