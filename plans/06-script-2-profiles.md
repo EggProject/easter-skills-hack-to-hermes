@@ -280,4 +280,4 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 - **Rationale**: byte-identical output across runs is the only way to test deterministically and the only way the migration-note generator can diff two runs cleanly.
 - **Evidence**: V3 [major] determinism; 06 §Deterministic JSON report; `test_audit_json_deterministic` in this file. Confidence: inferred.
 
-<!-- end of file: 283 lines (budget 400) -->
+<!-- end of file: 283 lines (budget 300) -->

@@ -1,6 +1,6 @@
 <!-- title: Migrated skill-creator — Hermes-native standalone skill -->
 <!-- scope: Sec 5.4 + Sec 6.D. Frontmatter, tool-name mapping, T3 inventory, nesting-guard helper, eval pipeline. -->
-<!-- ACs covered: AC-4.1 .. AC-4.10 -->
+<!-- ACs covered: AC-4.1 .. AC-4.13 -->
 
 # 07 — Migrated Skill-Creator (Hermes-native)
 
@@ -210,11 +210,14 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 - **AC-4.3** — Body contains zero Anthropic tool names outside code fences; lowercase Hermes names present (see TDD test list).
 - **AC-4.4** — `hermes_subprocess_env()` helper is the single source of truth; both `scripts/run_eval.py` and `scripts/improve_description.py` import and use it; the helper lives at `skills/skill-creator/_subprocess.py`.
 - **AC-4.5** — T3 inventory has 18 rows (T3.001–T3.018); one test per row (`test_T3_001_to_T3_018`).
-- **AC-4.6** — Eval pipeline end-to-end test passes against a 2-case fixture.
+- **AC-4.6** — (reserved; 01's definition: nesting-guard helper test. 07 does NOT redefine.)
 - **AC-4.7** — Eval viewer static-open test passes; `feedback.json` resolved via relative path.
 - **AC-4.8** — Subagent registration matches Anthropic roles; dispatch routes via `delegate_task`.
-- **AC-4.9** — Bilingual EN+HU on `--help` and console log lines.
-- **AC-4.10** — Plugin does not import, reference, or vendor the migrated skill; it surfaces an advisory only.
+- **AC-4.9** — (reserved; 01's definition: eval-viewer static-open test. 07 does NOT redefine.)
+- **AC-4.10** — (reserved; 01's definition: active-cap detection test. 07 does NOT redefine.)
+- **AC-4.11** — (07's AC-4.6 in V4-R5) Eval pipeline end-to-end test passes against a 2-case fixture.
+- **AC-4.12** — (07's AC-4.9 in V4-R5) Bilingual EN+HU on `--help` and console log lines.
+- **AC-4.13** — (07's AC-4.10 in V4-R5) Plugin does not import, reference, or vendor the migrated skill; it surfaces an advisory only.
 
 ## Decisions & evidence
 
@@ -231,7 +234,7 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 ### D3. `hermes_subprocess_env()` strips BOTH `HERMES_SESSION` AND `CLAUDECODE`
 - **Decision**: the helper at `skills/skill-creator/_subprocess.py` returns `os.environ` minus the nesting-guard vars: `HERMES_SESSION` (Hermes's guard) and `CLAUDECODE` (the legacy Anthropic guard). The parent process NEVER `os.environ.pop`s the var; stripping is performed in the helper for the subprocess env ONLY.
 - **Rationale**: when the parent process is itself a Claude/Anthropic session (e.g., during the Phase 5 eval pipeline), the migrated `hermes -p` subprocess must be un-nested from BOTH guards or it refuses to run.
-- **Evidence**: `skills/skill-creator/_subprocess.py` (canonical helper); V3 [refuted claim 11]; AC-4.6 in 01; `test_helper_is_single_source_of_truth` in this file. Confidence: verified-from-source.
+- **Evidence**: `skills/skill-creator/_subprocess.py` (canonical helper); V3 [refuted claim 11]; AC-4.6 in 01 (01's AC-4.6 = nesting-guard, unchanged from V4-R5; NOT the test id from earlier drafts of this file, which has been renumbered to AC-4.11 per V4-R6 U4 to avoid id-collision with 01); `test_helper_is_single_source_of_truth` in this file. Confidence: verified-from-source.
 
 ### D4. Q2 event-shape: adapter-based, single canonical shape (R8 fix)
 - **Decision**: the Hermes stream-json event shape is wrapped in an adapter that normalizes to the Anthropic-shaped dict the rest of the pipeline consumes. The rest of the pipeline is unchanged.
@@ -241,7 +244,7 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 ### D5. Frontmatter ships TWO variants: `SKILL.md` (full, <=1024 chars) + `SKILL.md.short` (<=60 chars)
 - **Decision**: the migrated skill ships two frontmatter variants. The installer selects based on the active cap (60 vs 1024). If neither fits the active cap, the install is refused.
 - **Rationale**: the system-prompt index enforces a 60-char description cap (per `agent/skill_utils.py`); the `skill_view(name='skill-creator')` path loads the full description. Two variants cover both states without bloating the system prompt.
-- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:688-689` (cap-raise / index-cap comparator); prior draft cited 653-654 which is the docstring of `resolve_skill_config_values` (V4-RR3 S3). 07 §Frontmatter; AC-4.2 + AC-4.10 in 01. Confidence: inferred (re-derive exact byte sequence from the pinned checkout at implementation time; downgrade to inferred rather than verified-from-source until the grep is re-run against the pinned commit).
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:688-689` (cap-raise / index-cap comparator); prior draft cited 653-654 which is the docstring of `resolve_skill_config_values` (V4-RR3 S3). 07 §Frontmatter; AC-4.2 in 01; AC-4.10 in 01 (01's AC-4.10 = active-cap-detection, unchanged from V4-R5; NOT the plugin-no-import test from earlier drafts of this file, which has been renumbered to AC-4.13 per V4-R6 U4 to avoid id-collision with 01). Confidence: inferred (re-derive exact byte sequence from the pinned checkout at implementation time; downgrade to inferred rather than verified-from-source until the grep is re-run against the pinned commit).
 
 ### D6. Tool-name matching uses `tool_name.lower() in (...)`
 - **Decision**: the migrated skill matches tool names case-insensitively (`tool_name.lower()`). Anthropic uppercase names (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`, `Task`, `Skill`, `AskUserQuestion`, `WebSearch`, `WebFetch`, `TodoWrite`) are mapped to their lowercase Hermes equivalents.
@@ -253,4 +256,4 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 - **Rationale**: `claude` is the Anthropic binary; the migrated skill runs inside Hermes and must use Hermes's CLI for nesting detection to work.
 - **Evidence**: 07 §T3 inventory (T3.001, T3.003, T3.006, T3.016); AC-4.8 in 01; `test_no_claude_invocations_remain` in this file. Confidence: verified-from-source.
 
-<!-- end of file: 256 lines (budget 450) -->
+<!-- end of file: 259 lines (budget 450) -->

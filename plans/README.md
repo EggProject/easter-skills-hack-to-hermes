@@ -17,7 +17,7 @@
 - [`12-risks-and-open-questions.md`](12-risks-and-open-questions.md) — 12 — Q1–Q11, residual risks R1–R7, escalation log
 - [`13-script-3-report.md`](13-script-3-report.md) — 13 — Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY)
 
-All 14 plan files (00–13) are emitted. Every file is under 500 lines; see `00-index.md` for the live per-file counts, sum, and budget table (budget sum 4070, hard cap 4500). V8 plan-repair fixes (T1–T6, building on V3–V7) are applied. See `docs/review/` for the full round-by-round fix log.
+All 14 plan files (00–13) are emitted. Every file is under 500 lines; see `00-index.md` for the live per-file counts, sum, and budget table (budget sum 3960, hard cap 4500). V8 plan-repair fixes (T1–T6, building on V3–V7) are applied. See `docs/review/` for the full round-by-round fix log.
 
 ## Supporting artefacts
 
