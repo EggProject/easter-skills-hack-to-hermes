@@ -28,7 +28,7 @@ Script #3 (reporter) is STDOUT + `--json PATH` only — it does NOT write to the
 | Source repo | https://github.com/anthropics/claude-plugins-official |
 | Source skillId | skill-creator |
 | Pinned upstream commit | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
-| Target Hermes version | upstream main @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe |
+| Target Hermes version | 5e01a5db (installed) - authored against 36ae958; byte-identical for all plan-touched files |
 | Plugin version | 0.1.0 |
 | Generated at | <ISO 8601 UTC> |
 

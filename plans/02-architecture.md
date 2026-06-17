@@ -15,8 +15,8 @@
                 |  +-----------------------------+            |
                 |  +-----------------------------+            |
                 |  | agent/prompt_builder.py     |            |
-                |  |   build_available_skills_   |            |
-                |  |   block + clear_skills_     |            |
+                |  |   build_skills_system_      |            |
+                |  |   prompt + clear_skills_    |            |
                 |  |   system_prompt_cache       |            |
                 |  +-----------------------------+            |
                 |  +-----------------------------+            |

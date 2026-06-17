@@ -59,7 +59,7 @@ provides_hooks:
   - on_session_start
 ```
 
-The manifest is `plugin.yaml` (YAML), per the load model in `hermes_cli/plugins.py` which requires a `plugin.yaml` manifest at the plugin root. There is NO `entry_points` map. There is NO `kind` field (the only known valid value per `pluginAuthoring.json` is `backend`; per Q-confirmed the safest default is no `kind` at all). The plugin declares its capability via `provides_hooks` only.
+The manifest is `plugin.yaml` (YAML), per the load model in `hermes_cli/plugins.py` which requires a `plugin.yaml` manifest at the plugin root. There is NO `entry_points` map. There is NO `kind` field: `kind` defaults to `standalone` when omitted (`hermes_cli/plugins.py:263`, `_parse_manifest` `data.get("kind","standalone")` at `:1415`); valid kinds = `{standalone, exclusive, model-provider, backend, platform}` (`hermes_cli/plugins.py:232`, `_VALID_PLUGIN_KINDS`). A hook+skill plugin wants the default `standalone`, so omit `kind` (do NOT set `backend`). The plugin declares its capability via `provides_hooks` only.
 
 The plugin has no `requires_env`. The cap-raise state is detected, not gated.
 
@@ -226,8 +226,8 @@ NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_descr
 ## Decisions & evidence
 
 ### D1. Plugin manifest is `plugin.yaml`; NO `plugin.json`, NO `entry_points` map, NO `kind` field (B3)
-- **Decision**: the plugin ships ONE manifest file at `src/hermes_skill_creator_plugin/plugin.yaml` with fields `name`, `version`, `description`, `author`, `provides_hooks`. No `kind` field (the only known valid value per `pluginAuthoring.json` is `backend`, which is wrong for a hook+skill plugin). No `entry_points` map.
-- **Rationale**: `hermes_cli/plugins.py` requires `plugin.yaml`; an `entry_points` map would create a second wiring path; `kind: backend` would mis-declare the plugin.
+- **Decision**: the plugin ships ONE manifest file at `src/hermes_skill_creator_plugin/plugin.yaml` with fields `name`, `version`, `description`, `author`, `provides_hooks`. No `kind` field. No `entry_points` map.
+- **Rationale**: `hermes_cli/plugins.py` requires `plugin.yaml`; an `entry_points` map would create a second wiring path. `kind` is OMITTED because it defaults to `standalone` when absent (`hermes_cli/plugins.py:263`, `_parse_manifest` `data.get("kind","standalone")` at `:1415`); explicit `kind` is unnecessary AND setting `kind: backend` would mis-declare a hook+skill plugin (backend is one of the valid kinds in `_VALID_PLUGIN_KINDS = {standalone, exclusive, model-provider, backend, platform}` at `hermes_cli/plugins.py:232`, but it is the wrong kind for this plugin).
 - **Evidence**: V3 [blocker B3 / major M2]; `hermes_cli/plugins.py` (anchor: directory plugin must contain `plugin.yaml`); AC-1.1 + AC-1.5 in 01. Confidence: verified-from-source.
 
 ### D2. `skill_register.py` is REMOVED (B3)

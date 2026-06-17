@@ -20,23 +20,23 @@
 
 | # | File | Covers | Status | Budget | Actual |
 | --- | --- | --- | --- | --- | --- |
-| 00 | `00-index.md` | This file | [emitted] | 130 | 106 |
+| 00 | `00-index.md` | This file | [emitted] | 130 | 111 |
 | 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 142 |
 | 02 | `02-architecture.md` | Component diagram, data flow, sequence, safety | [emitted] | 250 | 242 |
 | 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 260 | 253 |
 | 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 688 in agent/skill_utils.py; --target REQUIRED; --force) | [emitted] | 400 | 249 |
 | 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 183 |
 | 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 300 | 283 |
-| 07 | `07-skill-creator-migration.md` | §5.4 Migrated skill (T3 18 rows; tool-name mapping full; HERMES_SESSION+CLAUDECODE strip) | [emitted] | 450 | 256 |
+| 07 | `07-skill-creator-migration.md` | §5.4 Migrated skill (T3 18 rows; tool-name mapping full; HERMES_SESSION+CLAUDECODE strip) | [emitted] | 450 | 259 |
 | 08 | `08-migration-note-format.md` | §5.5 MIGRATION (3-file split) | [emitted] | 220 | 213 |
 | 09 | `09-test-strategy.md` | TDD, fixtures, AST-grep, no-touch sentinels, seed-minimal-fixture contract | [emitted] | 400 | 392 |
 | 10 | `10-toolchain-and-conventions.md` | uv, pyproject, pre-commit, bilingual, worktree+PR | [emitted] | 340 | 333 |
 | 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 157 |
 | 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 204 |
 | 13 | `13-script-3-report.md` | Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY) — NOTE: §5.7 in the original brief is the continuously-maintained Todo list, NOT this deliverable | [emitted] | 400 | 304 |
-| | **Total** | | | **3960** | **3320** |
+| | **Total** | | | **3960** | **3325** |
 
-Sum 3320 < 4500 (sum of budgets 3960). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
+Sum 3325 < 4500 (sum of budgets 3960). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
 
 ## Hard constraints (HARD)
 
@@ -103,5 +103,10 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 - **Decision**: plan set = 00..13 (14 files); file map covers all of them.
 - **Rationale**: round-2/3 review added `13-script-3-report.md` for the WE-requested Script #3 report (extra-brief feature, NOT the original §5.7 — §5.7 in the brief is the continuously-maintained Todo list, which is a separate artifact tracked outside this plan set). 00-index grew an Actual/Total row for Script #3.
 - **Evidence**: V3 review added Script #3 deliverable; V4 RR4 S6 clarified §5.7 vs Script #3 ownership. Confidence: verified-from-source (V3 review + AC-7.1..AC-7.7 in 01).
+
+### D6. Per-cell arithmetic guard closes the V1 drift class (REC-2 systemic)
+- **Decision**: `tools/check_line_count.py` asserts at pre-commit time, FOR EVERY ROW of the file map, that (a) the per-file `Actual` cell equals live `wc -l` for the cited path, AND (b) the per-file `Budget` cell equals the live budget value as it appears in this table (i.e. the per-file budgets the operator hands to the hook come FROM this table — the table is the budget spec, not a derived view). Additionally the 00-index Total cell MUST equal the sum of the Actual column. The pre-commit hook fails on any per-cell mismatch, not just the aggregate. Documented in 09 §Test strategy (per-cell guard spec) and 10 §Extended check_line_count.py spec.
+- **Rationale**: the V1 class reopened in V7 RR2 because the old hook only checked `Total == sum(Actual)` and missed the per-cell drift (07 Actual left at 256 after 07 grew to 259; Total read 3320 from a hand-typed value; sum-of-column equalled 3317 — but a hand-typed Total can mask a per-cell mistake). Per-cell assertions make the class un-reopenable: a stale cell fails before the aggregate ever gets computed. The systemic version also asserts the Budget cell against the budget column, which protects the analogous (currently theoretical) class.
+- **Evidence**: V1 finding (this round) + V6 RR2 / V4 RR2. Confidence: inferred (process rule); verified-from-source (live `wc -l` for all 14 files post-fix: 111,142,242,253,249,183,283,259,213,392,333,157,204,304 = 3325; Total cell = 3325; per-file Budget cells unchanged from V7).
 
 <!-- end of file -->

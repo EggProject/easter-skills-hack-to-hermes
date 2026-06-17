@@ -1,6 +1,6 @@
 <!-- title: Migrated skill-creator — Hermes-native standalone skill -->
 <!-- scope: Sec 5.4 + Sec 6.D. Frontmatter, tool-name mapping, T3 inventory, nesting-guard helper, eval pipeline. -->
-<!-- ACs covered: AC-4.1 .. AC-4.13 -->
+<!-- ACs covered: AC-4.1 .. AC-4.17 -->
 
 # 07 — Migrated Skill-Creator (Hermes-native)
 
@@ -207,17 +207,21 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 
 - **AC-4.1** — Lives at `skills/skill-creator/` at the worktree root (a separate top-level deliverable, NOT inside the plugin package). Shipped/installed as a flat skill into `~/.hermes/skills/skill-creator/` via Script #2's `do_install`, so it appears as `skill-creator` in the `<available_skills>` system-prompt index. The plugin does NOT bundle, contain, or own the skill files.
 - **AC-4.2** — `tools/skill_manager_tool.py:_validate_frontmatter` returns no errors for the migrated SKILL.md.
-- **AC-4.3** — Body contains zero Anthropic tool names outside code fences; lowercase Hermes names present (see TDD test list).
-- **AC-4.4** — `hermes_subprocess_env()` helper is the single source of truth; both `scripts/run_eval.py` and `scripts/improve_description.py` import and use it; the helper lives at `skills/skill-creator/_subprocess.py`.
+- **AC-4.3** — (reserved; 01's definition: subagent split. 07 does NOT redefine.)
+- **AC-4.4** — (reserved; 01's definition: eval pipeline. 07 does NOT redefine.)
 - **AC-4.5** — T3 inventory has 18 rows (T3.001–T3.018); one test per row (`test_T3_001_to_T3_018`).
 - **AC-4.6** — (reserved; 01's definition: nesting-guard helper test. 07 does NOT redefine.)
-- **AC-4.7** — Eval viewer static-open test passes; `feedback.json` resolved via relative path.
-- **AC-4.8** — Subagent registration matches Anthropic roles; dispatch routes via `delegate_task`.
+- **AC-4.7** — (reserved; 01's definition: tool-name .lower() matching. 07 does NOT redefine.)
+- **AC-4.8** — (reserved; 01's definition: CLI uses hermes not claude. 07 does NOT redefine.)
 - **AC-4.9** — (reserved; 01's definition: eval-viewer static-open test. 07 does NOT redefine.)
 - **AC-4.10** — (reserved; 01's definition: active-cap detection test. 07 does NOT redefine.)
 - **AC-4.11** — (07's AC-4.6 in V4-R5) Eval pipeline end-to-end test passes against a 2-case fixture.
 - **AC-4.12** — (07's AC-4.9 in V4-R5) Bilingual EN+HU on `--help` and console log lines.
 - **AC-4.13** — (07's AC-4.10 in V4-R5) Plugin does not import, reference, or vendor the migrated skill; it surfaces an advisory only.
+- **AC-4.14** — Body contains zero Anthropic tool names outside code fences; lowercase Hermes names present.
+- **AC-4.15** — `hermes_subprocess_env()` is the single source of truth; `run_eval.py` + `improve_description.py` import it.
+- **AC-4.16** — Eval viewer static-open test passes; `feedback.json` resolved via relative path.
+- **AC-4.17** — Subagent registration matches Anthropic roles; dispatch routes via `delegate_task`.
 
 ## Decisions & evidence
 
@@ -256,4 +260,4 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 - **Rationale**: `claude` is the Anthropic binary; the migrated skill runs inside Hermes and must use Hermes's CLI for nesting detection to work.
 - **Evidence**: 07 §T3 inventory (T3.001, T3.003, T3.006, T3.016); AC-4.8 in 01; `test_no_claude_invocations_remain` in this file. Confidence: verified-from-source.
 
-<!-- end of file: 259 lines (budget 450) -->
+<!-- end of file: 263 lines (budget 450) -->

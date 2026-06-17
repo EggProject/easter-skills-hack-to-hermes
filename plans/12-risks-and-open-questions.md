@@ -120,7 +120,7 @@
 
 ### PC1 — Plugin manifest has NO `kind` field (V3 / M1)
 
-- The plugin manifest does NOT carry a `kind` field. Per V3 review (M1) and `pluginAuthoring.json`, the only known valid value for `kind` is `"backend"`; a hook+skill plugin has no kind at all, and `kind: "backend"` is the wrong declaration. **AC-1.1 is fixed to OMIT `kind`.** The plugin manifest exposes `name`, `version`, `description`, `author`, `provides_hooks`, `provides_skills`, and any other fields the loader actually reads — nothing else. No `kind` key in `plugin.yaml`. Risk: low; impact: contained; mitigation: schema check in 03's plugin-loader test.
+- The plugin manifest does NOT carry a `kind` field. `kind` defaults to `standalone` when omitted (`hermes_cli/plugins.py:263`, `_parse_manifest` does `data.get("kind","standalone")` at `:1415`); the full set of valid kinds is `{standalone, exclusive, model-provider, backend, platform}` (`hermes_cli/plugins.py:232` `_VALID_PLUGIN_KINDS`). A hook+skill plugin wants the default `standalone`, so the manifest OMITS `kind` (do NOT set `backend`). **AC-1.1 is fixed to OMIT `kind`.** The plugin manifest exposes `name`, `version`, `description`, `author`, `provides_hooks`, `provides_skills`, and any other fields the loader actually reads — nothing else. No `kind` key in `plugin.yaml`. Risk: low; impact: contained; mitigation: schema check in 03's plugin-loader test.
 
 ### PC2 — Plugin manifest format is `plugin.yaml`, not `plugin.json` (V3 / M2)
 
