@@ -200,4 +200,36 @@ Hermes persists the new skill; plugin re-validates on next session.
 - Fixes [V4-R4] ONE canonical enabled-detection name: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills` — shared by Script #2 (writes) and Script #3 (reads).
 - Fixes [V4-R11] Script #3 has NO `--emit-migration-note`, NO `MIGRATION.report.md`. It is STDOUT + `--json PATH` only.
 
-<!-- end of file: 202 lines (budget 200) -->
+## Decisions & evidence
+
+### D1. `plugin.yaml` is the manifest format (M2)
+- **Decision**: the plugin ships `src/hermes_skill_creator_plugin/plugin.yaml` (YAML). `plugin.json` is REMOVED. The manifest has NO `entry_points` map and NO `kind` field.
+- **Rationale**: `hermes_cli/plugins.py` requires a `plugin.yaml` manifest at the plugin root (per V3 review M2). The single `register(ctx)` in `__init__.py` is the load model; an `entry_points` map would create a second wiring path.
+- **Evidence**: V3 [major M2]; `hermes_cli/plugins.py` (anchor "Each directory plugin must contain a `plugin.yaml` manifest"); AC-1.1 in 01; 03 §plugin.yaml. Confidence: verified-from-source.
+
+### D2. Migrated skill is STANDALONE at worktree root (B4)
+- **Decision**: `skills/skill-creator/` is a sibling of `src/`, `tests/`, `docs/` at the worktree root — NOT inside `src/hermes_skill_creator_plugin/`. The plugin does NOT bundle, contain, or own the skill files.
+- **Rationale**: a skill bundled inside the plugin package cannot be installed at the flat `~/.hermes/skills/<name>/` path, and `register_skill` cannot achieve `<available_skills>` index visibility.
+- **Evidence**: V3 [blocker B4]; 03 §Plugin layout; AC-1.4 + AC-4.1 in 01. Confidence: verified-from-source.
+
+### D3. Plugin does NOT register_skill (B3)
+- **Decision**: the plugin's `register(ctx)` calls `ctx.register_hook('on_session_start', cb)` ONLY. It does NOT call `ctx.register_skill('skill-creator', ...)`. There is NO `skill_register.py` module.
+- **Rationale**: `register_skill` resolves a plugin-registered skill as `<plugin_name>:<name>` via explicit `skill_view()`; it is NOT placed in the flat tree and is NOT listed in `<available_skills>`. Surfacing the skill via the plugin does NOT satisfy AC-1.4 / AC-4.1.
+- **Evidence**: V3 [blocker B3]; 03 §Load model; AC-1.4 in 01. Confidence: verified-from-source.
+
+### D4. ONE canonical enabled-detection helper (R4 fix)
+- **Decision**: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, *, platform=None) -> frozenset[str]` is the SINGLE source of truth, shared by Script #2 (writes) and Script #3 (reads). No duplicates, no fallback to a local re-implementation.
+- **Rationale**: round-2 review found the reporter was about to re-derive the enabled set locally; sharing prevents drift between audit (Script #2) and report (Script #3).
+- **Evidence**: V5 R4 + R10 fix; 06 §Shared enabled-detection module; 13 §Enabled-set detection; AC-7.3 in 01. Confidence: verified-from-source.
+
+### D5. `hermes_home_scope` mirrors BOTH override token AND env var
+- **Decision**: `hermes_home_scope(path)` sets BOTH `set_hermes_home_override(str(path))` AND `os.environ['HERMES_HOME']=str(path)`, restoring both on exit (try/finally).
+- **Rationale**: `hermes_cli.config.load_config()` and `save_config()` anchor on the override token (via `get_config_path()`); `hermes_cli.skills_hub.do_install` reads `os.environ['HERMES_HOME']` in some sub-paths. Mirroring both is the only way to ensure config writes and hub installs resolve to the scoped HERMES_HOME.
+- **Evidence**: V3 [refuted claim 3]; 06 §hermes_home_scope; AC-3.4 / AC-3.6 in 01. Confidence: verified-from-source.
+
+### D6. `clear_skills_system_prompt_cache` is from `agent.prompt_builder` (V4-R1)
+- **Decision**: Script #2 calls `agent.prompt_builder.clear_skills_system_prompt_cache(clear_snapshot=True)`; the "if the function does not exist" fallback is DROPPED.
+- **Rationale**: the function EXISTS in the installed Hermes at `agent/prompt_builder.py:~1022` (sig `(*, clear_snapshot: bool = False)`); a literal-path fallback to `~/.hermes/...` violates the "never touch the real install" rule.
+- **Evidence**: V4-R1; 06 §Apply path step 6c; AC-3.8 in 01. Confidence: verified-from-source.
+
+<!-- end of file: 234 lines (budget 240) -->

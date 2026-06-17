@@ -216,4 +216,41 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 - **AC-4.9** — Bilingual EN+HU on `--help` and console log lines.
 - **AC-4.10** — Plugin does not import, reference, or vendor the migrated skill; it surfaces an advisory only.
 
-<!-- end of file: 219 lines (budget 450) -->
+## Decisions & evidence
+
+### D1. Migrated skill is STANDALONE at the worktree root (B4)
+- **Decision**: the skill lives at `<worktree>/skills/skill-creator/` (a sibling of `src/`, `tests/`, `docs/`). The plugin does NOT bundle, contain, or own the skill files.
+- **Rationale**: Brief §5.4 + §6.D.6 + AC-4.1 require a standalone deliverable; only a flat-path hub install achieves `<available_skills>` index visibility.
+- **Evidence**: V3 [blocker B4]; AC-1.4 + AC-4.1 in 01; PC4 in 12. Confidence: verified-from-source.
+
+### D2. T3 inventory has exactly 18 rows (M4)
+- **Decision**: the per-binding replacement table enumerates T3.001..T3.018 (18 rows). One TDD test per row (`test_T3_001_to_T3_018`).
+- **Rationale**: round-1/2 review found earlier drafts with fewer rows or "TBD" placeholders; 18 is the binding count after the Phase-2 re-derive against the pinned vendored source.
+- **Evidence**: `research/anthropic-skill-creator-original/` pinned `2a40fd2e7c52207aa903bd33fc4c65716126966e`; V3 [major M4]; AC-4.5 + AC-5.5 in 01; 08 §Exhaustiveness. Confidence: verified-from-source.
+
+### D3. `hermes_subprocess_env()` strips BOTH `HERMES_SESSION` AND `CLAUDECODE`
+- **Decision**: the helper at `skills/skill-creator/_subprocess.py` returns `os.environ` minus the nesting-guard vars: `HERMES_SESSION` (Hermes's guard) and `CLAUDECODE` (the legacy Anthropic guard). The parent process NEVER `os.environ.pop`s the var; stripping is performed in the helper for the subprocess env ONLY.
+- **Rationale**: when the parent process is itself a Claude/Anthropic session (e.g., during the Phase 5 eval pipeline), the migrated `hermes -p` subprocess must be un-nested from BOTH guards or it refuses to run.
+- **Evidence**: `skills/skill-creator/_subprocess.py` (canonical helper); V3 [refuted claim 11]; AC-4.6 in 01; `test_helper_is_single_source_of_truth` in this file. Confidence: verified-from-source.
+
+### D4. Q2 event-shape: adapter-based, single canonical shape (R8 fix)
+- **Decision**: the Hermes stream-json event shape is wrapped in an adapter that normalizes to the Anthropic-shaped dict the rest of the pipeline consumes. The rest of the pipeline is unchanged.
+- **Rationale**: round-2 review rejected guessing the shape; an adapter localizes the unknown to a single function and keeps the rest of the eval pipeline unchanged.
+- **Evidence**: V5 R8; 07 §Eval pipeline; 12 Q2; `test_event_shape_adapter_handles_known_shapes` in this file. Confidence: inferred (event shape itself is unverified until Phase 5 re-read of `hermes_cli/streaming/`); verified-from-source (adapter pattern).
+
+### D5. Frontmatter ships TWO variants: `SKILL.md` (full, <=1024 chars) + `SKILL.md.short` (<=60 chars)
+- **Decision**: the migrated skill ships two frontmatter variants. The installer selects based on the active cap (60 vs 1024). If neither fits the active cap, the install is refused.
+- **Rationale**: the system-prompt index enforces a 60-char description cap (per `agent/skill_utils.py`); the `skill_view(name='skill-creator')` path loads the full description. Two variants cover both states without bloating the system prompt.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:653-654`; 07 §Frontmatter; AC-4.2 + AC-4.10 in 01. Confidence: verified-from-source.
+
+### D6. Tool-name matching uses `tool_name.lower() in (...)`
+- **Decision**: the migrated skill matches tool names case-insensitively (`tool_name.lower()`). Anthropic uppercase names (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`, `Task`, `Skill`, `AskUserQuestion`, `WebSearch`, `WebFetch`, `TodoWrite`) are mapped to their lowercase Hermes equivalents.
+- **Rationale**: Hermes tool names are lowercase per `allowedAndForbiddenInvocations` (registry walk over `tools/registry.py`).
+- **Evidence**: `plans/_research/hermesSkillConventions.json`; 07 §Tool-name mapping; AC-4.7 in 01. Confidence: verified-from-source.
+
+### D7. Eval pipeline scripts invoke `hermes`, NOT `claude`
+- **Decision**: `scripts/run_eval.py`, `scripts/improve_description.py`, and `scripts/run_loop.py` invoke `hermes -p ...` instead of `claude -p ...`. CLI flags match Hermes's CLI.
+- **Rationale**: `claude` is the Anthropic binary; the migrated skill runs inside Hermes and must use Hermes's CLI for nesting detection to work.
+- **Evidence**: 07 §T3 inventory (T3.001, T3.003, T3.006, T3.016); AC-4.8 in 01; `test_no_claude_invocations_remain` in this file. Confidence: verified-from-source.
+
+<!-- end of file: 256 lines (budget 450) -->

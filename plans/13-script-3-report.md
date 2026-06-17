@@ -259,4 +259,46 @@ The reporter is a NEW standalone read-only entry point:
 - **AC-7.6** usage from Curator, n/a when missing — `test_report_curator_field_verification_recorded` + `test_report_usage_n_a_when_curator_absent` + `test_report_usage_n_a_for_unseen_skill` + `test_report_usage_does_not_invent_fields` + `test_report_uses_at_suffixed_timestamps`.
 - **AC-7.7** 100% coverage, TDD — `test_report_coverage_100_percent` + the TDD ordering documented in "Definition of Done".
 
-<!-- end of file: 262 lines (budget 400) -->
+## Decisions & evidence
+
+### D1. Script #3 is READ-ONLY end-to-end (R11 fix)
+- **Decision**: Script #3 (`hermes-skill-creator-report`) is STDOUT + `--json PATH` ONLY. No `--apply`, no `--emit-migration-note`, no `--write-report`, no `MIGRATION.report.md`. The only filesystem write is the operator-chosen `--json PATH`, which defaults to `./skill-report.json` under cwd (outside any fixture tree).
+- **Rationale**: a read-only reporter that writes a MIGRATION note or any worktree file would violate the "no state mutation" contract and would need a sentinel test of its own. STDOUT + optional JSON keeps the contract trivially auditable.
+- **Evidence**: V5 R11; AC-7.1 in 01; `test_report_read_only_zero_writes` + `test_report_no_write_calls_in_source` + `test_report_no_migration_report_file_emitted` in this file. Confidence: verified-from-source.
+
+### D2. Curator field names: `_at`-suffixed timestamps (R12 fix)
+- **Decision**: usage columns reference the `_at`-suffixed fields verified against `tools/skill_usage.py:463-468`: `last_used_at`, `last_viewed_at`, `last_patched_at`, `use_count`, `view_count`, `patch_count`. The legacy unsuffixed `last_used` field is NOT used (it does not exist in the current source).
+- **Rationale**: round-2 review found the reporter assumed a `last_used` field that does not exist; round-2 R12 fix pins the exact six field names from the real source.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `tools/skill_usage.py:155, 169, 463-468`; V5 R12; `test_report_curator_field_verification_recorded` + `test_report_usage_does_not_invent_fields` + `test_report_uses_at_suffixed_timestamps` in this file. Confidence: verified-from-source.
+
+### D3. Tokenize FULL description, not truncated index form (R12 fix)
+- **Decision**: the reporter tokenizes the FULL `name + " " + description` string. The text-format table truncates the displayed description to 60 chars (matching the system-prompt index form), but the JSON output preserves the full description.
+- **Rationale**: round-2 review found the reporter tokenizing the truncated 60-char form, which underestimates cost. The reporter's job is an accurate cost estimate; the index form is a separate concern (operator-facing display).
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/prompt_builder.py:1399` (`f"    - {name}: {desc}"`) and `agent/skill_utils.py:682, 688-689` (`extract_skill_description`); V5 R12; `test_report_tokens_use_full_description_not_truncated` + `test_report_text_format_truncates_description_to_60` in this file. Confidence: verified-from-source.
+
+### D4. Shared enabled-detection helper (R4 fix)
+- **Decision**: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, *, platform=None) -> frozenset[str]` is imported at module top-level by the reporter. The reporter NEVER redefines the function locally. If the shared module is unavailable at import time, the reporter aborts with exit 6 (not a local re-implementation).
+- **Rationale**: round-2 review found the reporter about to re-derive the enabled set locally; sharing prevents drift between audit (Script #2) and report (Script #3).
+- **Evidence**: V5 R4 + R10; 06 §Shared enabled-detection module; AC-7.3 in 01; `test_report_shares_enabled_detection_with_script_2` + `test_report_exit_six_when_enabled_detection_unavailable` in this file. Confidence: verified-from-source.
+
+### D5. Sort stability + `n/a` rows last (binding)
+- **Decision**: all `--sort` modes sort descending on the primary key, with `skill_name` (ascending) as a stable secondary key. Rows with `n/a` on the primary sort column sort LAST (they represent unknown, not zero).
+- **Rationale**: deterministic output across runs is required for snapshot tests; `n/a` last avoids clustering unknown skills with real zeros.
+- **Evidence**: 13 §Sorting; `test_report_sort_stable_secondary_key_by_name` + `test_report_sort_by_use_count` + `test_report_sort_by_last_used_at` in this file. Confidence: inferred.
+
+### D6. Tokenizer fallback: `chars // 4` when loader raises or is unavailable
+- **Decision**: when the configured model's tokenizer is unavailable or raises on every call, the reporter logs a one-line bilingual warning and proceeds with `len(rendered) // 4`.
+- **Rationale**: the fallback matches Hermes's own budget-planning approximation; failing the run would deny the operator the report entirely.
+- **Evidence**: 13 §Tokens; `test_report_tokenizer_fallback_chars_div_4` + `test_report_tokenizer_raises_uses_fallback` in this file. Confidence: inferred.
+
+### D7. JSON determinism: frozen timestamp + sorted rows
+- **Decision**: `--format=json` output's `generated_at` reads `HERMES_SKILL_CREATOR_FROZEN_TIME` when set; otherwise wall clock. Rows are sorted by the active sort key; profile order is sorted; JSON keys are sorted.
+- **Rationale**: byte-identical output across runs is required for snapshot tests and downstream-agent diffs.
+- **Evidence**: 13 §Output; `test_report_json_deterministic_with_frozen_time` in this file. Confidence: inferred.
+
+### D8. Curator field-verification fixture: `tests/fixtures/curator/recorded_fields.json`
+- **Decision**: the implementer MUST record the Curator's storage class, field names, and field types in a JSON fixture BEFORE writing the reporter code. The fixture's mtime is enforced < 7 days from HEAD (mtime sentinel).
+- **Rationale**: round-2 review found the reporter quoting field names that had drifted; a verification step gated on recency prevents the reporter from going stale.
+- **Evidence**: 13 §Usage; `test_report_curator_field_verification_recorded` in this file. Confidence: inferred.
+
+<!-- end of file: 304 lines (budget 400) -->

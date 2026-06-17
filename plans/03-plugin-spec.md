@@ -223,4 +223,31 @@ NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_descr
 - `07-skill-creator-migration.md` — the migrated skill body (lives at `skills/skill-creator/` at the worktree root).
 - `10-toolchain-and-conventions.md` — `[project.scripts]` does NOT include an installer entry point for the plugin; the plugin has no `python -m ... install` subcommand. The plugin is installable via the standard Hermes plugin loader (pip-installed, `plugin.yaml` discovered).
 
-<!-- end of file: 226 lines (budget 250) -->
+## Decisions & evidence
+
+### D1. Plugin manifest is `plugin.yaml`; NO `plugin.json`, NO `entry_points` map, NO `kind` field (B3)
+- **Decision**: the plugin ships ONE manifest file at `src/hermes_skill_creator_plugin/plugin.yaml` with fields `name`, `version`, `description`, `author`, `provides_hooks`. No `kind` field (the only known valid value per `pluginAuthoring.json` is `backend`, which is wrong for a hook+skill plugin). No `entry_points` map.
+- **Rationale**: `hermes_cli/plugins.py` requires `plugin.yaml`; an `entry_points` map would create a second wiring path; `kind: backend` would mis-declare the plugin.
+- **Evidence**: V3 [blocker B3 / major M2]; `hermes_cli/plugins.py` (anchor: directory plugin must contain `plugin.yaml`); AC-1.1 + AC-1.5 in 01. Confidence: verified-from-source.
+
+### D2. `skill_register.py` is REMOVED (B3)
+- **Decision**: there is NO `skill_register.py` in the plugin package. The plugin's `register(ctx)` does NOT call `ctx.register_skill`.
+- **Rationale**: `register_skill` does not place the skill in `<available_skills>`. The migrated skill is shipped standalone via Script #2's flat-path install.
+- **Evidence**: V3 [blocker B3]; 03 §Plugin layout; AC-1.4 in 01. Confidence: verified-from-source.
+
+### D3. Plugin does NOT own skill files; `skills/skill-creator/` is standalone at the worktree root (B4)
+- **Decision**: `src/hermes_skill_creator_plugin/` does NOT contain a `skills/` subdirectory. The migrated skill lives at `<worktree>/skills/skill-creator/` (sibling of `src/`), and is shipped flat into `~/.hermes/skills/skill-creator/` via Script #2's `do_install`.
+- **Rationale**: a plugin-owned skill cannot be installed at the flat path that achieves `<available_skills>` visibility, and embedding the skill in the plugin violates Brief §5.4 + §6.D.6 + AC-4.1.
+- **Evidence**: V3 [blocker B4]; AC-1.4 + AC-4.1 in 01; PC4 in 12. Confidence: verified-from-source.
+
+### D4. Cap-state detection is static-AST, advisory only
+- **Decision**: `_advisory.detect_cap_state(target_dir)` runs `ast.parse` over `agent/skill_utils.py` and inspects `extract_skill_description`'s comparator. It NEVER imports `agent.skill_utils` at module level and NEVER performs `setattr` on any Hermes module.
+- **Rationale**: a runtime `setattr(agent.skill_utils, "MAX_DESCRIPTION_LENGTH", 1024)` would mutate the installed Hermes (forbidden by the HARD safety rule); static-AST detection is side-effect-free.
+- **Evidence**: V3 [refuted claim 1] (runtime monkey-patch rejected); 03 §Cap-raise mechanism; AC-1.3 in 01; `test_advisory_no_setattr_on_skill_utils` in this file. Confidence: verified-from-source.
+
+### D5. Pin values for the unpatched vs patched comparator
+- **Decision**: `UNPATCHED_CAP = 60` (literal `60` in the comparator) and `PATCHED_CAP_REFERENCE = "MAX_DESCRIPTION_LENGTH"` (the patched constant name) are pinned in `_advisory.py`.
+- **Rationale**: the AST must distinguish "patched" from "unpatched" by matching either the literal `60` or the `MAX_DESCRIPTION_LENGTH` reference in the `Compare` node's comparators.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:653` (unpatched) and `tools/skills_tool.py:98` (the patched-cap constant). Confidence: verified-from-source.
+
+<!-- end of file: 253 lines (budget 260) -->

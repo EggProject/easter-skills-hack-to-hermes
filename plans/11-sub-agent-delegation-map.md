@@ -127,4 +127,31 @@ A separate sub-agent (workstream G-verify) runs the full suite on `main` after a
 
 Workstream G-verify is NOT in the Phase 5 DAG above; it runs as Phase 6 (separate sub-agent invocation, see plan #15 in the task list).
 
-<!-- end of file: 130 lines (budget 200) -->
+## Decisions & evidence
+
+### D1. One workstream per AC cluster (or two for closely-related clusters)
+- **Decision**: Phase 5 is partitioned into 6 workstreams: B-plugin (AC-1), C-script-1 (AC-2 + AC-5), D-script-2 (AC-3), E-skill (AC-4 + AC-5), F-meta (AC-6 + 00-index final), G-report (AC-7). Each workstream owns its plan files end-to-end (TDD + implementation + commit + PR).
+- **Rationale**: per-AC-cluster worktrees isolate writes and keep PRs small. B / C / D / E are independent (no cross-deliverable imports); G depends on D (shared enabled-detection); F depends on all five.
+- **Evidence**: 11 §Workstream table + DAG; 10 §Worktree + PR workflow. Confidence: inferred.
+
+### D2. G-report workstream for Script #3 (R11)
+- **Decision**: Script #3 is its own workstream (`G-report`, branch `phase5/G-report`) because it is a new READ-ONLY deliverable added in V3, not a refactor of an existing one.
+- **Rationale**: Script #3 reuses the enabled-detection module from Script #2 (D), but its read-only contract + Curator field-verification gate are different enough that bundling it into D would inflate D's PR scope.
+- **Evidence**: V5 R11; 11 §Workstream table; AC-7.1..AC-7.7 in 01. Confidence: verified-from-source.
+
+### D3. Shared enabled-detection helper is the cross-workstream contract
+- **Decision**: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, *, platform=None) -> frozenset[str]` is owned by D-script-2 and consumed by G-report. The implementer MUST verify the import direction: the shared module does NOT import from the reporter (reporter → shared, never the reverse).
+- **Rationale**: round-2 review found the reporter about to re-derive the enabled set locally; sharing prevents drift between audit (Script #2) and report (Script #3).
+- **Evidence**: V5 R4 + R10; 06 §Shared enabled-detection module; 13 §Enabled-set detection. Confidence: verified-from-source.
+
+### D4. Cross-workstream PR review gates
+- **Decision**: a PR is rejected if (a) it lands without `test_*` for a new function, (b) it uses `os.environ.pop("HERMES_SESSION", None)` in the parent process, (c) it touches `~/.hermes/hermes-agent` (caught by the no-touch sentinel), (d) it embeds the migrated skill under `src/hermes_skill_creator_plugin/`, or (e) G-report writes to `HERMES_HOME` during tests.
+- **Rationale**: the parent-coordinator review enforces the contract that any single PR could otherwise violate; rejecting at PR-review time is cheaper than reverting after merge.
+- **Evidence**: 11 §PR review expectations; 09 §No-touch sentinel; 13 §Safety. Confidence: inferred.
+
+### D5. Phase 6 verification (G-verify) runs against `main`, not Phase 5 branches
+- **Decision**: after all 5 Phase 5 PRs are merged to `main`, a separate sub-agent (G-verify, plan #15 in the task list) runs the full suite against `main`: `uv run pytest` (100% coverage), `pre-commit run --all-files`, Script #1 against a fixture checkout, Script #2 against a tmp `HERMES_HOME`, Script #3 against a tmp `HERMES_HOME` with zero writes, and a static check that `~/.hermes/hermes-agent` is byte-identical to its pre-Phase-5 state.
+- **Rationale**: per-workstream tests pass in isolation; the integration test against `main` is the only check that catches cross-workstream regressions.
+- **Evidence**: 11 §Post-Phase-5 verification. Confidence: inferred.
+
+<!-- end of file: 157 lines (budget 200) -->

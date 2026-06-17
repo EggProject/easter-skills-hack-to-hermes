@@ -199,8 +199,8 @@ repos:
         pass_filenames: false
 
       - id: check-line-count
-        name: Plan files <= 500 lines
-        entry: python tools/check_line_count.py
+        name: Plan files <= 500 lines + footer matches wc -l + 00-index Total matches sum
+        entry: python tools/check_line_count.py --enforce-footer --enforce-budget-table
         language: system
         files: '^plans/.*\.md$'
         pass_filenames: false
@@ -219,11 +219,30 @@ repos:
 - `--help` output: two top-level sections — `Usage (English)` and `Hasznalat (magyar)` — with mirrored content (every option documented in both languages in the same order). Enforced by `test_help_is_bilingual` for every entry point (now four: patch, profiles, install, report).
 - Migration note: English only (technical artifact for downstream AI agents); the bilingual message that announces its regeneration is `print("[en] Migration note regenerated / [hu] Migrációs jegyzet újragenerálva")`.
 - Frontmatter `description` field: starts with `Use when …` in English; bilingual description is allowed but not required.
+- `--help` and the entrypoint docstring MUST agree on which options exist (drift here is caught by snapshot tests under `tests/snapshots/help_*.txt`).
 
 ## Line-count rule (HARD, enforced)
 
 - Every plan file under `plans/` MUST be <= 500 lines. Enforced by `tools/check_line_count.py` (pre-commit). Sum across all 13 files <= 4500 (see 00-index.md budget table).
 - Every source file under `src/` and `scripts/` MUST be <= 500 lines. Enforced by wemake-python-styleguide's `max-module-lines` and a custom check.
+
+### Extended check_line_count.py spec (REC-2, REC-3)
+
+`tools/check_line_count.py` enforces THREE invariants on plan files; failure of ANY aborts the commit.
+
+1. **Per-file cap.** Each `plans/*.md` MUST be `<= 500` lines.
+2. **Footer drift guard.** Each footer MUST be `<!-- end of file: NN lines (budget BB) -->` AND `NN` MUST equal the real `wc -l <file>`. `BB` is a human hint only.
+3. **00-index budget table guard.** `plans/00-index.md`'s `Total` cell AND its `Sum NNNN` prose token MUST equal the live sum of `wc -l` across every `plans/*.md`.
+
+Per-file cap catches bloat; footer-drift catches "edited file, forgot footer" (bit 09 all three rounds and 08/10 in R2); 00-index guard catches "edited sibling, forgot Total". CLI:
+
+```sh
+python tools/check_line_count.py                    # all three (default)
+python tools/check_line_count.py --no-footer        # escape hatch only
+python tools/check_line_count.py --no-budget-table  # escape hatch only
+```
+
+Pre-commit entry passes `--enforce-footer --enforce-budget-table` (both on by default in the script).
 
 ## Commit granularity
 
@@ -231,6 +250,8 @@ repos:
 - Within a cluster, multiple files may change in a single commit (e.g., the test file and the source file it tests land together). Splitting a TDD red+green across two commits is forbidden — the test and the implementation land atomically.
 - A commit message MUST reference the AC IDs it satisfies, e.g. `feat(02-script-1): add --target refusal and bilingual error (AC-2.10)`.
 - A commit MUST NOT break `uv run pytest` (CI is the enforcer, but the local pre-commit is also wired).
+- A commit MUST NOT introduce new TODO/FIXME without an AC ID linked; orphaned TODO is a review-blocker.
+- Rebase or squash onto `main` if the AC cluster boundary is in doubt — never ship a cluster-mixed commit.
 
 ## Worktree + PR workflow
 
@@ -241,32 +262,11 @@ repos:
 - The PR title is `Phase 5 / <task-letter>: <one-line summary>`. The PR body lists the AC IDs and links to the snapshot diff.
 - The PR MUST pass `uv run pytest` and the full pre-commit suite before merge.
 
-## PR template (.github/pull_request_template.md or equivalent)
+## PR template (.github/pull_request_template.md)
 
 ```markdown
-## What
-
-<!-- one-paragraph summary -->
-
-## Why
-
-<!-- link to the AC IDs in 01-overview.md -->
-
-## How
-
-<!-- list the files changed, with line ranges -->
-
-## Tests
-
-<!-- list the new test IDs (e.g. test_apply_cap_only_default_idempotent) -->
-
-## Migration note
-
-<!-- was MIGRATION.md regenerated? link to the diff -->
-
-## Risk
-
-<!-- what could go wrong, what is the rollback plan -->
+## What / Why / How / Tests / Migration note / Risk
+<!-- one-paragraph summary; AC IDs in 01-overview.md; files changed (line ranges); new test IDs; MIGRATION.md regen diff; rollback plan -->
 ```
 
 ## Bilingual commit messages
@@ -293,4 +293,41 @@ repos:
 - Every module has a top-of-file docstring with purpose, public API, and `See also: plans/XX-name.md` link to the relevant plan file.
 - Bilingual docstrings are NOT required (docstrings are for the next developer; the user-facing messages are bilingual).
 
-<!-- end of file: 296 lines (budget 250) -->
+## Decisions & evidence
+
+### D1. Toolchain: `uv venv` + `pyproject.toml` + `pre-commit` (ruff + black + mypy + wemake)
+- **Decision**: the project is `uv`-managed. `pyproject.toml` declares deps + `[project.scripts]` (four console entry points: `hermes-skill-creator-patch`, `hermes-skill-creator-profiles`, `hermes-skill-creator-install`, `hermes-skill-creator-report`). `uv.lock` is checked in. `.pre-commit-config.yaml` runs ruff, black, mypy, wemake-python-styleguide, plus three local hooks (`check-bilingual`, `check-line-count`, `check-migration-note`).
+- **Rationale**: `uv` is fast and hermetic; the pre-commit hooks catch the rule classes (line-count drift, bilingual drift, MIGRATION tampering) at commit time before they reach CI.
+- **Evidence**: 10 §uv venv workflow + .pre-commit-config.yaml; AC-6.1..AC-6.4 in 01. Confidence: inferred (toolchain choices); verified-from-source (pre-commit hook list).
+
+### D2. Bilingual format spec: `[en] text / [hu] szöveg` single-line + two-section `--help` (Q7)
+- **Decision**: console/log messages match `^\[en\] .+ / \[hu\] .+$` on a SINGLE line. `--help` uses two top-level sections (`Usage (English)` and `Használat (magyar)`) with mirrored content. Migration note is English only; the announcement of its regeneration is bilingual.
+- **Rationale**: bilingual messages give the operator both languages without forcing a separate `--lang` flag; two-section help mirrors the console format.
+- **Evidence**: HITL-confirmed Q7; 10 §Bilingual rule; `tools/check_bilingual.py` + `test_help_is_bilingual` in 09. Confidence: verified-from-source.
+
+### D3. Extended `check_line_count.py` spec (REC-2, REC-3)
+- **Decision**: `tools/check_line_count.py` enforces THREE invariants on plan files (per-file cap, footer == wc -l, 00-index Total == live sum). Pre-commit passes `--enforce-footer --enforce-budget-table` (both on by default).
+- **Rationale**: hand-maintained footers and budget-table totals drifted in rounds 1/2/3; the hook catches drift at commit time.
+- **Evidence**: V6 REC-2 + REC-3; 10 §Extended check_line_count.py spec; 00-index D1/D2 in this round. Confidence: verified-from-source.
+
+### D4. Worktree + PR workflow per file
+- **Decision**: every Phase 5 task runs in its own worktree under `.claude/worktrees/`. Branch name is `phase5/<task-letter>-<short-name>`. PR title is `Phase 5 / <task-letter>: <one-line summary>`. The PR MUST pass `uv run pytest` and the full pre-commit suite before merge.
+- **Rationale**: per-task worktrees isolate writes; per-cluster PRs keep reviews small and rollbacks clean.
+- **Evidence**: 10 §Worktree + PR workflow; 11 §Workstream table. Confidence: inferred.
+
+### D5. Commit granularity: ONE commit per AC cluster
+- **Decision**: a commit covers ONE acceptance-criterion cluster (1.x, 2.x, ..., 7.x). Splitting a TDD red+green across two commits is forbidden — the test and the implementation land atomically.
+- **Rationale**: per-cluster commits make bisect + revert clean and tie commits to the contract.
+- **Evidence**: 10 §Commit granularity. Confidence: inferred.
+
+### D6. Coverage gate: line + branch + 100% (HARD)
+- **Decision**: CI runs `pytest --cov --cov-branch --cov-fail-under=100`. Drops below 100% on any push fail the build. The operator must add the missing test or remove the dead branch.
+- **Rationale**: a coverage gap is almost always an untested error path; the gate forces every branch to be exercised.
+- **Evidence**: 10 §Coverage gate; AC-7.7 in 01; `test_coverage_100_percent_enforced` in 09. Confidence: verified-from-source.
+
+### D7. Documentation in code: docstrings for the next developer
+- **Decision**: every public function has a docstring with `Args:`, `Returns:`, `Raises:` sections. Every module has a top-of-file docstring with `See also: plans/XX-name.md`. Bilingual docstrings are NOT required.
+- **Rationale**: docstrings target the next developer (English); the bilingual surface is reserved for `--help` and console/log lines (operator-facing).
+- **Evidence**: 10 §Documentation in code. Confidence: inferred.
+
+<!-- end of file: 333 lines (budget 340) -->

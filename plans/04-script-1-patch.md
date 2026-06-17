@@ -209,4 +209,41 @@ Every `print()` and `logger.{info,warning,error}` call MUST match `^\[en\] .+ / 
 
 100% line + branch coverage. Branches enumerated above. Every `argparse` choice exercised. Every exit code reachable by at least one test.
 
-<!-- end of file: 212 lines (budget 400) -->
+## Decisions & evidence
+
+### D1. Cap-raise is a two-site atomic patch (B2)
+- **Decision**: `S1.cap` patches BOTH the comparator (`if len(desc) > 60:` → `if len(desc) > MAX_DESCRIPTION_LENGTH:`) AND the slice (`return desc[:57] + "..."` → `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."`) as a SINGLE `site_id` with two anchors.
+- **Rationale**: the function encodes the cap in two places; patching only one breaks it (either the check still drops, or the slice still chops at 57). They are a single logical edit and MUST land atomically.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:653` (comparator) and `:654` (slice); PC5 in 12; V3 [blocker B2]. Confidence: verified-from-source.
+
+### D2. `MAX_DESCRIPTION_LENGTH` import strategy with circular-import guard
+- **Decision**: prefer `from tools.skills_tool import MAX_DESCRIPTION_LENGTH` at the top of `agent/skill_utils.py`; pre-flight check greps the existing file for any `from tools.skills_tool import` and aborts with exit 4 ("potential circular import — define a local constant _MAX_DESCRIPTION_LENGTH = 1024 instead") if found. Fallback is a LOCAL constant `_MAX_DESCRIPTION_LENGTH = 1024` defined at the top of `agent/skill_utils.py`.
+- **Rationale**: `MAX_DESCRIPTION_LENGTH` already exists in `tools/skills_tool.py` (line 98). Reusing it keeps the patched cap aligned with the codebase idiom (slice `[:MAX_DESCRIPTION_LENGTH - 3]` matches lines 659 + 814 of the same file). The pre-flight guard prevents an `agent<->tools` cycle.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `tools/skills_tool.py:98, 659, 814`; 04 §Cap-raise sites; `test_apply_cap_raise_max_description_length_defined` in this file. Confidence: verified-from-source.
+
+### D3. `--target` is REQUIRED (Q4)
+- **Decision**: `--target` is `argparse(required=True)`. Missing → exit 4 with `[en] --target is required. Refusing to run. / [hu] A --target kötelező. A szkript megtagadja a futtatást.`
+- **Rationale**: round-1 default behavior of "fall back to `~/.hermes/hermes-agent`" would mutate the installed Hermes and violate the HARD safety rule. Requiring an explicit user-owned checkout closes that door.
+- **Evidence**: HITL-confirmed Q4; V3 [blocker from safety lens] `--target` required; AC-2.10 in 01; 04 §Safety gates. Confidence: verified-from-source.
+
+### D4. `--force` requires `--i-accept-line-drift` as a SECOND flag (Q4 / AC-2.5.1)
+- **Decision**: `--force` alone exits 5. `--force --i-accept-line-drift` pauses for TTY confirmation, prints the diff, and appends to `~/.hermes/patch-audit.log` with timestamp + diff hash.
+- **Rationale**: round-1 review rejected `--force` as an auto-bypass; requiring a separate `--i-accept-line-drift` flag forces explicit acknowledgement that line-only targeting can patch the wrong site. The TTY pause + audit log closes the silent-bypass class.
+- **Evidence**: V3 [major] `--force` safety; AC-2.5 / AC-2.5.1 in 01; 04 §Multi-signal targeting. Confidence: verified-from-source.
+
+### D5. Multi-signal targeting: 8+ char anchor + 1-based line number (AC-2.2)
+- **Decision**: every site is identified by BOTH a unique 8+ char anchor string AND a 1-based line number. Mismatch → `TEXT_DRIFT` (anchor) or `LINE_DRIFT` (line). Both abort the run.
+- **Rationale**: a single-signal match (anchor only) is vulnerable to upstream drift and copy-paste duplication; the dual match makes accidental matches vanishingly unlikely.
+- **Evidence**: V3 [major M3] (symbol + anchor, no hard line numbers); 04 §Multi-signal targeting; AC-2.2 in 01. Confidence: verified-from-source.
+
+### D6. Atomic write protocol: tmp + `os.replace` + restore on exception
+- **Decision**: every patched file is written via `<file>.patch.tmp` + `os.replace`, with the original bytes snapshotted in memory; on exception, the tmp file is deleted and the original restored. Mode bits preserved via `os.chmod`.
+- **Rationale**: a direct `Path.write_text` would leave a half-written file on crash; the tmp + `os.replace` pair is POSIX-atomic on the same filesystem.
+- **Evidence**: V3 [blocker from safety lens] atomic write; 04 §Atomic write protocol; `test_apply_atomic_on_rename_failure` in this file. Confidence: verified-from-source.
+
+### D7. MIGRATION row counts: 1 (default) or 1+7 or 1+6 (with `--no-schema-redirect`)
+- **Decision**: `--emit-migration-note` writes `MIGRATION.hermes-patch.md` with EXACTLY 1 row (cap only) by default; 1+7=8 rows with `--task-e-redirect`; 1+6=7 rows with `--task-e-redirect --no-schema-redirect`. Counts are computed at runtime from the sites table — never hard-coded.
+- **Rationale**: hard-coded counts in the migration note have drifted in past rounds; computing from the live site table removes that drift.
+- **Evidence**: V3 [major M4] T3 count; V4 R10 (R11 was about Script #3, not Script #1); 04 §Migration note row counts; AC-5.5 in 01. Confidence: verified-from-source.
+
+<!-- end of file: 249 lines (budget 400) -->

@@ -235,4 +235,41 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 
 100% line + branch. Every branch of the apply sequence, every error path, every bilingual message reachable. The shared `get_enabled_skills` module is covered by Script #2's tests; Script #3 (reporter) re-uses those fixtures and adds only its own tokenization + Curator-lookup coverage.
 
-<!-- end of file: 238 lines (budget 400) -->
+## Decisions & evidence
+
+### D1. `save_disabled_skills` is called with the disabled set as the 2nd positional arg (B3)
+- **Decision**: `save_disabled_skills(config, sorted(desired_disabled), platform=None)` — the disabled set is the 2nd positional arg. No `names=` kwarg.
+- **Rationale**: the real signature at `hermes_cli/skills_config.py:45` is `save_disabled_skills(config: dict, disabled: Set[str], platform: Optional[str] = None)`. Passing `names=` would raise `TypeError`.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `hermes_cli/skills_config.py:45`; V3 [blocker B3]; AC-3.11 in 01; `test_apply_save_disabled_skills_positional_args` in this file. Confidence: verified-from-source.
+
+### D2. `clear_skills_system_prompt_cache` is imported from `agent.prompt_builder` (B3)
+- **Decision**: Script #2 imports `clear_skills_system_prompt_cache` from `agent.prompt_builder` and calls it with `clear_snapshot=True` after every successful flip. No fallback to a literal-path snapshot delete.
+- **Rationale**: the function EXISTS at `agent/prompt_builder.py:~1022` with sig `(*, clear_snapshot: bool = False)`. A literal-path fallback to `~/.hermes/.skills_prompt_snapshot.json` would violate the "never touch the real install" rule.
+- **Evidence**: V3 [blocker B3] + V4-R1; `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/prompt_builder.py:~1022`; AC-3.8 in 01. Confidence: verified-from-source.
+
+### D3. ONE canonical enabled-detection helper, shared with Script #3 (R4 fix)
+- **Decision**: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, *, platform=None) -> frozenset[str]` is the SINGLE source of truth. Script #2 and Script #3 BOTH import from it.
+- **Rationale**: round-2 review found the reporter about to re-derive the enabled set locally; sharing prevents drift between audit (Script #2) and report (Script #3).
+- **Evidence**: V5 R4; 06 §Shared enabled-detection module; 13 §Enabled-set detection; AC-7.3 in 01. Confidence: verified-from-source.
+
+### D4. `hermes_home_scope` mirrors BOTH override token AND env var
+- **Decision**: `hermes_home_scope(path)` sets BOTH `set_hermes_home_override(str(path))` AND `os.environ['HERMES_HOME']=str(path)`, restoring both on exit (try/finally).
+- **Rationale**: `hermes_cli.config.load_config()` and `save_config()` anchor on the override token (via `get_config_path()`); `hermes_cli.skills_hub.do_install` reads `os.environ['HERMES_HOME']` in some sub-paths. Mirroring both is the only way to ensure config writes and hub installs resolve to the scoped HERMES_HOME.
+- **Evidence**: V3 [refuted claim 3]; `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `hermes_constants.py:set_hermes_home_override` and `hermes_cli/skills_hub.py:478` (`ensure_hub_dirs`); AC-3.4 + AC-3.6 in 01. Confidence: verified-from-source.
+
+### D5. Flat-install path for the migrated skill (B4)
+- **Decision**: Script #2's `do_install` MUST install the skill at the FLAT path `~/.hermes/skills/skill-creator/` under the scoped HERMES_HOME. The plugin does NOT do this.
+- **Rationale**: `ctx.register_skill` on the plugin context is a namespaced resolver; it does NOT place the skill in the flat tree or the `<available_skills>` index. Only a flat-path hub install achieves system-prompt index visibility.
+- **Evidence**: V3 [blocker B3 / B4]; 03 §Plugin layout; AC-3.6 + AC-4.1 in 01; `test_apply_installs_skill_creator_when_absent` in this file. Confidence: verified-from-source.
+
+### D6. Per-profile directory set: `_PROFILE_DIRS`, NOT `gateway/` subdir (Q3)
+- **Decision**: the audit walks `_PROFILE_DIRS = {memories, sessions, skills, skins, logs, plans, workspace, cron, home}`. `gateway.pid` is a flat file in the profile root, stat-only.
+- **Rationale**: `hermes_cli/profiles.py:39-53` defines `_PROFILE_DIRS`. There is no `gateway/` subdir in the profile tree.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `hermes_cli/profiles.py:39-53`; V3 [refuted claim 5]; AC-3.10 in 01; `test_walks_profile_dirs_set` + `test_gateway_pid_read_as_flat_file` in this file. Confidence: verified-from-source.
+
+### D7. Determinism: frozen timestamp + sorted JSON keys + sorted rows
+- **Decision**: the JSON report's `generated_at` is read from `HERMES_SKILL_CREATOR_FROZEN_TIME` (or `--frozen-time` flag); all JSON keys are sorted; all rows are sorted by `(profile_name, skill_name)`.
+- **Rationale**: byte-identical output across runs is the only way to test deterministically and the only way the migration-note generator can diff two runs cleanly.
+- **Evidence**: V3 [major] determinism; 06 §Deterministic JSON report; `test_audit_json_deterministic` in this file. Confidence: inferred.
+
+<!-- end of file: 275 lines (budget 400) -->

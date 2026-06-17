@@ -20,23 +20,23 @@
 
 | # | File | Covers | Status | Budget | Actual |
 | --- | --- | --- | --- | --- | --- |
-| 00 | `00-index.md` | This file | [emitted] | 90 | 80 |
-| 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 123 |
-| 02 | `02-architecture.md` | Component diagram, data flow, sequence, safety | [emitted] | 200 | 202 |
-| 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 250 | 226 |
-| 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 653; --target REQUIRED; --force) | [emitted] | 400 | 212 |
-| 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 140 |
-| 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 400 | 238 |
-| 07 | `07-skill-creator-migration.md` | §5.4 Migrated skill (T3 18 rows; tool-name mapping full; HERMES_SESSION+CLAUDECODE strip) | [emitted] | 450 | 219 |
-| 08 | `08-migration-note-format.md` | §5.5 MIGRATION (3-file split) | [emitted] | 180 | 181 |
-| 09 | `09-test-strategy.md` | TDD, fixtures, AST-grep, no-touch sentinels, seed-minimal-fixture contract | [emitted] | 300 | 345 |
-| 10 | `10-toolchain-and-conventions.md` | uv, pyproject, pre-commit, bilingual, worktree+PR | [emitted] | 250 | 296 |
-| 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 130 |
-| 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 200 | 176 |
-| 13 | `13-script-3-report.md` | §5.7 Script #3 (profile-level skill token + usage reporter; READ-ONLY) | [emitted] | 250 | 262 |
-| | **Total** | | | **3570** | **2829** |
+| 00 | `00-index.md` | This file | [emitted] | 130 | 106 |
+| 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 150 |
+| 02 | `02-architecture.md` | Component diagram, data flow, sequence, safety | [emitted] | 240 | 234 |
+| 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 260 | 253 |
+| 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 653; --target REQUIRED; --force) | [emitted] | 400 | 249 |
+| 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 187 |
+| 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 400 | 275 |
+| 07 | `07-skill-creator-migration.md` | §5.4 Migrated skill (T3 18 rows; tool-name mapping full; HERMES_SESSION+CLAUDECODE strip) | [emitted] | 450 | 256 |
+| 08 | `08-migration-note-format.md` | §5.5 MIGRATION (3-file split) | [emitted] | 220 | 213 |
+| 09 | `09-test-strategy.md` | TDD, fixtures, AST-grep, no-touch sentinels, seed-minimal-fixture contract | [emitted] | 400 | 392 |
+| 10 | `10-toolchain-and-conventions.md` | uv, pyproject, pre-commit, bilingual, worktree+PR | [emitted] | 340 | 333 |
+| 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 157 |
+| 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 203 |
+| 13 | `13-script-3-report.md` | §5.7 Script #3 (profile-level skill token + usage reporter; READ-ONLY) | [emitted] | 400 | 304 |
+| | **Total** | | | **4050** | **3206** |
 
-Sum 2829 < 4500 (sum of budgets 3570). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
+Sum 3206 < 4500 (sum of budgets 4050). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
 
 ## Hard constraints (HARD)
 
@@ -70,11 +70,38 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 - Q3: per-profile directory set (default: `_PROFILE_DIRS`).
 - Q4: cap-raise safety contract (default: --target REQUIRED; no runtime monkey-patch).
 - Q5: MIGRATION 3-file split (default: 3 files).
-- Q6: per-file line budget (default: 3490 sum).
+- Q6: per-file line budget (default: 3570 sum; see the file map + budget table above for live values).
 - Q7: bilingual format spec (default: `[en]/[hu]` single line + two-section help).
 - Q8: plugin installer interactive safety (default: TTY confirm + --yes).
 - Q9: active-cap detection at install (default: refuse if desc > active cap).
 - Q10: Script #3 tokenizer selection — real model tokenizer via configured model vs. fallback `~chars/4` heuristic (default: real tokenizer when available, heuristic fallback otherwise; both paths tested).
 - Q11: Script #3 usage-data sourcing — Curator project ref #45 field names + storage location; verify before wiring, show `n/a` where data absent (default: read-only probe + `n/a` fallback, no synthetic data).
+
+## Decisions & evidence
+
+### D1. Budget table is the single source of truth for plan-file budgets (REC-3)
+- **Decision**: 01-overview.md, 12-risks-and-open-questions.md, and the plan-file footers MUST NOT restate per-file counts or totals; they reference this budget table. Standalone prose like "Sum 2829" or "(default: 3490 sum)" is removed in favor of the live table.
+- **Rationale**: hard numbers in plan prose drifted across rounds (RR2, RR3, RR4). Centralizing the live values here removes the parallel-truth class of drift.
+- **Evidence**: V6 RR2 / RR3 / RR4 findings; the table cells above are computed from `wc -l` and updated after every plan edit. Confidence: inferred (process rule); verified-from-source (live `wc -l`).
+
+### D2. Actual column is auto-generated from `wc -l` (REC-2)
+- **Decision**: the `Actual` column reflects the live `wc -l` of each file. The Total cell reflects the live sum. `tools/check_line_count.py --enforce-budget-table` enforces both.
+- **Rationale**: hand-maintained Actual counts drifted in R2 (00=80 vs real 79; 09=345 vs real 347); auto-generation closes that class of bug.
+- **Evidence**: V6 RR2 verified against the live checkout. Confidence: verified-from-source.
+
+### D3. Hard caps: 500 lines per file, 4500 lines sum
+- **Decision**: per-file cap = 500; sum cap = 4500; budgets per file = 90–450.
+- **Rationale**: round-1 briefs and V3 review cite 500/4500 as the spec-of-truth ceilings; sub-budgets are the operator hint.
+- **Evidence**: V3 [blocker] hard caps; reiterated in 06 / 09 / 10 footer rules. Confidence: verified-from-source (HITL gate + V3 review).
+
+### D4. Footers `<!-- end of file -->` vs `<!-- end of file: NN lines (budget BB) -->`
+- **Decision**: 00-index.md uses the bare `<!-- end of file -->` marker; all other files use `<!-- end of file: NN lines (budget BB) -->` so `tools/check_line_count.py --enforce-footer` can assert `NN == wc -l`.
+- **Rationale**: this file is the budget source of truth — its own footer cannot reference itself (chicken-and-egg). The other 13 files carry live-NN footers that the pre-commit hook validates.
+- **Evidence**: V6 RR5 footer-drift class + REC-2 spec. Confidence: inferred.
+
+### D5. 13 plan files, 14 deliverables (13 + README)
+- **Decision**: plan set = 00..13 (14 files); file map covers all of them.
+- **Rationale**: round-2/3 review added `13-script-3-report.md` for §5.7; 00-index grew an Actual/Total row for it.
+- **Evidence**: V3 review added Script #3 deliverable. Confidence: verified-from-source (V3 review + AC-7.1..AC-7.7 in 01).
 
 <!-- end of file -->

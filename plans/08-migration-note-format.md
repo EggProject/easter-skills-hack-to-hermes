@@ -178,4 +178,36 @@ The migration note is in English only (it is a technical artifact for downstream
 
 100% line + branch on the generation function. All branches (cap only / cap + Task E / cap + Task E no-schema / with-frozen-time / without / report present / report absent) covered.
 
-<!-- end of file: 181 lines (budget 180) -->
+## Decisions & evidence
+
+### D1. MIGRATION is a 3-file split (R11 fix)
+- **Decision**: `MIGRATION.md` (top-level index) + `MIGRATION.hermes-patch.md` (Script #1's sites) + `MIGRATION.skill-port.md` (migrated skill T3 inventory). All three source-controlled at the worktree root.
+- **Rationale**: the three files serve three different audiences (operators running Script #1, operators reviewing the skill body, downstream AI agents). Splitting keeps each file bite-sized.
+- **Evidence**: V3 [refuted claim 10] + V5 R11 reaffirmation; HITL-confirmed Q5; AC-5.1 in 01. Confidence: verified-from-source.
+
+### D2. Pinned upstream commit `2a40fd2e...` is TBD until verified (R10 fix)
+- **Decision**: the pinned upstream Anthropic commit is `2a40fd2e7c52207aa903bd33fc4c65716126966e` (the vendored source at `research/anthropic-skill-creator-original/`). The GitHub SHA MUST be independently verified at Phase 5 implementation time before being emitted into `MIGRATION.*`.
+- **Rationale**: round-2 review found the SHA was quoted without independent verification. Pinning to a vendored source (rather than a WebFetch claim) is the verifiable source of truth.
+- **Evidence**: V5 R10; 08 §GitHub issue verification; `research/anthropic-skill-creator-original/` (vendored). Confidence: verified-from-source (vendored); assumed (GitHub SHA match pending re-verify).
+
+### D3. GitHub issues `#46005` and `#46024` are NOT in `MIGRATION.*` until verified (R10 fix)
+- **Decision**: `#46005` and `#46024` are TBD. They MUST NOT be emitted into `MIGRATION.hermes-patch.md` or `MIGRATION.md` until each is independently verified via WebFetch at Phase 5 implementation time.
+- **Rationale**: round-1/2 plans cited these IDs as confirmed; round-2 review found no independent verification. The generator's "GitHub issue" field is left blank (or `TBD`) for these IDs.
+- **Evidence**: V5 R10; 08 §GitHub issue verification; R3 in 12. Confidence: assumed (pending WebFetch verification).
+
+### D4. Script #3 has NO `--emit-migration-note` (R11)
+- **Decision**: Script #3 is STDOUT + `--json PATH` ONLY. There is no `MIGRATION.report.md`, no `--emit-migration-note` flag, no `--write-report` flag.
+- **Rationale**: a read-only reporter that writes a MIGRATION note violates the read-only contract. STDOUT + optional JSON keeps the contract trivially auditable.
+- **Evidence**: V5 R11; AC-7.1 in 01; `test_report_no_migration_report_file_emitted` + `test_report_rejects_emit_migration_note_flag` in 13. Confidence: verified-from-source.
+
+### D5. Row counts are computed at runtime from the sites table
+- **Decision**: `--emit-migration-note` row counts are computed from the live sites table: 1 (default), 1+7=8 (with `--task-e-redirect`), 1+6=7 (with `--task-e-redirect --no-schema-redirect`). The T3 row count == 18 (the number of rows in 07's T3 inventory).
+- **Rationale**: hard-coded counts have drifted in past rounds; computing from the live tables removes that drift.
+- **Evidence**: V3 [major M4]; 08 §Exhaustiveness; AC-5.5 in 01. Confidence: verified-from-source.
+
+### D6. Determinism: frozen timestamp + LF endings + no trailing whitespace
+- **Decision**: the migration note uses `HERMES_SKILL_CREATOR_FROZEN_TIME` for `generated_at` when set (CI always sets it); LF line endings; no trailing whitespace; tables sorted by `site_id` (patch file) and row number (skill-port file).
+- **Rationale**: byte-identical output across runs is required for both snapshot tests and downstream-agent diffs.
+- **Evidence**: 08 §Determinism; `test_migration_note_deterministic` + `test_migration_note_anchors_match_inventory` in this file. Confidence: inferred.
+
+<!-- end of file: 213 lines (budget 220) -->

@@ -117,7 +117,34 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 - **AC-4.6** tightened: nesting-guard helper is the single source of truth; parent process never `os.environ.pop`s. (Fixes [refuted claim 11] env-var centralization.)
 - **AC-1.4** rewritten: plugin is purely advisory; skill is surfaced by Script #2's flat-path install. `register_skill` cannot achieve `<available_skills>` visibility. (V3 [blocker B3] plugin API mismatches + [blocker B4] standalone skill.)
 - **AC-7.x** (NEW cluster): Script #3 read-only profile-skill token + usage reporter per brief §5.7.
-- **00-index.md** arithmetic is the source of truth (total Actual 2814, total Budget 3570). Breakdown includes `13-script-3-report.md` (236 lines) and `06-script-2-profiles.md` (238 lines, was 185).
+- Per-file line counts and totals are the single source of truth in `plans/00-index.md` (file map + budget table). Do NOT restate them here — that is exactly what kept drifting round-over-round. See 00-index for the live values.
 - All hard line-number citations in AC text replaced with symbol + anchor-text references per V3 [major M3].
 
-<!-- end of file: 123 lines (budget 150) -->
+## Decisions & evidence
+
+### D1. MIGRATION split is 3 files (R11 fix)
+- **Decision**: `MIGRATION.md` (index) + `MIGRATION.hermes-patch.md` (Script #1 sites) + `MIGRATION.skill-port.md` (migrated skill T3 inventory). All three source-controlled at the worktree root.
+- **Rationale**: round-1 single-file `MIGRATION.md` conflated two audiences (operators running Script #1 vs. operators reviewing the skill body). Splitting by audience makes each file bite-sized and AI-readable.
+- **Evidence**: V3 [refuted claim 10] + V5 R11 reaffirmation + HITL-confirmed Q5. Confidence: verified-from-source.
+
+### D2. Script #3 is READ-ONLY (R11 fix)
+- **Decision**: Script #3 (`hermes-skill-creator-report`) is STDOUT + `--json PATH` only. No `--emit-migration-note`, no `MIGRATION.report.md`, no `--write-report`. The only filesystem write is the operator-chosen `--json PATH` (default `./skill-report.json` under cwd, outside the fixture tree).
+- **Rationale**: a read-only reporter that writes a MIGRATION note violates the "no state mutation" contract and would need a sentinel test of its own. STDOUT + optional JSON keeps the contract trivially auditable.
+- **Evidence**: V5 R11 (script #3 lacks `--emit-migration-note`); AC-7.1 in this file; `test_report_read_only_zero_writes` in 09 and 13. Confidence: verified-from-source.
+
+### D3. AC-7 cluster per brief §5.7
+- **Decision**: new AC-7.1..AC-7.7 cluster covers Script #3 (READ-ONLY reporter). The cluster sits alongside 1.x..6.x and is referenced from 09, 10, 11, 13.
+- **Rationale**: V3 added Script #3 as a new brief section; without a dedicated AC cluster, the reporter's contract would be scattered across cross-references.
+- **Evidence**: brief §5.7; V3 review; AC-7.1..AC-7.7 in this file. Confidence: verified-from-source.
+
+### D4. Hard numbers dropped from 01:120 (REC-3, RR4 fix)
+- **Decision**: the prose "see 00-index.md budget table (single source of truth)" replaces the round-1 hard-coded "2814 total" + "236 lines" citation at the 01:120 area.
+- **Rationale**: round-3 review found these hard numbers were stale; the budget table is the live source of truth.
+- **Evidence**: V6 RR4. Confidence: verified-from-source.
+
+### D5. AC-1.4 / AC-4.1 rewritten: skill is standalone, plugin does NOT register_skill (B4)
+- **Decision**: the migrated `skill-creator` lives at the worktree-root `skills/skill-creator/` (NOT inside `src/hermes_skill_creator_plugin/`); the plugin NEVER calls `ctx.register_skill('skill-creator', ...)`. The skill is installed by Script #2's `do_install` into `~/.hermes/skills/skill-creator/`.
+- **Rationale**: `ctx.register_skill` does NOT place a plugin-registered skill in the flat `~/.hermes/skills/` tree and does NOT list it in `<available_skills>`. Only a flat-path install achieves system-prompt index visibility. A plugin-namespaced skill also fails the standalone-deliverable requirement.
+- **Evidence**: V3 [blocker B3 / B4]; HITL-confirmed Q5. Confidence: verified-from-source.
+
+<!-- end of file: 150 lines (budget 150) -->

@@ -44,8 +44,8 @@
 
 ### Q6 — Per-file line budget table
 
-- **Question**: is the per-file line budget (00 90, 01 150, 02 200, 03 250, 04 400, 05 250, 06 400, 07 450, 08 180, 09 300, 10 250, 11 200, 12 200, 13 250; sum 3570 < 4500) approved?
-- **Proposed default**: yes.
+- **Question**: is the per-file line budget approved?
+- **Proposed default**: yes. See `plans/00-index.md` for the per-file budget table (single source of truth; live values auto-generated from `wc -l`). The default sum-budget is 3570; the hard cap is 500 lines per file and 4500 lines total.
 - **Resolution path**: HITL gate. Pre-commit hook `check_line_count.py` enforces it.
 - **Escalation**: if any file blows the budget, the plan is rejected and that file is split or trimmed.
 
@@ -158,7 +158,7 @@
 | E3 | 2026-06-17 | (Q3) per-profile dir set | `_PROFILE_DIRS = {memories, sessions, skills, skins, logs, plans, workspace, cron, home}` per `hermes_cli/profiles.py:_PROFILE_DIRS` | default accepted | Script #2 re-reads `hermes_cli/profiles.py:_PROFILE_DIRS` at Phase 5 implementation; if the list changed, 06 is updated. |
 | E4 | 2026-06-17 | (Q4) cap-raise safety contract | --target REQUIRED, no runtime monkey-patch | **accepted** (--target REQUIRED + advisory-only) | Runtime monkey-patch removed from the plan; plugin is purely advisory (static AST read of user-owned checkout); Script #1 refuses to run if `--target == ~/.hermes/hermes-agent`. |
 | E5 | 2026-06-17 | (Q5) MIGRATION split | 3 files | **3 files** (confirmed) | `MIGRATION.md` (index) + `MIGRATION.hermes-patch.md` (Script #1's cap-raise + 7 Task E sites) + `MIGRATION.skill-port.md` (T3 inventory of 18 Claude-binding replacements). All three source-controlled. |
-| E6 | 2026-06-17 | (Q6) line budget | 3570 sum | default accepted | pre-commit hook `tools/check_line_count.py` enforces per-file budget; sum < 4500. |
+| E6 | 2026-06-17 | (Q6) line budget | 3570 sum (see 00-index for per-file table) | default accepted | pre-commit hook `tools/check_line_count.py` enforces per-file budget; sum < 4500; 00-index is single source of truth. |
 | E7 | 2026-06-17 | (Q7) bilingual format | `[en] text / [hu] szöveg` single line + two-section `--help` | default accepted | pre-commit `tools/check_bilingual.py` enforces console format; `test_help_is_bilingual` enforces the two-section structure. |
 | E8 | 2026-06-17 | (Q8) installer interactive safety | TTY confirm + `--yes` bypass | default accepted | Installer prompts in TTY, refuses real `~/.hermes` without `--yes`; integration tests use `tmp_path HERMES_HOME` + `--yes`. |
 | E9 | 2026-06-17 | (Q9) active-cap detection | refuse if desc > active cap | **refuse + bilingual error** (confirmed) | Installer detects active cap (60 vs 1024) by static AST read of target; refuses install with bilingual error if description exceeds the cap; `--with-short-description` flag substitutes the truncated form. Tests cover both cap states. |
@@ -173,4 +173,31 @@
 - The 60-char code-point slicing (vs grapheme slicing) in `extract_skill_description` is a known limitation. If i18n skill descriptions include ZWJ-emoji, the slice may split a grapheme. This is documented in 04 (the patch inherits the same behaviour, with the same limitation). Fixing it (grapheme-safe slicing) is OUT OF SCOPE for this plan; follow-up work.
 - Registering the migrated `skill-creator` via the plugin's `ctx.register_skill(...)` is OUT OF SCOPE. `register_skill` does not place a plugin-registered skill in the flat `~/.hermes/skills/` tree and does not surface it in the system prompt `<available_skills>` index. The skill is shipped standalone and installed flat (see PC4).
 
-<!-- end of file: 176 lines (budget 200) -->
+## Decisions & evidence
+
+### D1. Q1–Q11 defaults (HITL-confirmed where indicated)
+- **Decision**: each open question has a proposed default. Q1 (`HERMES_SESSION`), Q4 (`--target REQUIRED` + advisory-only plugin), Q5 (MIGRATION 3-file split), and Q9 (active-cap detection with bilingual error) are HITL-confirmed (memory: `hermes-skills-hitl-decisions.md`). Q2 / Q3 / Q6 / Q7 / Q8 / Q10 / Q11 are pending Phase 5 re-verify but their defaults stand.
+- **Rationale**: explicit defaults unblock Phase 5 implementation; escalation paths are documented per question.
+- **Evidence**: 12 §Open questions Q1–Q11 + §Escalation log E1–E9. Confidence: verified-from-source (HITL log for Q1/Q4/Q5/Q9); inferred (defaults for the rest pending Phase 5 re-verify).
+
+### D2. R1–R7 residual risks + PC1–PC5 plan-craft risks
+- **Decision**: each residual risk (R1–R7) is documented with its mitigation. Plan-craft risks (PC1–PC5) are explicitly closed (V3 [blocker / major] fixes).
+- **Rationale**: risk documentation makes trade-offs visible; PC1–PC5 cover the V3 round-1 issues that drove the plan rework.
+- **Evidence**: 12 §Residual risks + §Plan-craft risks. Confidence: verified-from-source.
+
+### D3. 00-index is the single source of truth for budgets (REC-3)
+- **Decision**: 12 references `plans/00-index.md` for per-file budgets. 12 does NOT restate the per-file counts or the sum; any round that drifted is corrected by pointing to the live table.
+- **Rationale**: round-1/2/3 review found hard-coded counts drifted; centralizing the source of truth removes parallel-truth drift.
+- **Evidence**: V6 REC-3 + Q6 default; 12 Q6 §Resolution path; `tools/check_line_count.py --enforce-budget-table` in 10. Confidence: verified-from-source.
+
+### D4. Escalation log table is the HITL audit trail
+- **Decision**: 12 §Escalation log enumerates E1..E9 with date, question, default, HITL decision, and action taken. The table is the single audit trail for Phase 4 HITL decisions.
+- **Rationale**: HITL decisions are load-bearing; an audit trail is required so the next reviewer can re-trace any default.
+- **Evidence**: 12 §Escalation log; memory: `hermes-skills-hitl-decisions.md`. Confidence: verified-from-source.
+
+### D5. GitHub issue IDs `#46005` and `#46024` are NOT in `MIGRATION.*` until verified (R10)
+- **Decision**: `#46005` and `#46024` are TBD. They MUST NOT be emitted into `MIGRATION.hermes-patch.md` or `MIGRATION.md` until each is independently verified via WebFetch at Phase 5 implementation time.
+- **Rationale**: round-1/2 plans cited these IDs as confirmed without independent verification. R3 here explicitly downgrades them to TBD.
+- **Evidence**: V5 R10; 12 R3; 08 §GitHub issue verification. Confidence: assumed (pending WebFetch verification).
+
+<!-- end of file: 203 lines (budget 200) -->

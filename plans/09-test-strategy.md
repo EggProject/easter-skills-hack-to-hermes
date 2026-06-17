@@ -17,14 +17,14 @@
 ```
                           E2E (sparse)
                          /             \
-              Integration (per-file)     Contract (T3 inventory)
+              Integration (per-file)     Contract (C3 inventory)
                    /         \               |
               Unit (per-function)        Snapshot (--help, MIGRATION.md)
 ```
 
 - **Unit** — pure logic, no Hermes installation reads. Mock `agent.skill_utils`, `hermes_cli.*`, `tools.skill_manager_tool`. Run in < 1s per test.
 - **Integration** — uses a fixture HERMES_HOME under `tmp_path`. Exercises the installer's file copy, Script #1's atomic write, Script #2's per-profile apply, Script #3's read-only probe. The fixture NEVER touches the real `~/.hermes/`. Run in < 30s per test.
-- **Contract** — T3 inventory: one test per binding replacement; reads the migrated file and asserts the forbidden string is absent and the Hermes string is present.
+- **Contract** — C3 inventory: one test per binding replacement; reads the migrated file and asserts the forbidden string is absent and the Hermes string is present.
 - **Snapshot** — `--help` output (bilingual format), `MIGRATION.md` (deterministic), frontmatter after install.
 - **E2E** — one or two flows: (a) fresh `tmp_path` Hermes install → run install → run Script #1 (against a separate user-owned checkout fixture) → run Script #2 → run Script #3 (read-only) → start a fake Hermes session and assert `skills_list` returns `skill-creator`. Bounded to < 5 minutes.
 
@@ -189,6 +189,11 @@ Script #3 is REPORT-ONLY. A separate fixture (`hermes_home_writable` above) wrap
 - `test_wemake_clean` — `flake8 src/` (wemake-python-styleguide) exits 0.
 - `test_pre_commit_hooks_installed_and_passing` — `pre-commit run --all-files` exits 0.
 
+### Anchor-uniqueness meta-tests (REC-1, the systemic fix for the fabricated-anchor class)
+- `test_task_e_current_text_is_unique_in_source` — for EACH Task-E / patch-site `current_text` entry in `05`'s site table, grep the **real** Hermes source (the five canonical sites: `tools/skill_manager_tool.py`, `agent/prompt_builder.py`, `agent/background_review.py`, `website/docs/user-guide/features/skills.md`, `agent/skill_utils.py`) for the literal `current_text` string. Assert hit count == 1 (exactly one match). If hit count == 0 → fail with `TEXT_DRIFT` (the site cannot be located in the pinned Hermes checkout — Script #1 will ABORT in production). If hit count > 1 → fail with `NON_UNIQUE_ANCHOR` (the site is ambiguous — Script #1 could patch the wrong location). For E6 specifically (`SKILL_MANAGE_SCHEMA` description), the test asserts the COMPOUND anchor (the 3-line sequence `SKILL_MANAGE_SCHEMA = {` / `    "name": "skill_manage",` / `    "description": (`) resolves to exactly one occurrence AND the first-line text of that description matches the byte-for-byte string `"Manage skills (create, update, delete). Skills are your procedural memory — ..."`. This test is the systemic fix for the fabricated-anchor bug class: E4 (the `extract_skill_description` cap-raise) and E6 (the `SKILL_MANAGE_SCHEMA` description) survived Rounds 1, 2, AND 3 of review. Had this test existed in Round 1, both would have failed on day one.
+- `test_patch_anchor_current_text_byte_for_byte` — for each `current_text` in the site table, read the file at the resolved location and assert the substring equals the `current_text` field byte-for-byte (no whitespace drift, no ellipsis-vs-unicode drift, no smart-quote-vs-straight-quote drift). Used after `test_task_e_current_text_is_unique_in_source` passes to guarantee the located site is the site the plan claims to patch.
+- `test_seed_minimal_anchors_match_real_hermes` — the `seed_minimal` fixture is the test-time stand-in for the real Hermes checkout. This test asserts that every anchor line in `seed_minimal` (the function def, the cap-raise site, the slice, the `MAX_DESCRIPTION_LENGTH` constant) matches the corresponding line in the **real** Hermes source. If the fixture drifts away from upstream, the integration test for Script #1 patches against stale anchors and reports a false PASS.
+
 ### Seed-minimal-fixture meta-tests
 - `test_seed_minimal_matches_patch_anchors` — runs `seed_minimal(tmp_checkout)`; reads `agent/skill_utils.py` and `tools/skills_tool.py`; asserts the 4 anchor lines match the contract table (function def for `extract_skill_description`, cap-raise site `if len(desc) > 60:`, replacement target `return desc[:57] + "..."`, `MAX_DESCRIPTION_LENGTH = 1024` at line 95). This is the meta-test that the fixture stays in sync with Script #1's patch anchors.
 - `test_seed_minimal_patched_variant_replaces_literal_60` — runs `seed_minimal_patched(tmp_checkout)`; asserts the cap-raise site of `agent/skill_utils.py` contains `MAX_DESCRIPTION_LENGTH` and NOT the literal `60`; AND the slice is `desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` (the cap-raise patch is complete — comparator AND slice are both updated).
@@ -344,4 +349,44 @@ def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checko
     ...
 ```
 
-<!-- end of file: 345 lines (budget 300) -->
+## Decisions & evidence
+
+### D1. TDD-first, 100% line + branch coverage (HARD)
+- **Decision**: every code file is written test-first. The CI gate is `pytest --cov --cov-branch --cov-fail-under=100`. < 100% line OR branch coverage fails the build.
+- **Rationale**: TDD forces each binding replacement to have a contract test before the implementation lands; 100% branch coverage closes the "untested error path" class of bugs.
+- **Evidence**: V3 [blocker from testability lens]; AC-6.2 in 01; `test_coverage_100_percent_enforced` in this file. Confidence: verified-from-source.
+
+### D2. `T3.*` (skill-port) vs `C3.*` (contract) namespace separation (R5 fix)
+- **Decision**: the skill-port inventory (07) uses `T3.*` IDs (T3.001..T3.018); this file's contract inventory uses `C3.*` IDs (C3.001..C3.018). The two namespaces do NOT collide.
+- **Rationale**: round-2 review found the test-pyramid prose calling the contract inventory `T3 inventory`, contradicting 09's own C3 namespace and confusing cross-references.
+- **Evidence**: V5 R5; 09 §C3 contract inventory namespace note. Confidence: verified-from-source.
+
+### D3. `test_task_e_current_text_is_unique_in_source` (REC-1)
+- **Decision**: every Task-E / patch-site `current_text` in 05's site table is asserted UNIQUE in the real Hermes source. Hit count == 1. Hit count == 0 → fail with `TEXT_DRIFT`; hit count > 1 → fail with `NON_UNIQUE_ANCHOR`.
+- **Rationale**: round-1/2/3 review found fabricated anchors (e.g., the round-1/2 E6 `"Create, edit, patch, delete, write_file, or remove_file"` with 0 hits) caused Script #1 to abort on a default-on patch. A meta-test that greps the real source for each `current_text` closes the fabricated-anchor class.
+- **Evidence**: V6 RR1 + REC-1. Confidence: verified-from-source.
+
+### D4. Extended `check_line_count.py` spec: footer == wc -l, Total == sum (REC-2)
+- **Decision**: `tools/check_line_count.py --enforce-footer --enforce-budget-table` asserts THREE invariants on plan files:
+  1. per-file cap (<= 500 lines)
+  2. footer drift (`<!-- end of file: NN lines (budget BB) -->` with `NN == wc -l`)
+  3. 00-index budget table (`Total` cell AND `Sum NNNN` prose == live `wc -l` sum)
+- **Rationale**: round-1/2/3 review found footers drifted (00 footer mismatch in R2; 09 footer mismatch in R2; 00-index Total mismatch in R2). Hard-coding the three invariants in the pre-commit hook closes that drift class.
+- **Evidence**: V6 RR2 + RR5 + REC-2; 10 §Extended check_line_count.py spec. Confidence: verified-from-source.
+
+### D5. No-touch sentinel: `~/.hermes/hermes-agent/agent/skill_utils.py` sha256
+- **Decision**: the `@assert_hermes_agent_untouched` decorator wraps every Script #1 unit test. It snapshots the sha256 of `~/.hermes/hermes-agent/agent/skill_utils.py` at test start and asserts it is unchanged at test end. If the file is missing, the test `pytest.skip`s.
+- **Rationale**: a stray write to the installed Hermes would be silent and catastrophic. The sentinel forces any such write to fail loudly.
+- **Evidence**: V3 [blocker from safety lens] no-touch sentinel; `real_hermes_agent_sentinel` fixture in this file. Confidence: verified-from-source.
+
+### D6. Read-only sentinel for Script #3: fixture tree sha256 before/after
+- **Decision**: Script #3 tests use the `hermes_home_writable` fixture. Before and after every run, the fixture walks the tree and asserts byte-identical snapshots (file list, sizes, mtimes). The reporter MUST NOT create, modify, or delete any file under HERMES_HOME.
+- **Rationale**: a read-only reporter that quietly writes a temp file or sorts in place would still violate the contract; the sentinel closes that class.
+- **Evidence**: V5 R11 + AC-7.1 in 01; `test_report_read_only_zero_writes` in this file and 13. Confidence: verified-from-source.
+
+### D7. Seed-minimal fixture contract: `tests/fixtures/minimal_hermes/seed_minimal.py`
+- **Decision**: the `hermes_checkout` fixture calls `seed_minimal(checkout)` to lay down the minimum tree Script #1's pre-validation can resolve. The fixture writes exactly 6 files (4 anchor + 2 empty `__init__.py`). A patched variant replaces `60` with `MAX_DESCRIPTION_LENGTH` and the slice `desc[:57]` with `desc[:MAX_DESCRIPTION_LENGTH - 3]`.
+- **Rationale**: a fixture that drifts from the real Hermes anchors would let integration tests report a false PASS. The meta-test `test_seed_minimal_matches_patch_anchors` catches the drift at the fixture level.
+- **Evidence**: 09 §Seed-minimal-fixture contract; 09 §Coverage matrix; `test_seed_minimal_matches_patch_anchors` + `test_seed_minimal_patched_variant_completes_cap_raise` in this file. Confidence: verified-from-source.
+
+<!-- end of file: 392 lines (budget 400) -->
