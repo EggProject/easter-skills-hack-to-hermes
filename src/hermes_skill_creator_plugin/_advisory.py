@@ -34,10 +34,11 @@ from pathlib import Path
 UNPATCHED_CAP = 60
 # Pin: the constant the patched function uses.
 PATCHED_CAP_REFERENCE = "MAX_DESCRIPTION_LENGTH"
-# Sentinel return values.
-_PATCHED = "patched"
-_UNPATCHED = "unpatched"
-_UNKNOWN = "unknown"
+# Sentinel return values (public so register() can compare without importing
+# leading-underscore names from another module).
+PATCHED_STATE = "patched"
+UNPATCHED_STATE = "unpatched"
+UNKNOWN_STATE = "unknown"
 
 
 def resolve_target_dir() -> Path:
@@ -63,11 +64,11 @@ def detect_cap_state(target_dir: Path) -> str:
     """
     skill_utils = target_dir / "agent" / "skill_utils.py"
     if not skill_utils.exists():
-        return _UNKNOWN
+        return UNKNOWN_STATE
     try:
         tree = ast.parse(skill_utils.read_text(encoding="utf-8"))
     except SyntaxError:
-        return _UNKNOWN
+        return UNKNOWN_STATE
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "extract_skill_description":
             for sub in ast.walk(node):
@@ -77,13 +78,13 @@ def detect_cap_state(target_dir: Path) -> str:
                             isinstance(comparator, ast.Constant)
                             and comparator.value == UNPATCHED_CAP
                         ):
-                            return _UNPATCHED
+                            return UNPATCHED_STATE
                         if (
                             isinstance(comparator, ast.Name)
                             and comparator.id == PATCHED_CAP_REFERENCE
                         ):
-                            return _PATCHED
-    return _UNKNOWN
+                            return PATCHED_STATE
+    return UNKNOWN_STATE
 
 
 def should_emit_advisory(advisory_marker: Path) -> bool:

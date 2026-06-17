@@ -17,7 +17,7 @@ TDD test cases for this module:
     test_register_emits_advisory_when_cap_unpatched
     test_register_silent_when_target_unknown
     test_register_silent_when_marker_already_seen
-    test_register_warns_when_hermes_home_unset
+    test_register_silent_when_hermes_home_unset
     test_register_callable_in_package_init
 
 See also: docs/plans/03-plugin-spec.md
@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from ._advisory import (
+    UNPATCHED_STATE,
     detect_cap_state,
     emit_advisory,
     resolve_target_dir,
@@ -53,7 +54,8 @@ def register(ctx: _PluginCtx) -> None:
     """Single entry point invoked by hermes_cli.plugins at plugin load.
 
     Detects the cap state, emits a one-time bilingual advisory via ctx.log,
-    and wires the on_session_start hook for downstream consumers.
+    and always wires the on_session_start hook (which is a no-op stub for
+    downstream consumers; the one-time marker enforces advisory semantics).
 
     Per the Phase 5 safety contract: NEVER writes to HERMES_HOME except for
     the best-effort, idempotent marker file under $HERMES_HOME. NEVER calls
@@ -61,22 +63,20 @@ def register(ctx: _PluginCtx) -> None:
     """
     target = resolve_target_dir()
     state = detect_cap_state(target)
-    if state != "unpatched":
-        ctx.register_hook("on_session_start", _on_session_start)
+    ctx.register_hook("on_session_start", _on_session_start)
+
+    if state != UNPATCHED_STATE:
         return
 
     hermes_home_env = os.environ.get("HERMES_HOME")
     if not hermes_home_env:
         # No HERMES_HOME => no marker path => cannot implement one-time
         # semantics. Stay silent rather than guessing the live install path.
-        ctx.register_hook("on_session_start", _on_session_start)
         return
     advisory_marker = Path(hermes_home_env) / _ADVISORY_MARKER_FILENAME
     if should_emit_advisory(advisory_marker):
         ctx.log(f"{ADVISORY_CAP_EN} / {ADVISORY_CAP_HU}")
         emit_advisory(advisory_marker)
-
-    ctx.register_hook("on_session_start", _on_session_start)
 
 
 def _on_session_start() -> None:

@@ -10,6 +10,7 @@ TDD list (from plan):
   test_register_emits_advisory_when_cap_unpatched
   test_register_silent_when_target_unknown
   test_register_silent_when_marker_already_seen
+  test_register_warns_when_hermes_home_unset
 """
 
 from __future__ import annotations
@@ -43,14 +44,12 @@ def _write_unpatched_skill_utils(target: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent(
-            """\
+        textwrap.dedent("""\
             def extract_skill_description(desc):
                 if len(desc) > 60:
                     return desc[:60]
                 return desc
-            """
-        ),
+            """),
         encoding="utf-8",
     )
 
@@ -59,15 +58,13 @@ def _write_patched_skill_utils(target: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent(
-            """\
+        textwrap.dedent("""\
             def extract_skill_description(desc):
                 MAX_DESCRIPTION_LENGTH = 1024
                 if len(desc) > MAX_DESCRIPTION_LENGTH:
                     return desc[:MAX_DESCRIPTION_LENGTH]
                 return desc
-            """
-        ),
+            """),
         encoding="utf-8",
     )
 
