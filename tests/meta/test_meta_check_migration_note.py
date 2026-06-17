@@ -18,6 +18,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from tools import check_migration_note
 from tools.check_migration_note import (
     GENERATED_MARKER,
@@ -29,19 +31,15 @@ from tools.check_migration_note import (
 def _write_migration(
     tmp_path: Path, name: str, body: str, *, register_in_manifest: bool = True
 ) -> Path:
-    """Drop a MIGRATION*.md at the worktree root and (optionally) register its sha in the manifest."""
+    """Drop a MIGRATION*.md and (optionally) register its sha in the manifest."""
     target = tmp_path / name
     target.write_text(f"{GENERATED_MARKER}\n{body}\n", encoding="utf-8")
     if register_in_manifest:
         manifest = {}
         if (tmp_path / MANIFEST_PATH.name).exists():
-            manifest = json.loads(
-                (tmp_path / MANIFEST_PATH.name).read_text(encoding="utf-8")
-            )
+            manifest = json.loads((tmp_path / MANIFEST_PATH.name).read_text(encoding="utf-8"))
         manifest[name] = hashlib.sha256(target.read_bytes()).hexdigest()
-        (tmp_path / MANIFEST_PATH.name).write_text(
-            json.dumps(manifest), encoding="utf-8"
-        )
+        (tmp_path / MANIFEST_PATH.name).write_text(json.dumps(manifest), encoding="utf-8")
     return target
 
 
@@ -60,9 +58,7 @@ def test_unmodified_migration_file_passes(tmp_path: Path, monkeypatch) -> None:
     assert check_migration_files(tmp_path) == []
 
 
-def test_hand_edit_to_migration_hermes_patch_md_fails(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_hand_edit_to_migration_hermes_patch_md_fails(tmp_path: Path, monkeypatch) -> None:
     """Hand-editing a tracked MIGRATION*.md (sha no longer matches manifest) => finding."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
@@ -75,9 +71,7 @@ def test_hand_edit_to_migration_hermes_patch_md_fails(
     assert any("differs from" in f.message for f in findings)
 
 
-def test_hand_edit_to_migration_skill_port_md_fails(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_hand_edit_to_migration_skill_port_md_fails(tmp_path: Path, monkeypatch) -> None:
     """Hand-editing MIGRATION.skill-port.md (sha no longer matches manifest) => finding."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
@@ -106,9 +100,7 @@ def test_generated_marker_missing_fails(tmp_path: Path, monkeypatch) -> None:
     assert any("missing generated marker" in f.message for f in findings)
 
 
-def test_manifest_missing_fails_when_migration_file_present(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_manifest_missing_fails_when_migration_file_present(tmp_path: Path, monkeypatch) -> None:
     """A git-tracked MIGRATION*.md without a manifest entry => finding."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
@@ -159,9 +151,7 @@ def test_unreadable_migration_file_yields_finding(tmp_path: Path, monkeypatch) -
     assert any("could not read" in f.message for f in findings)
 
 
-def test_manifest_with_garbage_json_returns_empty_dict(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_manifest_with_garbage_json_returns_empty_dict(tmp_path: Path, monkeypatch) -> None:
     """A non-JSON manifest MUST be treated as empty (no crash)."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     manifest = tmp_path / MANIFEST_PATH.name
@@ -221,9 +211,7 @@ def test_main_with_argv_none_uses_sys_argv(
     assert rc == 0
 
 
-def test_main_module_invocation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_module_invocation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The __main__ block MUST be importable (covers line 161)."""
     import importlib
 
@@ -238,6 +226,7 @@ def test_is_git_tracked_returns_false_on_called_process_error(
     import subprocess as sp
 
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
+
     # Patch the module's `subprocess` reference so the function sees the patched call.
     def raising(*args: object, **kwargs: object) -> str:
         raise sp.CalledProcessError(1, "git")
@@ -262,22 +251,16 @@ def test_is_git_tracked_returns_false_on_empty_output(
 ) -> None:
     """_is_git_tracked MUST return False when git outputs an empty string."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        check_migration_note.subprocess, "check_output", lambda *a, **k: ""
-    )
+    monkeypatch.setattr(check_migration_note.subprocess, "check_output", lambda *a, **k: "")
     assert check_migration_note._is_git_tracked(tmp_path / "MIGRATION.md") is False
 
 
-def test_main_module_via_runpy(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_module_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The `if __name__ == '__main__'` block MUST be runnable in-process (line 161)."""
     import types
 
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name
-    )
+    monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
     monkeypatch.setattr("sys.argv", ["check_migration_note.py"])
     main_module = types.ModuleType("__main__")
     main_module.__dict__.update(check_migration_note.__dict__)

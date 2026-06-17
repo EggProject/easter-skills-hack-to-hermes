@@ -16,6 +16,8 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import pytest
+
 from tools import check_bilingual
 from tools.check_bilingual import (
     HELP_EN_SECTION,
@@ -163,9 +165,7 @@ def test_help_text_missing_en_section_fails(tmp_path: Path) -> None:
     assert any(HELP_EN_SECTION in f.message for f in findings)
 
 
-def test_check_runs_clean_on_this_worktree_skeleton(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_check_runs_clean_on_this_worktree_skeleton(tmp_path: Path, monkeypatch) -> None:
     """The hook MUST exit 0 against a clean synthetic fixture (bilingual everywhere)."""
     _write_src(
         tmp_path,
@@ -355,9 +355,7 @@ def test_skills_dir_is_walked(tmp_path: Path) -> None:
     """A file under skills/ MUST be walked by the detector."""
     skills = tmp_path / "skills"
     skills.mkdir()
-    (skills / "bad.py").write_text(
-        'def run() -> None:\n    print("[hu] csak")\n', encoding="utf-8"
-    )
+    (skills / "bad.py").write_text('def run() -> None:\n    print("[hu] csak")\n', encoding="utf-8")
     findings = run_all_checks(tmp_path)
     assert any("bilingual" in f.message for f in findings)
 
@@ -418,9 +416,7 @@ def test_string_value_fstring_with_non_constant_placeholder_returns_none() -> No
     assert check_bilingual._string_value(node) is None
 
 
-def test_main_module_invocation_via_runpy(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The `if __name__ == '__main__'` block MUST be runnable in-process (line 201)."""
     import types
 
@@ -529,9 +525,7 @@ def test_main_default_argv_uses_sys_argv(
     assert rc == 0
 
 
-def test_main_module_invocation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_module_invocation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """__main__ block MUST call main(); covered when imported as a module."""
     import runpy
     import sys

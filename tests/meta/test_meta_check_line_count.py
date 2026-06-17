@@ -33,9 +33,7 @@ from tools.check_line_count import (
 
 
 def _wc_l(path: Path) -> int:
-    return int(
-        subprocess.check_output(["wc", "-l", str(path)], text=True).split()[0]
-    )
+    return int(subprocess.check_output(["wc", "-l", str(path)], text=True).split()[0])
 
 
 def _build_synthetic_plans(
@@ -73,13 +71,8 @@ def _build_synthetic_plans(
     for fname, loc in rows.items():
         if fname == "00-index.md":
             continue
-        lines.append(
-            f"| 99 | `docs/plans/{fname}` | synthetic | [emitted] | "
-            f"{loc} | {loc} |"
-        )
-    lines.append(
-        f"| | **Total** | | | **{total_cell}** | **{total_cell}** |"
-    )
+        lines.append(f"| 99 | `docs/plans/{fname}` | synthetic | [emitted] | " f"{loc} | {loc} |")
+    lines.append(f"| | **Total** | | | **{total_cell}** | **{total_cell}** |")
     # Pad until we have exactly rows["00-index.md"] lines, then add the bare
     # marker as the last line. We pad BEFORE the marker so the final line is
     # the marker itself.
@@ -95,9 +88,7 @@ def _build_synthetic_plans(
 
 def test_per_file_cap_passes_when_all_files_under_500_loc(tmp_path: Path) -> None:
     """All files <= 500 LOC => no failures from invariant 1."""
-    _build_synthetic_plans(
-        tmp_path, rows={"00-index.md": 20, "01-overview.md": 50}, total_cell=70
-    )
+    _build_synthetic_plans(tmp_path, rows={"00-index.md": 20, "01-overview.md": 50}, total_cell=70)
     assert check_per_file_cap(tmp_path) == []
 
 
@@ -114,9 +105,7 @@ def test_per_file_cap_fails_when_a_file_exceeds_500_loc(tmp_path: Path) -> None:
 
 def test_footer_drift_passes_when_plan_footer_matches_actual(tmp_path: Path) -> None:
     """Footer NN == wc -l => no failures from invariant 2."""
-    _build_synthetic_plans(
-        tmp_path, rows={"00-index.md": 20, "01-overview.md": 50}, total_cell=70
-    )
+    _build_synthetic_plans(tmp_path, rows={"00-index.md": 20, "01-overview.md": 50}, total_cell=70)
     assert check_footer_drift(tmp_path) == []
 
 
@@ -124,9 +113,7 @@ def test_footer_drift_fails_when_plan_footer_is_stale(tmp_path: Path) -> None:
     """Stale footer NN != wc -l => invariant 2 fails."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
-    (plans / "00-index.md").write_text(
-        "# Index\n<!-- end of file -->\n", encoding="utf-8"
-    )
+    (plans / "00-index.md").write_text("# Index\n<!-- end of file -->\n", encoding="utf-8")
     target = plans / "01-overview.md"
     body = "\n".join("line" for _ in range(30)) + "\n"
     # Declare 25 but actual is 30
@@ -203,11 +190,7 @@ def test_check_runs_clean_on_this_worktree_skeleton(
 
 def test_check_is_readonly_and_writes_nothing(tmp_path: Path) -> None:
     """The hook MUST NOT create or modify any files inside the repo root."""
-    # Snapshot BEFORE the synthetic builder runs (an empty tree).
-    before = {str(p) for p in tmp_path.rglob("*")}
-    _build_synthetic_plans(
-        tmp_path, rows={"00-index.md": 20, "01-overview.md": 30}, total_cell=50
-    )
+    _build_synthetic_plans(tmp_path, rows={"00-index.md": 20, "01-overview.md": 30}, total_cell=50)
     # Snapshot AFTER builder; this is the baseline we must NOT extend.
     baseline = {str(p) for p in tmp_path.rglob("*")}
     _ = run_all_checks(tmp_path)
@@ -227,18 +210,14 @@ def test_iter_plan_files_returns_empty_when_plans_dir_missing(
 
 def test_iter_plan_files_excludes_index() -> None:
     """_iter_plan_files MUST exclude 00-index.md from the plan-only list."""
-    with pytest.MonkeyPatch.context() as mp:
-        import tempfile
+    import tempfile
 
-        with tempfile.TemporaryDirectory() as td:
-            plans = Path(td) / "docs" / "plans"
-            plans.mkdir(parents=True)
-            (plans / "00-index.md").write_text("# index\n", encoding="utf-8")
-            (plans / "01-foo.md").write_text("# foo\n", encoding="utf-8")
-            assert all(
-                p.name != "00-index.md"
-                for p in check_line_count._iter_plan_files(Path(td))
-            )
+    with tempfile.TemporaryDirectory() as td:
+        plans = Path(td) / "docs" / "plans"
+        plans.mkdir(parents=True)
+        (plans / "00-index.md").write_text("# index\n", encoding="utf-8")
+        (plans / "01-foo.md").write_text("# foo\n", encoding="utf-8")
+        assert all(p.name != "00-index.md" for p in check_line_count._iter_plan_files(Path(td)))
 
 
 def test_footer_drift_raises_when_index_missing_bare_marker(
@@ -278,9 +257,7 @@ def test_budget_table_total_raises_when_total_cell_missing(
     """When 00-index.md has no Total cell, invariant 3 MUST fail."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
-    (plans / "00-index.md").write_text(
-        "# Index\n<!-- end of file -->\n", encoding="utf-8"
-    )
+    (plans / "00-index.md").write_text("# Index\n<!-- end of file -->\n", encoding="utf-8")
     failures = check_budget_table_total(tmp_path)
     assert any("could not find Total cell" in f for f in failures)
 
@@ -400,9 +377,7 @@ def test_main_returns_1_when_failures(
     assert "FAIL" in out
 
 
-def test_main_returns_0_when_clean(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
-) -> None:
+def test_main_returns_0_when_clean(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     """main() MUST exit 0 against a perfectly-clean synthetic fixture."""
     _build_synthetic_plans(
         tmp_path,
@@ -571,9 +546,7 @@ def test_main_with_no_invariant_flags_disables_all(
         total_cell=999,  # would fail budget-table normally
     )
     monkeypatch.setattr(check_line_count, "REPO_ROOT", tmp_path)
-    rc = check_line_count.main(
-        ["--no-footer", "--no-budget-table", "--no-per-cell"]
-    )
+    rc = check_line_count.main(["--no-footer", "--no-budget-table", "--no-per-cell"])
     assert rc == 0
 
 
@@ -592,18 +565,12 @@ def test_main_uses_sys_argv_when_none(
     assert rc == 0
 
 
-def test_run_all_checks_with_each_disabled(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_all_checks_with_each_disabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """run_all_checks with enforce_*=False MUST short-circuit that invariant."""
-    _build_synthetic_plans(
-        tmp_path, rows={"00-index.md": 20, "01-overview.md": 30}, total_cell=50
-    )
+    _build_synthetic_plans(tmp_path, rows={"00-index.md": 20, "01-overview.md": 30}, total_cell=50)
     # If footer is off, the missing-footer case below is not flagged.
     plans = tmp_path / "docs" / "plans"
-    (plans / "01-overview.md").write_text(
-        "no footer here\n", encoding="utf-8"
-    )  # no footer
+    (plans / "01-overview.md").write_text("no footer here\n", encoding="utf-8")  # no footer
     failures = run_all_checks(tmp_path, enforce_footer=False)
     # Per-cell guard should still pass (Actual matches wc -l of 01-x.md).
     assert all("footer drift" not in f for f in failures)
@@ -715,10 +682,7 @@ def test_parse_file_map_total_row_skipped() -> None:
 
 def test_total_cell_value_fallback_unbold(tmp_path: Path) -> None:
     """_total_cell_value MUST also accept a non-bolded integer in the Total row (line 207-209)."""
-    index_text = (
-        "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n"
-        "| | Total | | | 5 | 5 |\n"
-    )
+    index_text = "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n" "| | Total | | | 5 | 5 |\n"
     assert check_line_count._total_cell_value(index_text) == 5
 
 
@@ -740,9 +704,7 @@ def test_budget_table_total_handles_unreadable_index(
     assert any("missing" in f and "00-index.md" in f for f in failures)
 
 
-def test_main_module_invocation_via_runpy(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The `if __name__ == '__main__'` block MUST be importable (line 351)."""
     import importlib
 
@@ -750,9 +712,7 @@ def test_main_module_invocation_via_runpy(
     assert hasattr(check_line_count, "main")
 
 
-def test_main_block_executes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_block_executes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The `if __name__ == '__main__':` block MUST be runnable in-process (line 348)."""
     import types
 
@@ -789,8 +749,5 @@ def test_per_cell_guard_raises_when_00_index_missing(
 def test_total_cell_value_no_integer_continues_loop() -> None:
     """When neither regex matches, the loop MUST continue to the next line (line 205->197)."""
     # A line with **Total** but no integer (e.g. truncated table).
-    text = (
-        "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n"
-        "| | **Total** | | | broken |\n"
-    )
+    text = "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n" "| | **Total** | | | broken |\n"
     assert check_line_count._total_cell_value(text) is None

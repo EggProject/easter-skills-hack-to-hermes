@@ -22,9 +22,7 @@ import pytest
 
 from tests import conftest
 from tests.conftest import (
-    HERMES_HOME,
     MINIMAL_HERMES_FILES,
-    assert_hermes_agent_untouched,
     hermes_subprocess_env,
     seed_minimal,
 )
