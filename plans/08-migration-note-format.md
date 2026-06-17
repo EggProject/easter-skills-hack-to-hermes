@@ -116,17 +116,17 @@ Script #3 (reporter) is STDOUT + `--json PATH` only — it does NOT write to the
 | 12 | agents/grader.md | Anthropic subagent YAML | Hermes `agent_name` registration | T3.012 |
 | 13 | agents/analyzer.md | same | same | T3.013 |
 | 14 | agents/comparator.md | same | same | T3.014 |
-| 15 | eval-viewer/generate_review.py \| invocation | `claude` invocation | `hermes` invocation; static HTML viewer | T3.015 |
-| 16 | scripts/run_eval.py \| output sink | `claude --output-format stream-json` redirected to file | `hermes` invocation writing to the eval log dir | T3.016 |
-| 17 | scripts/aggregate_benchmark.py | `claude`-driven narrative aggregation | static aggregator (no LLM) or `hermes`-driven | T3.017 |
-| 18 | scripts/generate_report.py | `claude`-driven markdown narrative | static template fill, optional `hermes` LLM step | T3.018 |
+| 15 | eval-viewer/generate_review.py | (host-agnostic per JSON evidence; no Claude binding) | preserved unchanged (stdlib HTTP server) | T3.015 |
+| 16 | scripts/run_loop.py | module docstring references claude -p (orchestrator) | module docstring rewritten to reference hermes -p (Hermes orchestrator) | T3.016 |
+| 17 | scripts/run_loop.py | TBD: any other claude/CLAUDECODE invocations in the loop body | replaced per Hermes equivalent (Phase 5 re-derive from vendored source) | T3.017 |
+| 18 | scripts/improve_description.py | RuntimeError(f"claude -p exited {rc}\n…") + comment-only claude -p rename | RuntimeError(f"hermes -p exited {rc}\n…") + comment-only hermes -p rename | T3.018 |
 
 ## Strength preservation
 
 | Strength | Artifact | Hermes equivalent | AC |
 | --- | --- | --- | --- |
 | Subagent split | agents/{grader,analyzer,comparator}.md | delegate_task + agent_name | T3.012-T3.014 |
-| Eval pipeline | scripts/{run_eval, aggregate_benchmark, generate_report, ...}.py | same scripts, Hermes CLI, event-shape adapter | T3.003, T3.011, T3.016-T3.018 |
+| Eval pipeline | scripts/{run_eval, aggregate_benchmark, generate_report, ...}.py | same scripts, Hermes CLI, event-shape adapter | T3.003, T3.011, T3.006 |
 | Eval viewer | eval-viewer/{generate_review.py, viewer.html} | generate_review.py --static, file:// URL | T3.015 |
 ```
 

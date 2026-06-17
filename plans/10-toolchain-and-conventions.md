@@ -199,8 +199,8 @@ repos:
         pass_filenames: false
 
       - id: check-line-count
-        name: Plan files <= 500 lines + footer matches wc -l + 00-index Total matches sum
-        entry: python tools/check_line_count.py --enforce-footer --enforce-budget-table
+        name: Plan files <= 500 lines + footer matches wc -l + 00-index Total matches sum + per-cell guard (Actual == wc -l per row; Budget == handed budget per row)
+        entry: python tools/check_line_count.py --enforce-footer --enforce-budget-table --enforce-per-cell
         language: system
         files: '^plans/.*\.md$'
         pass_filenames: false
@@ -228,21 +228,23 @@ repos:
 
 ### Extended check_line_count.py spec (REC-2, REC-3)
 
-`tools/check_line_count.py` enforces THREE invariants on plan files; failure of ANY aborts the commit.
+`tools/check_line_count.py` enforces FOUR invariants on plan files; failure of ANY aborts the commit.
 
 1. **Per-file cap.** Each `plans/*.md` MUST be `<= 500` lines.
 2. **Footer drift guard.** Each footer MUST be `<!-- end of file: NN lines (budget BB) -->` AND `NN` MUST equal the real `wc -l <file>`. `BB` is a human hint only.
 3. **00-index budget table guard.** `plans/00-index.md`'s `Total` cell AND its `Sum NNNN` prose token MUST equal the live sum of `wc -l` across every `plans/*.md`.
+4. **Per-cell guard.** For every 00-index file-map row, the per-file `Actual` cell MUST equal `wc -l` of that row's path, AND the per-file `Budget` cell MUST equal the budget value handed to the hook. Fail on any per-cell mismatch (before the aggregate Total==sum is computed). Closes the V1 drift class permanently.
 
-Per-file cap catches bloat; footer-drift catches "edited file, forgot footer" (bit 09 all three rounds and 08/10 in R2); 00-index guard catches "edited sibling, forgot Total". CLI:
+Per-file cap catches bloat; footer-drift catches "edited file, forgot footer" (bit 09 all three rounds and 08/10 in R2); 00-index guard catches "edited sibling, forgot Total"; per-cell guard catches "edited one row, hand-typed Total to mask it" (the V1 drift class that reopened in R7 and was hand-patched in R8). CLI:
 
 ```sh
-python tools/check_line_count.py                    # all three (default)
+python tools/check_line_count.py                    # all four (default)
 python tools/check_line_count.py --no-footer        # escape hatch only
 python tools/check_line_count.py --no-budget-table  # escape hatch only
+python tools/check_line_count.py --no-per-cell      # escape hatch only
 ```
 
-Pre-commit entry passes `--enforce-footer --enforce-budget-table` (both on by default in the script).
+Pre-commit entry passes `--enforce-footer --enforce-budget-table --enforce-per-cell` (all on by default in the script).
 
 ## Commit granularity
 
@@ -306,9 +308,9 @@ Pre-commit entry passes `--enforce-footer --enforce-budget-table` (both on by de
 - **Evidence**: HITL-confirmed Q7; 10 §Bilingual rule; `tools/check_bilingual.py` + `test_help_is_bilingual` in 09. Confidence: verified-from-source.
 
 ### D3. Extended `check_line_count.py` spec (REC-2, REC-3)
-- **Decision**: `tools/check_line_count.py` enforces THREE invariants on plan files (per-file cap, footer == wc -l, 00-index Total == live sum). Pre-commit passes `--enforce-footer --enforce-budget-table` (both on by default).
-- **Rationale**: hand-maintained footers and budget-table totals drifted in rounds 1/2/3; the hook catches drift at commit time.
-- **Evidence**: V6 REC-2 + REC-3; 10 §Extended check_line_count.py spec; 00-index D1/D2 in this round. Confidence: verified-from-source.
+- **Decision**: `tools/check_line_count.py` enforces FOUR invariants on plan files (per-file cap, footer == wc -l, 00-index Total == live sum, per-cell Actual==wc -l + Budget==budget). Pre-commit passes `--enforce-footer --enforce-budget-table --enforce-per-cell` (all on by default).
+- **Rationale**: hand-maintained footers and budget-table totals drifted in rounds 1/2/3; the per-cell guard closes the V1 drift class (single-row change with hand-typed Total to mask it) that the aggregate check still lets through — that class reopened in R7 and was hand-patched in R8. The hook now catches drift at commit time at every level (file, footer, aggregate, per-cell).
+- **Evidence**: V6 REC-2 + REC-3; V8 W2 review; 10 §Extended check_line_count.py spec; 00-index D1/D2/D6 in this round. Confidence: verified-from-source.
 
 ### D4. Worktree + PR workflow per file
 - **Decision**: every Phase 5 task runs in its own worktree under `.claude/worktrees/`. Branch name is `phase5/<task-letter>-<short-name>`. PR title is `Phase 5 / <task-letter>: <one-line summary>`. The PR MUST pass `uv run pytest` and the full pre-commit suite before merge.
@@ -330,4 +332,4 @@ Pre-commit entry passes `--enforce-footer --enforce-budget-table` (both on by de
 - **Rationale**: docstrings target the next developer (English); the bilingual surface is reserved for `--help` and console/log lines (operator-facing).
 - **Evidence**: 10 §Documentation in code. Confidence: inferred.
 
-<!-- end of file: 333 lines (budget 340) -->
+<!-- end of file: 335 lines (budget 340) -->

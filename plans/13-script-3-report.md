@@ -105,6 +105,8 @@ When the Curator is absent from the current Hermes source (i.e. the project ref 
 
 When the Curator IS present and the fields are recorded, the reporter joins the enabled-skill set against the Curator's view of usage and renders `n/a` only for skills that exist in the enabled set but not in the Curator's records (a newly installed skill that has not yet been used).
 
+**n/a-vs-0 accessor (binding, V8/W4 fix).** Read usage via `tools.skill_usage.usage_report()` (one row per on-disk skill, carrying a `_persisted` flag plus provenance). Render `n/a` iff `_persisted` is `False` (or the Curator module is absent); render the recorded value when `_persisted` is `True`, even if a count is `0`. Do NOT use `get_record()` for the n/a decision — it always backfills `_empty_record()` (`skill_usage.py:525`) and collapses "never tracked" into a zeroed record, which would render `0` instead of `n/a`. Using `usage_report()` also confirms that the Curator tracks ALL on-disk skills (not just agent-created), answering the previously-open "all vs agent-created" question. The contract test for this is `test_report_na_uses_persisted_flag_not_zero_backfill` (see TDD list).
+
 ## Output (sortable table)
 
 Default format: a plain-text table rendered with a small in-tree formatter (no third-party tabulate dep). Columns: `profile | name | description (truncated to 60) | tokens | use_count | patch_count | view_count | last_used_at | % of cap`. The description is truncated to 60 chars with a trailing ellipsis (`...`) — this matches the rendered form the system prompt's index uses under the unpatched cap (see "Index form note" above), and it is what the operator will visually recognize from the agent's session output. The full description is preserved in the `--format=json` output.
@@ -219,6 +221,7 @@ The reporter is a NEW standalone read-only entry point:
 - `test_report_curator_field_verification_recorded` — assert the fixture `tests/fixtures/curator/recorded_fields.json` exists, parses as JSON, enumerates exactly the six documented field names (`use_count`, `view_count`, `patch_count`, `last_used_at`, `last_viewed_at`, `last_patched_at`), and was updated within 7 days of HEAD (mtime sentinel).
 - `test_report_usage_n_a_when_curator_absent` — fixture with no Curator module; assert every usage column renders `n/a`; the reporter exits 0.
 - `test_report_usage_n_a_for_unseen_skill` — fixture with Curator + a skill present in the enabled set but absent from the Curator's records; assert the per-row usage columns render `n/a` for that skill.
+- `test_report_na_uses_persisted_flag_not_zero_backfill` — fixture with a skill present in the enabled set but absent from the Curator's on-disk records; assert `usage_report()` returns a row for that skill with `_persisted=False`; assert the reporter renders `n/a` for that row's usage columns (NOT `0`); assert a sibling skill with `_persisted=True` and a real `use_count=0` renders the integer `0` (not `n/a`); assert the reporter source does NOT call `get_record()` (the backfill accessor) in the n/a decision path.
 - `test_report_usage_view_use_patch_counts` — fixture with a known Curator record; assert `use_count`, `view_count`, `patch_count` match the fixture's recorded values.
 - `test_report_usage_last_used_at_iso8601` — assert `last_used_at` is rendered as an ISO 8601 string (NOT the legacy `last_used`); assert the column is sortable.
 - `test_report_usage_last_viewed_at_and_last_patched_at_present` — fixture with a Curator record that has `last_viewed_at` and `last_patched_at` populated; assert both columns render their ISO 8601 values.
@@ -256,7 +259,7 @@ The reporter is a NEW standalone read-only entry point:
 - **AC-7.3** `--help` bilingual two-section — `test_report_help_is_bilingual`.
 - **AC-7.4** shares enabled-detection with Script #2 — `test_report_shares_enabled_detection_with_script_2` + the platform / toggle / conditional-exclusion tests.
 - **AC-7.5** tokens from rendered name+description — `test_report_tokens_match_fixture` + `test_report_tokens_use_full_description_not_truncated` + `test_report_total_tokens` + `test_report_pct_of_cap` + `test_report_tokenizer_fallback_chars_div_4` + `test_report_tokenizer_raises_uses_fallback`.
-- **AC-7.6** usage from Curator, n/a when missing — `test_report_curator_field_verification_recorded` + `test_report_usage_n_a_when_curator_absent` + `test_report_usage_n_a_for_unseen_skill` + `test_report_usage_does_not_invent_fields` + `test_report_uses_at_suffixed_timestamps`.
+- **AC-7.6** usage from Curator, n/a when missing — `test_report_curator_field_verification_recorded` + `test_report_usage_n_a_when_curator_absent` + `test_report_usage_n_a_for_unseen_skill` + `test_report_na_uses_persisted_flag_not_zero_backfill` + `test_report_usage_does_not_invent_fields` + `test_report_uses_at_suffixed_timestamps`.
 - **AC-7.7** 100% coverage, TDD — `test_report_coverage_100_percent` + the TDD ordering documented in "Definition of Done".
 
 ## Decisions & evidence
@@ -301,4 +304,4 @@ The reporter is a NEW standalone read-only entry point:
 - **Rationale**: round-2 review found the reporter quoting field names that had drifted; a verification step gated on recency prevents the reporter from going stale.
 - **Evidence**: 13 §Usage; `test_report_curator_field_verification_recorded` in this file. Confidence: inferred.
 
-<!-- end of file: 304 lines (budget 400) -->
+<!-- end of file: 307 lines (budget 400) -->

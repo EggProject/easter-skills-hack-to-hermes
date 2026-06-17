@@ -370,12 +370,13 @@ def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checko
 - **Evidence**: V6 RR1 + REC-1; V7 V4-round S1. Confidence: verified-from-source.
 
 ### D4. Extended `check_line_count.py` spec: footer == wc -l, Total == sum (REC-2)
-- **Decision**: `tools/check_line_count.py --enforce-footer --enforce-budget-table` asserts THREE invariants on plan files:
+- **Decision**: `tools/check_line_count.py --enforce-footer --enforce-budget-table` asserts FOUR invariants on plan files:
   1. per-file cap (<= 500 lines)
   2. footer drift (`<!-- end of file: NN lines (budget BB) -->` with `NN == wc -l`)
   3. 00-index budget table (`Total` cell AND `Sum NNNN` prose == live `wc -l` sum)
-- **Rationale**: round-1/2/3 review found footers drifted (00 footer mismatch in R2; 09 footer mismatch in R2; 00-index Total mismatch in R2). Hard-coding the three invariants in the pre-commit hook closes that drift class.
-- **Evidence**: V6 RR2 + RR5 + REC-2; 10 §Extended check_line_count.py spec. Confidence: verified-from-source.
+  4. Per-cell guard. For every 00-index file-map row, the per-file Actual cell MUST equal `wc -l` of that row's path, AND the per-file Budget cell MUST equal the budget value handed to the hook. Fail on any per-cell mismatch (before the aggregate Total==sum is computed). Closes the V1 drift class permanently.
+- **Rationale**: round-1/2/3 review found footers drifted (00 footer mismatch in R2; 09 footer mismatch in R2; 00-index Total mismatch in R2). Hard-coding the invariants in the pre-commit hook closes that drift class. The 4th invariant (per-cell guard) was added after V8 review: the aggregate Total==sum check alone would still pass a per-cell mistake that is masked by a hand-typed Total (e.g., V7's 07→263 drift was hand-patched rather than caught by the hook). Asserting per-cell Actual==wc -l and per-cell Budget==budget closes the arithmetic class mechanically. (Supersedes the narrower D2 reading that the hook only enforces (a) footer and (b) Total==sum aggregate — see 00-index D2/D6 reconciliation.)
+- **Evidence**: V6 RR2 + RR5 + REC-2; V8 W2 should-fix; 10 §Extended check_line_count.py spec (mirror). Confidence: verified-from-source.
 
 ### D5. No-touch sentinel: `~/.hermes/hermes-agent/agent/skill_utils.py` sha256
 - **Decision + Rationale**: the `@assert_hermes_agent_untouched` decorator wraps every Script #1 unit test; snapshots sha256 at test start, asserts unchanged at test end, `pytest.skip`s if file is missing. A stray write to the installed Hermes would be silent and catastrophic — the sentinel forces loud failure.
@@ -389,4 +390,4 @@ def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checko
 - **Decision + Rationale**: the `hermes_checkout` fixture calls `seed_minimal(checkout)` to lay down the minimum tree Script #1's pre-validation can resolve. The fixture writes exactly 6 files (4 anchor + 2 empty `__init__.py`). A patched variant replaces `60` with `MAX_DESCRIPTION_LENGTH` and the slice `desc[:57]` with `desc[:MAX_DESCRIPTION_LENGTH - 3]`. The `MAX_DESCRIPTION_LENGTH` constant in `tools/skills_tool.py` is at line 98 (line 95 is blank in the pinned checkout). A fixture that drifts from the real Hermes anchors would let integration tests report a false PASS — the meta-test `test_seed_minimal_matches_patch_anchors` catches the drift.
 - **Evidence**: 09 §Seed-minimal-fixture contract; 09 §Coverage matrix; `test_seed_minimal_matches_patch_anchors` + `test_seed_minimal_patched_variant_completes_cap_raise` in this file. Confidence: verified-from-source.
 
-<!-- end of file: 392 lines (budget 400) -->
+<!-- end of file: 393 lines (budget 400) -->
