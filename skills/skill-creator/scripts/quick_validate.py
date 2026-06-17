@@ -4,11 +4,7 @@
 The validator is imported, not shelled-out (no subprocess).
 
 TDD test cases for this module:
-  test_quick_validate_accepts_a_valid_skill
-  test_quick_validate_rejects_missing_name
-  test_quick_validate_rejects_too_long_description
-  test_quick_validate_rejects_invalid_metadata_hermes
-  test_quick_validate_help_is_bilingual
+  test_help_is_bilingual (parametrized over this script)
 """
 
 from __future__ import annotations
@@ -136,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         for e in errors:
             sys.stderr.write(f"[en] validation error: {e} / [hu] érvényesítési hiba: {e}\n")
+        sys.stderr.flush()
         return 1
     emit(
         f"Skill validates: {args.skill}",

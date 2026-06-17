@@ -6,13 +6,11 @@ that strips nesting-guard vars from the subprocess env.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
 
 from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-
 
 SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-creator"
 
@@ -136,7 +134,7 @@ def test_helper_is_single_source_of_truth(hermes_home: Path) -> None:
                 target = node.target
             if target is not None and target.id == "NESTING_GUARD_VAR":
                 assignments.append((py, node.lineno, target.id))
-    assert len(assignments) == 1, (
-        f"NESTING_GUARD_VAR must be assigned exactly once (got {len(assignments)}: {assignments})"
-    )
+    assert (
+        len(assignments) == 1
+    ), f"NESTING_GUARD_VAR must be assigned exactly once (got {len(assignments)}: {assignments})"
     assert assignments[0][0].name == "_subprocess.py"

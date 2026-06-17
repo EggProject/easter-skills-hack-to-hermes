@@ -6,15 +6,16 @@ replacements is captured in `MIGRATION.skill-port.md` (see docs/plans/07
 pipeline consumes the Anthropic-shaped dict the adapter produces.
 
 TDD test cases for this module:
-  test_run_eval_invokes_hermes_not_claude
   test_run_eval_unnests_hermes_guard
   test_run_eval_restores_hermes_guard_on_exit
   test_run_eval_no_op_when_guard_unset
   test_run_eval_event_shape_adapter_normalizes_hermes_shape
-  test_run_eval_uses_model_hermes_or_omits
+  test_run_eval_uses_hermes_subprocess_env
   test_run_eval_writes_skill_md_to_hermes_home_not_dot_claude
-  test_run_eval_help_is_bilingual
-  test_run_eval_console_log_lines_match_bilingual_regex
+  test_event_shape_adapter_handles_known_shapes
+  test_eval_pipeline_end_to_end
+  test_help_is_bilingual (parametrized over this script)
+  test_console_log_lines_match_bilingual_regex
 """
 
 from __future__ import annotations

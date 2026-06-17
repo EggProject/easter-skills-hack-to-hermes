@@ -4,16 +4,12 @@ Hermes-native port. Wraps the skill dir at `skills/skill-creator/` (or any
 target) into a tarball at `--output`.
 
 TDD test cases for this module:
-  test_package_skill_creates_tarball
-  test_package_skill_contains_skill_md
-  test_package_skill_contains_scripts
-  test_package_skill_help_is_bilingual
+  test_help_is_bilingual (parametrized over this script)
 """
 
 from __future__ import annotations
 
 import argparse
-import sys
 import tarfile
 from pathlib import Path
 

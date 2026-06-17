@@ -6,12 +6,11 @@ The migration provenance is captured in `MIGRATION.skill-port.md` (see
 docs/plans/07 §T3 inventory).
 
 TDD test cases for this module:
-  test_improve_description_invokes_hermes_not_claude
   test_improve_description_unnests_hermes_guard
   test_improve_description_restores_hermes_guard_on_exit
   test_improve_description_no_op_when_guard_unset
-  test_improve_description_runtime_error_mentions_hermes
-  test_improve_description_help_is_bilingual
+  test_T3_018_improve_description_runtime_error_mentions_hermes
+  test_help_is_bilingual (parametrized over this script)
 """
 
 from __future__ import annotations

@@ -6,10 +6,9 @@ a session config). The migration provenance is in
 `MIGRATION.skill-port.md` (see docs/plans/07 §T3 inventory).
 
 TDD test cases for this module:
-  test_run_loop_help_mentions_hermes_only
-  test_run_loop_module_docstring_mentions_hermes
-  test_run_loop_uses_hermes_subprocess_env
-  test_run_loop_help_is_bilingual
+  test_help_is_bilingual (parametrized over this script)
+  (T3.016 + T3.017 — Anthropic-binding removal — covered by
+  tests/unit/test_skill_creator_frontmatter.py against this script)
 """
 
 from __future__ import annotations

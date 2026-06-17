@@ -10,14 +10,19 @@ NEVER writes to `~/.hermes/hermes-agent` (the live Hermes install). The
 `HERMES_HOME` env var (or `--hermes-home`) selects the target.
 
 TDD test cases for this module:
+  test_skill_creator_home_has_skills_and_profiles_dirs
   test_installer_copies_skill_to_hermes_home_skills_dir
   test_installer_emits_migration_skill_port_md
   test_migration_skill_port_has_18_t3_rows
   test_migration_skill_port_deterministic_under_frozen_time
-  test_migration_skill_port_no_claude_invocations_outside_provenance
+  test_migration_skill_port_mentions_anthropic_provenance
   test_installer_writes_only_to_hermes_home_and_worktree
   test_installer_refuses_to_write_to_live_hermes_agent
   test_installer_selects_short_or_full_description_per_active_cap
+  test_detect_active_cap_raises_when_skill_utils_missing
+  test_install_raises_when_skill_source_missing
+  test_install_raises_when_short_skill_md_missing
+  test_install_autodetects_cap
 """
 
 from __future__ import annotations
@@ -25,9 +30,8 @@ from __future__ import annotations
 import os
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 # T3 inventory — per-binding replacement table (docs/plans/07).
 # 18 rows. Each row: (location, claude-binding, hermes-binding, test-id).
@@ -153,7 +157,7 @@ _LIVE_HERMES_AGENT = Path("~/.hermes/hermes-agent").expanduser()
 PINNED_UPSTREAM_COMMIT = "2a40fd2e7c52207aa903bd33fc4c65716126966e"
 
 
-def detect_active_cap(checkout: Optional[Path] = None) -> str:
+def detect_active_cap(checkout: Path | None = None) -> str:
     """Detect the active cap (60 vs MAX_DESCRIPTION_LENGTH) in agent/skill_utils.py.
 
     Reads `extract_skill_description` in the active checkout (or
@@ -170,7 +174,11 @@ def detect_active_cap(checkout: Optional[Path] = None) -> str:
     if not src.exists():
         raise FileNotFoundError(f"agent/skill_utils.py not found in {target}")
     text = src.read_text(encoding="utf-8")
-    return "patched" if "MAX_DESCRIPTION_LENGTH" in text and "if len(desc) > 60:" not in text else "unpatched"
+    return (
+        "patched"
+        if "MAX_DESCRIPTION_LENGTH" in text and "if len(desc) > 60:" not in text
+        else "unpatched"
+    )
 
 
 def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
@@ -215,9 +223,12 @@ def _render_migration_skill_port(*, generated_at: str, upstream_commit: str) -> 
             "",
             "| Strength | Artifact | Hermes equivalent | AC |",
             "| --- | --- | --- | --- |",
-            "| Subagent split | agents/{grader,analyzer,comparator}.md | delegate_task + agent_name | T3.012-T3.014 |",
-            "| Eval pipeline | scripts/{run_eval, aggregate_benchmark, generate_report, ...}.py | same scripts, Hermes CLI, event-shape adapter | T3.003, T3.011, T3.006 |",
-            "| Eval viewer | eval-viewer/{generate_review.py, viewer.html} | generate_review.py --static, file:// URL | T3.015 |",
+            "| Subagent split | agents/{grader,analyzer,comparator}.md |"
+            " delegate_task + agent_name | T3.012-T3.014 |",
+            "| Eval pipeline | scripts/{run_eval, aggregate_benchmark, generate_report, ...}.py |"
+            " same scripts, Hermes CLI, event-shape adapter | T3.003, T3.011, T3.006 |",
+            "| Eval viewer | eval-viewer/{generate_review.py, viewer.html} |"
+            " generate_review.py --static, file:// URL | T3.015 |",
             "",
         ]
     )
@@ -228,7 +239,7 @@ def _generated_at() -> str:
     frozen = os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME")
     if frozen:
         return frozen
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass
@@ -243,7 +254,7 @@ def install(
     skill_source: Path,
     hermes_home: Path,
     worktree_root: Path,
-    cap: Optional[str] = None,
+    cap: str | None = None,
 ) -> InstallResult:
     """Install the migrated skill to `hermes_home/skills/skill-creator/`.
 

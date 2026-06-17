@@ -3,12 +3,8 @@
 Bilingual console messages (single-line `[en] ... / [hu] ...`).
 
 TDD test cases for this module:
-  test_emit_bilingual_console_emits_en_then_hu_on_one_line
-  test_emit_bilingual_console_format_matches_regex
-  test_emit_bilingual_console_handles_no_args
-  test_emit_bilingual_console_writes_to_stdout
-  test_help_section_english_and_magyar_both_present
-  test_help_section_mirrors_options
+  test_emit_bilingual_console_emits_en_then_hu
+  test_console_log_lines_match_bilingual_regex
 """
 
 from __future__ import annotations

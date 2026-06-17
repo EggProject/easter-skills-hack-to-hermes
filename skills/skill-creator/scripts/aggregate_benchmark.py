@@ -6,9 +6,7 @@ per-case + per-rubric aggregate metrics (mean, stddev, p50, p95).
 TDD test cases for this module:
   test_aggregate_benchmark_parses_hermes_stream_json
   test_aggregate_benchmark_handles_empty_results
-  test_aggregate_benchmark_computes_per_rubric_breakdown
-  test_aggregate_benchmark_sorts_results_by_case_id
-  test_aggregate_benchmark_help_is_bilingual
+  test_help_is_bilingual (parametrized over this script)
 """
 
 from __future__ import annotations
@@ -66,7 +64,7 @@ def aggregate(results: list[dict]) -> dict:
     scores = [_score_from_events(r.get("events", [])) for r in results]
     per_case = [
         {"case_id": r.get("case", {}).get("id", i), "score": s}
-        for i, (r, s) in enumerate(zip(results, scores))
+        for i, (r, s) in enumerate(zip(results, scores, strict=False))
     ]
     per_case.sort(key=lambda x: x["case_id"])
     return {

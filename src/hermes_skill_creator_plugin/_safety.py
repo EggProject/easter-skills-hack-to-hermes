@@ -4,8 +4,10 @@ The decorator is a thin wrapper that compares the resolved HERMES_HOME to the
 live `~/.hermes/hermes-agent` path and pytest.skip's the test if they match.
 
 TDD test cases for this module:
-  test_assert_hermes_agent_untouched_skips_when_path_live
-  test_assert_hermes_agent_untouched_runs_when_path_inside_tmp
+  test_safety_module_exports
+  test_current_hermes_home_reads_env
+  test_decorator_passes_through_when_hermes_home_in_tmp
+  test_decorator_skips_when_hermes_home_resolves_to_live
   test_decorator_preserves_test_return_value
   test_decorator_propagates_assertion_errors
 """
@@ -16,7 +18,7 @@ import os
 from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")

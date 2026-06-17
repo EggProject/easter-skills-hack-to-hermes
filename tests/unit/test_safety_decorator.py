@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 
 from hermes_skill_creator_plugin._safety import (  # noqa: E402
-    HERMES_HOME,
     _LIVE_HERMES_AGENT,
+    HERMES_HOME,
     _current_hermes_home,
     assert_hermes_agent_untouched,
 )

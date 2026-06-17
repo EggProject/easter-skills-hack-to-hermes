@@ -14,7 +14,6 @@ import pytest
 
 from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
 
-
 SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-creator"
 SCRIPTS = SKILL_DIR / "scripts"
 EVAL_VIEWER = SKILL_DIR / "eval-viewer"
@@ -42,7 +41,11 @@ def test_event_shape_adapter_handles_known_shapes(skill_creator_home: Path) -> N
     run_eval = _load(SCRIPTS / "run_eval.py", "adapter_test")
     samples = [
         {"event": "message", "role": "assistant", "content": "hello"},
-        {"event": "tool_use", "role": "assistant", "content": [{"type": "tool_use", "name": "read_file"}]},
+        {
+            "event": "tool_use",
+            "role": "assistant",
+            "content": [{"type": "tool_use", "name": "read_file"}],
+        },
         {"type": "message", "role": "assistant", "content": "fallback"},
         {"event": "message", "content": "no-role"},
     ]
@@ -69,13 +72,25 @@ def test_aggregate_benchmark_parses_hermes_stream_json(skill_creator_home: Path)
         {
             "case": {"id": "a"},
             "events": [
-                {"type": "message", "message": {"role": "assistant", "content": [{"type": "text", "text": "score: 0.8"}]}}
+                {
+                    "type": "message",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "score: 0.8"}],
+                    },
+                }
             ],
         },
         {
             "case": {"id": "b"},
             "events": [
-                {"type": "message", "message": {"role": "assistant", "content": [{"type": "text", "text": "score: 0.6"}]}}
+                {
+                    "type": "message",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "score: 0.6"}],
+                    },
+                }
             ],
         },
     ]
@@ -127,9 +142,7 @@ def test_eval_pipeline_end_to_end(
 
     run_eval = _load(SCRIPTS / "run_eval.py", "e2e_run_eval")
     cases = [{"id": "a"}, {"id": "b"}]
-    results = run_eval.run_eval(
-        cases, hermes_home=skill_creator_home, category="c", target="t"
-    )
+    results = run_eval.run_eval(cases, hermes_home=skill_creator_home, category="c", target="t")
     assert len(results) == 2
     # Each result has Anthropic-shaped events (translated by the adapter).
     for r in results:
@@ -159,9 +172,7 @@ def test_eval_pipeline_end_to_end(
 
 
 @assert_hermes_agent_untouched
-def test_eval_viewer_static_open(
-    skill_creator_home: Path, tmp_path: Path
-) -> None:
+def test_eval_viewer_static_open(skill_creator_home: Path, tmp_path: Path) -> None:
     """generate_review.py --static writes both files; the HTML's JS reads
     feedback.json via a relative path under the same dir.
     """

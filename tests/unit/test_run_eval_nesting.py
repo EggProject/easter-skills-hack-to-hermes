@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import ast
 import importlib.util
-import json
 import re
 import subprocess
 import sys
@@ -17,7 +16,6 @@ from pathlib import Path
 import pytest
 
 from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-
 
 SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-creator"
 SCRIPTS = SKILL_DIR / "scripts"
@@ -38,9 +36,7 @@ def _load_module(path: Path, name: str):
 
 
 @assert_hermes_agent_untouched
-def test_run_eval_unnests_hermes_guard(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_eval_unnests_hermes_guard(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HERMES_SESSION", "session-id")
     monkeypatch.setenv("HERMES_HOME", str(hermes_home))
     captured: dict = {}
@@ -103,9 +99,7 @@ def test_run_eval_no_op_when_guard_unset(
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
     run_eval_mod = _load_module(SCRIPTS / "run_eval.py", "run_eval_unset_test")
-    run_eval_mod.run_eval(
-        [{"id": "x"}], hermes_home=hermes_home, category="c", target="t"
-    )
+    run_eval_mod.run_eval([{"id": "x"}], hermes_home=hermes_home, category="c", target="t")
     assert "HERMES_SESSION" not in captured["env"]
 
 
@@ -217,7 +211,7 @@ def test_emit_bilingual_console_emits_en_then_hu(
 def test_console_log_lines_match_bilingual_regex(
     skill_creator_home: Path,
 ) -> None:
-    """AST-grep every `print(...)` + `emit(...)` in `scripts/`; assert the
+    r"""AST-grep every `print(...)` + `emit(...)` in `scripts/`; assert the
     format string matches `^\[en\] .+ / \[hu\] .+$`."""
     pattern = re.compile(r"^\[en\] .+ / \[hu\] .+$")
     failures: list[str] = []
@@ -251,15 +245,18 @@ def test_console_log_lines_match_bilingual_regex(
 
 
 @assert_hermes_agent_untouched
-@pytest.mark.parametrize("script_name", [
-    "run_eval.py",
-    "improve_description.py",
-    "run_loop.py",
-    "aggregate_benchmark.py",
-    "generate_report.py",
-    "quick_validate.py",
-    "package_skill.py",
-])
+@pytest.mark.parametrize(
+    "script_name",
+    [
+        "run_eval.py",
+        "improve_description.py",
+        "run_loop.py",
+        "aggregate_benchmark.py",
+        "generate_report.py",
+        "quick_validate.py",
+        "package_skill.py",
+    ],
+)
 def test_help_is_bilingual(skill_creator_home: Path, script_name: str) -> None:
     """Each migrated script's argparse description includes both the
     English 'Use when' marker and the Hungarian 'Hasznalat' marker.

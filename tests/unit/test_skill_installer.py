@@ -5,7 +5,6 @@ Per docs/plans/07 + 08 §TDD test list.
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
@@ -18,7 +17,6 @@ from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402
     detect_active_cap,
     install,
 )
-
 
 SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-creator"
 WORKTREE = Path(__file__).resolve().parents[2]
@@ -255,9 +253,7 @@ def test_install_raises_when_short_skill_md_missing(
 
 
 @assert_hermes_agent_untouched
-def test_install_autodetects_cap(
-    skill_creator_home: Path, tmp_path: Path
-) -> None:
+def test_install_autodetects_cap(skill_creator_home: Path, tmp_path: Path) -> None:
     """When cap=None, install() autodetects the cap from the active checkout."""
     fake_skill = tmp_path / "fake-skill-autodetect"
     fake_skill.mkdir()

@@ -38,6 +38,6 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [pytest, click, ruamel.yaml]
-        args: ["--strict", "--no-incremental"]
-        files: ^(src/hermes_skill_creator_plugin|skills/skill-creator)/
+        args: ["--strict", "--no-incremental", "--explicit-package-bases"]
+        files: ^src/hermes_skill_creator_plugin/
         exclude: ^(docs/research/|tests/)

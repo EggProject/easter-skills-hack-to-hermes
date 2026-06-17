@@ -5,17 +5,14 @@ Hermes-native port. Reads the output of `aggregate_benchmark.py` and writes:
   - `feedback.json` — the viewer's data file (relative path to viewer.html)
 
 TDD test cases for this module:
-  test_generate_report_writes_report_md_and_feedback_json
-  test_generate_report_feedback_json_has_expected_schema
-  test_generate_report_markdown_contains_aggregate_block
-  test_generate_report_help_is_bilingual
+  test_eval_pipeline_end_to_end (covers generate_report via the e2e path)
+  test_help_is_bilingual (parametrized over this script)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from scripts.utils import emit

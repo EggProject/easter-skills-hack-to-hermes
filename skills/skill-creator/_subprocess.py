@@ -11,9 +11,10 @@ TDD test cases for this module:
   test_hermes_subprocess_env_strips_hermes_session
   test_hermes_subprocess_env_strips_claudecode
   test_hermes_subprocess_env_preserves_other_vars
-  test_helper_is_single_source_of_truth
+  test_hermes_subprocess_env_does_not_mutate_parent
   test_nesting_guard_var_constant_is_hermes_session
-  test_legacy_guard_vars_includes_claudecode
+  test_hermes_subprocess_env_when_guard_unset
+  test_helper_is_single_source_of_truth
 """
 
 from __future__ import annotations

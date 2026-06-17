@@ -8,20 +8,14 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
-
 from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402
+from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402  # noqa: E402
     FULL_DESC_CAP,
+    PINNED_UPSTREAM_COMMIT,
     SHORT_DESC_CAP,
     T3_INVENTORY,
     detect_active_cap,
-    install,
 )
-from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402
-    PINNED_UPSTREAM_COMMIT,
-)
-
 
 SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-creator"
 WORKTREE = Path(__file__).resolve().parents[2]
@@ -73,7 +67,12 @@ def _minimal_yaml_parse(block: str) -> dict:
             indent = len(raw) - len(raw.lstrip(" "))
             if indent < current_pipe_indent:
                 lines.append(
-                    (current_pipe_indent - 2, current_pipe_key, "\n".join(pipe_lines).strip(), "scalar")
+                    (
+                        current_pipe_indent - 2,
+                        current_pipe_key,
+                        "\n".join(pipe_lines).strip(),
+                        "scalar",
+                    )
                 )
                 current_pipe_key = None
                 current_pipe_indent = 0
@@ -170,14 +169,18 @@ def test_full_description_starts_with_use_when(skill_creator_home: Path) -> None
     desc = fm["description"]
     if isinstance(desc, list):
         desc = " ".join(desc)
-    assert desc.lower().startswith("use when"), f"description must start with 'Use when', got: {desc[:60]!r}"
+    assert desc.lower().startswith(
+        "use when"
+    ), f"description must start with 'Use when', got: {desc[:60]!r}"
 
 
 @assert_hermes_agent_untouched
 def test_short_description_starts_with_use_when(skill_creator_home: Path) -> None:
     fm = _parse_frontmatter(_read(SKILL_DIR / "SKILL.md.short"))
     desc = fm["description"]
-    assert desc.lower().startswith("use when"), f"short desc must start with 'Use when', got: {desc!r}"
+    assert desc.lower().startswith(
+        "use when"
+    ), f"short desc must start with 'Use when', got: {desc!r}"
 
 
 @assert_hermes_agent_untouched
@@ -219,13 +222,34 @@ def test_name_is_lowercase_alnum_dot_dash_underscore(skill_creator_home: Path) -
 
 
 UPPERCASE_TOOL_NAMES = [
-    "Read", "Write", "Edit", "Glob", "Grep", "Bash", "Task", "Skill",
-    "AskUserQuestion", "WebSearch", "WebFetch", "TodoWrite",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash",
+    "Task",
+    "Skill",
+    "AskUserQuestion",
+    "WebSearch",
+    "WebFetch",
+    "TodoWrite",
 ]
 HERMES_TOOL_NAMES = [
-    "skill_manage", "skill_view", "skills_list", "read_file", "write_file",
-    "patch", "search_files", "terminal", "delegate_task", "clarify",
-    "web_search", "web_extract", "todo", "cronjob",
+    "skill_manage",
+    "skill_view",
+    "skills_list",
+    "read_file",
+    "write_file",
+    "patch",
+    "search_files",
+    "terminal",
+    "delegate_task",
+    "clarify",
+    "web_search",
+    "web_extract",
+    "todo",
+    "cronjob",
 ]
 
 
@@ -243,8 +267,7 @@ def test_no_uppercase_tool_names_in_full_body_outside_fences(skill_creator_home:
         # Tool invocation shape: `\bName\s*\(` (e.g. `Read(`, `Skill(`).
         pattern = r"\b" + re.escape(name) + r"\s*\("
         assert not re.search(pattern, body), (
-            f"uppercase tool name {name!r} invoked in SKILL.md body "
-            "(matched `<Name>(`)"
+            f"uppercase tool name {name!r} invoked in SKILL.md body " "(matched `<Name>(`)"
         )
 
 
@@ -269,9 +292,9 @@ def test_no_claude_invocations_in_skill_md(skill_creator_home: Path) -> None:
     body = text.split("---\n", 2)[2] if "\n---\n" in text else text
     body = _strip_fences(body)
     # `claude -p`, `claude --model`, `claude -c`, etc.
-    assert not re.search(r"\bclaude\s+-[a-zA-Z-]", body), (
-        f"found 'claude -<flag>' invocation in SKILL.md body"
-    )
+    assert not re.search(
+        r"\bclaude\s+-[a-zA-Z-]", body
+    ), "found 'claude -<flag>' invocation in SKILL.md body"
 
 
 # ---------------------------------------------------------------------------

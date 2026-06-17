@@ -1,8 +1,8 @@
 """check_line_count.py — four invariants:
-  1. per-file cap (no file exceeds 500 LOC)
-  2. footer drift (Plan Footer line numbers match actual line numbers)
-  3. budget-table Total (sum of file budgets matches declared Total)
-  4. per-cell guard (each row's cap >= actual LOC of that file)
+1. per-file cap (no file exceeds 500 LOC)
+2. footer drift (Plan Footer line numbers match actual line numbers)
+3. budget-table Total (sum of file budgets matches declared Total)
+4. per-cell guard (each row's cap >= actual LOC of that file)
 """
 
 # TDD test cases:

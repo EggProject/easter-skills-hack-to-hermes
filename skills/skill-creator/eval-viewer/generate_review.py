@@ -4,11 +4,7 @@
 viewer.html with a relative path that resolves under the same dir.
 
 TDD test cases for this module:
-  test_generate_review_static_writes_feedback_json
-  test_generate_review_static_writes_under_same_dir_as_viewer
-  test_generate_review_uses_relative_path_in_html
-  test_generate_review_help_is_bilingual
-  test_generate_review_serves_via_http_when_not_static
+  test_eval_viewer_static_open
 """
 
 from __future__ import annotations
@@ -17,7 +13,6 @@ import argparse
 import http.server
 import json
 import socketserver
-import sys
 from pathlib import Path
 
 from scripts.utils import emit
@@ -35,16 +30,16 @@ def write_static(feedback: dict, *, out_dir: Path) -> tuple[Path, Path]:
 
 def _render_html(feedback: dict) -> str:
     """Render a self-contained HTML page that fetches `feedback.json` (relative)."""
-    return f"""<!doctype html>
+    return """<!doctype html>
 <html><head><title>Eval Review</title></head>
 <body>
 <h1>Eval Review</h1>
-<pre id="feedback">{{}}</pre>
+<pre id="feedback">{}</pre>
 <script>
 fetch('feedback.json')
   .then(r => r.json())
-  .then(j => {{ document.getElementById('feedback').textContent = JSON.stringify(j, null, 2); }})
-  .catch(e => {{ document.getElementById('feedback').textContent = 'Error: ' + e; }});
+  .then(j => { document.getElementById('feedback').textContent = JSON.stringify(j, null, 2); })
+  .catch(e => { document.getElementById('feedback').textContent = 'Error: ' + e; });
 </script>
 </body></html>
 """
