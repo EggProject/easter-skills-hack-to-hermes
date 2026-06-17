@@ -239,4 +239,4 @@ Hermes persists the new skill; plugin re-validates on next session.
 - **Rationale**: disabling is keyed by skill NAME (`tools/skills_tool.py:597` `return name in global_disabled`; `:644` `name = frontmatter.get("name", skill_dir.name)`). There is no skill named `"openai"` — `openai` is only the upstream HUB INSTALL PATH (`hermes_cli/skills_hub.py:1671`), not a skill name. Unioning `"openai"` to the disabled set is a no-op that would mislead operators. The factory `skill-creator` and the migrated `skill-creator` share the same NAME (`skill-creator`); disabling by that name would break the migrated skill's own `<available_skills>` index entry — the exact opposite of intent. The correct swap is byte-for-byte overwrite at the same flat path.
 - **Evidence**: 06 §S5 (V4 RR2/REC-3 fix); AC-3.2 in 01. Confidence: verified-from-source.
 
-<!-- end of file: 234 lines (budget 210) -->
+<!-- end of file: 242 lines (budget 250) -->
