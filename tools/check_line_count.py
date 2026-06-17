@@ -34,9 +34,7 @@ def main() -> int:
         if footer_match:
             claimed = int(footer_match.group(1))
             if claimed != n:
-                issues.append(
-                    f"{p}: footer says {claimed} lines but file has {n}"
-                )
+                issues.append(f"{p}: footer says {claimed} lines but file has {n}")
     if issues:
         for issue in issues:
             print(issue, file=sys.stderr)

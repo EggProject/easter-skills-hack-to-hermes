@@ -53,7 +53,6 @@ from hermes_skill_creator_plugin._patcher import (
     write_state,
 )
 
-
 # --- TDD happy path ------------------------------------------------------
 
 
@@ -88,9 +87,7 @@ def test_apply_cap_only_default_idempotent(
     assert any("S1.cap" in m for m in already_msgs)
 
 
-def test_check_no_writes(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--check writes zero bytes to target (sha256 snapshot)."""
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     pre = hashlib.sha256(target_file.read_bytes()).hexdigest()
@@ -142,9 +139,7 @@ def test_force_retries_only_drifted_sites(
         task_e_redirect=False,
         no_schema_redirect=False,
     )
-    pre = hashlib.sha256(
-        (hermes_checkout / "agent" / "skill_utils.py").read_bytes()
-    ).hexdigest()
+    pre = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     r = run_patch(
         target=hermes_checkout,
         check=False,
@@ -155,9 +150,7 @@ def test_force_retries_only_drifted_sites(
         no_schema_redirect=False,
     )
     assert r.exit_code == EXIT_OK
-    post = hashlib.sha256(
-        (hermes_checkout / "agent" / "skill_utils.py").read_bytes()
-    ).hexdigest()
+    post = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     # After successful first apply, --force has nothing drifted to retry;
     # the file should be byte-identical (no new write).
     assert pre == post
@@ -175,12 +168,10 @@ def test_apply_cap_raise_two_sites_atomic(
     (checkout / "agent").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text(
         "\n".join(["# pad"] * 687)
-        + "\n    if len(desc) > 60:\n        return desc[:57] + \"ELLIPSIS\"\n",
+        + '\n    if len(desc) > 60:\n        return desc[:57] + "ELLIPSIS"\n',
         encoding="utf-8",
     )
-    pre = hashlib.sha256(
-        (checkout / "agent" / "skill_utils.py").read_bytes()
-    ).hexdigest()
+    pre = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     r = run_patch(
         target=checkout,
         check=False,
@@ -191,9 +182,7 @@ def test_apply_cap_raise_two_sites_atomic(
         no_schema_redirect=False,
     )
     assert r.exit_code != EXIT_OK
-    post = hashlib.sha256(
-        (checkout / "agent" / "skill_utils.py").read_bytes()
-    ).hexdigest()
+    post = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     assert pre == post
     assert r.rejected_path is not None
     rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
@@ -214,9 +203,7 @@ def test_apply_cap_raise_max_description_length_defined(
         no_schema_redirect=False,
     )
     assert r.exit_code == EXIT_OK
-    text = (hermes_checkout / "agent" / "skill_utils.py").read_text(
-        encoding="utf-8"
-    )
+    text = (hermes_checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
     assert "MAX_DESCRIPTION_LENGTH" in text
     # The literal "60" must be gone from the cap-raise site (line 688).
     lines = text.splitlines()
@@ -230,24 +217,15 @@ def test_apply_cap_raise_max_description_length_defined(
 # --- Task E composition --------------------------------------------------
 
 
-def test_task_e_default_off(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_task_e_default_off(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Default --apply touches only S1.cap; the 4 Task E files are unchanged."""
     targets = [
         hermes_checkout / "agent" / "prompt_builder.py",
         hermes_checkout / "agent" / "background_review.py",
         hermes_checkout / "tools" / "skill_manager_tool.py",
-        hermes_checkout
-        / "website"
-        / "docs"
-        / "user-guide"
-        / "features"
-        / "skills.md",
+        hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md",
     ]
-    pre_hashes = {
-        str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in targets
-    }
+    pre_hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in targets}
     r = run_patch(
         target=hermes_checkout,
         check=False,
@@ -263,9 +241,7 @@ def test_task_e_default_off(
         assert pre_hashes[str(p)] == post, f"file changed: {p}"
 
 
-def test_task_e_redirect_on(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_task_e_redirect_on(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--apply --task-e-redirect patches all 7 Task E sites + S1.cap (8 sites)."""
     r = run_patch(
         target=hermes_checkout,
@@ -453,9 +429,13 @@ def test_apply_atomic_on_rename_failure(
 
     real_replace = os.replace
     target_path_resolved = target_file.resolve()
-    sidecar_path_str = str(hermes_checkout / STATE_SIDECAR)
 
-    def selective_boom(src: str, dst: str, *args: object, **kwargs: object) -> None:
+    def selective_boom(
+        src: str | os.PathLike[str],
+        dst: str | os.PathLike[str],
+        *args: str | int,
+        **kwargs: bool,
+    ) -> None:
         dst_str = str(dst)
         if dst_str == str(target_path_resolved):
             raise OSError("simulated rename failure")
@@ -532,16 +512,11 @@ def test_zero_writes_on_validation_failure(
         encoding="utf-8",
     )
     (checkout / "agent" / "prompt_builder.py").write_text(
-        "\n".join(["# pad"] * 158)
-        + '\n    "BAD-ANCHOR"\n',
+        "\n".join(["# pad"] * 158) + '\n    "BAD-ANCHOR"\n',
         encoding="utf-8",
     )
-    pre_skill = hashlib.sha256(
-        (checkout / "agent" / "skill_utils.py").read_bytes()
-    ).hexdigest()
-    pre_pb = hashlib.sha256(
-        (checkout / "agent" / "prompt_builder.py").read_bytes()
-    ).hexdigest()
+    pre_skill = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
+    pre_pb = hashlib.sha256((checkout / "agent" / "prompt_builder.py").read_bytes()).hexdigest()
     r = run_patch(
         target=checkout,
         check=True,
@@ -552,12 +527,8 @@ def test_zero_writes_on_validation_failure(
         no_schema_redirect=False,
     )
     assert r.exit_code != EXIT_OK
-    post_skill = hashlib.sha256(
-        (checkout / "agent" / "skill_utils.py").read_bytes()
-    ).hexdigest()
-    post_pb = hashlib.sha256(
-        (checkout / "agent" / "prompt_builder.py").read_bytes()
-    ).hexdigest()
+    post_skill = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
+    post_pb = hashlib.sha256((checkout / "agent" / "prompt_builder.py").read_bytes()).hexdigest()
     assert pre_skill == post_skill
     assert pre_pb == post_pb
 
@@ -608,6 +579,7 @@ def test_console_log_lines_match_bilingual_regex(
 def test_help_is_bilingual() -> None:
     """--help output contains both 'Usage (English)' and 'Hasznalat (magyar)'."""
     from click.testing import CliRunner
+
     from hermes_skill_creator_plugin.cli_patch import main as cli_main
 
     runner = CliRunner()
@@ -660,7 +632,6 @@ def test_state_sidecar_survives_re_run(
         task_e_redirect=False,
         no_schema_redirect=False,
     )
-    pre = (hermes_checkout / "agent" / "skill_utils.py").read_bytes()
     r = run_patch(
         target=hermes_checkout,
         check=False,
@@ -671,7 +642,6 @@ def test_state_sidecar_survives_re_run(
         no_schema_redirect=False,
     )
     assert r.exit_code == EXIT_OK
-    post = (hermes_checkout / "agent" / "skill_utils.py").read_bytes()
     # The file is rewritten on every run; the second run produces
     # byte-identical content (state is "already") so the pre/post hash
     # of the patched file matches a re-derivation.
@@ -843,12 +813,8 @@ def test_render_task_e_row_contains_site_id() -> None:
     assert "E2.memory_guidance" in _render_task_e_row(E2_MEMORY_GUIDANCE)
     assert "E3.build_skills_prompt" in _render_task_e_row(E3_BUILD_SKILLS_PROMPT)
     assert "E4.skill_review_prompt_opt4" in _render_task_e_row(E4_SKILL_REVIEW_PROMPT)
-    assert "E5.combined_review_prompt_opt4" in _render_task_e_row(
-        E5_COMBINED_REVIEW_PROMPT
-    )
-    assert "E6.skill_manage_schema_desc" in _render_task_e_row(
-        E6_SKILL_MANAGE_SCHEMA_DESC
-    )
+    assert "E5.combined_review_prompt_opt4" in _render_task_e_row(E5_COMBINED_REVIEW_PROMPT)
+    assert "E6.skill_manage_schema_desc" in _render_task_e_row(E6_SKILL_MANAGE_SCHEMA_DESC)
     assert "E7.skills_doc_section" in _render_task_e_row(E7_SKILLS_DOC_SECTION)
 
 
@@ -896,9 +862,7 @@ def test_emit_migration_note_default_one_row(
     text = p.read_text(encoding="utf-8")
     # 1 site row + 1 header row -> 2 lines in the cap table
     cap_table = text.split("## Task E sites")[0]
-    cap_data_rows = [
-        ln for ln in cap_table.splitlines() if ln.startswith("| S1.")
-    ]
+    cap_data_rows = [ln for ln in cap_table.splitlines() if ln.startswith("| S1.")]
     assert len(cap_data_rows) == 1
 
 
@@ -981,9 +945,7 @@ def test_apply_cap_secondary_anchor_mismatch_caught_by_validation(
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append("    return desc[:57] + 'XXX'\n")  # WRONG slice
-    (checkout / "agent" / "skill_utils.py").write_text(
-        "".join(lines), encoding="utf-8"
-    )
+    (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     r = run_patch(
         target=checkout,
         check=False,
@@ -1015,9 +977,7 @@ def test_apply_permission_error_branch(
             raise PermissionError("simulated permission denied")
         return real_atomic(path, data, mode=mode)
 
-    monkeypatch.setattr(
-        "hermes_skill_creator_plugin._patcher._atomic_write_bytes", selective_boom
-    )
+    monkeypatch.setattr("hermes_skill_creator_plugin._patcher._atomic_write_bytes", selective_boom)
     r = run_patch(
         target=hermes_checkout,
         check=False,
@@ -1054,8 +1014,8 @@ def test_cross_filesystem_different_fsid(
 ) -> None:
     """When target and tmp live on different filesystems, returns True
     and the patcher emits the CROSS_FS_WARN diagnostic."""
-    from collections import namedtuple
     import sys as _sys
+    from collections import namedtuple
 
     if _sys.platform == "win32":  # pragma: no cover
         pytest.skip("POSIX-only statvfs test")
@@ -1075,6 +1035,7 @@ def test_cross_filesystem_target_statvfs_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When target's statvfs raises OSError, returns False."""
+
     def fake_statvfs(_path):  # type: ignore[no-untyped-def]
         raise OSError("simulated statvfs failure on target")
 
@@ -1133,9 +1094,7 @@ def test_apply_emits_cross_fs_warning(
 # --- coverage: atomic_write_bytes unlink + chmod error paths -----------
 
 
-def test_atomic_write_bytes_chmod_raises(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_atomic_write_bytes_chmod_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When the post-replace chmod raises OSError, the function still
     returns the file is written."""
     p = tmp_path / "out.txt"
@@ -1143,9 +1102,14 @@ def test_atomic_write_bytes_chmod_raises(
     os.chmod(p, 0o644)
     real_chmod = os.chmod
 
-    def maybe_fail_chmod(*args: object, **kwargs: object) -> None:
+    def maybe_fail_chmod(
+        path: str | os.PathLike[str],
+        mode: int,
+        *args: str | int,
+        **kwargs: bool,
+    ) -> None:
         try:
-            return real_chmod(*args, **kwargs)
+            return real_chmod(path, mode, *args, **kwargs)
         except OSError:
             # We deliberately re-raise; the patcher swallows it.
             raise

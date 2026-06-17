@@ -12,16 +12,13 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from hermes_skill_creator_plugin.cli_patch import HELP_EN, HELP_HU, main
 from hermes_skill_creator_plugin._patcher import (
-    EXIT_DRIFT,
     EXIT_IO,
     EXIT_OK,
-    EXIT_PERMISSION,
     EXIT_USER_ABORT,
     STATE_SIDECAR,
 )
-
+from hermes_skill_creator_plugin.cli_patch import HELP_EN, HELP_HU, main
 
 # --- --help --------------------------------------------------------------
 
@@ -74,9 +71,7 @@ def test_cli_target_hermes_agent_refused() -> None:
 # --- --apply happy path -------------------------------------------------
 
 
-def test_cli_apply_default(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_apply_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
@@ -86,9 +81,7 @@ def test_cli_apply_default(
     assert (hermes_checkout / STATE_SIDECAR).exists()
 
 
-def test_cli_check_no_writes(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     pre = hashlib.sha256(target_file.read_bytes()).hexdigest()
     runner = CliRunner()
@@ -129,9 +122,7 @@ def test_cli_force_with_i_accept_succeeds(
     assert r.exit_code == EXIT_OK
 
 
-def test_cli_task_e_redirect(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_task_e_redirect(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
@@ -143,9 +134,7 @@ def test_cli_task_e_redirect(
         ],
     )
     assert r.exit_code == EXIT_OK
-    state = json.loads(
-        (hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8")
-    )
+    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
     assert "E1.skills_guidance" in state
     assert "E7.skills_doc_section" in state
 
@@ -165,9 +154,7 @@ def test_cli_no_schema_redirect(
         ],
     )
     assert r.exit_code == EXIT_OK
-    state = json.loads(
-        (hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8")
-    )
+    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
     assert "E6.skill_manage_schema_desc" not in state
 
 

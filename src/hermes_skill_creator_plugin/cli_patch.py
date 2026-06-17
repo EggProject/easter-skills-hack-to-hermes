@@ -170,10 +170,9 @@ def main(
         # default: --check
         check = True
 
-    if force and not i_accept_line_drift and not yes:
-        # Click-level guard: when --yes is also set we still abort unless
-        # --i-accept-line-drift is present. The patcher also enforces this.
-        pass
+    # The --force / --i-accept-line-drift guard is enforced inside
+    # run_patch (which returns EXIT_USER_ABORT). No click-level guard
+    # is needed here.
 
     result = run_patch(
         target=target_path,

@@ -45,9 +45,7 @@ def _check_file(path: pathlib.Path) -> list[str]:
         arg0 = node.args[0]
         if isinstance(arg0, ast.Constant) and isinstance(arg0.value, str):
             if not BILINGUAL.match(arg0.value):
-                issues.append(
-                    f"{path}:{arg0.lineno}: non-bilingual {name}(): {arg0.value!r}"
-                )
+                issues.append(f"{path}:{arg0.lineno}: non-bilingual {name}(): {arg0.value!r}")
         elif isinstance(arg0, ast.JoinedStr):
             # f-string: walk each Constant piece
             for value in ast.walk(arg0):

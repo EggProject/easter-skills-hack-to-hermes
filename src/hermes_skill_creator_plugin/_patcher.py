@@ -44,6 +44,7 @@ from .i18n.messages_en import (
     CROSS_FS_WARN,
     FORCE_AUDIT_LOG,
     FORCE_REQUIRES_I_ACCEPT,
+    IO_ERROR,
     LINE_DRIFT,
     OK_ALREADY_PATCHED,
     OK_PATCHED,
@@ -684,7 +685,6 @@ def run_patch(
         lines = text.splitlines(keepends=True)
         # 1-based line number -> 0-based index
         idx = anchor.line - 1
-        original_line = lines[idx]  # noqa: F841  (kept for forensic logging)
         # Branch on the site kind:
         #   "cap"          — REPLACE the primary anchor (and the sibling
         #                    secondary anchor) with the new replacement
@@ -709,8 +709,14 @@ def run_patch(
         after_bytes = "".join(lines).encode("utf-8")
         try:
             _atomic_write_bytes(path, after_bytes)
-        except PermissionError:
-            diagnostics.append(PERMISSION_DENIED.format(path=str(path)))
+        except (PermissionError, OSError) as exc:
+            # PermissionError is a subclass of OSError; a single handler
+            # covers both "permission denied" (explicit) and other I/O
+            # failures (full disk, fs error, etc.) — all map to exit 3.
+            if isinstance(exc, PermissionError):
+                diagnostics.append(PERMISSION_DENIED.format(path=str(path)))
+            else:
+                diagnostics.append(IO_ERROR.format(path=str(path), error=str(exc)))
             state[site.site_id] = "drifted"
             write_state(target_path, state)
             return PatcherResult(
@@ -720,19 +726,9 @@ def run_patch(
                 state=state,
                 diagnostics=tuple(diagnostics),
             )
-        except OSError:
-            diagnostics.append(PERMISSION_DENIED.format(path=str(path)))
-            state[site.site_id] = "drifted"
-            write_state(target_path, state)
-            return PatcherResult(
-                exit_code=EXIT_PERMISSION,
-                sites_patched=tuple(sites_patched),
-                sites_already=tuple(sites_already),
-                state=state,
-                diagnostics=tuple(diagnostics),
-            )
-        # audit log on --force; in non-force runs we also log because the
-        # audit log is the durable record per AC-2.5.1.
+        # audit log on --force (FORCE_AUDIT_LOG). Non-force runs do NOT
+        # append to the audit log; the .patch.state.json sidecar is the
+        # durable record for normal apply runs.
         if force:
             diff_sha = _diff_sha(before, after_bytes)
             audit_line = FORCE_AUDIT_LOG.format(
@@ -834,7 +830,7 @@ def _render_patch_table(sites: Iterable[Site]) -> list[str]:
     """Render Task E rows. Excludes ``S1.cap`` (rendered separately)."""
     rows: list[str] = []
     for site in sites:
-        if site.site_id == "S1.cap":
+        if site.site_id == S1_CAP_SITE.site_id:
             continue
         rows.append(_render_task_e_row(site))
     return rows
