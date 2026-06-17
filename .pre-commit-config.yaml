@@ -1,0 +1,38 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-line-count
+        name: check-line-count (per-file cap, footer drift, budget table, per-cell guard)
+        entry: python tools/check_line_count.py
+        language: system
+        types: [python, markdown]
+        pass_filenames: false
+      - id: check-bilingual
+        name: check-bilingual (en/hu on a single line)
+        entry: python tools/check_bilingual.py
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: check-migration-note
+        name: check-migration-note (MIGRATION*.md is generated, not hand-edited)
+        entry: python tools/check_migration_note.py
+        language: system
+        types: [markdown]
+        pass_filenames: false
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3.11
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [pytest, click, ruamel.yaml]
+        args: ["--strict"]
