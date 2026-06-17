@@ -59,5 +59,4 @@ warn_redundant_casts = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=hermes_skill_creator_plugin --cov-branch --cov-fail-under=100"
-pythonpath = ["src"]
+addopts = "--cov=hermes_skill_creator_plugin --cov=tools --cov=tests.conftest --cov-branch --cov-fail-under=100"

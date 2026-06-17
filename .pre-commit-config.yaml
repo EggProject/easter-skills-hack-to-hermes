@@ -1,38 +1,60 @@
+# .pre-commit-config.yaml
+# Pre-commit wiring per docs/plans/10-toolchain-and-conventions.md §.pre-commit-config.yaml
+# and docs/plans/09-test-strategy.md §TDD test list.
+#
+# Local hooks (run via `python tools/<hook>.py`):
+#   check-bilingual     — en/hu single-line console messages + two-section --help
+#   check-line-count    — FOUR invariants: per-file cap, footer drift, budget-table Total, per-cell guard
+#   check-migration-note — MIGRATION*.md is generated, not hand-edited (sha256 vs .migration_manifest.json)
+#
+# Upstream hooks:
+#   ruff + ruff-format  — lint + format
+#   black               — secondary formatter
+#   mypy --strict       — static type check
+
+exclude: ^(docs/research/|docs/review/|docs/plans/_)
+
 repos:
   - repo: local
     hooks:
-      - id: check-line-count
-        name: check-line-count (per-file cap, footer drift, budget table, per-cell guard)
-        entry: python tools/check_line_count.py
-        language: system
-        types: [python, markdown]
-        pass_filenames: false
       - id: check-bilingual
-        name: check-bilingual (en/hu on a single line)
+        name: Bilingual format check (en/hu single-line + two-section help)
         entry: python tools/check_bilingual.py
         language: system
         types: [python]
         pass_filenames: false
+
+      - id: check-line-count
+        name: "Plan files: per-file cap + footer drift + budget table Total + per-cell guard"
+        entry: python tools/check_line_count.py --enforce-footer --enforce-budget-table --enforce-per-cell
+        language: system
+        files: '^docs/plans/.*\.md$'
+        pass_filenames: false
+
       - id: check-migration-note
-        name: check-migration-note (MIGRATION*.md is generated, not hand-edited)
+        name: MIGRATION*.md is generated, not hand-edited
         entry: python tools/check_migration_note.py
         language: system
-        types: [markdown]
+        files: '^(MIGRATION\.md|MIGRATION\.hermes-patch\.md|MIGRATION\.skill-port\.md|\.migration_manifest\.json)$'
         pass_filenames: false
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: ["--fix", "--exit-non-zero-on-fix"]
       - id: ruff-format
+
   - repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:
       - id: black
         language_version: python3.11
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
     hooks:
       - id: mypy
-        additional_dependencies: [pytest, click, ruamel.yaml]
+        additional_dependencies: [click, ruamel.yaml, types-PyYAML]
         args: ["--strict"]
+        files: '^src/'

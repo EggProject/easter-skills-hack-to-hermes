@@ -27,7 +27,7 @@ import sys
 from collections.abc import Callable, Generator
 from functools import wraps
 from pathlib import Path
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 import pytest
 
