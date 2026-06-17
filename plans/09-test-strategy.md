@@ -190,12 +190,15 @@ Script #3 is REPORT-ONLY. A separate fixture (`hermes_home_writable` above) wrap
 - `test_pre_commit_hooks_installed_and_passing` — `pre-commit run --all-files` exits 0.
 
 ### Anchor-uniqueness meta-tests (REC-1, the systemic fix for the fabricated-anchor class)
-- `test_task_e_current_text_is_unique_in_source` — for EACH Task-E / patch-site `current_text` entry in `05`'s site table, grep the **real** Hermes source (the five canonical sites: `tools/skill_manager_tool.py`, `agent/prompt_builder.py`, `agent/background_review.py`, `website/docs/user-guide/features/skills.md`, `agent/skill_utils.py`) for the literal `current_text` string. Assert hit count == 1 (exactly one match). If hit count == 0 → fail with `TEXT_DRIFT` (the site cannot be located in the pinned Hermes checkout — Script #1 will ABORT in production). If hit count > 1 → fail with `NON_UNIQUE_ANCHOR` (the site is ambiguous — Script #1 could patch the wrong location). For E6 specifically (`SKILL_MANAGE_SCHEMA` description), the test asserts the COMPOUND anchor (the 3-line sequence `SKILL_MANAGE_SCHEMA = {` / `    "name": "skill_manage",` / `    "description": (`) resolves to exactly one occurrence AND the first-line text of that description matches the byte-for-byte string `"Manage skills (create, update, delete). Skills are your procedural memory — ..."`. This test is the systemic fix for the fabricated-anchor bug class: E4 (the `extract_skill_description` cap-raise) and E6 (the `SKILL_MANAGE_SCHEMA` description) survived Rounds 1, 2, AND 3 of review. Had this test existed in Round 1, both would have failed on day one.
+
+The anchors in this section are taken VERBATIM from `docs/review/TASK_E_PROMPT_EDITS.md` (authored from pinned checkout `36ae958473b8530ffb1a395c4944b8cdbcae82fe`, byte-verified). The `current_text` for every assertion is the exact physical line — NOT a paraphrased join of Python implicit-concat fragments. NO special-cases for any site.
+
+- `test_task_e_current_text_is_unique_in_source` — enumerates EVERY operative single-line anchor and greps the real source. Hit count == 1 → pass; == 0 → fail with `TEXT_DRIFT` (Script #1 will ABORT); > 1 → fail with `NON_UNIQUE_ANCHOR` (ambiguous site). Per-site assertions (all byte-accurate physical lines from TASK_E_PROMPT_EDITS.md, no paraphrasing, no implicit-concat normalization, no ellipsis substitution): **E1** grep `agent/prompt_builder.py` for L179 `    "Skills that aren't maintained become liabilities."`; **E2** grep `agent/prompt_builder.py` for L158 `    "necessary later, save it as a skill with the skill tool.\n"`; **E3a** grep `agent/prompt_builder.py` for the single-line anchor near `skill_manage(action='patch')`; **E3b** grep `agent/prompt_builder.py` for L1421 `            "After difficult/iterative tasks, offer to save as a skill. "`; **E4** grep `agent/background_review.py` for L105 `    "today's task, it's wrong — fall back to (1), (2), or (3).\n\n"`; **E5** grep `agent/background_review.py` for L192 `    "(2), or (3).\n\n"`; **E6** grep `tools/skill_manager_tool.py` for L1129 `        "pitfalls come up; pin only guards against irrecoverable loss."` (this IS a single physical line; the description body is opened at L1101 and implicit-concat splits L1102/L1103/etc., but L1129 itself is the unique end-of-value line — the test does NOT short-circuit on an ellipsis form); **E6 compound symbol** grep for the 3-line block L1099 `SKILL_MANAGE_SCHEMA = {` / L1100 `    "name": "skill_manage",` / L1101 `    "description": (` (bare `"description": (` is NON-unique, 8 occurrences — anchor on the compound); **E7** grep `website/docs/user-guide/features/skills.md` for the L380 single-line anchor; **Cap** grep `agent/skill_utils.py` for `    if len(desc) > 60:` and `        return desc[:57] + "..."` (each hit count == 1). This is the systemic fix for the fabricated-anchor class: E4 and E6 survived R1/R2/R3 because `current_text` was paraphrased as a single joined string while the source splits across multiple physical lines via Python implicit-concat.
 - `test_patch_anchor_current_text_byte_for_byte` — for each `current_text` in the site table, read the file at the resolved location and assert the substring equals the `current_text` field byte-for-byte (no whitespace drift, no ellipsis-vs-unicode drift, no smart-quote-vs-straight-quote drift). Used after `test_task_e_current_text_is_unique_in_source` passes to guarantee the located site is the site the plan claims to patch.
 - `test_seed_minimal_anchors_match_real_hermes` — the `seed_minimal` fixture is the test-time stand-in for the real Hermes checkout. This test asserts that every anchor line in `seed_minimal` (the function def, the cap-raise site, the slice, the `MAX_DESCRIPTION_LENGTH` constant) matches the corresponding line in the **real** Hermes source. If the fixture drifts away from upstream, the integration test for Script #1 patches against stale anchors and reports a false PASS.
 
 ### Seed-minimal-fixture meta-tests
-- `test_seed_minimal_matches_patch_anchors` — runs `seed_minimal(tmp_checkout)`; reads `agent/skill_utils.py` and `tools/skills_tool.py`; asserts the 4 anchor lines match the contract table (function def for `extract_skill_description`, cap-raise site `if len(desc) > 60:`, replacement target `return desc[:57] + "..."`, `MAX_DESCRIPTION_LENGTH = 1024` at line 95). This is the meta-test that the fixture stays in sync with Script #1's patch anchors.
+- `test_seed_minimal_matches_patch_anchors` — runs `seed_minimal(tmp_checkout)`; reads `agent/skill_utils.py` and `tools/skills_tool.py`; asserts the 4 anchor lines match the contract table (function def for `extract_skill_description`, cap-raise site `if len(desc) > 60:`, replacement target `return desc[:57] + "..."`, `MAX_DESCRIPTION_LENGTH = 1024` at line 98). This is the meta-test that the fixture stays in sync with Script #1's patch anchors.
 - `test_seed_minimal_patched_variant_replaces_literal_60` — runs `seed_minimal_patched(tmp_checkout)`; asserts the cap-raise site of `agent/skill_utils.py` contains `MAX_DESCRIPTION_LENGTH` and NOT the literal `60`; AND the slice is `desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` (the cap-raise patch is complete — comparator AND slice are both updated).
 - `test_hermes_checkout_fixture_uses_seed_minimal` — asserts the `hermes_checkout` fixture (in conftest.py) calls `seed_minimal` exactly once and the resulting tree matches the contract.
 - `test_seed_minimal_writes_only_six_files` — asserts `seed_minimal` writes exactly 6 files (4 anchor + 2 empty `__init__.py`); any drift is a fixture bug, not a code bug.
@@ -210,7 +213,7 @@ All Script #3 tests use the `hermes_home_writable` fixture and assert zero bytes
 - `test_report_named_profile` — `--profile <name>` lists the named profile's enabled skills; assert the reporter resolves the profile from `~/.hermes/profiles/<name>.yaml` (or the equivalent config key) and applies the profile-specific toggle.
 - `test_report_sort_by_tokens` — `--sort tokens`; assert the table rows are sorted descending by token count; assert the total-token row at the bottom reflects the sorted ordering.
 - `test_report_sort_by_use_count` — `--sort use_count`; assert the rows are sorted descending by `use_count`; assert skills with `n/a` use_count sort to the end.
-- `test_report_sort_by_last_used` — `--sort last_used`; assert the rows are sorted descending by `last_used` timestamp; assert skills with `n/a` last_used sort to the end.
+- `test_report_sort_by_last_used` — `--sort last_used_at`; assert the rows are sorted descending by `last_used_at` timestamp; assert skills with `n/a` last_used_at sort to the end.
 - `test_report_tokens_match_fixture` — inject a fixture skill with a known name + description; assert the reported token count equals the tokenizer's output for the rendered `name + description` string; when the tokenizer is unavailable, assert the fallback is `len(rendered) // 4`.
 - `test_report_tokens_projected_against_1024_cap` — when the column projection is enabled, assert each row shows a `(tokens / 1024)` percentage and the total row shows an aggregate.
 - `test_report_usage_n_a_when_curator_absent` — when the Curator store is missing or the skill has no usage record, the `use_count` and `last_used` columns show `n/a` (and the row still renders); assert no exception is raised.
@@ -241,7 +244,7 @@ All Script #3 tests use the `hermes_home_writable` fixture and assert zero bytes
 6. Write `tests/unit/test_script_1_*.py` (one per branch). Make them pass.
 7. Write `tests/integration/test_script_1_apply.py`. Make it pass.
 8. Write `tests/unit/test_script_2_*.py`. Make them pass.
-9. Write `tests/integration/test_script_2_apply.py`. Make it pass.
+9. Write `tests/integration/test_script_2_apply.py`. Make them pass.
 10. Write `tests/unit/test_script_3_*.py` (sort, profile, tokens, usage, bilingual, read-only). Make them pass.
 11. Write `tests/integration/test_script_3_read_only.py` (asserts zero bytes written across a full run). Make it pass.
 12. Write `tests/unit/test_run_eval.py`, `test_improve_description.py`, `test_generate_review.py`. Make it pass.
@@ -262,7 +265,7 @@ The fixture is the contract; the patch anchors are read from it.
 | `agent/skill_utils.py` | function def | `def extract_skill_description(frontmatter: Dict[str, Any]) -> str:` | function definition anchor (S1.cap) |
 | `agent/skill_utils.py` | cap-raise site | `    if len(desc) > 60:` | cap-raise site (S1.cap, UNPATCHED state) |
 | `agent/skill_utils.py` | replacement target | `        return desc[:57] + "..."` | the cap-raise replacement target |
-| `tools/skills_tool.py` | constant | `MAX_DESCRIPTION_LENGTH = 1024` | the patched comparator constant (imported by S1.cap's replacement) |
+| `tools/skills_tool.py` | constant | `MAX_DESCRIPTION_LENGTH = 1024` (at line 98; line 95 is blank) | the patched comparator constant (imported by S1.cap's replacement) |
 | `agent/__init__.py` | n/a | (empty) | makes `agent` a package so `from agent.skill_utils import extract_skill_description` resolves in tests |
 | `tools/__init__.py` | n/a | (empty) | makes `tools` a package so `from tools.skills_tool import MAX_DESCRIPTION_LENGTH` resolves in tests |
 
@@ -361,10 +364,10 @@ def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checko
 - **Rationale**: round-2 review found the test-pyramid prose calling the contract inventory `T3 inventory`, contradicting 09's own C3 namespace and confusing cross-references.
 - **Evidence**: V5 R5; 09 §C3 contract inventory namespace note. Confidence: verified-from-source.
 
-### D3. `test_task_e_current_text_is_unique_in_source` (REC-1)
-- **Decision**: every Task-E / patch-site `current_text` in 05's site table is asserted UNIQUE in the real Hermes source. Hit count == 1. Hit count == 0 → fail with `TEXT_DRIFT`; hit count > 1 → fail with `NON_UNIQUE_ANCHOR`.
-- **Rationale**: round-1/2/3 review found fabricated anchors (e.g., the round-1/2 E6 `"Create, edit, patch, delete, write_file, or remove_file"` with 0 hits) caused Script #1 to abort on a default-on patch. A meta-test that greps the real source for each `current_text` closes the fabricated-anchor class.
-- **Evidence**: V6 RR1 + REC-1. Confidence: verified-from-source.
+### D3. `test_task_e_current_text_is_unique_in_source` (REC-1, V4 hard-fix)
+- **Decision**: every Task-E / patch-site `current_text` in 05's site table is asserted UNIQUE in the real Hermes source. The operative `current_text` for every site is a BYTE-ACCURATE single physical line, taken verbatim from `docs/review/TASK_E_PROMPT_EDITS.md`. Hit count == 1. Hit count == 0 → fail with `TEXT_DRIFT`; hit count > 1 → fail with `NON_UNIQUE_ANCHOR`. NO special-cases for any site (the previous E6 ellipsis-form special-case was a workaround that masked the implicit-concat defect; it is REMOVED).
+- **Rationale**: round-1/2/3/4 review found fabricated anchors (E6 round-1/2 `"Create, edit, patch, delete, write_file, or remove_file"` with 0 hits; round-3/4 paraphrased-join anchors for E1/E2/E4/E6 with 0 single-line hits because the real description is split via Python implicit string concatenation). A meta-test that greps the real source for each `current_text` — using byte-accurate physical lines, not paraphrased joins — closes the fabricated-anchor class.
+- **Evidence**: V6 RR1 + REC-1; V7 V4-round S1. Confidence: verified-from-source.
 
 ### D4. Extended `check_line_count.py` spec: footer == wc -l, Total == sum (REC-2)
 - **Decision**: `tools/check_line_count.py --enforce-footer --enforce-budget-table` asserts THREE invariants on plan files:
@@ -375,18 +378,15 @@ def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checko
 - **Evidence**: V6 RR2 + RR5 + REC-2; 10 §Extended check_line_count.py spec. Confidence: verified-from-source.
 
 ### D5. No-touch sentinel: `~/.hermes/hermes-agent/agent/skill_utils.py` sha256
-- **Decision**: the `@assert_hermes_agent_untouched` decorator wraps every Script #1 unit test. It snapshots the sha256 of `~/.hermes/hermes-agent/agent/skill_utils.py` at test start and asserts it is unchanged at test end. If the file is missing, the test `pytest.skip`s.
-- **Rationale**: a stray write to the installed Hermes would be silent and catastrophic. The sentinel forces any such write to fail loudly.
+- **Decision + Rationale**: the `@assert_hermes_agent_untouched` decorator wraps every Script #1 unit test; snapshots sha256 at test start, asserts unchanged at test end, `pytest.skip`s if file is missing. A stray write to the installed Hermes would be silent and catastrophic — the sentinel forces loud failure.
 - **Evidence**: V3 [blocker from safety lens] no-touch sentinel; `real_hermes_agent_sentinel` fixture in this file. Confidence: verified-from-source.
 
 ### D6. Read-only sentinel for Script #3: fixture tree sha256 before/after
-- **Decision**: Script #3 tests use the `hermes_home_writable` fixture. Before and after every run, the fixture walks the tree and asserts byte-identical snapshots (file list, sizes, mtimes). The reporter MUST NOT create, modify, or delete any file under HERMES_HOME.
-- **Rationale**: a read-only reporter that quietly writes a temp file or sorts in place would still violate the contract; the sentinel closes that class.
+- **Decision + Rationale**: Script #3 tests use the `hermes_home_writable` fixture. Before and after every run, the fixture walks the tree and asserts byte-identical snapshots (file list, sizes, mtimes). The reporter MUST NOT create, modify, or delete any file under HERMES_HOME — a reporter that quietly writes a temp file or sorts in place would still violate the contract; the sentinel closes that class.
 - **Evidence**: V5 R11 + AC-7.1 in 01; `test_report_read_only_zero_writes` in this file and 13. Confidence: verified-from-source.
 
 ### D7. Seed-minimal fixture contract: `tests/fixtures/minimal_hermes/seed_minimal.py`
-- **Decision**: the `hermes_checkout` fixture calls `seed_minimal(checkout)` to lay down the minimum tree Script #1's pre-validation can resolve. The fixture writes exactly 6 files (4 anchor + 2 empty `__init__.py`). A patched variant replaces `60` with `MAX_DESCRIPTION_LENGTH` and the slice `desc[:57]` with `desc[:MAX_DESCRIPTION_LENGTH - 3]`.
-- **Rationale**: a fixture that drifts from the real Hermes anchors would let integration tests report a false PASS. The meta-test `test_seed_minimal_matches_patch_anchors` catches the drift at the fixture level.
+- **Decision + Rationale**: the `hermes_checkout` fixture calls `seed_minimal(checkout)` to lay down the minimum tree Script #1's pre-validation can resolve. The fixture writes exactly 6 files (4 anchor + 2 empty `__init__.py`). A patched variant replaces `60` with `MAX_DESCRIPTION_LENGTH` and the slice `desc[:57]` with `desc[:MAX_DESCRIPTION_LENGTH - 3]`. The `MAX_DESCRIPTION_LENGTH` constant in `tools/skills_tool.py` is at line 98 (line 95 is blank in the pinned checkout). A fixture that drifts from the real Hermes anchors would let integration tests report a false PASS — the meta-test `test_seed_minimal_matches_patch_anchors` catches the drift.
 - **Evidence**: 09 §Seed-minimal-fixture contract; 09 §Coverage matrix; `test_seed_minimal_matches_patch_anchors` + `test_seed_minimal_patched_variant_completes_cap_raise` in this file. Confidence: verified-from-source.
 
-<!-- end of file: 392 lines (budget 400) -->
+<!-- end of file: 392 lines (budget 360) -->

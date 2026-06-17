@@ -7,8 +7,8 @@
 ## Goal
 
 For the `hermes` (default) profile AND every named profile returned by `hermes_cli.profiles.list_profiles()`:
-1. Disable `openai` and (if present as a global plugin) `skills`.
-2. Install the migrated `skill-creator` via the hub (idempotent: reinstall/upgrade if present).
+1. Disable `skills` (global plugin) if it is present as a global artifact. (See S5 — we do NOT add `"openai"` to the disabled list; disabling is keyed by skill NAME and there is no skill named `"openai"`; the factory skill's NAME is `skill-creator`.)
+2. Install the migrated `skill-creator` via the hub at the FLAT path `~/.hermes/skills/skill-creator/`. This is REPLACEMENT-IN-PLACE of the factory skill (which shares the same name); the new copy overwrites the factory at the same path.
 3. Call `clear_skills_system_prompt_cache(clear_snapshot=True)` after every successful flip.
 4. Emit a deterministic JSON report per profile.
 
@@ -78,18 +78,26 @@ def hermes_home_scope(path: Path):
         reset_hermes_home_override(token)
 ```
 
-Rationale: `hermes_cli.config.load_config()` and `save_config()` anchor on `get_config_path()` which reads the override token, NOT `os.environ['HERMES_HOME']`. `hermes_cli.skills_hub.do_install` (line 478) calls `ensure_hub_dirs()` which writes under the override but `do_install` itself also reads `os.environ['HERMES_HOME']` in some sub-paths (D7 dispute). Both must be mirrored.
+Rationale: `hermes_cli.config.load_config()` and `save_config()` anchor on `get_config_path()` which reads the override token, NOT `os.environ['HERMES_HOME']`. `hermes_cli.skills_hub.do_install` calls `ensure_hub_dirs()` (defined at `tools/skills_hub.py:3287`; line 478 of `hermes_cli/skills_hub.py` is the unrelated `do_install` symbol — see V4 S3) which writes under the override, but `do_install` itself also reads `os.environ['HERMES_HOME']` in some sub-paths (D7 dispute). Both must be mirrored.
 
 ## Desired state per profile
 
 ```python
 @dataclass(frozen=True)
 class DesiredState:
-    desired_disabled: frozenset[str]   # {"openai"} (or + "skills" if present)
+    desired_disabled: frozenset[str]   # {"skills"} iff global plugin present; NEVER "openai"
     desired_installed: frozenset[str]  # {"skill-creator"} always
 ```
 
-`openai` is ALWAYS disabled (it's the upstream source of the original Anthropic skill-creator). `skills` is disabled iff a global `plugins/skills/` artifact exists in the profile. `skill-creator` is installed iff absent under `~/.hermes/profiles/<id>/skills/...` or the default `~/.hermes/skills/...`.
+### S5 — name-collision reasoning (V4 RR2/REC-3 fix)
+
+The factory `skill-creator` and the migrated `skill-creator` share the same skill NAME (`skill-creator`); the upstream `openai/skills/skill-creator` is only the hub INSTALL PATH (`hermes_cli/skills_hub.py:1671`), not a skill name. Disabling is keyed by skill NAME (`tools/skills_tool.py:597` `return name in global_disabled`; `:646` `name = frontmatter.get("name", skill_dir.name)`). Therefore:
+
+- Adding `"openai"` to the disabled list is a NO-OP — there is no skill named `"openai"`; nothing matches.
+- Disabling by NAME `"skill-creator"` would BREAK our own migrated skill at the system-prompt index; this is exactly the opposite of what we want.
+- The correct swap is REPLACEMENT-IN-PLACE: `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)` writes the migrated skill into the SAME flat path `~/.hermes/skills/skill-creator/`, overwriting the factory copy byte-for-byte.
+
+`skills` is disabled iff a global `plugins/skills/` artifact exists in the profile. `skill-creator` is installed at the flat path (replacing the factory); version drift is handled by `force=True` on every apply so the migrated copy is always authoritative.
 
 ## Shared enabled-detection module (used by Script #2 AND Script #3 reporter)
 
@@ -129,11 +137,11 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 1. `load_config()` → `config: dict`.
 2. `disabled_now = get_disabled_skill_names(platform=None)` (from `agent.skill_utils`, NOT `hermes_cli.skills_config`).
 3. `installed_now = walk_skills_dir(path / "skills")`.
-4. Compute `desired_disabled = disabled_now | {"openai"}` (and union `"skills"` if globally present).
+4. Compute `desired_disabled = disabled_now` (and union `"skills"` if globally present). NOTE: do NOT union `"openai"` — it matches no skill by name (S5); see "Desired state per profile" above.
 5. Compute `desired_installed = installed_now`; ensure `"skill-creator"` in it.
 6. If `--apply`:
-   a. `save_disabled_skills(config, sorted(desired_disabled), platform=None)` — POSITIONAL args, real sig `save_disabled_skills(config: dict, disabled: Set[str], platform: Optional[str] = None)` at `hermes_cli/skills_config.py:45`. Returns updated `config`; call `save_config(config)` (no `path=`).
-   b. If `"skill-creator"` not in `installed_now` (or version drift detected): `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)` from `hermes_cli.skills_hub`. This writes the skill to `<scoped HERMES_HOME>/skills/skill-creator/` (the FLAT path; see "Flat-install path" above).
+   a. `save_disabled_skills(config, sorted(desired_disabled), platform=None)` — POSITIONAL args, real sig `save_disabled_skills(config: dict, disabled: Set[str], platform: Optional[str] = None)` at `hermes_cli/skills_config.py:45`. Returns updated `config`; call `save_config(config)` (no `path=`). Note: when `desired_disabled == disabled_now` and the only delta is the swap-in of `skill-creator`, this save may be a no-op — that is correct.
+   b. Always call `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)` from `hermes_cli.skills_hub`. This REPLACES the factory skill at `<scoped HERMES_HOME>/skills/skill-creator/` (the FLAT path; see "Flat-install path" above). `force=True` is required because the factory skill already exists at the same path; without it, do_install would skip or refuse. The replacement is idempotent and authoritative.
    c. `clear_skills_system_prompt_cache(clear_snapshot=True)` — imported from `agent.prompt_builder`:
       ```python
       from agent.prompt_builder import clear_skills_system_prompt_cache
@@ -154,9 +162,9 @@ Script #2 calls this to compute `installed_now` and the diff between current and
       "profile_name": "hermes",
       "current_disabled": [],
       "current_installed": ["some-other-skill"],
-      "desired_disabled": ["openai"],
+      "desired_disabled": [],
       "desired_installed": ["skill-creator", "some-other-skill"],
-      "diff": {"added_disabled": ["openai"], "removed_disabled": [], "added_installed": ["skill-creator"], "removed_installed": []},
+      "diff": {"added_disabled": [], "removed_disabled": [], "added_installed": ["skill-creator"], "removed_installed": []},
       "actions_taken": [],  // populated when --apply
       "errors": []
     }
@@ -186,23 +194,25 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 - `test_audit_default_profile` — fixture with default profile only; assert exactly one row in `profiles[]`.
 - `test_audit_named_profiles` — fixture with 3 named profiles; assert 3 rows in stable sorted order.
 - `test_audit_empty_profile` — fixture with a profile that has no `skills/` dir; `current_installed == []`; `desired_installed == ["skill-creator"]`.
-- `test_audit_drift_detection` — fixture where `openai` is already disabled; assert `added_disabled == []`.
+- `test_audit_drift_detection` — fixture where some unrelated skill is already disabled; assert `desired_disabled == current_disabled` (no spurious "openai" added; S5).
 - `test_audit_skills_global_present` — fixture with `plugins/skills/`; assert `desired_disabled` includes `"skills"`.
 - `test_audit_skills_global_absent` — fixture without; assert `desired_disabled` does NOT include `"skills"`.
 - `test_audit_json_deterministic` — run twice on the same fixture with `--frozen-time`; sha256 of output is byte-identical.
 - `test_audit_keys_sorted` — JSON keys are in sorted order (sorted dict insertion).
 
 ### Apply path
-- `test_apply_disables_openai` — `--apply`; assert `config["skills"]["disabled"]` includes `"openai"` after the run.
+- `test_apply_replaces_factory_skill_creator` — fixture with the factory `skill-creator` already at `<scoped HERMES_HOME>/skills/skill-creator/SKILL.md`; `--apply`; assert `do_install` is called with `force=True, skip_confirm=True, invalidate_cache=True` and that the migrated copy OVERWRITES the factory at the same flat path (assert post-condition: `SKILL.md` content matches the migrated fixture, NOT the factory content). (S5 fix — replaces the old `test_apply_disables_openai`.)
+- `test_apply_does_not_add_openai_to_disabled_list` — `--apply`; assert `"openai"` is NEVER present in `config["skills"]["disabled"]` at any point during the run (capture before/during/after via a wrapped `save_disabled_skills` spy). The string `"openai"` is a no-op against the name-keyed disable check and would mislead operators. (S5 fix — new regression sentinel.)
 - `test_apply_does_not_disable_skills_when_global_absent` — assert `desired_disabled` does NOT include `"skills"`.
 - `test_apply_installs_skill_creator_when_absent` — assert `<scoped HERMES_HOME>/skills/skill-creator/SKILL.md` exists after run (FLAT path, not plugin-namespaced).
-- `test_apply_idempotent_reinstall` — second `--apply`; assert no re-install (do_install spy called 0 times).
+- `test_apply_idempotent_reinstall` — second `--apply`; assert do_install is still called once per profile (idempotent overwrite), with `force=True`.
 - `test_apply_force_reinstall_on_version_drift` — fixture with old `skill-creator` version; `--apply`; assert do_install called once with `force=True`.
 - `test_apply_calls_clear_skills_system_prompt_cache` — spy on `agent.prompt_builder.clear_skills_system_prompt_cache`; assert called once per profile with `clear_snapshot=True`.
 - `test_apply_cache_clear_raises_continues_with_warning` — mock cache-clear to raise; assert flip persists; warning logged; script continues to next profile.
 - `test_apply_hub_install_fails_continues` — mock `do_install` to raise; assert per-profile error; next profile is processed.
 - `test_apply_writes_inside_hermes_home_scope` — assert the entire apply block runs under the context manager; if the manager exits early the apply must abort.
 - `test_apply_save_disabled_skills_positional_args` — spy on `save_disabled_skills`; assert it is called with `(config, sorted_set, platform=None)` positionally — NOT with `names=` kwarg.
+- `test_apply_does_not_disable_skill_creator_by_name` — assert `"skill-creator"` is NEVER added to `desired_disabled` (the migrated skill shares the factory name; disabling it would break our own index entry). (S5 — name-collision regression sentinel.)
 
 ### Disabled-skill API correctness
 - `test_get_disabled_skill_names_uses_agent_skill_utils` — assert the function comes from `agent.skill_utils`, NOT `hermes_cli.skills_config`.
@@ -255,7 +265,7 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 ### D4. `hermes_home_scope` mirrors BOTH override token AND env var
 - **Decision**: `hermes_home_scope(path)` sets BOTH `set_hermes_home_override(str(path))` AND `os.environ['HERMES_HOME']=str(path)`, restoring both on exit (try/finally).
 - **Rationale**: `hermes_cli.config.load_config()` and `save_config()` anchor on the override token (via `get_config_path()`); `hermes_cli.skills_hub.do_install` reads `os.environ['HERMES_HOME']` in some sub-paths. Mirroring both is the only way to ensure config writes and hub installs resolve to the scoped HERMES_HOME.
-- **Evidence**: V3 [refuted claim 3]; `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `hermes_constants.py:set_hermes_home_override` and `hermes_cli/skills_hub.py:478` (`ensure_hub_dirs`); AC-3.4 + AC-3.6 in 01. Confidence: verified-from-source.
+- **Evidence**: V3 [refuted claim 3]; `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `hermes_constants.py:set_hermes_home_override` and `tools/skills_hub.py:3287` (`ensure_hub_dirs`); AC-3.4 + AC-3.6 in 01. Confidence: verified-from-source. (Note: line 478 of `hermes_cli/skills_hub.py` is the unrelated `do_install` symbol; the `ensure_hub_dirs` definition is in `tools/skills_hub.py:3287`. V4 S3 line-number correction.)
 
 ### D5. Flat-install path for the migrated skill (B4)
 - **Decision**: Script #2's `do_install` MUST install the skill at the FLAT path `~/.hermes/skills/skill-creator/` under the scoped HERMES_HOME. The plugin does NOT do this.
@@ -272,4 +282,4 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 - **Rationale**: byte-identical output across runs is the only way to test deterministically and the only way the migration-note generator can diff two runs cleanly.
 - **Evidence**: V3 [major] determinism; 06 §Deterministic JSON report; `test_audit_json_deterministic` in this file. Confidence: inferred.
 
-<!-- end of file: 275 lines (budget 400) -->
+<!-- end of file: 285 lines (budget 400) -->

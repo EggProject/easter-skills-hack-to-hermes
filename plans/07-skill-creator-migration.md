@@ -34,7 +34,7 @@ metadata:
 Hard rules satisfied (per `tools/skill_manager_tool.py:_validate_frontmatter`):
 - Name matches `^[a-z0-9][a-z0-9._-]*$`, len 13, <= 64.
 - **Two frontmatter variants ship** because Hermes's system-prompt index enforces two different caps:
-  - `SKILL.md.short` — the SHORT variant surfaced in the `<available_skills>` index; description string-coerced, <= 60 chars (matches the `agent/skill_utils.py:extract_skill_description` slice `[:MAX_DESCRIPTION_LENGTH - 3] + "..."` at MAX_DESCRIPTION_LENGTH=1024, BUT index cap is 60 per `agent/skill_utils.py`).
+  - `SKILL.md.short` — the SHORT variant surfaced in the `<available_skills>` index; description string-coerced, <= 60 chars (matches the `agent/skill_utils.py:extract_skill_description` slice `[:MAX_DESCRIPTION_LENGTH - 3] + "..."` at MAX_DESCRIPTION_LENGTH=1024 at `agent/skill_utils.py:688-689` — lines 653/654 are the docstring of an unrelated function, see V4-RR3 S3; BUT index cap is 60 per `agent/skill_utils.py`).
   - `SKILL.md` (FULL) — the body loaded on `skill_view(name='skill-creator')`; description string-coerced, ~330 chars, <= 1024 chars.
   - Both variants share the same `name`, `version`, `author`, `license`, and `metadata.hermes` fields; only the `description` length differs.
 - Starts with `Use when …` (peer convention).
@@ -241,7 +241,7 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 i
 ### D5. Frontmatter ships TWO variants: `SKILL.md` (full, <=1024 chars) + `SKILL.md.short` (<=60 chars)
 - **Decision**: the migrated skill ships two frontmatter variants. The installer selects based on the active cap (60 vs 1024). If neither fits the active cap, the install is refused.
 - **Rationale**: the system-prompt index enforces a 60-char description cap (per `agent/skill_utils.py`); the `skill_view(name='skill-creator')` path loads the full description. Two variants cover both states without bloating the system prompt.
-- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:653-654`; 07 §Frontmatter; AC-4.2 + AC-4.10 in 01. Confidence: verified-from-source.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:688-689` (cap-raise / index-cap comparator); prior draft cited 653-654 which is the docstring of `resolve_skill_config_values` (V4-RR3 S3). 07 §Frontmatter; AC-4.2 + AC-4.10 in 01. Confidence: inferred (re-derive exact byte sequence from the pinned checkout at implementation time; downgrade to inferred rather than verified-from-source until the grep is re-run against the pinned commit).
 
 ### D6. Tool-name matching uses `tool_name.lower() in (...)`
 - **Decision**: the migrated skill matches tool names case-insensitively (`tool_name.lower()`). Anthropic uppercase names (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`, `Task`, `Skill`, `AskUserQuestion`, `WebSearch`, `WebFetch`, `TodoWrite`) are mapped to their lowercase Hermes equivalents.

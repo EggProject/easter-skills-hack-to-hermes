@@ -2,30 +2,34 @@
 
 ## Plan files (chunked, each ≤500 lines)
 
-- [`00-index.md`](00-index.md) — 00 — Index and How to Read This Plan (68 lines)
-- [`01-overview.md`](01-overview.md) — 01 — Overview, Deliverables, Acceptance Criteria (109 lines)
-- [`02-architecture.md`](02-architecture.md) — 02 — Architecture, Component Diagram, Data Flow (147 lines)
-- [`03-plugin-spec.md`](03-plugin-spec.md) — 03 — Hermes Plugin Spec (§5.1, 60→1024 Cap Raise) (147 lines)
+- [`00-index.md`](00-index.md) — 00 — Index and How to Read This Plan
+- [`01-overview.md`](01-overview.md) — 01 — Overview, Deliverables, Acceptance Criteria
+- [`02-architecture.md`](02-architecture.md) — 02 — Architecture, Component Diagram, Data Flow
+- [`03-plugin-spec.md`](03-plugin-spec.md) — 03 — Hermes Plugin Spec (§5.1, 60→1024 Cap Raise)
+- [`04-script-1-patch.md`](04-script-1-patch.md) — 04 — Script #1 (cap-raise patch; --target REQUIRED)
+- [`05-script-1-task-e-toggle.md`](05-script-1-task-e-toggle.md) — 05 — Task E toggle (7 sites, byte-accurate anchors)
+- [`06-script-2-profiles.md`](06-script-2-profiles.md) — 06 — Script #2 (per-profile audit/flip; hermes_home_scope)
+- [`07-skill-creator-migration.md`](07-skill-creator-migration.md) — 07 — Migrated skill (T3 18 rows; tool-name mapping; HERMES_SESSION+CLAUDECODE strip)
+- [`08-migration-note-format.md`](08-migration-note-format.md) — 08 — MIGRATION (3-file split)
+- [`09-test-strategy.md`](09-test-strategy.md) — 09 — TDD, fixtures, AST-grep, no-touch sentinels
+- [`10-toolchain-and-conventions.md`](10-toolchain-and-conventions.md) — 10 — uv, pyproject, pre-commit, bilingual, worktree+PR
+- [`11-sub-agent-delegation-map.md`](11-sub-agent-delegation-map.md) — 11 — Phase 5 sub-agent routing
+- [`12-risks-and-open-questions.md`](12-risks-and-open-questions.md) — 12 — Q1–Q11, residual risks R1–R7, escalation log
+- [`13-script-3-report.md`](13-script-3-report.md) — 13 — Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY)
+
+All 14 plan files (00–13) are emitted. Every file is under 500 lines; the sum is 3312 lines (budget sum 4050, hard cap 4500). V7 plan-repair fixes (S1–S8) are applied. See `00-index.md` for the live budget table and `docs/review/PLAN_FIXES_ROUND4.md` for the V7 fix log.
 
 ## Supporting artefacts
 
-- [`_synthesis.md`](_synthesis.md) — Synthesized research brief (287 lines)
+- [`_synthesis.md`](_synthesis.md) — Synthesized research brief
 - [`_plan_reviews.md`](_plan_reviews.md) — Adversarial plan reviews (4 lenses)
 - [`_research/`](_research/) — Raw research JSON per topic
+- [`docs/review/`](docs/review/) — V2–V7 plan-repair logs + TASK_E_PROMPT_EDITS anchors
 
 ## Open questions for the HITL gate
 
-- What is the exact Hermes env-var name for the nesting-guard? Candidates: HERMES_SESSION, HERMES_AGENT, HERMES_PARENT_PID. Must be confirmed by reading the Hermes harness before Script #1 lands.
-- What is the exact Hermes CLI flag set for --include-partial-messages / --verbose / --output-format stream-json? Need to read hermes_cli/main.py argparse parser before Script #1 lands.
-- Should Script #1 raise the 60-char extract_skill_description cap to 1024, or to a smaller interim value (e.g. 200)? The spec docs/maybe-patch-points.md implies a raising is desired; the exact value is a design decision.
-- Does Script #2's flip phase require a per-profile HERMES_HOME mirror in os.environ, or is set_hermes_home_override sufficient? The dispute in D7 shows do_install / save_config / get_disabled_skill_names anchor to os.environ['HERMES_HOME']; confirm whether set_hermes_home_override updates the env var or only an in-process cache.
-- Should the migrated skill-creator SKILL.md description be left untouched (the 60-char cap is a separate problem), or should the migrated skill be exempted from the cap? If the cap stays at 60, the migrated skill's description must be ≤ 60 chars. The T3 spec implies raising the cap; the exact value affects how aggressively the description can be Hermes-flavoured.
-- Should Script #1 land an idempotent re-runnable --check mode, or just a one-shot --apply? The patch touches agent/skill_utils.py:647-655 and the Task E sites across 4 files; a --check flag that asserts the expected state without writing is desirable. Confirm with the user.
-- Should the migration ship a one-time GitHub-issue note that the 60-char cap was raised? Issues #46005 and #46024 reference this work; an outbound comment in the patch-script's release notes would be appropriate.
-- Is the GitHub issue NousResearch/hermes-agent#46005 real? Not independently verifiable from the read-only environment. If the user wants to reference it in commit messages or the patch-script's README, confirm against the live GitHub UI.
-- Does the website docs site at website/docs/user-guide/features/skills.md:378 actually exist in the v0.16.0 install at the cited line? Re-read at planning time to confirm exact line offset.
-- Should Script #1 take a --profile <id> flag so the patch only applies to one profile's config snapshot (not the global Hermes install)? Per the project safety rule the script MUST NOT modify ~/.hermes/hermes-agent; a per-profile dry-run that validates the patch against a config snapshot would let the user verify the change in one profile before deciding to apply it to the global install.
-
-## Plan summary
-
-Produced 4/13 plan files (00-index, 01-overview, 02-architecture, 03-plugin-spec). The remaining 9 files (04-script-1-patch, 05-script-1-task-e-toggle, 06-script-2-profiles, 07-skill-creator-migration, 08-migration-note-format, 09-test-strategy, 10-toolchain-and-conventions, 11-sub-agent-delegation-map, 12-risks-and-open-questions) are needed to fully cover §5.2–§5.6. The StructuredOutput tool returned a validation error and aborted the batch — the files were not persisted. Please re-invoke the request to retry, and I will emit all 13 files in the next call.
+- Q1: Hermes nesting-guard env var name → `HERMES_SESSION` (HITL-confirmed E1).
+- Q4: cap-raise safety contract → `--target REQUIRED` + plugin advisory-only (HITL-confirmed E4; the §5.1 re-scope to "advisory-only + Script #1 does the patch" is surfaced at E4a as a literal deviation from the brief).
+- Q5: MIGRATION 3-file split → confirmed (E5).
+- Q9: active-cap detection at install → refuse + bilingual error (confirmed E9).
+- Q2 / Q3 / Q6 / Q7 / Q8 / Q10 / Q11: defaults accepted; pending Phase 5 re-verify.

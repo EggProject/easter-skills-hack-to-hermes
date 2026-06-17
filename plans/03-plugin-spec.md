@@ -248,6 +248,6 @@ NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_descr
 ### D5. Pin values for the unpatched vs patched comparator
 - **Decision**: `UNPATCHED_CAP = 60` (literal `60` in the comparator) and `PATCHED_CAP_REFERENCE = "MAX_DESCRIPTION_LENGTH"` (the patched constant name) are pinned in `_advisory.py`.
 - **Rationale**: the AST must distinguish "patched" from "unpatched" by matching either the literal `60` or the `MAX_DESCRIPTION_LENGTH` reference in the `Compare` node's comparators.
-- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:653` (unpatched) and `tools/skills_tool.py:98` (the patched-cap constant). Confidence: verified-from-source.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:688`/`:689` (unpatched `extract_skill_description` cap-raise site; literal `60` comparator, the actual slice being inspected by the AST walk) and `tools/skills_tool.py:98` (`MAX_DESCRIPTION_LENGTH` constant the patched form references). Note: an earlier draft cited `agent/skill_utils.py:653`/`:654` for this site, but those lines are the docstring of an unrelated function (`resolve_skill_config_values`); the real cap comparator is at 688/689. The byte sequence at 688/689 was NOT re-verified at the pinned commit during this edit; treat this citation as **inferred** rather than verified-from-source until a re-verify pass is run. Confidence: inferred.
 
 <!-- end of file: 253 lines (budget 260) -->

@@ -112,6 +112,7 @@ packages = ["src/hermes_skill_creator_plugin"]
 
 ```python
 # src/hermes_skill_creator_plugin/entrypoints.py
+from typing import Optional
 import click
 from .i18n.messages_en import M as EN
 from .i18n.messages_hu import M as HU
@@ -121,16 +122,15 @@ from .i18n.messages_hu import M as HU
     help=f"{EN.report_help_short}\n\n{EN.report_help_long}",
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.option("--profile", required=True, help=EN.report_opt_profile)
-@click.option("--sort", type=click.Choice(["tokens", "use_count", "last_used"]),
+@click.option("--profile", default=None, required=False, help=EN.report_opt_profile)
+@click.option("--sort", type=click.Choice(["tokens", "use_count", "last_used_at"]),
               default="tokens", help=EN.report_opt_sort)
-def report_main(profile: str, sort: str) -> None:
+def report_main(profile: Optional[str], sort: str) -> None:
     """Profile-level skill token + usage reporter (READ-ONLY).
 
-    Lists the ENABLED skills for the given profile (config/toggle + platform
-    filters honored), tokenizes the rendered name+description string with the
-    configured model's tokenizer (fallback ~chars/4), and joins usage counts
-    (view/use/patch + last_used) from the Curator (project ref #45).
+    Lists the ENABLED skills for --profile (or all profiles when omitted),
+    tokenizes the rendered name+description (fallback ~chars/4), and joins
+    view/use/patch + last_used_at counts from the Curator (project ref #45).
 
     MUST NOT mutate anything on disk. CI asserts zero bytes written against
     the fixture tree.
@@ -330,4 +330,4 @@ Pre-commit entry passes `--enforce-footer --enforce-budget-table` (both on by de
 - **Rationale**: docstrings target the next developer (English); the bilingual surface is reserved for `--help` and console/log lines (operator-facing).
 - **Evidence**: 10 §Documentation in code. Confidence: inferred.
 
-<!-- end of file: 333 lines (budget 340) -->
+<!-- end of file: 333 lines (budget 310) -->

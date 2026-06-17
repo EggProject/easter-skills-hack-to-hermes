@@ -21,22 +21,22 @@
 | # | File | Covers | Status | Budget | Actual |
 | --- | --- | --- | --- | --- | --- |
 | 00 | `00-index.md` | This file | [emitted] | 130 | 106 |
-| 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 150 |
+| 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 142 |
 | 02 | `02-architecture.md` | Component diagram, data flow, sequence, safety | [emitted] | 240 | 234 |
 | 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 260 | 253 |
-| 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 653; --target REQUIRED; --force) | [emitted] | 400 | 249 |
-| 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 187 |
-| 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 400 | 275 |
+| 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 688 in agent/skill_utils.py; --target REQUIRED; --force) | [emitted] | 400 | 249 |
+| 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 183 |
+| 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 400 | 285 |
 | 07 | `07-skill-creator-migration.md` | §5.4 Migrated skill (T3 18 rows; tool-name mapping full; HERMES_SESSION+CLAUDECODE strip) | [emitted] | 450 | 256 |
 | 08 | `08-migration-note-format.md` | §5.5 MIGRATION (3-file split) | [emitted] | 220 | 213 |
 | 09 | `09-test-strategy.md` | TDD, fixtures, AST-grep, no-touch sentinels, seed-minimal-fixture contract | [emitted] | 400 | 392 |
 | 10 | `10-toolchain-and-conventions.md` | uv, pyproject, pre-commit, bilingual, worktree+PR | [emitted] | 340 | 333 |
 | 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 157 |
-| 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 203 |
-| 13 | `13-script-3-report.md` | §5.7 Script #3 (profile-level skill token + usage reporter; READ-ONLY) | [emitted] | 400 | 304 |
-| | **Total** | | | **4050** | **3206** |
+| 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 204 |
+| 13 | `13-script-3-report.md` | Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY) — NOTE: §5.7 in the original brief is the continuously-maintained Todo list, NOT this deliverable | [emitted] | 400 | 304 |
+| | **Total** | | | **4050** | **3311** |
 
-Sum 3206 < 4500 (sum of budgets 4050). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
+Sum 3311 < 4500 (sum of budgets 4050). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
 
 ## Hard constraints (HARD)
 
@@ -70,7 +70,7 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 - Q3: per-profile directory set (default: `_PROFILE_DIRS`).
 - Q4: cap-raise safety contract (default: --target REQUIRED; no runtime monkey-patch).
 - Q5: MIGRATION 3-file split (default: 3 files).
-- Q6: per-file line budget (default: 3570 sum; see the file map + budget table above for live values).
+- Q6: per-file line budget (default: 4050 sum; see the file map + budget table above for live values).
 - Q7: bilingual format spec (default: `[en]/[hu]` single line + two-section help).
 - Q8: plugin installer interactive safety (default: TTY confirm + --yes).
 - Q9: active-cap detection at install (default: refuse if desc > active cap).
@@ -84,10 +84,10 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 - **Rationale**: hard numbers in plan prose drifted across rounds (RR2, RR3, RR4). Centralizing the live values here removes the parallel-truth class of drift.
 - **Evidence**: V6 RR2 / RR3 / RR4 findings; the table cells above are computed from `wc -l` and updated after every plan edit. Confidence: inferred (process rule); verified-from-source (live `wc -l`).
 
-### D2. Actual column is auto-generated from `wc -l` (REC-2)
-- **Decision**: the `Actual` column reflects the live `wc -l` of each file. The Total cell reflects the live sum. `tools/check_line_count.py --enforce-budget-table` enforces both.
-- **Rationale**: hand-maintained Actual counts drifted in R2 (00=80 vs real 79; 09=345 vs real 347); auto-generation closes that class of bug.
-- **Evidence**: V6 RR2 verified against the live checkout. Confidence: verified-from-source.
+### D2. Actual column + Total cell are hand-typed from `wc -l` at file-finalization time (REC-2)
+- **Decision**: the `Actual` column is hand-typed from `wc -l` at file-finalization time; the Total cell MUST equal the sum of the Actual column OVER ALL ROWS (00..13, i.e. all 14 plan files — the 00-index row's own Actual count IS included in the Total). The extended `tools/check_line_count.py` hook (see 10 §Extended check_line_count.py spec) asserts at pre-commit time: (a) each file's `<!-- end of file: NN lines -->` footer equals live `wc -l`, AND (b) the 00-index Total cell equals the live sum of the Actual column.
+- **Rationale**: hand-maintained Actual counts drifted in R2 (00=80 vs real 79; 09=345 vs real 347) AND V4 (Total 3206 vs real 3312 = 3206 + file 00's 106 — the old Total omitted row 00 from its own sum). Centralizing the cell values here in this table is the contract; the pre-commit hook then enforces it. Dropping the "auto-generated" claim because the cells are hand-typed and we have already shipped one wrong Total — honesty about the process prevents future drift-class bugs.
+- **Evidence**: V6 RR2 / V4 RR2 verified against the live checkout. Confidence: verified-from-source.
 
 ### D3. Hard caps: 500 lines per file, 4500 lines sum
 - **Decision**: per-file cap = 500; sum cap = 4500; budgets per file = 90–450.
@@ -101,7 +101,7 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 
 ### D5. 13 plan files, 14 deliverables (13 + README)
 - **Decision**: plan set = 00..13 (14 files); file map covers all of them.
-- **Rationale**: round-2/3 review added `13-script-3-report.md` for §5.7; 00-index grew an Actual/Total row for it.
-- **Evidence**: V3 review added Script #3 deliverable. Confidence: verified-from-source (V3 review + AC-7.1..AC-7.7 in 01).
+- **Rationale**: round-2/3 review added `13-script-3-report.md` for the WE-requested Script #3 report (extra-brief feature, NOT the original §5.7 — §5.7 in the brief is the continuously-maintained Todo list, which is a separate artifact tracked outside this plan set). 00-index grew an Actual/Total row for Script #3.
+- **Evidence**: V3 review added Script #3 deliverable; V4 RR4 S6 clarified §5.7 vs Script #3 ownership. Confidence: verified-from-source (V3 review + AC-7.1..AC-7.7 in 01).
 
 <!-- end of file -->

@@ -45,7 +45,7 @@
 ### Q6 — Per-file line budget table
 
 - **Question**: is the per-file line budget approved?
-- **Proposed default**: yes. See `plans/00-index.md` for the per-file budget table (single source of truth; live values auto-generated from `wc -l`). The default sum-budget is 3570; the hard cap is 500 lines per file and 4500 lines total.
+- **Proposed default**: yes. See `plans/00-index.md` for the per-file budget table (single source of truth; live values auto-generated from `wc -l`). The default sum-budget is 4050 (per the 00-index budget column); the hard cap is 500 lines per file and 4500 lines total.
 - **Resolution path**: HITL gate. Pre-commit hook `check_line_count.py` enforces it.
 - **Escalation**: if any file blows the budget, the plan is rejected and that file is split or trimmed.
 
@@ -157,8 +157,9 @@
 | E2 | 2026-06-17 | (Q2) Hermes event shape | adapter-based, single canonical | default accepted | Adapter in `07 §Nesting-guard helper`; re-verify shape at Phase 5 by reading `~/.hermes/hermes-agent/hermes_cli/streaming/`. |
 | E3 | 2026-06-17 | (Q3) per-profile dir set | `_PROFILE_DIRS = {memories, sessions, skills, skins, logs, plans, workspace, cron, home}` per `hermes_cli/profiles.py:_PROFILE_DIRS` | default accepted | Script #2 re-reads `hermes_cli/profiles.py:_PROFILE_DIRS` at Phase 5 implementation; if the list changed, 06 is updated. |
 | E4 | 2026-06-17 | (Q4) cap-raise safety contract | --target REQUIRED, no runtime monkey-patch | **accepted** (--target REQUIRED + advisory-only) | Runtime monkey-patch removed from the plan; plugin is purely advisory (static AST read of user-owned checkout); Script #1 refuses to run if `--target == ~/.hermes/hermes-agent`. |
+| E4a | 2026-06-17 | (§5.1 re-scope) brief §5.1 originally assigned the cap-raise logic to the plugin; V3 re-scoped the plugin to advisory-only + Script #1 as the writer | default accepted (literal deviation from §5.1, justified: runtime monkey-patch violates §4, and `register_skill` cannot reach the `<available_skills>` index per `hermes_cli/plugins.py`) | Plan §5.1 / 03 / 04 updated: the plugin is a static-AST advisor; Script #1 (TDD-first, --target REQUIRED) performs the cap-raise patch. **This is a literal deviation from brief §5.1** — surfaced here at the HITL gate (not silently re-scoped) so the next reviewer can re-trace the deviation. |
 | E5 | 2026-06-17 | (Q5) MIGRATION split | 3 files | **3 files** (confirmed) | `MIGRATION.md` (index) + `MIGRATION.hermes-patch.md` (Script #1's cap-raise + 7 Task E sites) + `MIGRATION.skill-port.md` (T3 inventory of 18 Claude-binding replacements). All three source-controlled. |
-| E6 | 2026-06-17 | (Q6) line budget | 3570 sum (see 00-index for per-file table) | default accepted | pre-commit hook `tools/check_line_count.py` enforces per-file budget; sum < 4500; 00-index is single source of truth. |
+| E6 | 2026-06-17 | (Q6) line budget | 4050 sum (see 00-index for per-file table) | default accepted | pre-commit hook `tools/check_line_count.py` enforces per-file budget; sum < 4500; 00-index is single source of truth. |
 | E7 | 2026-06-17 | (Q7) bilingual format | `[en] text / [hu] szöveg` single line + two-section `--help` | default accepted | pre-commit `tools/check_bilingual.py` enforces console format; `test_help_is_bilingual` enforces the two-section structure. |
 | E8 | 2026-06-17 | (Q8) installer interactive safety | TTY confirm + `--yes` bypass | default accepted | Installer prompts in TTY, refuses real `~/.hermes` without `--yes`; integration tests use `tmp_path HERMES_HOME` + `--yes`. |
 | E9 | 2026-06-17 | (Q9) active-cap detection | refuse if desc > active cap | **refuse + bilingual error** (confirmed) | Installer detects active cap (60 vs 1024) by static AST read of target; refuses install with bilingual error if description exceeds the cap; `--with-short-description` flag substitutes the truncated form. Tests cover both cap states. |
@@ -200,4 +201,4 @@
 - **Rationale**: round-1/2 plans cited these IDs as confirmed without independent verification. R3 here explicitly downgrades them to TBD.
 - **Evidence**: V5 R10; 12 R3; 08 §GitHub issue verification. Confidence: assumed (pending WebFetch verification).
 
-<!-- end of file: 203 lines (budget 200) -->
+<!-- end of file: 204 lines (budget 210) -->

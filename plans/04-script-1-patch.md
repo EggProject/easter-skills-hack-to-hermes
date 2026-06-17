@@ -25,7 +25,7 @@ The cap-raise has TWO co-located edits in `agent/skill_utils.py` (function `extr
 | site_id | file (relative to `--target`) | symbol | current_text (8+ char anchor) | replacement_text |
 | --- | --- | --- | --- | --- |
 | `S1.cap.a` | `agent/skill_utils.py` | `extract_skill_description` | `if len(desc) > 60:` | `if len(desc) > MAX_DESCRIPTION_LENGTH:` |
-| `S1.cap.b` | `agent/skill_utils.py` | `extract_skill_description` | `return desc[:57] + "..."` | `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` |
+| `S1.cap.b` | `agent/skill_utils.py` | `extract_skill_description` (line 689) | `return desc[:57] + "..."` | `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` |
 
 `MAX_DESCRIPTION_LENGTH` = 1024 is defined in `tools/skills_tool.py`. Two acceptable import strategies, picked in this order:
 
@@ -214,7 +214,7 @@ Every `print()` and `logger.{info,warning,error}` call MUST match `^\[en\] .+ / 
 ### D1. Cap-raise is a two-site atomic patch (B2)
 - **Decision**: `S1.cap` patches BOTH the comparator (`if len(desc) > 60:` → `if len(desc) > MAX_DESCRIPTION_LENGTH:`) AND the slice (`return desc[:57] + "..."` → `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."`) as a SINGLE `site_id` with two anchors.
 - **Rationale**: the function encodes the cap in two places; patching only one breaks it (either the check still drops, or the slice still chops at 57). They are a single logical edit and MUST land atomically.
-- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:653` (comparator) and `:654` (slice); PC5 in 12; V3 [blocker B2]. Confidence: verified-from-source.
+- **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:688` (comparator) and `:689` (slice); PC5 in 12; V3 [blocker B2]. Confidence: verified-from-source.
 
 ### D2. `MAX_DESCRIPTION_LENGTH` import strategy with circular-import guard
 - **Decision**: prefer `from tools.skills_tool import MAX_DESCRIPTION_LENGTH` at the top of `agent/skill_utils.py`; pre-flight check greps the existing file for any `from tools.skills_tool import` and aborts with exit 4 ("potential circular import — define a local constant _MAX_DESCRIPTION_LENGTH = 1024 instead") if found. Fallback is a LOCAL constant `_MAX_DESCRIPTION_LENGTH = 1024` defined at the top of `agent/skill_utils.py`.
