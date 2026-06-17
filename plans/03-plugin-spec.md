@@ -1,5 +1,5 @@
-<!-- title: Hermes plugin spec (Section 5.1) — no runtime monkey-patch; static-AST advisory; interactive installer -->
-<!-- scope: Sec 5.1. Plugin owns skill re-registration + cap-state advisory. The cap-raise is Script #1's job. -->
+<!-- title: Hermes plugin spec (Section 5.1) — advisory-only; static-AST cap detection; one-time bilingual log -->
+<!-- scope: Sec 5.1. Plugin is purely advisory. The cap-raise is Script #1's job. The migrated skill-creator is a STANDALONE deliverable shipped via the hub, NOT bundled in the plugin. -->
 <!-- ACs covered: AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-4.10 -->
 
 # 03 — Hermes Plugin Spec (§5.1)
@@ -7,62 +7,106 @@
 ## Goal
 
 Ship a Hermes plugin named `hermes-skill-creator-plugin` that:
-1. Re-publishes the migrated `skill-creator` skill via `PluginContext.register_skill`.
-2. Emits a ONE-TIME bilingual advisory at session start if the cap is detected (via static AST read of the operator's Hermes checkout) as still 60. NO runtime setattr on `agent.skill_utils`. NO file mutation. NO monkey-patch.
-3. Conforms to `hermes-agent-skill-authoring` (the validator at `tools/skill_manager_tool.py:_validate_frontmatter`).
+
+1. Emits a ONE-TIME bilingual advisory at session start if the 60-char skill-description cap is detected (via static AST read of the operator's Hermes checkout) as still 60. NO runtime setattr on `agent.skill_utils`. NO file mutation. NO monkey-patch.
+2. Conforms to `hermes-agent-skill-authoring` (the validator at `tools/skill_manager_tool.py:_validate_frontmatter`).
+3. Does NOT register, bundle, contain, or own the migrated `skill-creator` skill. The skill is a standalone deliverable at `skills/skill-creator/` (worktree root) and is shipped via the hub / Script #2's `do_install` into the flat `~/.hermes/skills/skill-creator/` tree.
 
 > **Hard rule (HARD)**: the plugin NEVER modifies `~/.hermes/hermes-agent` (neither by file write NOR by in-process module mutation). The cap-raise is performed ONLY by Script #1 against a user-owned Hermes checkout (see `04-script-1-patch.md`).
+
+> **Hard rule (HARD)**: the plugin NEVER registers `skill-creator` via `ctx.register_skill`. A plugin-registered skill resolves ONLY as `<plugin_name>:<name>` via explicit `skill_view()`; it is NOT placed in the flat `~/.hermes/skills/` tree and is NOT listed in the system-prompt `<available_skills>` index. Registering the skill via the plugin would NOT make it appear as `skill-creator` in the index, which is what Task E and the brief depend on.
 
 ## Plugin layout
 
 ```
 src/hermes_skill_creator_plugin/
-  __init__.py
-  plugin.json                   # manifest (required)
-  hooks.py                      # on_session_start, register (advisory only)
-  _advisory.py                  # static-AST cap detection (NO setattr)
-  _scope.py                     # hermes_home_scope context manager
-  _subprocess.py                # hermes_subprocess_env() helper
-  skill_register.py             # register_skill('skill-creator', ...)
-  installer.py                  # python -m hermes_skill_creator_plugin.install
-  skills/
-    skill-creator/
-      SKILL.md                  # migrated skill body
-      ... (agents/, scripts/, eval-viewer/, references/, assets/)
+  __init__.py                 # contains the single register(ctx) that wires the on_session_start hook
+  plugin.yaml                 # manifest (required; YAML, not JSON)
+  _advisory.py                # static-AST cap detection (NO setattr, NO mutation)
+  _scope.py                   # hermes_home_scope context manager
+  _subprocess.py              # hermes_subprocess_env() helper
   i18n/
     messages_en.py
     messages_hu.py
   tests/  (under tests/, not in the package)
 ```
 
-There is NO `patch_runtime.py` and NO `resources/extract_skill_description_patched.py`. The runtime monkey-patch is DELETED.
+There is NO `skill_register.py` (the plugin does NOT register the skill). There is NO `installer.py` (no `python -m ... install` subcommand). There is NO bundled `skills/skill-creator/` subdirectory. There is NO `patch_runtime.py` and NO `resources/extract_skill_description_patched.py`. The runtime monkey-patch is DELETED.
 
-## plugin.json (manifest)
+The migrated skill lives at the WORKTREE ROOT, separate from the plugin package:
 
-```json
-{
-  "name": "hermes-skill-creator-plugin",
-  "version": "0.1.0",
-  "description": "Re-publishes a Hermes-native port of Anthropic's skill-creator and emits a one-time bilingual advisory if the 60-char skill-description cap is un-raised. The cap is raised by Script #1 against a user-owned checkout; this plugin performs NO cap mutation.",
-  "author": "kiscsicska",
-  "provides_tools": [],
-  "provides_hooks": ["on_session_start"],
-  "requires_env": [],
-  "entry_points": {
-    "hooks": "hermes_skill_creator_plugin.hooks:register",
-    "register": "hermes_skill_creator_plugin.skill_register:register"
-  }
-}
+```
+skills/
+  skill-creator/
+    SKILL.md                  # migrated skill body
+    ... (agents/, scripts/, eval-viewer/, references/, assets/)
 ```
 
-`requires_env` is intentionally empty. The plugin has NO mandatory env vars. The cap-raise state is detected, not gated.
+This directory is a STANDALONE deliverable. It is shipped/installed by Script #2's `do_install` (see `06-script-2-install.md`) into the flat path `~/.hermes/skills/skill-creator/`, which is what makes it appear as `skill-creator` in the `<available_skills>` index.
+
+## plugin.yaml (manifest)
+
+```yaml
+name: hermes-skill-creator-plugin
+version: 0.1.0
+description: >-
+  Emits a one-time bilingual advisory if the 60-char skill-description cap is
+  un-raised in the operator's Hermes checkout. The cap is raised by Script #1
+  against a user-owned checkout; this plugin performs NO cap mutation and does
+  NOT register, bundle, or own the migrated skill-creator skill.
+author: kiscsicska
+provides_hooks:
+  - on_session_start
+```
+
+The manifest is `plugin.yaml` (YAML), per the load model in `hermes_cli/plugins.py` which requires a `plugin.yaml` manifest at the plugin root. There is NO `entry_points` map. There is NO `kind` field (the only known valid value per `pluginAuthoring.json` is `backend`; per Q-confirmed the safest default is no `kind` at all). The plugin declares its capability via `provides_hooks` only.
+
+The plugin has no `requires_env`. The cap-raise state is detected, not gated.
+
+## Load model: one `register(ctx)` in `__init__.py`
+
+Per `hermes_cli/plugins.py`, the load model is a single `register(ctx)` callable in the package `__init__.py` (or a pip entry point in the group `hermes_agent.plugins`). The plugin uses the in-package form. Inside that one `register(ctx)`, the plugin calls `ctx.register_hook('on_session_start', advisory_callback)`. There is NO split `hooks:register` and `skill_register:register` pair.
+
+`src/hermes_skill_creator_plugin/__init__.py` (sketch):
+
+```python
+"""hermes-skill-creator-plugin: advisory-only cap-state detector."""
+from ._advisory import (
+    detect_cap_state,
+    resolve_target_dir,
+    should_emit_advisory,
+    emit_advisory,
+)
+from .i18n.messages_en import ADVISORY_CAP_EN
+from .i18n.messages_hu import ADVISORY_CAP_HU
+from pathlib import Path
+import os
+
+def register(ctx) -> None:
+    """Single entry point invoked by hermes_cli.plugins at plugin load."""
+    target = resolve_target_dir()
+    state = detect_cap_state(target)  # static AST, no setattr
+    if state != "unpatched":
+        return
+    advisory_marker = Path(os.environ["HERMES_HOME"]) / ".hermes_skill_creator_advisory_seen"
+    if not should_emit_advisory(advisory_marker):
+        return  # one-time semantics
+    ctx.log(f"{ADVISORY_CAP_EN} / {ADVISORY_CAP_HU}")
+    emit_advisory(advisory_marker)  # best-effort marker write
+```
+
+The plugin NEVER calls `ctx.register_skill(...)`. The plugin NEVER imports `agent.skill_utils` at import time. The plugin NEVER performs `setattr` on any Hermes module.
 
 ## Cap-raise mechanism (static-AST, NOT runtime)
 
 `_advisory.py`:
 
 ```python
-"""Static AST-based cap-state detection. NO runtime mutation."""
+"""Static AST-based cap-state detection. NO runtime mutation. NO setattr.
+
+The actual cap-raise is performed by Script #1 against a user-owned Hermes
+checkout. This module only DETECTS the cap state; it NEVER mutates the target.
+"""
 from __future__ import annotations
 import ast
 import os
@@ -73,10 +117,22 @@ UNPATCHED_CAP = 60
 # Pin: the constant the patched function uses.
 PATCHED_CAP_REFERENCE = "MAX_DESCRIPTION_LENGTH"
 
+def resolve_target_dir() -> Path:
+    """Return the Hermes checkout to inspect.
+
+    Honors HERMES_HERMES_AGENT_TARGET (set by Script #1 + CI). Falls back to
+    ~/.hermes/hermes-agent ONLY in interactive operator use; CI must always
+    set the env var to avoid the live read.
+    """
+    env = os.environ.get("HERMES_HERMES_AGENT_TARGET")
+    if env:
+        return Path(env)
+    return Path(os.path.expanduser("~/.hermes/hermes-agent"))
+
 def detect_cap_state(target_dir: Path) -> str:
     """Return one of: "patched", "unpatched", "unknown".
 
-    target_dir: a USER-OWNED Hermes checkout (NOT ~/.hermes/hermes-agent).
+    target_dir: a USER-OWNED Hermes checkout (NOT ~/.hermes/hermes-agent in CI).
     Reads agent/skill_utils.py with ast.parse; inspects the
     extract_skill_description function for the literal "60" or the
     MAX_DESCRIPTION_LENGTH reference.
@@ -103,79 +159,16 @@ def detect_cap_state(target_dir: Path) -> str:
 def should_emit_advisory(advisory_marker: Path) -> bool:
     """Return True iff the advisory marker file is absent (one-time semantics)."""
     return not advisory_marker.exists()
-```
 
-`hooks.py` (sketch — full impl at Phase 5 / B-plugin):
-
-```python
-def register(ctx) -> None:
-    target = _resolve_target_dir()  # honors HERMES_HERMES_AGENT_TARGET
-    state = detect_cap_state(target)  # static AST, no setattr
-    if state != "unpatched": return
-    marker = HERMES_HOME / ".hermes_skill_creator_advisory_seen"
-    if marker.exists(): return  # one-time semantics
-    ctx.log("[en] Skill descriptions capped at 60. Run Script #1. / [hu] ...")
-    marker.write_text("advisory shown\n", encoding="utf-8")  # best-effort
-```
-
-NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_description`. NO in-process mutation of any Hermes module. The hook NEVER imports `agent.skill_utils`.
-
-## Skill registration (no precedence ambiguity)
-
-`skill_register.py` (sketch — full impl at Phase 5 / B-plugin):
-
-```python
-def register(ctx) -> None:
-    skill_md = PACKAGE_ROOT / "skills" / "skill-creator" / "SKILL.md"
-    if not skill_md.exists(): return _log_missing(ctx)
+def emit_advisory(advisory_marker: Path) -> None:
+    """Best-effort write of the one-time marker. Never raises."""
     try:
-        post = frontmatter.load(skill_md)  # python-frontmatter; robust to ---, BOM
-    except Exception as exc:
-        return _log_parse_error(ctx, exc)
-    description = str(post.metadata.get("description", "")).strip()
-    if not description: return _log_no_description(ctx)
-    body = skill_md.read_text(encoding="utf-8")
-    category = post.metadata.get("metadata", {}).get("hermes", {}).get("category", "authoring")
-    ctx.register_skill(name="skill-creator", description=description, body=body, category=category)
-    ctx.log(ADVISORY_SKILL_PRESENT_EN + " / " + ADVISORY_SKILL_PRESENT_HU)
+        advisory_marker.write_text("advisory shown\n", encoding="utf-8")
+    except OSError:
+        pass  # best-effort
 ```
 
-The plugin ALWAYS registers from its BUNDLED copy. If the user has a `~/.hermes/skills/<cat>/skill-creator/` of their own, that file is the authoritative one for `skill_view` (the runtime skill loader), but the system-prompt index block uses the plugin's bundled description. This is documented in 12-risks-and-open-questions.md (R5).
-
-## Installer (interactive by default)
-
-`installer.py` (sketch — full impl at Phase 5 / B-plugin):
-
-```python
-def main() -> None:
-    args = parse_args()  # --hermes-home, --yes, --no-install-skill, --with-extended-description
-    target = args.hermes_home or Path(os.environ.get("HERMES_HOME", str(REAL_HERMES_HOME)))
-    safety_check(target, args.yes)  # TTY confirm OR exit 5
-    with hermes_home_scope(target):
-        install_plugin(target)       # sha256-based idempotency; OK: már telepítve
-        if not args.no_install_skill:
-            install_skill(target, args.with_extended_description)  # active-cap guard
-    print("[en] OK: install complete / [hu] OK: telepítés kész")
-
-def safety_check(target, yes):
-    if target.resolve() == REAL_HERMES_HOME.resolve() and not yes:
-        if not sys.stdin.isatty(): sys.exit(5)  # non-TTY, no --yes -> abort
-        ans = input("[en] Install to {target}? [y/N] / [hu] ...? [i/N] ")
-        if ans.lower() not in {"y","i","yes"}: sys.exit(5)
-
-def install_skill(target_home, with_extended):
-    cap_state = detect_cap_state(Path(os.environ.get("HERMES_HERMES_AGENT_TARGET", "~/.hermes/hermes-agent")))
-    skill_md = SKILL_BUNDLE / ("SKILL.md.short" if with_extended and cap_state != "patched" else "SKILL.md")
-    description = frontmatter.load(skill_md).metadata.get("description", "")
-    active_cap = 1024 if cap_state == "patched" else 60
-    if len(description) > active_cap:
-        print(f"[en] description {len(description)} > active cap {active_cap}; refusing / [hu] ...",
-              file=sys.stderr)
-        sys.exit(1)  # AC-4.10
-    # Atomic copy (write to .tmp + os.replace); on exception, rollback.
-```
-
-The installer uses `hermes_home_scope` for ALL file writes. It refuses the real `~/.hermes` without `--yes` (or interactive TTY confirmation).
+NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_description`. NO in-process mutation of any Hermes module. The hook NEVER imports `agent.skill_utils`. The static-AST detection NEVER mutates the target. The actual cap-raise is Script #1's job.
 
 ## TDD test list
 
@@ -186,54 +179,48 @@ The installer uses `hermes_home_scope` for ALL file writes. It refuses the real 
 - `test_detect_cap_state_unknown_syntax_error` — corrupted file; returns `"unknown"`.
 - `test_advisory_no_setattr_on_skill_utils` — assert the `_advisory` module does NOT import or setattr on `agent.skill_utils`.
 - `test_advisory_does_not_read_hermes_agent_unless_env_set` — without `HERMES_HERMES_AGENT_TARGET`, the resolver returns the live path; the test asserts the resolver is invoked with the env var to avoid the live read in CI.
+- `test_resolve_target_dir_prefers_env_var` — `HERMES_HERMES_AGENT_TARGET=/tmp/x` → resolver returns `/tmp/x`.
 - `test_emit_advisory_idempotent` — first call emits; marker file written; second call does NOT emit.
 - `test_emit_advisory_re_emits_when_marker_deleted` — delete marker; next call emits.
+- `test_emit_advisory_swallows_oserror` — unwritable marker path → no exception raised.
+- `test_advisory_module_does_not_register_skill` — assert the `_advisory` module has no `ctx.register_skill` call site (the plugin is advisory only).
 
-### plugin.json manifest (validator acceptance)
-- `test_plugin_manifest_passes_hermes_parser` — invokes `hermes_cli.plugins._parse_manifest(bundled_plugin_json)` (in-process import, no subprocess) and asserts the parsed `PluginManifest` is well-formed (name matches `^[a-z0-9][a-z0-9._-]*$`, description len <= 1024, entry_points is a mapping with both `hooks` and `register` keys). This is the AC-1.1 + AC-1.5 acceptance gate that the bundled manifest passes the live validator.
-- `test_plugin_manifest_has_no_kind_field` — asserts the bundled `plugin.json` does NOT carry a `kind` field (the only known valid value per `pluginAuthoring.json` is `backend`; per Q-TBD-confirmed the safest default is no `kind` at all).
-- `test_plugin_manifest_entry_points_resolve` — asserts the `entry_points.hooks` and `entry_points.register` import paths resolve to a callable `register(ctx)` in the package.
+### plugin.yaml manifest (validator acceptance)
+- `test_plugin_manifest_is_yaml_not_json` — the bundled manifest at `src/hermes_skill_creator_plugin/plugin.yaml` exists; `plugin.json` does NOT exist at the plugin root. Parses as YAML, not JSON.
+- `test_plugin_manifest_passes_hermes_parser` — invokes `hermes_cli.plugins._parse_manifest(bundled_plugin_yaml_path)` (in-process import, no subprocess) and asserts the parsed `PluginManifest` is well-formed (name matches `^[a-z0-9][a-z0-9._-]*$`, description len <= 1024, `provides_hooks` is a list containing `on_session_start`). This is the AC-1.1 + AC-1.5 acceptance gate that the bundled manifest passes the live validator.
+- `test_plugin_manifest_has_no_kind_field` — asserts the bundled `plugin.yaml` does NOT carry a `kind` field.
+- `test_plugin_manifest_has_no_entry_points` — asserts the bundled `plugin.yaml` does NOT carry an `entry_points` map (the load model is one `register(ctx)` in `__init__.py`, not an entry-point map).
+- `test_register_callable_in_package_init` — `from hermes_skill_creator_plugin import register` resolves to a callable taking a single `ctx` arg.
 
-### skill_register
-- `test_register_calls_ctx_register_skill` — happy path.
-- `test_register_loads_frontmatter_with_python_frontmatter` — uses python-frontmatter; handles embedded `---` in description, BOM, multi-doc.
-- `test_register_missing_skill_md_is_noop` — bundled SKILL.md missing → log + return; no `register_skill` call.
-- `test_register_missing_frontmatter_logs_and_returns` — no `description` key; log + return.
-- `test_register_invalid_frontmatter_logs_and_returns` — python-frontmatter raises; log + return.
-- `test_register_uses_bundled_not_user_local` — assertion: even when `~/.hermes/skills/skill-creator/` exists, the register call uses the bundled frontmatter (R5).
-
-### installer
-- `test_install_respects_hermes_home_override` — `HERMES_HOME=tmp_path`; all writes under `tmp_path`.
-- `test_install_aborts_without_yes_on_real_home` — `HERMES_HOME=~/.hermes`, no `--yes`, no TTY → exit 5.
-- `test_install_yes_bypasses_prompt_on_real_home` — `--yes` → proceeds.
-- `test_install_idempotent_second_run_exits_0` — second run with sha256 match; `OK: already installed / OK: már telepítve`.
-- `test_install_collision_detected` — pre-existing target with different sha256 → log advisory, do not overwrite.
-- `test_install_partial_state_rollback` — interrupt mid-copy; assert no partial directory.
-- `test_install_refuses_when_description_exceeds_active_cap` — cap_state=unpatched, description>60 → exit 1 with bilingual error.
-- `test_install_with_extended_description_uses_short_when_cap_unpatched` — `--with-extended-description` + cap_state=unpatched → uses `SKILL.md.short` (the <=60-char variant).
-- `test_install_with_extended_description_uses_full_when_cap_patched` — `--with-extended-description` + cap_state=patched → uses `SKILL.md` (the <=1024-char variant).
-- `test_install_uses_hermes_home_scope` — assert all file writes happen inside `hermes_home_scope`; if the scope exits early, no writes.
-
-### hooks
-- `test_hooks_does_not_setattr_on_skill_utils` — assert the hooks module has NO import-time mutation of `agent.skill_utils`.
-- `test_hooks_emits_advisory_when_cap_unpatched` — fixture: target_dir has unpatched agent/skill_utils.py; `HERMES_HERMES_AGENT_TARGET` set; first call emits, marker written; second call does not.
-- `test_hooks_silent_when_cap_patched` — fixture: target_dir has patched agent/skill_utils.py; no advisory.
+### register(ctx) wiring
+- `test_register_calls_ctx_register_hook_once` — single `ctx.register_hook('on_session_start', cb)` call; no other `ctx.*` methods invoked.
+- `test_register_does_not_call_ctx_register_skill` — assert the registered plugin NEVER calls `ctx.register_skill` (the skill is shipped standalone via Script #2).
+- `test_register_silent_when_cap_patched` — fixture: target_dir has patched agent/skill_utils.py; no advisory log, no marker write.
+- `test_register_emits_advisory_when_cap_unpatched` — fixture: target_dir has unpatched agent/skill_utils.py; `HERMES_HERMES_AGENT_TARGET` set; first call emits, marker written; second call does not.
+- `test_register_silent_when_target_unknown` — missing target_dir; no advisory, no marker write.
 
 ### Bilingual
-- `test_register_log_is_bilingual` — log contains both `[en]` and `[hu]` markers.
-- `test_advisory_message_contains_en_and_hu` — the cap-state advisory contains both.
-- `test_installer_help_is_bilingual` — `--help` has both "Usage (English)" and "Használat (magyar)" sections.
+- `test_advisory_log_contains_en_and_hu` — the cap-state advisory contains both `[en]` and `[hu]` markers.
 
 ### Coverage
-- 100% line + branch on `_advisory.py`, `hooks.py`, `skill_register.py`, `installer.py`, `_scope.py`, `_subprocess.py`. Every `argparse` choice exercised. Every error path covered. The TTY confirmation branch is exercised by mocking `sys.stdin.isatty` and `input`.
+- 100% line + branch on `_advisory.py`, `__init__.py`, `_scope.py`, `_subprocess.py`. Every error path covered. The one-time-marker branches and the `unknown`/`patched`/`unpatched` tri-state are all exercised.
 
 ## Fix ledger
 
+- Fixes [blocker B3] manifest format — switched from `plugin.json` to `plugin.yaml`; removed `entry_points` map; removed `kind` field; uses single `register(ctx)` in `__init__.py`.
+- Fixes [blocker B3] removed `skill_register.py` entirely; the plugin no longer calls `ctx.register_skill` (registration does not achieve index visibility; the skill is shipped standalone via Script #2's flat-path `do_install`).
+- Fixes [blocker B4] removed `skills/skill-creator/` subdirectory from the plugin layout; the skill is a STANDALONE deliverable at the worktree root, shipped/installed via the hub, and is NOT bundled, contained, or owned by the plugin.
+- Fixes [blocker B4] AC-1.4 — plugin is advisory-only (static-AST cap-state detection + one-time bilingual log); the skill is installed via Script #2's flat-path `do_install` into `~/.hermes/skills/skill-creator/`.
+- Fixes [blocker B1.2] cap-raise mechanism — the static-AST detection NEVER mutates the target; the actual cap-raise is Script #1's job.
 - Fixes [blocker from safety lens] 03-plugin-spec.md runtime monkey-patch — DELETED.
-- Fixes [blocker from safety lens] 03-plugin-spec.md plugin installer no TTY gate — added.
-- Fixes [blocker from overview lens] AC 4.10 active-cap detection — added.
-- Fixes [major] skill_register split("---")[1]) naive parser — replaced with python-frontmatter.
-- Fixes [major] install does not respect HERMES_HOME — added.
-- Fixes [minor] manifest kind=skill_authoring — pinned (TBD confirmation deferred to 12-Q-TBD; integration test runs the actual validator).
+- Fixes [blocker from overview lens] AC 4.10 active-cap detection — Script #1 owns the actual cap mutation; the plugin only detects.
 
-<!-- end of file: 235 lines (budget 220) -->
+## Cross-references
+
+- `04-script-1-patch.md` — Script #1 performs the actual cap-raise (AST rewrite of `agent/skill_utils.py`).
+- `05-script-1-task-e-toggle.md` — Script #1 also patches the Task E site in Hermes.
+- `06-script-2-install.md` — Script #2 ships the standalone `skill-creator` skill into `~/.hermes/skills/skill-creator/` via `do_install`. The plugin does NOT own the skill.
+- `07-migrated-skill.md` — the migrated skill body (lives at `skills/skill-creator/` at the worktree root).
+- `10-packaging-toolchain.md` — `[project.scripts]` does NOT include an installer entry point for the plugin; the plugin has no `python -m ... install` subcommand. The plugin is installable via the standard Hermes plugin loader (pip-installed, `plugin.yaml` discovered).
+
+<!-- end of file: 226 lines (budget 220) -->
