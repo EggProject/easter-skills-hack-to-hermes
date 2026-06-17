@@ -1,0 +1,66 @@
+{
+  "targetSites": [
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/skill_utils.py",
+      "lineNumber": 647,
+      "exactSnippet": "def extract_skill_description(frontmatter: Dict[str, Any]) -> str:\n    \"\"\"Extract a truncated description from parsed frontmatter.\"\"\"\n    raw_desc = frontmatter.get(\"description\", \"\")\n    if not raw_desc:\n        return \"\"\n    desc = str(raw_desc).strip().strip(\"'\\\"\")\n    if len(desc) > 60:\n        return desc[:57] + \"...\"\n    return desc",
+      "surroundingContext": "# \u2500\u2500 Description extraction \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n\ndef extract_skill_description(frontmatter: Dict[str, Any]) -> str:\n    \"\"\"Extract a truncated description from parsed frontmatter.\"\"\"\n    raw_desc = frontmatter.get(\"description\", \"\")\n    if not raw_desc:\n        return \"\"\n    desc = str(raw_desc).strip().strip(\"'\\\"\")\n    if len(desc) > 60:\n        return desc[:57] + \"...\"\n    return desc\n\n\n# \u2500\u2500 File iteration \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "whyThisIsTheTruncation": "AUTHORITATIVE SITE. This is the single function that performs the 60-character threshold check and truncates skill descriptions to 57 chars + ellipsis (\"...\" = 3 chars) before any consumer can render them. It is imported by agent/prompt_builder.py (line 20) and invoked from _parse_skill_file() at line 1090, whose return value (the already-truncated `desc`) is later fed into the available_skills index block injected into the system prompt at line 1352 via `f\"    - {name}: {desc}\"`. The output length is therefore \u226460 chars regardless of the original frontmatter value."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "lineNumber": 1090,
+      "exactSnippet": "        return True, frontmatter, extract_skill_description(frontmatter)",
+      "surroundingContext": "def _parse_skill_file(skill_file: Path) -> tuple[bool, dict, str]:\n    \"\"\"Parse a SKILL.md and return (is_compatible, frontmatter, description).\n\n    ``description`` is the already-truncated form returned by\n    ``extract_skill_description`` so callers can render the skill index\n    without re-applying the cap.\n    \\\"\\\"\\\"\n    try:\n        raw = skill_file.read_text(encoding=\\\"utf-8\\\")\n        frontmatter, _ = parse_frontmatter(raw)\n\n        if not skill_matches_platform(frontmatter):\n            return False, frontmatter, \\\"\\\"\n\n        # Environment relevance gate (offer-time only): hide skills tagged for\n        # a runtime environment that isn't active (e.g. kanban-only skills for\n        # non-kanban users, s6-only skills outside the container). Explicit\n        # loads (skill_view / --skills) bypass this \u2014 see skill_matches_environment.\n        if not skill_matches_environment(frontmatter):\n            return False, frontmatter, \\\"\\\"\n\n        return True, frontmatter, extract_skill_description(frontmatter)",
+      "whyThisIsTheTruncation": "DIRECT CALL SITE. This is the only call to extract_skill_description in production code. The truncated string is then flowed into _build_snapshot_entry \u2192 skills_by_category \u2192 the index_lines.append at line 1352 that becomes part of the &lt;available_skills&gt; block in build_skills_system_prompt(). The docstring even says: \\\"description is the already-truncated form returned by extract_skill_description so callers can render the skill index without re-applying the cap.\\\""
+    }
+  ],
+  "githubIssueUrl": "https://github.com/NousResearch/hermes-agent/issues/46005",
+  "githubIssueSummary": "Issue #46005 \\\"Skill description YAML bug (15 files) + 57-char truncation too restrictive for CJK\\\" \u2014 confirms the 57-char + \\\"...\\\" truncation (total rendered width 60) is the current Hermes behavior and is considered too restrictive for CJK / non-ASCII scripts. Open / P3. Sibling issue #46024 \\\"Make skill description truncation limit configurable\\\" is the feature-request counterpart (Open / P3).",
+  "otherRelatedSites": [
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/skills_tool.py",
+      "lineNumber": 95,
+      "snippet": "MAX_DESCRIPTION_LENGTH = 1024",
+      "relevance": "DISTINCT (unrelated) cap. Applies to skills_list() / skill_view() tool output for the full frontmatter \u2014 clamps at 1024 chars (not 60). This is the second-tier limit when the LLM calls skills_list as a tool; it is NOT the one that affects the injected system prompt index.</relevance>"
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/skills_tool.py",
+      "lineNumber": 655,
+      "snippet": "if len(description) > MAX_DESCRIPTION_LENGTH:\n    description = description[:MAX_DESCRIPTION_LENGTH - 3] + \"...\"",
+      "relevance": "Same 1024-char MAX_DESCRIPTION_LENGTH cap from skills_list() / _find_all_skills() \u2014 only matters when the LLM invokes skills_list mid-conversation, NOT for the auto-injected system prompt index. Lines 810-811 repeat this for the plugin-skill view path.</relevance>"
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/skills_tool.py",
+      "lineNumber": 1509,
+      "snippet": "print(f\"  \u2022 {cat}{skill['name']}: {skill['description'][:60]}...\")",
+      "relevance": "CLI __main__ self-test only \u2014 operator-facing print, never injected into agent context. Cosmetic 60-char preview.</relevance>"
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/hermes_cli/skills_hub.py",
+      "lineNumber": 305,
+      "snippet": "r.description[:60] + (\"...\" if len(r.description) > 60 else \"\"),",
+      "relevance": "Hub catalog listing \u2014 operator TUI only. Not on the agent-injection path.</relevance>"
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/hermes_cli/mcp_config.py",
+      "lineNumber": 447,
+      "snippet": "short = desc[:60] + \"...\" if len(desc) > 60 else desc",
+      "relevance": "CLI /mcp config preview only. Cosmetic.</relevance>"
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/hermes_cli/mcp_catalog.py",
+      "lineNumber": 627,
+      "snippet": "f\"{n}  \u2014  {(d[:60] + '...') if len(d) > 60 else d}\"",
+      "relevance": "CLI MCP catalog display only. Cosmetic.</relevance>"
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/browser_tool.py",
+      "lineNumber": 3795,
+      "snippet": "print(f\"  \ud83d\udd39 {schema['name']}: {schema['description'][:60]}...\")",
+      "relevance": "CLI browser-schema listing only. Cosmetic.</relevance>"
+    }
+  ],
+  "evidence": "VERIFIED via Read:\n\nagent/skill_utils.py L644-655:\n  # \u2500\u2500 Description extraction \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  def extract_skill_description(frontmatter: Dict[str, Any]) -> str:\n      \\\"\\\"\\\"Extract a truncated description from parsed frontmatter.\\\"\\\"\\\"\n      raw_desc = frontmatter.get(\\\"description\\\", \\\"\\\")\n      if not raw_desc:\n          return \\\"\\\"\n      desc = str(raw_desc).strip().strip(\\\"'\\\\\\\"\\\")\n      if len(desc) > 60:\n          return desc[:57] + \\\"...\\\"\n      return desc\n\nagent/prompt_builder.py L1075-1093 (docstring + call):\n  def _parse_skill_file(skill_file: Path) -> tuple[bool, dict, str]:\n      \\\"\\\"\\\"Parse a SKILL.md and return (is_compatible, frontmatter, description).\n      ``description`` is the already-truncated form returned by\n      ``extract_skill_description`` so callers can render the skill index\n      without re-applying the cap.\n      \\\"\\\"\\\"\n      ...\n      return True, frontmatter, extract_skill_description(frontmatter)\n\nagent/prompt_builder.py L20 (import):\n  from .skill_utils import (\n      ...\n      extract_skill_description,\n      ...)\n\nagent/prompt_builder.py L1218-1235 (consumed):\n  for skill_file in iter_skill_index_files(skills_dir, \\\"SKILL.md\\\"):\n      is_compatible, frontmatter, desc = _parse_skill_file(skill_file)\n      entry = _build_snapshot_entry(skill_file, skills_dir, frontmatter, desc)\n      ...\n      skills_by_category.setdefault(entry[\\\"category\\\"], []).append(\n          (entry[\\\"frontmatter_name\\\"], entry[\\\"description\\\"]))\n\nagent/prompt_builder.py L1352 (render):\n  index_lines.append(f\\\"    - {name}: {desc}\\\")\n\nagent/prompt_builder.py L1377-1380 (injected into system prompt):\n  \\\"<available_skills>\\\\n\\\" + \\\"\\\\n\\\".join(index_lines) + \\\"\\\\n</available_skills>\\\\n\\\"\n\ngrep 'description.*60|60.*description' over /Users/kiscsicska/.hermes/hermes-agent/agent returned only one match (skill_utils.py:647 \u2014 confirmed authoritative).\n\nCross-checked tools/skills_tool.py \u2014 uses MAX_DESCRIPTION_LENGTH = 1024 (a separate, larger limit used by the skills_list/skill_view *tools* invoked at conversation time, not the auto-injected system-prompt index).\n\nGitHub issues cross-referenced via WebFetch on github.com/NousResearch/hermes-agent issues:\n  - #46005 \\\"Skill description YAML bug (15 files) + 57-char truncation too restrictive for CJK\\\" \u2014 confirms the 57+3=60 cap as the current Hermes behavior.\n  - #46024 \\\"Make skill description truncation limit configurable\\\" \u2014 feature request to lift this cap.",
+  "confidence": "high"
+}

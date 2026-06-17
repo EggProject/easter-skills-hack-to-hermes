@@ -1,0 +1,132 @@
+{
+  "officialDocsUrls": [
+    "https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/build-a-hermes-plugin.md",
+    "https://github.com/NousResearch/hermes-agent/tree/main/website/docs/guides",
+    "https://github.com/NousResearch/hermes-agent/tree/main/website/docs/reference",
+    "https://github.com/NousResearch/hermes-agent/blob/main/hermes_cli/plugins.py",
+    "https://github.com/NousResearch/hermes-agent/blob/main/plugins/plugin_utils.py",
+    "https://github.com/NousResearch/hermes-agent/blob/main/AGENTS.md (skill-authoring standards)",
+    "https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md (skill-authoring standards)",
+    "https://github.com/NousResearch/hermes-agent/blob/main/tools/skills_tool.py (MAX_DESCRIPTION_LENGTH)",
+    "https://github.com/NousResearch/hermes-agent/blob/main/tools/skill_manager_tool.py (MAX_DESCRIPTION_LENGTH)"
+  ],
+  "pluginAnatomy": "Directory layout (the \"general plugin\" surface, e.g. calculator example). A plugin lives at one of:\n  - Directory plugin: <plugins_root>/<name>/  with  plugin.yaml + __init__.py [+ optional schemas.py, tools.py, skills/..., data files]\n  - Entry-point plugin: any pip package that declares a hermes_agent.plugins entry point in pyproject.toml (its top-level package is loaded and register(ctx) is looked up)\n  - Specialised tree (different kind: manifest value) lives under plugins/<subsystem>/<name>/ (model-providers/, platforms/, memory/, context_engine/, image_gen/, web/, browser/, observability/, tts/, transcription/, dashboard_auth/, video_gen/, teams_pipeline/, google_meet/, spotify/, kanban/, ...)\n\nRequired minimum files for a general plugin:\n  plugin.yaml      # manifest (name, version, description; declares provides_tools, provides_hooks, requires_env, kind, author)\n  __init__.py      # MUST expose def register(ctx) -> None; if it raises, the plugin is disabled and Hermes continues\n  schemas.py       # tool JSON-Schemas (one dict per tool; the 'description' field is what the LLM sees)\n  tools.py         # tool handlers, signature def fn(args: dict, **kwargs) -> str, return JSON string, never raise\n\nOptional files (per official guide):\n  skills/<name>/SKILL.md   # read-only bundled skills, namespaced <plugin>:<name> via ctx.register_skill()\n  any data files           # loaded at import time via Path(__file__).parent\n  LICENSE / NOTICE         # legal provenance (e.g. security-guidance forks Anthropic patterns)\n  README.md\n\nDiscovery roots (per the official guide and Hermes source):\n  1. ~/.hermes/plugins/<name>/  (user install)\n  2. <hermes-agent>/plugins/<name>/  (bundled, auto-loaded)\n  3. Python entry points declared under the group 'hermes_agent.plugins' in any installed package (pyproject.toml)\n\nThe PluginManager is the discovery + loader: discover_and_load() -> _discover_and_load_inner() -> _scan_directory() + _scan_entry_points() -> _parse_manifest() -> _load_plugin() imports the module, looks up an attribute named 'register', and calls register(PluginContext(manifest, self)). If register() raises, the plugin is disabled (not fatal to the host).\n\nBilingual note: code/prompts in English; user-facing descriptions and console/log messages bilingual EN+HU (per project rule).\n",
+  "requiredManifestFields": [
+    "name (string, required) \u2014 the plugin's identifier. Sub-plugins use a dashed 'kind-name' form (e.g. 'web-firecrawl', 'browser-browser-use', 'observability/langfuse').",
+    "version (string, required) \u2014 typically semver '1.0.0' or quoted '0.1.0'.",
+    "description (string, required) \u2014 short human-readable summary; used in /plugins list and the banner.",
+    "provides_tools (list[string], optional) \u2014 tool names this plugin registers. Documented for the calculator example and the plugin guide's 'final plugin structure'.",
+    "provides_hooks (list[string], optional) \u2014 hook names this plugin subscribes to. Documented in the official guide and used by langfuse/observability.",
+    "hooks (list[string], alternative to provides_hooks) \u2014 used by security-guidance, observability/langfuse, etc. Treated as equivalent to provides_hooks by the manifest parser.",
+    "requires_env (list[string] or list[{name,description,url,secret}], optional) \u2014 env-var gate. If unset, plugin is disabled and the user is prompted during 'hermes plugins install'.",
+    "author (string, optional) \u2014 for provenance.",
+    "kind (string, optional, for backend plugins) \u2014 e.g. 'backend' for web-firecrawl/web-brave-free/browser-browser-use. Switches loader to provider-registration path.",
+    "provides_web_providers / provides_browser_providers / provides_image_gen_providers / provides_video_gen_providers / provides_tts_providers / provides_transcription_providers / provides_dashboard_auth_providers (list[string], kind-specific) \u2014 declares names contributed to those subsystem registries."
+  ],
+  "extensionPoints": [
+    {
+      "name": "ctx.register_tool(name, toolset, schema, handler, check_fn=None, requires_env=None, is_async=False, description='', emoji='', override=False)",
+      "description": "Register a tool in the global tool registry. Signature for handlers: def fn(args: dict, **kwargs) -> str, returning a JSON string and never raising. Pass override=True to replace a built-in tool of the same name. check_fn makes the tool conditional on a runtime check.",
+      "whenToUse": "Whenever the plugin exposes a callable capability to the model (custom LLM-callable tool)."
+    },
+    {
+      "name": "ctx.register_hook(hook_name, callback)",
+      "description": "Subscribe to a lifecycle event. Valid hook names: pre_tool_call, post_tool_call, transform_tool_result, pre_llm_call, post_llm_call, on_session_start, on_session_end, on_session_finalize, on_session_reset, pre_api_request, post_api_request. Only pre_llm_call's return value is consumed (returns {'context': '...'} or a string to inject into the user message; appended, not into system prompt, to preserve prompt cache). transform_tool_result returns an optional string to replace the result. pre_tool_call can return {'action': 'block', 'message': '...'} to refuse.",
+      "whenToUse": "Whenever the plugin needs to observe/transform tool calls, LLM calls, or session lifecycle (e.g. security-guidance uses pre_tool_call + transform_tool_result; observability/langfuse uses pre/post_api_request, pre/post_llm_call, pre/post_tool_call)."
+    },
+    {
+      "name": "ctx.register_middleware(kind, callback)",
+      "description": "Behavior-changing middleware (different from observer hooks). request-middleware rewrites the effective payload; execution-middleware wraps the real callback.",
+      "whenToUse": "When the plugin needs to wrap/transform a request or callback rather than just observe it."
+    },
+    {
+      "name": "ctx.register_cli_command(name, help, setup_fn, handler_fn=None, description='')",
+      "description": "Register a 'hermes <plugin> ...' CLI subcommand tree. setup_fn receives an argparse subparser.",
+      "whenToUse": "When the plugin needs an out-of-session terminal subcommand (e.g. 'hermes honcho ...')."
+    },
+    {
+      "name": "ctx.register_command(name, handler, description='', args_hint='')",
+      "description": "Register an in-session slash command (e.g. /mystatus). handler signature: fn(raw_args: str) -> str | None (async supported). Conflicts with built-in commands are rejected. args_hint surfaces argument UI on Discord/etc.",
+      "whenToUse": "When the plugin needs an in-conversation slash command available across CLI and gateway modes."
+    },
+    {
+      "name": "ctx.dispatch_tool(tool_name, args, **kwargs)",
+      "description": "Invoke any tool through the registry with the parent agent's context (CLI: cli.agent attached). Public replacement for hand-rolled agent plumbing.",
+      "whenToUse": "When a slash command / hook / CLI subcommand needs to call a host tool (e.g. delegate_task) and inherit the parent's context."
+    },
+    {
+      "name": "ctx.register_skill(name, path, description='')",
+      "description": "Register a read-only skill shipped inside the plugin. The skill is resolvable as '<plugin_name>:<name>' via skill_view(). It does NOT enter the flat global skills index and is not listed in the system prompt's skill index.",
+      "whenToUse": "When the plugin bundles auxiliary SKILL.md workflows it wants the model to be able to load on demand without polluting the global skills listing."
+    },
+    {
+      "name": "ctx.register_web_search_provider(provider) / register_browser_provider(provider) / register_image_gen_provider(provider) / register_video_gen_provider(provider) / register_tts_provider(provider) / register_transcription_provider(provider) / register_dashboard_auth_provider(provider)",
+      "description": "Register a provider instance for a specialised subsystem. Each provider must inherit from the matching base class (e.g. WebSearchProvider, BrowserProvider, ImageGenProvider, ...). Built-in names win on collision; mis-typed providers are logged at WARNING and ignored.",
+      "whenToUse": "For backend-style plugins (kind: backend) that add a new external service to one of the subsystem registries."
+    },
+    {
+      "name": "ctx.register_context_engine(engine)",
+      "description": "Register a context engine replacing the built-in ContextCompressor. Only one context engine plugin is allowed; the second is rejected.",
+      "whenToUse": "For context_engine/<name>/ plugins that want to swap Hermes's default compression strategy."
+    },
+    {
+      "name": "ctx.register_platform(name, label, adapter_factory, check_fn, validate_config=None, required_env=None, install_hint='', **entry_kwargs)",
+      "description": "Register a gateway/messaging platform adapter (Slack, Discord, Telegram, ...). The adapter_factory must return a BasePlatformAdapter instance.",
+      "whenToUse": "For platform plugins under plugins/platforms/<name>/."
+    },
+    {
+      "name": "ctx.register_slack_action_handler(action_id, callback)",
+      "description": "Register a handler for Slack Block Kit click events. async callback must call await ack() within 3 seconds.",
+      "whenToUse": "When the plugin needs to react to Slack button clicks."
+    },
+    {
+      "name": "ctx.register_auxiliary_task(name, description, defaults=None, plugin=...)",
+      "description": "Register an auxiliary task exposed to the agent (used for memory/delegate_task-style routing).",
+      "whenToUse": "When the plugin exposes a long-running or composable task the host can dispatch."
+    },
+    {
+      "name": "ctx.llm (property)",
+      "description": "Lazy host-owned LLM facade (agent.plugin_llm.PluginLlm) for trusted plugins that need to run chat or structured completions against the user's active model/auth. Override capability (model/agent_id/auth profile) is fail-closed and gated via plugins.entries.<plugin_id>.llm.* config.",
+      "whenToUse": "When the plugin needs to call the user's LLM without bringing its own provider keys."
+    },
+    {
+      "name": "ctx.inject_message(content, role='user')",
+      "description": "Inject a message into the active conversation. Interrupts a running turn or queues as next input if idle. Not available in gateway mode (returns False).",
+      "whenToUse": "For remote-control viewers / messaging bridges that push messages into the conversation."
+    }
+  ],
+  "examples": [
+    {
+      "name": "plugins/security-guidance (general plugin, hook-only)",
+      "location": "/Users/kiscsicska/.hermes/hermes-agent/plugins/security-guidance/",
+      "whatItDoes": "Single-directory plugin with plugin.yaml + __init__.py + patterns.py + LICENSE/NOTICE + README.md. register(ctx) calls ctx.register_hook('pre_tool_call', ...) and ctx.register_hook('transform_tool_result', ...). Manifest declares hooks: [transform_tool_result, pre_tool_call]. Demonstrates the warn-vs-block toggle via SECURITY_GUIDANCE_BLOCK env var."
+    },
+    {
+      "name": "plugins/web/firecrawl (kind: backend, sub-plugin)",
+      "location": "/Users/kiscsicska/.hermes/hermes-agent/plugins/web/firecrawl/",
+      "whatItDoes": "Sub-plugin under plugins/web/. plugin.yaml: name: web-firecrawl, kind: backend, provides_web_providers: [firecrawl]. __init__.py: register(ctx) -> ctx.register_web_search_provider(FirecrawlWebSearchProvider()). provider.py holds the actual class. Auto-loaded by kind."
+    },
+    {
+      "name": "plugins/web/brave_free (kind: backend, sub-plugin)",
+      "location": "/Users/kiscsicska/.hermes/hermes-agent/plugins/web/brave_free/",
+      "whatItDoes": "Mirrors the image_gen/<vendor>/ layout: provider.py holds the class, __init__.py:register(ctx) instantiates and registers it. plugin.yaml: name: web-brave-free, kind: backend, provides_web_providers: [brave-free]."
+    },
+    {
+      "name": "plugins/browser/browser_use (kind: backend, sub-plugin)",
+      "location": "/Users/kiscsicska/.hermes/hermes-agent/plugins/browser/browser_use/",
+      "whatItDoes": "Backend browser provider. plugin.yaml: name: browser-browser-use, kind: backend, provides_browser_providers: [browser-use]. __init__.py: register(ctx) -> ctx.register_browser_provider(BrowserUseBrowserProvider())."
+    },
+    {
+      "name": "plugins/observability/langfuse (general plugin, many hooks)",
+      "location": "/Users/kiscsicska/.hermes/hermes-agent/plugins/observability/langfuse/",
+      "whatItDoes": "Opt-in via 'hermes plugins enable observability/langfuse'. plugin.yaml: name: langfuse, requires_env: [HERMES_LANGFUSE_PUBLIC_KEY, HERMES_LANGFUSE_SECRET_KEY], hooks: [pre_api_request, post_api_request, pre_llm_call, post_llm_call, pre_tool_call, post_tool_call]. Demonstrates the env-var gate + many hook subscriptions in one plugin."
+    },
+    {
+      "name": "Official calculator example (the canonical 'general plugin' template)",
+      "location": "https://github.com/NousResearch/hermes-agent/blob/main/website/docs/guides/build-a-hermes-plugin.md",
+      "whatItDoes": "Two tools (calculate, unit_convert), a post_tool_call hook, and a bundled skill. Files: plugin.yaml + __init__.py + schemas.py + tools.py + skills/.... register(ctx) calls ctx.register_tool twice + ctx.register_hook once. Demonstrates the most common skeleton a new plugin should follow."
+    }
+  ],
+  "patchHookMechanism": "There is NO clean plugin hook for monkey-patching a hardcoded constant in Hermes core. Verified by reading the full PluginContext class (hermes_cli/plugins.py, lines 290-1090) and the official 'build-a-hermes-plugin.md' guide:\n\n  - PluginContext only exposes register_* methods (register_tool, register_hook, register_middleware, register_command, register_cli_command, register_skill, register_web_search_provider, register_browser_provider, register_image_gen_provider, register_video_gen_provider, register_tts_provider, register_transcription_provider, register_dashboard_auth_provider, register_context_engine, register_platform, register_slack_action_handler, register_auxiliary_task) plus llm and inject_message.\n  - The 60-character rule is a DOCUMENTATION hardline in AGENTS.md \u00a7 'Skill authoring standards' (HARDLINE) and CONTRIBUTING.md \u00a7 'Skill authoring standards' (HARDLINE). The constant that backs the runtime truncation is tools.skills_tool.MAX_DESCRIPTION_LENGTH = 1024 (lines 95, 655-656, 810-811) and a parallel tools.skill_manager_tool.MAX_DESCRIPTION_LENGTH = 1024 (lines 112, 246-247). These are used in skills_tool.py and skill_manager_tool.py.\n  - There is no hook named 'pre_skills_load' or 'patch_constant' or any 'transform_skill_index' surface. There is no PluginContext method to mutate tools.* module attributes.\n  - The only ways a plugin *could* in principle reach MAX_DESCRIPTION_LENGTH:\n      (a) Module-level monkey-patch: in the plugin's __init__.py, do 'import tools.skills_tool as _s; _s.MAX_DESCRIPTION_LENGTH = 1024' \u2014 but the tools.skills_tool module is imported lazily on first use of the skill listing; if the plugin registers first, its mutation would apply. This is unsupported, fragile (depends on import order), and explicitly out of band \u2014 there is no documented hook for it.\n      (b) A transform_tool_result / pre_tool_call hook does not apply \u2014 the description truncation happens during SKILL.md parse in the skill listing loader, not in a tool result.\n      (c) A pre_llm_call hook returning context that nudges the model toward shorter descriptions \u2014 purely advisory, does not actually change the truncation constant.\n\nRecommended cleanest approach (ranked):\n\n  1. RECOMMENDED \u2014 Do not patch the constant at all. Treat the 60-character limit as a STYLE guideline at skill-writing time and rely on the existing 1024-char safety truncation in tools/skills_tool.py:655-656. The runtime code already accepts up to 1024 chars in frontmatter; the 60-char rule is enforced by code review, not by the runtime. Verify with the 'assert len(m.group(1)) <= 60' snippet already shipped in AGENTS.md / CONTRIBUTING.md.\n  2. If raising the runtime cap is genuinely required, the supported mechanism is to ship a fork of Hermes that edits tools/skills_tool.py:95 (and the matching MAX_DESCRIPTION_LENGTH in tools/skill_manager_tool.py:112). The patch script referenced by the project (Phase 5 / Task B) is exactly that \u2014 a controlled, idempotent edit of the constant in the user's ~/.hermes/hermes-agent checkout, with a backup and a profile. There is no plugin-level hook for this.\n  3. If the project's 'plugin' must do something at runtime, an OPT-IN plugin can register a pre_llm_call hook that injects a brief reminder into the user message telling the model to keep descriptions under 60 chars. This does NOT change the truncation constant \u2014 it changes model behaviour. Acceptable as a soft companion to (1).\n  4. A monkey-patch from __init__.py (option (a) above) is technically possible but undocumented, depends on import order, and is not a supported hook. Treat as a last resort and document the fragility.\n\nIn short: no clean plugin hook exists for raising the 60/1024 char limit. The 60-char rule is a documentation/UX hardline (AGENTS.md / CONTRIBUTING.md 'HARDLINE' sections); the 1024-char value is a Python constant in two files (tools/skills_tool.py:95 and tools/skill_manager_tool.py:112). The supported way to change it is a controlled source edit (patch script) of those two constants; the supported plugin surface is only for register_* methods, none of which can mutate a tools.* module constant.",
+  "evidence": "Official documentation (read-only fetch):\n  - website/docs/guides/build-a-hermes-plugin.md \u2014 full plugin guide (calculator example, manifest fields, hook reference, specialised plugin types, non-Python extension surfaces, distribution via entry point / NixOS, common mistakes). Captured in this turn.\n  - website/docs/guides/ \u2014 sibling guides (work-with-skills.md, python-library.md, ...) available; not needed for plugin authoring spec.\n  - website/docs/reference/ \u2014 reference docs available; not needed for plugin authoring spec.\n\nHermes source (read-only, paths under /Users/kiscsicska/.hermes/hermes-agent/):\n  - plugins/__init__.py: bare package marker (1 line: '# Hermes plugins package'). Confirms plugins is a namespace package loaded by name.\n  - plugins/plugin_utils.py: ships lazy_singleton decorator + SingletonSlot class. Thread-safe lazy caching helpers for plugin authors. No state, no side effects, import-light.\n  - hermes_cli/plugins.py: contains PluginContext class (lines 290-1090) with the full register_* surface enumerated above. Validates unknown hook/middleware names with a warning rather than raising (forward-compat). PluginManager.discover_and_load -> _discover_and_load_inner -> _scan_directory + _scan_entry_points -> _parse_manifest -> _load_plugin (imports module, looks up 'register' attribute, calls register(PluginContext)). If register() raises, the plugin is disabled but the host continues.\n  - plugins/security-guidance/{plugin.yaml, __init__.py, patterns.py, LICENSE, NOTICE, README.md}: the canonical 'single-directory hook-only plugin' example. Manifest: name, version, description, author, hooks: [transform_tool_result, pre_tool_call]. register() calls ctx.register_hook twice. Uses SECURITY_GUIDANCE_BLOCK env var to switch warn vs block.\n  - plugins/web/__init__.py: docstring describes the sub-plugin convention: plugins/web/<name>/{plugin.yaml, __init__.py, provider.py}, auto-loaded by kind: backend via ctx.register_web_search_provider().\n  - plugins/web/firecrawl/{plugin.yaml, __init__.py, provider.py}: sub-plugin. kind: backend, provides_web_providers: [firecrawl].\n  - plugins/web/brave_free/{plugin.yaml, __init__.py, provider.py}: sub-plugin. kind: backend, provides_web_providers: [brave-free].\n  - plugins/browser/browser_use/{plugin.yaml, __init__.py, provider.py}: sub-plugin. kind: backend, provides_browser_providers: [browser-use].\n  - plugins/observability/langfuse/plugin.yaml: opt-in plugin with requires_env gate and 6 hook subscriptions. Demonstrates env-gated, multi-hook plugin pattern.\n  - tools/skills_tool.py:95, 655-656, 810-811: MAX_DESCRIPTION_LENGTH = 1024 (the runtime constant that backs skill-description truncation).\n  - tools/skill_manager_tool.py:112, 246-247: parallel MAX_DESCRIPTION_LENGTH = 1024 (hard-fails writes exceeding it).\n  - AGENTS.md:859, CONTRIBUTING.md:520: 'description \u2264 60 characters, one sentence, ends with a period' marked HARDLINE; 'Reviewers reject PRs that violate them.' Includes the 'assert len(m.group(1)) <= 60' verification snippet.\n\nVerified non-existence of patch hooks:\n  - PluginContext has no method to mutate tools/skills_tool.MAX_DESCRIPTION_LENGTH.\n  - The official 'Hook reference' table in build-a-hermes-plugin.md lists 8 hooks: pre_tool_call, post_tool_call, pre_llm_call, post_llm_call, on_session_start, on_session_end, on_session_finalize, on_session_reset. None applies to skill-index loading.\n  - The 'Non-Python extension surfaces' section lists MCP servers, gateway event hooks (HOOK.yaml + handler.py in ~/.hermes/hooks/<name>/), shell hooks in config.yaml, skill taps, and TTS/STT command templates. None of these mutate a Python constant in tools/*.\n  - Conclusion: there is no clean plugin-level monkey-patch surface for raising the description limit. The 60-char rule is a documentation hardline; the 1024-char constant is editable only via a controlled source edit (the patch script that Phase 5 / Task B will implement)."
+}

@@ -1,0 +1,469 @@
+{
+  "sourceRepoUrl": "https://github.com/anthropics/claude-plugins-official",
+  "skillId": "plugins/skill-creator",
+  "pinnedCommitHash": "2a40fd2e7c52207aa903bd33fc4c65716126966e",
+  "fileList": [
+    {
+      "relativePath": "README.md",
+      "sizeBytes": 264,
+      "role": "plugin-level human-readable description (root)"
+    },
+    {
+      "relativePath": "LICENSE",
+      "sizeBytes": 11358,
+      "role": "Apache-2.0 plugin license (root)"
+    },
+    {
+      "relativePath": ".claude-plugin/plugin.json",
+      "sizeBytes": 378,
+      "role": "plugin manifest: name, description, author (Anthropic)"
+    },
+    {
+      "relativePath": "skills/skill-creator/SKILL.md",
+      "sizeBytes": 33168,
+      "role": "main skill entry point: capture intent, write skill, run evals, improve description, package"
+    },
+    {
+      "relativePath": "skills/skill-creator/LICENSE.txt",
+      "sizeBytes": 11357,
+      "role": "Apache-2.0 skill license"
+    },
+    {
+      "relativePath": "skills/skill-creator/agents/analyzer.md",
+      "sizeBytes": 10376,
+      "role": "subagent: post-hoc analyzer (why winner won) + benchmark notes"
+    },
+    {
+      "relativePath": "skills/skill-creator/agents/comparator.md",
+      "sizeBytes": 7287,
+      "role": "subagent: blind A/B comparator of two outputs"
+    },
+    {
+      "relativePath": "skills/skill-creator/agents/grader.md",
+      "sizeBytes": 9049,
+      "role": "subagent: grade expectations vs outputs, critique evals"
+    },
+    {
+      "relativePath": "skills/skill-creator/assets/eval_review.html",
+      "sizeBytes": 7058,
+      "role": "static HTML template for human review of trigger-eval queries"
+    },
+    {
+      "relativePath": "skills/skill-creator/eval-viewer/generate_review.py",
+      "sizeBytes": 16365,
+      "role": "stdlib-only HTTP server: serve embedded results, collect feedback.json"
+    },
+    {
+      "relativePath": "skills/skill-creator/eval-viewer/viewer.html",
+      "sizeBytes": 44998,
+      "role": "frontend HTML for the review page (embeds run data)"
+    },
+    {
+      "relativePath": "skills/skill-creator/references/schemas.md",
+      "sizeBytes": 12061,
+      "role": "JSON schemas: evals.json, history.json, grading.json, metrics.json, timing.json, benchmark.json, comparison.json, analysis.json"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/__init__.py",
+      "sizeBytes": 0,
+      "role": "package marker"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/aggregate_benchmark.py",
+      "sizeBytes": 14386,
+      "role": "aggregate per-run grading.json into benchmark.json/markdown with mean/stddev/delta"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/generate_report.py",
+      "sizeBytes": 12847,
+      "role": "HTML report renderer for description-optimization loop"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/improve_description.py",
+      "sizeBytes": 11116,
+      "role": "call `claude -p` to propose a new description; 1024-char hard-limit safety rewrite"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/package_skill.py",
+      "sizeBytes": 4234,
+      "role": "zip a skill folder into a .skill file (excludes evals/, __pycache__, .DS_Store)"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/quick_validate.py",
+      "sizeBytes": 3972,
+      "role": "frontmatter validator: allowed keys, kebab-case name, <=1024 char description, no <>/, etc."
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/run_eval.py",
+      "sizeBytes": 11464,
+      "role": "trigger eval: spawn `claude -p` per query, detect Skill/Read tool-use via stream-json"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/run_loop.py",
+      "sizeBytes": 13605,
+      "role": "orchestrator: train/test split, run_eval + improve_description, return best by test score"
+    },
+    {
+      "relativePath": "skills/skill-creator/scripts/utils.py",
+      "sizeBytes": 1661,
+      "role": "parse_skill_md: extract (name, description, body) from frontmatter; multiline literal/folded"
+    }
+  ],
+  "claudeSpecificInvocations": [
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 3,
+      "claudeForm": "description: ...Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+      "proposedHermesForm": "description: ...Use when users want to create a Hermes skill from scratch, edit or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+      "rationale": "Reference is to 'Claude Code' / 'Claude.ai' skills; in Hermes the runtime is the Hermes agent and the skill format lives under ~/.hermes/skills. Frontmatter description is the primary triggering vector and must be Hermes-aware."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 9,
+      "claudeForm": "Create a few test prompts and run claude-with-access-to-the-skill on them",
+      "proposedHermesForm": "Create a few test prompts and run hermes-with-access-to-the-skill on them",
+      "rationale": "Refers to spawning a 'Claude-with-skill' subagent. In Hermes the equivalent is launching a Hermes sub-session with the skill loaded into context."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 42,
+      "claudeForm": "Do NOT use `/skill-test` or any other testing skill.",
+      "proposedHermesForm": "Do NOT use `/skill-test` or any other testing skill (in Hermes, `/skill-test` is not registered; the eval loop is what we run here).",
+      "rationale": "Slash command /skill-test is Claude-Code-specific. In Hermes skills are invoked via the Skill tool/Hermes skill loader, not by a dedicated test slash command. The migration note must say 'if a user invokes /skill-test in Hermes, ignore it and continue with the local eval loop.'"
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 86,
+      "claudeForm": "Step 1: Spawn all runs (with-skill AND baseline) in the same turn",
+      "proposedHermesForm": "Step 1: Spawn all runs (with-skill AND baseline) in parallel in the same batch.",
+      "rationale": "'Same turn' is a Claude-Code session concept. In Hermes the equivalent is dispatching all subagents in a single function-call batch so they execute concurrently; preserve the intent (parallel) but use neutral language."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 89,
+      "claudeForm": "**With-skill run:** ... - Save outputs to: <workspace>/iteration-<N>/eval-<ID>/with_skill/outputs/",
+      "proposedHermesForm": "**With-skill run:** ... - Save outputs to: <workspace>/iteration-<N>/eval-<ID>/with_skill/outputs/ (Hermes convention: outputs/ is the materialized artifact directory)",
+      "rationale": "Path layout is portable. Hermes skills read/write files via the same filesystem tools; the convention is identical. Keep the layout, but document the path in the migration note."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 117,
+      "claudeForm": "When each subagent task completes, you receive a notification containing `total_tokens` and `duration_ms`.",
+      "proposedHermesForm": "When each subagent task completes, the task system returns a result record with `total_tokens` and `duration_ms` (or `total_duration_seconds`).",
+      "rationale": "Claude-Code exposes this in the task notification; Hermes returns it on the task result. Both fields are the same; update prose to remove the 'you receive a notification' framing."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 231,
+      "claudeForm": "The description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill.",
+      "proposedHermesForm": "The description field in SKILL.md frontmatter is the primary mechanism that determines whether the Hermes agent invokes a skill.",
+      "rationale": "Replace 'Claude' with 'the Hermes agent' to anchor description-triggering language to the new runtime."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 259,
+      "claudeForm": "Use the model ID from your system prompt (the one powering the current session) so the triggering test matches what the user actually experiences.",
+      "proposedHermesForm": "Use the model ID from the current Hermes session (the one powering the agent) so the triggering test matches what the user actually experiences.",
+      "rationale": "'Your system prompt' is Claude-Code phrasing; the model is exposed by the Hermes harness via env/config. Update the lookup mechanism in the migration note."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 288,
+      "claudeForm": "Skills appear in Claude's `available_skills` list with their name + description, and Claude decides whether to consult a skill based on that description.",
+      "proposedHermesForm": "Skills appear in the Hermes agent's `available_skills` (or equivalent) list with their name + description, and the agent decides whether to consult a skill based on that description.",
+      "rationale": "Replace 'Claude's' with 'the Hermes agent's'."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 330,
+      "claudeForm": "Check whether you have access to the `present_files` tool. If you don't, skip this step.",
+      "proposedHermesForm": "Check whether you have access to a file-presentation tool (`present_files` in Claude-Code, the equivalent in Hermes is a UI/share tool). If not, skip this step.",
+      "rationale": "`present_files` is Claude-Code-specific. Hermes has its own file-presentation surface (likely the Skill/UI tool); the gating check is still useful."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 352,
+      "claudeForm": "## Claude.ai-specific instructions",
+      "proposedHermesForm": "## Hermes-runtime-specific instructions",
+      "rationale": "This whole section is about differences between Claude-Code (subagents + CLI) and Claude.ai (no subagents, no CLI). For Hermes the analogous split is 'Hermes CLI/REPL mode' vs 'Hermes web/headless mode'. Replace prose; structure stays."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 354,
+      "claudeForm": "In Claude.ai, the core workflow is the same... but because Claude.ai doesn't have subagents, some mechanics change.",
+      "proposedHermesForm": "In Hermes headless/web mode the core workflow is the same... but if the runtime does not support subagents, some mechanics change.",
+      "rationale": "Remove the Claude.ai-specific framing; describe the constraint (no subagents) generically."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 365,
+      "claudeForm": "**Description optimization**: This section requires the `claude` CLI tool (specifically `claude -p`) which is only available in Claude Code. Skip it if you're on Claude.ai.",
+      "proposedHermesForm": "**Description optimization**: This section requires the `hermes` CLI (specifically `hermes -p`) to be available on the host. Skip it on Hermes headless/web mode if the CLI is not present; in that case run the prompt via the configured model provider directly (see migration note \u00a75.5 for the HTTP fallback).",
+      "rationale": "Replace `claude -p` with `hermes -p` (or a documented HTTP fallback for headless mode). The eval scripts (improve_description.py, run_eval.py) currently call `claude -p`; these are the highest-risk Claude-specific bindings (see claudeSpecificInvocations below)."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 388,
+      "claudeForm": "## Cowork-Specific Instructions",
+      "proposedHermesForm": "## Hermes Headless/Server-Specific Instructions",
+      "rationale": "Replace Claude-Code Cowork mode with the Hermes analog (e.g. Hermes server/headless)."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 404,
+      "claudeForm": "For whatever reason, the Cowork setup seems to disincline Claude from generating the eval viewer after running the tests...",
+      "proposedHermesForm": "For whatever reason, the Hermes headless setup may disincline the agent from generating the eval viewer after running the tests...",
+      "rationale": "Replace 'Cowork'/'Claude' with the Hermes analog."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 409,
+      "claudeForm": "**Description optimization** (`run_loop.py` / `run_eval.py`) should work in Cowork just fine since it uses `claude -p` via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.",
+      "proposedHermesForm": "**Description optimization** (`run_loop.py` / `run_eval.py`) should work in Hermes headless mode just fine since it uses `hermes -p` (or the HTTP fallback) via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.",
+      "rationale": "`claude -p` -> `hermes -p`; rest is host-agnostic."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 448,
+      "claudeForm": "You are optimizing a skill description for a Claude Code skill called \"{skill_name}\". A \"skill\" is sort of like a prompt, but with progressive disclosure",
+      "proposedHermesForm": "You are optimizing a skill description for a Hermes skill called \"{skill_name}\". A \"skill\" is sort of like a prompt, but with progressive disclosure",
+      "rationale": "Inside the LLM prompt template; the host changes from 'Claude Code' to 'Hermes'."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 449,
+      "claudeForm": "The description appears in Claude's \"available_skills\" list.",
+      "proposedHermesForm": "The description appears in the Hermes agent's \"available_skills\" list.",
+      "rationale": "Replace host reference in the LLM prompt."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 475,
+      "claudeForm": "the description competes with other skills for Claude's attention",
+      "proposedHermesForm": "the description competes with other skills for the agent's attention",
+      "rationale": "Replace 'Claude's' with 'the agent's'."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 114,
+      "claudeForm": "Note: currently Claude has a tendency to \"undertrigger\" skills -- to not use them when they'd be useful.",
+      "proposedHermesForm": "Note: the Hermes agent has a tendency to \"undertrigger\" skills -- to not use them when they'd be useful.",
+      "rationale": "Replace 'Claude' with 'Hermes agent'."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 144,
+      "claudeForm": "Claude reads only the relevant reference file.",
+      "proposedHermesForm": "The Hermes agent reads only the relevant reference file.",
+      "rationale": "Replace host reference."
+    },
+    {
+      "filePath": "skills/skill-creator/SKILL.md",
+      "lineNumber": 225,
+      "claudeForm": "there's a trend now where the power of Claude is inspiring plumbers to open up their terminals, parents and grandparents to google \"how to install npm\"",
+      "proposedHermesForm": "there's a trend now where the power of AI agents is inspiring plumbers to open up their terminals, parents and grandparents to google \"how to install npm\"",
+      "rationale": "Replace the specific 'Claude' reference with a generic 'AI agents'. User-facing copy; the bilingual rule means a HU translation is needed."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/improve_description.py",
+      "lineNumber": 26,
+      "claudeForm": "cmd = [\"claude\", \"-p\", \"--output-format\", \"text\"]",
+      "proposedHermesForm": "cmd = [\"hermes\", \"-p\", \"--output-format\", \"text\"]",
+      "rationale": "Subprocess invocation of the host CLI. In Hermes this is `hermes -p`."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/improve_description.py",
+      "lineNumber": 32,
+      "claudeForm": "# Remove CLAUDECODE env var to allow nesting claude -p inside a Claude Code session.",
+      "proposedHermesForm": "# Remove HERMES_SESSION and CLAUDECODE env vars to allow nesting `hermes -p` inside a Hermes session.",
+      "rationale": "The `CLAUDECODE` guard is Claude-Code's. Hermes has an equivalent nesting guard (likely `HERMES_SESSION` or `HERMES_AGENT`); the exact env-var name must be verified against the Hermes harness (the migration note must call this out as TBD)."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/improve_description.py",
+      "lineNumber": 33,
+      "claudeForm": "env = {k: v for k, v in os.environ.items() if k != \"CLAUDECODE\"}",
+      "proposedHermesForm": "env = {k: v for k, v in os.environ.items() if k not in {\"CLAUDECODE\", \"HERMES_SESSION\"}}",
+      "rationale": "Same - keep the existing CLAUDECODE strip; add Hermes's nesting-guard var (TBD exact name; conservative default)."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/improve_description.py",
+      "lineNumber": 44,
+      "claudeForm": "raise RuntimeError(f\"claude -p exited {result.returncode}\\nstderr: {result.stderr}\")",
+      "proposedHermesForm": "raise RuntimeError(f\"hermes -p exited {result.returncode}\\nstderr: {result.stderr}\")",
+      "rationale": "Error message references the new CLI."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/improve_description.py",
+      "lineNumber": 162,
+      "claudeForm": "Safety net: ... (The old SDK path did this as a true multi-turn; `claude -p` is one-shot, so we inline the prior output into the new prompt instead.)",
+      "proposedHermesForm": "Safety net: ... (Hermes's `hermes -p` is also one-shot, so we inline the prior output into the new prompt instead.)",
+      "rationale": "Comment-only; rename `claude -p` -> `hermes -p`."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 23,
+      "claudeForm": "def find_project_root() -> Path:\n    \"\"\"Find the project root by walking up from cwd looking for .claude/.\n    Mimics how Claude Code discovers its project root, so the command file\n    we create ends up where claude -p will look for it.\n    \"\"\"",
+      "proposedHermesForm": "def find_project_root() -> Path:\n    \"\"\"Find the project root by walking up from cwd looking for .hermes/ (and .claude/ as legacy).\n    Mimics how the Hermes harness discovers its project root, so the command file\n    we create ends up where `hermes -p` will look for it.\n    \"\"\"",
+      "rationale": "The detection logic must look for both `.hermes/` and `.claude/` (legacy) project markers; this preserves the migration's back-compat story."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 46,
+      "claudeForm": "Creates a command file in .claude/commands/ so it appears in Claude's available_skills list, then runs `claude -p` with the raw query.",
+      "proposedHermesForm": "Creates a command file in .hermes/commands/ (or .claude/commands/ as legacy fallback) so it appears in the Hermes agent's available_skills list, then runs `hermes -p` with the raw query.",
+      "rationale": "Staging directory must follow Hermes's plugin layout; keep Claude legacy for back-compat."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 49,
+      "claudeForm": "Uses --include-partial-messages to detect triggering early from stream events (content_block_start)",
+      "proposedHermesForm": "Uses the host's stream-json / partial-events flag to detect triggering early from stream events",
+      "rationale": "Specific Claude-Code CLI flag; Hermes has an equivalent (TBD exact name - likely `--include-partial-messages` or `--stream-events`). Migration note must record this."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 71,
+      "claudeForm": "cmd = [\n    \"claude\",\n    \"-p\", query,\n    \"--output-format\", \"stream-json\",\n    \"--verbose\",\n    \"--include-partial-messages\",\n]",
+      "proposedHermesForm": "cmd = [\n    \"hermes\",\n    \"-p\", query,\n    \"--output-format\", \"stream-json\",\n    \"--include-partial-events\",  # TBD: confirm Hermes flag name\n]",
+      "rationale": "Replace the CLI and flags with the Hermes equivalents. The `claude`/`hermes` switch is high-risk and must be tested by Script #1 (patch script) and Script #2 (profile manager) before being called."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 80,
+      "claudeForm": "# Remove CLAUDECODE env var to allow nesting claude -p inside a Claude Code session.",
+      "proposedHermesForm": "# Remove Hermes/Claude nesting-guard env vars (HERMES_SESSION, CLAUDECODE) so `hermes -p` can run inside a Hermes session.",
+      "rationale": "Same as improve_description.py."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 82,
+      "claudeForm": "env = {k: v for k, v in os.environ.items() if k != \"CLAUDECODE\"}",
+      "proposedHermesForm": "env = {k: v for k, v in os.environ.items() if k not in {\"CLAUDECODE\", \"HERMES_SESSION\"}}",
+      "rationale": "Same."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 137,
+      "claudeForm": "if tool_name in (\"Skill\", \"Read\"):",
+      "proposedHermesForm": "if tool_name in (\"Skill\", \"Read\", \"skill\", \"read\"):  # case-insensitive on Hermes; tool names are also case-insensitive per Hermes docs",
+      "rationale": "Claude-Code's tool names are PascalCase. Hermes's documented tool names (per Hermes plugin docs and the tool-name-mapping research) are lowercase (`skill`, `read`, `write`, `bash`, `edit`, `web_search`, `web_fetch`, ...). The migration must convert all tool-name references."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 156,
+      "claudeForm": "if tool_name == \"Skill\" and clean_name in tool_input.get(\"skill\", \"\"):\n    triggered = True\nelif tool_name == \"Read\" and clean_name in tool_input.get(\"file_path\", \"\"):\n    triggered = True",
+      "proposedHermesForm": "if tool_name.lower() == \"skill\" and clean_name in tool_input.get(\"skill\", \"\"):\n    triggered = True\nelif tool_name.lower() == \"read\" and clean_name in tool_input.get(\"file_path\", \"\"):\n    triggered = True",
+      "rationale": "Same - normalize tool-name matching to lowercase per Hermes convention."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 46,
+      "claudeForm": ".claude/commands/",
+      "proposedHermesForm": ".hermes/commands/",
+      "rationale": "Hermes skill/command path. Write to both for back-compat, prefer `.hermes/`."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_loop.py",
+      "lineNumber": 252,
+      "claudeForm": "parser.add_argument(\"--model\", required=True, help=\"Model for improvement\")",
+      "proposedHermesForm": "parser.add_argument(\"--model\", required=True, help=\"Model for improvement (Hermes model id)\")",
+      "rationale": "Docstring only; the model id space differs between providers but the flag shape is identical."
+    },
+    {
+      "filePath": "skills/skill-creator/agents/grader.md",
+      "lineNumber": 1,
+      "claudeForm": "# Grader Agent",
+      "proposedHermesForm": "# Grader Subagent",
+      "rationale": "Hermes uses 'subagent' rather than 'agent' to avoid namespace collision with the primary agent."
+    },
+    {
+      "filePath": "skills/skill-creator/agents/analyzer.md",
+      "lineNumber": 1,
+      "claudeForm": "# Post-hoc Analyzer Agent",
+      "proposedHermesForm": "# Post-hoc Analyzer Subagent",
+      "rationale": "Same as grader.md - Hermes uses 'subagent'."
+    },
+    {
+      "filePath": "skills/skill-creator/agents/comparator.md",
+      "lineNumber": 1,
+      "claudeForm": "# Blind Comparator Agent",
+      "proposedHermesForm": "# Blind Comparator Subagent",
+      "rationale": "Same."
+    },
+    {
+      "filePath": ".claude-plugin/plugin.json",
+      "lineNumber": 2,
+      "claudeForm": "\"description\": \"Create new skills, improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, update or optimize an existing skill, run evals to test a skill, or benchmark skill performance with variance analysis.\"",
+      "proposedHermesForm": "\"description\": \"Create new Hermes skills, improve existing Hermes skills, and measure Hermes-skill performance. Use when users want to create a skill from scratch, update or optimize an existing skill, run evals to test a skill, or benchmark skill performance with variance analysis.\"",
+      "rationale": "Plugin-level description must be Hermes-aware to trigger correctly."
+    },
+    {
+      "filePath": "README.md",
+      "lineNumber": 1,
+      "claudeForm": "# skill-creator",
+      "proposedHermesForm": "# skill-creator (Hermes port)",
+      "rationale": "Top-level README is plugin metadata in Claude; in Hermes, the skill's own SKILL.md is the canonical description source. Keep the file for parity, but flag it as Claude-specific."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/quick_validate.py",
+      "lineNumber": 42,
+      "claudeForm": "ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'}",
+      "proposedHermesForm": "ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility', 'model', 'when_to_use'}  # extend with Hermes-specific keys",
+      "rationale": "Hermes's frontmatter schema includes additional allowed keys (e.g. `model`, `when_to_use`) per the Hermes skill-authoring rules research. The migration must keep Claude's keys allowed (back-compat) and add Hermes-specific ones."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/quick_validate.py",
+      "lineNumber": 70,
+      "claudeForm": "if len(name) > 64:\n    return False, f\"Name is too long ({len(name)} characters). Maximum is 64 characters.\"",
+      "proposedHermesForm": "if len(name) > 64:\n    return False, f\"Name is too long ({len(name)} characters). Maximum is 64 characters.\"\n# Hermes-specific: name must not collide with built-in skills",
+      "rationale": "The 64-char cap is identical in Hermes; the migration should add a Hermes-specific collision check against the built-in skill registry."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/quick_validate.py",
+      "lineNumber": 83,
+      "claudeForm": "if len(description) > 1024:\n    return False, f\"Description is too long ({len(description)} characters). Maximum is 1024 characters.\"",
+      "proposedHermesForm": "if len(description) > 1024:\n    return False, f\"Description is too long ({len(description)} characters). Maximum is 1024 characters.\"\n# Hermes-specific: warn (not fail) at 200 words; hard-truncate at the 1024-char cap",
+      "rationale": "Same; add Hermes-specific word-count warning."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/utils.py",
+      "lineNumber": 1,
+      "claudeForm": "\"\"\"Shared utilities for skill-creator scripts.\"\"\"",
+      "proposedHermesForm": "\"\"\"Shared utilities for the Hermes-port of skill-creator.\"\"\"",
+      "rationale": "Module docstring only."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/run_eval.py",
+      "lineNumber": 3,
+      "claudeForm": "\"\"\"Run trigger evaluation for a skill description.\n\nTests whether a skill's description causes Claude to trigger (read the skill)",
+      "proposedHermesForm": "\"\"\"Run trigger evaluation for a skill description.\n\nTests whether a skill's description causes the Hermes agent to trigger (read the skill)",
+      "rationale": "Module docstring only."
+    },
+    {
+      "filePath": "skills/skill-creator/eval-viewer/generate_review.py",
+      "lineNumber": 1,
+      "claudeForm": "\"\"\"Generate and serve a review page for eval results.\"\"\"",
+      "proposedHermesForm": "(preserve)",
+      "rationale": "Host-agnostic; uses only stdlib."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/aggregate_benchmark.py",
+      "lineNumber": 1,
+      "claudeForm": "\"\"\"Aggregate individual run results into benchmark summary statistics.\"\"\"",
+      "proposedHermesForm": "(preserve)",
+      "rationale": "Host-agnostic."
+    },
+    {
+      "filePath": "skills/skill-creator/scripts/generate_report.py",
+      "lineNumber": 1,
+      "claudeForm": "\"\"\"Generate an HTML report from run_loop.py output.\"\"\"",
+      "proposedHermesForm": "(preserve)",
+      "rationale": "Host-agnostic."
+    }
+  ],
+  "localCopyPath": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/hermes-skills-dev/research/anthropic-skill-creator-original",
+  "claudeStrengthsToPreserve": [
+    "Three-tier subagent specialization: grader (objectively verifiable assertions), analyzer (post-hoc why), comparator (blind A/B). The names should be normalized to 'subagent' but the role split is sound.</item>"
+  ],
+  "evidence": "Pinned upstream commit 2a40fd2e7c52207aa903bd33fc4c65716126966e ('skill-creator: sync from anthropics/skills (drop ANTHROPIC_API_KEY requirement) #1523') resolved via https://api.github.com/repos/anthropics/claude-plugins-official/commits?path=plugins/skill-creator&per_page=1. The local mirror at /Users/kiscsicska/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/ is byte-identical to the staging copy at /Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/hermes-skills-dev/research/anthropic-skill-creator-original/ (verified with diff -q on plugin.json, SKILL.md, utils.py, quick_validate.py - all returned no differences). File counts and sizes match the GitHub tree listing at the pinned commit. Total of 20 files: 1 README.md, 1 LICENSE, 1 .claude-plugin/plugin.json, 1 skills/skill-creator/SKILL.md, 1 skills/skill-creator/LICENSE.txt, 3 agents/{analyzer,comparator,grader}.md, 1 assets/eval_review.html, 2 eval-viewer/{generate_review.py,viewer.html}, 1 references/schemas.md, 9 scripts/{__init__,aggregate_benchmark,generate_report,improve_description,package_skill,quick_validate,run_eval,run_loop,utils}.py. Upstream commit message explicitly notes 'improve_description.py and run_loop.py now shell out to `claude -p` instead of using the Anthropic SDK directly' - the highest-risk Claude-specific surface. The 1024-char description cap and 64-char kebab-case name cap are preserved verbatim. Tool names in scripts/run_eval.py are PascalCase ('Skill', 'Read') and must be normalized to lowercase per Hermes convention. The `CLAUDECODE` env-var nesting guard must be augmented with Hermes's equivalent (TBD exact name - likely HERMES_SESSION or HERMES_AGENT; must be confirmed in \u00a75.5 migration note). The eval_viewer/generate_review.py is host-agnostic (stdlib only) and ports unchanged."
+}

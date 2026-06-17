@@ -1,0 +1,156 @@
+{
+  "independentCandidates": [
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "lineNumber": 172,
+      "currentSnippet": "SKILLS_GUIDANCE = (\n    \"After completing a complex task (5+ tool calls), fixing a tricky error, \"\n    \"or discovering a non-trivial workflow, save the approach as a \"\n    \"skill with skill_manage so you can reuse it next time.\\n\"\n    \"When using a skill and finding it outdated, incomplete, or wrong, \"\n    \"patch it immediately with skill_manage(action='patch') \u2014 don't wait to be asked. \"\n    \"Skills that aren't maintained become liabilities.\"\n)",
+      "proposedReplacement": "SKILLS_GUIDANCE = (\n    \"After completing a complex task (5+ tool calls), fixing a tricky error, \"\n    \"or discovering a non-trivial workflow, save the approach as a \"\n    \"skill with skill_manage so you can reuse it next time.\\n\"\n    \"When creating a new skill, first check whether an installed skill named \"\n    \"`skill-creator` is available in the skills index. If so, load it with \"\n    \"skill_view(name='skill-creator') and follow its authoring and validation \"\n    \"instructions before drafting the new SKILL.md. Then persist the final \"\n    \"skill with skill_manage(action='create'). If `skill-creator` is not \"\n    \"installed, fall back to the built-in class-level skill rules and continue; \"\n    \"do not auto-install or fetch it. Do not force `skill-creator` for small \"\n    \"targeted patches \u2014 use it for new skills and optionally for major full \"\n    \"rewrites.\\n\"\n    \"When using a skill and finding it outdated, incomplete, or wrong, \"\n    \"patch it immediately with skill_manage(action='patch') \u2014 don't wait to be asked. \"\n    \"Skills that aren't maintained become liabilities.\"\n)",
+      "reasoning": "This is the primary foreground-agent constant that instructs the model to create skills via skill_manage. It is the canonical site for inserting the opt-in 'consult skill-creator if installed, otherwise continue' rule. The replacement preserves the existing patch-without-asking directive and gates only NEW skill creation on skill-creator."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "lineNumber": 143,
+      "currentSnippet": "MEMORY_GUIDANCE = (\n    \"You have persistent memory across sessions. Save durable facts using the memory \"\n    ...\n    \"If you've discovered a new way to do something, solved a problem that could be \"\n    \"necessary later, save it as a skill with the skill tool.\\n\"\n    ...\n)",
+      "proposedReplacement": "MEMORY_GUIDANCE = (\n    \"You have persistent memory across sessions. Save durable facts using the memory \"\n    ...\n    \"If you've discovered a new way to do something, solved a problem that could be \"\n    \"necessary later, save it as a skill. Before creating a new skill, check the \"\n    \"available skills index; if an installed skill named `skill-creator` is present, \"\n    \"load it with skill_view(name='skill-creator') and follow its authoring \"\n    \"guidance. Then persist with skill_manage(action='create'). If \"\n    \"`skill-creator` is absent, continue with the built-in class-level rules; do \"\n    \"not install it automatically.\\n\"\n    ...\n)",
+      "reasoning": "MEMORY_GUIDANCE is the second foreground surface that nudges the agent to convert discoveries into skills. The current text references 'the skill tool' generically; adding the opt-in skill-creator redirect here keeps the memory-vs-skill boundary consistent with SKILLS_GUIDANCE so the agent does not get conflicting cues when both blocks are injected."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "lineNumber": 1373,
+      "currentSnippet": "result = (\n    \"## Skills (mandatory)\\n\"\n    \"Before replying, scan the skills below. ...\n    ...\n    \"If a skill has issues, fix it with skill_manage(action='patch').\\n\"\n    \"After difficult/iterative tasks, offer to save as a skill. \"\n    \"If a skill you loaded was missing steps, had wrong commands, or needed \"\n    \"pitfalls you discovered, update it before finishing.\\n\"\n    ...\n    \"<available_skills>\\n\"\n    ...\n)\n",
+      "proposedReplacement": "result = (\n    \"## Skills (mandatory)\\n\"\n    \"Before replying, scan the skills below. ...\n    ...\n    \"If a skill has issues, fix it with skill_manage(action='patch').\\n\"\n    \"After difficult/iterative tasks, offer to save as a skill. \"\n    \"Before creating a new skill, load `skill-creator` if it appears in the \"\n    \"available-skills index above. Use it only as authoring guidance; persist \"\n    \"the resulting skill with skill_manage. If `skill-creator` is absent, \"\n    \"continue without it and do not install or fetch it.\\n\"\n    \"If a skill you loaded was missing steps, had wrong commands, or needed \"\n    \"pitfalls you discovered, update it before finishing.\\n\"\n    ...\n    \"<available_skills>\\n\"\n    ...\n)",
+      "reasoning": "build_skills_system_prompt() returns the foreground skills-index block that injects right into the system prompt. This is a third foreground surface where the agent learns which skills exist and how to create new ones. Without an opt-in redirect here, an agent that reads only the index block would skip the skill-creator step. The replacement sits next to the existing patch + offer-to-save lines so the rule is co-located with the create action."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/background_review.py",
+      "lineNumber": 45,
+      "currentSnippet": "_SKILL_REVIEW_PROMPT = (\n    \"Review the conversation above and update the skill library. ...\n    ...\n    \"  4. CREATE A NEW CLASS-LEVEL UMBRELLA SKILL when no existing skill covers the class. \"\n    \"The name MUST be at the class level. The name MUST NOT be a specific PR number, error string, feature \"\n    \"codename, library-alone name, or 'fix-X / debug-Y / audit-Z-today' \"\n    \"session artifact. If the proposed name only makes sense for \"\n    \"today's task, it's wrong \u2014 fall back to (1), (2), or (3).\\n\\n\"\n    ...\n)\n",
+      "proposedReplacement": "_SKILL_REVIEW_PROMPT = (\n    \"Review the conversation above and update the skill library. ...\n    ...\n    \"  4. CREATE A NEW CLASS-LEVEL UMBRELLA SKILL when no existing skill covers the class. \"\n    \"The name MUST be at the class level. The name MUST NOT be a specific PR number, error string, feature \"\n    \"codename, library-alone name, or 'fix-X / debug-Y / audit-Z-today' \"\n    \"session artifact. If the proposed name only makes sense for \"\n    \"today's task, it's wrong \u2014 fall back to (1), (2), or (3).\\n\\n\"\n    \"Before the actual skill_manage(action='create') call under option (4), \"\n    \"call skills_list. If an installed skill named `skill-creator` is \"\n    \"returned, load it with skill_view(name='skill-creator') and follow its \"\n    \"authoring/validation workflow when drafting the new SKILL.md. Then \"\n    \"create the skill with skill_manage(action='create'). If `skill-creator` \"\n    \"is not installed or cannot be loaded, continue using the built-in \"\n    \"class-level rules. Do not install, fetch, or network-look-up \"\n    \"`skill-creator` during background review \u2014 absence must not block \"\n    \"creation.\\n\\n\"\n    ...\n)",
+      "reasoning": "This is the automatic skill-creation path invoked by spawn_background_review_thread. The preference-order item (4) is where new skills actually get written; inserting the skill-creator redirect immediately before that branch ensures every background-authoring pass consults the optional methodology before persisting. The replacement preserves the existing (1)/(2)/(3)/(4) preference order, the negative-class naming rules, and the protected-skills/do-not-capture guard rails."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/background_review.py",
+      "lineNumber": 150,
+      "currentSnippet": "_COMBINED_REVIEW_PROMPT = (\n    \"Review the conversation above and update two things:\\n\\n\"\n    ...\n    \"  4. CREATE A NEW CLASS-LEVEL UMBRELLA when nothing exists. \"\n    \"Name at the class level \u2014 NOT a PR number, error string, \"\n    \"codename, library-alone name, or 'fix-X / debug-Y' session \"\n    \"artifact. If the name only fits today's task, fall back to (1), \"\n    \"(2), or (3).\\n\\n\"\n    ...\n)\n",
+      "proposedReplacement": "_COMBINED_REVIEW_PROMPT = (\n    \"Review the conversation above and update two things:\\n\\n\"\n    ...\n    \"  4. CREATE A NEW CLASS-LEVEL UMBRELLA when nothing exists. \"\n    \"Name at the class level \u2014 NOT a PR number, error string, \"\n    \"codename, library-alone name, or 'fix-X / debug-Y' session \"\n    \"artifact. If the name only fits today's task, fall back to (1), \"\n    \"(2), or (3).\\n\\n\"\n    \"Before the actual skill_manage(action='create') call under option (4), \"\n    \"call skills_list. If an installed skill named `skill-creator` is \"\n    \"returned, load it with skill_view(name='skill-creator') and follow its \"\n    \"authoring/validation workflow when drafting the new SKILL.md. Then \"\n    \"create the skill with skill_manage(action='create'). If `skill-creator` \"\n    \"is not installed or cannot be loaded, continue using the built-in \"\n    \"class-level rules. Do not install, fetch, or network-look-up \"\n    \"`skill-creator` during background review \u2014 absence must not block \"\n    \"creation.\\n\\n\"\n    ...\n)",
+      "reasoning": "The combined memory+skill review path must behave identically to the skill-only path for new-skill creation. Mirroring the redirect here keeps the two prompts semantically synchronized so a session routed to the combined prompt also follows the new rule. The replacement text mirrors _SKILL_REVIEW_PROMPT verbatim on the creation rule to avoid drift."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/system_prompt.py",
+      "lineNumber": 117,
+      "currentSnippet": "        tool_guidance.append(MEMORY_GUIDANCE)\n...\n    if \"skill_manage\" in agent.valid_tool_names:\n        tool_guidance.append(SKILLS_GUIDANCE)\n",
+      "proposedReplacement": "        tool_guidance.append(MEMORY_GUIDANCE)\n...\n    if \"skill_manage\" in agent.valid_tool_names:\n        tool_guidance.append(SKILLS_GUIDANCE)\n        # NOTE: MEMORY_GUIDANCE and SKILLS_GUIDANCE both already contain\n        # the opt-in skill-creator redirect for new-skill creation. The\n        # build_skills_system_prompt() index block is appended separately\n        # below and carries the same redirect at its 'offer to save as a skill'\n        # line. See docs/maybe-patch-points.md for the synchronization contract.\n",
+      "reasoning": "system_prompt.py is the assembly site that injects MEMORY_GUIDANCE and SKILLS_GUIDANCE into tool_guidance. No text change is needed here because the redirect lives inside the constants themselves; an inline comment pins the synchronization contract so a future refactor does not split the two constants and silently desync the redirect."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/skill_manager_tool.py",
+      "lineNumber": 992,
+      "currentSnippet": "    \"name\": \"skill_manage\",\n    \"description\": \"...\",  # schema description for the skill_manage tool",
+      "proposedReplacement": "    \"name\": \"skill_manage\",\n    \"description\": \"<existing schema text>; `skill-creator`, when installed, \"\n                   \"provides authoring guidance only. Use skill_manage to \"\n                   \"persist all skill files.\"",
+      "reasoning": "Optional, non-load-bearing: appending the opt-in note to the tool's schema description makes the skill-creator-vs-skill_manage boundary visible at the tool-introspection surface without altering the storage layer or adding a runtime dependency. It matches the doc's section 3 clarification and must NOT cause skill_manage to import, install, or invoke skill-creator."
+    }
+  ],
+  "mayPatchPointsCandidates": [
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "symbol": "SKILLS_GUIDANCE",
+      "currentSnippet": "SKILLS_GUIDANCE = (\n    \"After completing a complex task (5+ tool calls), fixing a tricky error, \"\n    \"or discovering a non-trivial workflow, save the approach as a \"\n    \"skill with skill_manage so you can reuse it next time.\\n\"\n    \"When using a skill and finding it outdated, incomplete, or wrong, \"\n    \"patch it immediately with skill_manage(action='patch') \u2014 don't wait to be asked. \"\n    \"Skills that aren't maintained become liabilities.\"\n)",
+      "proposedReplacement": "Insert the new-skill rule: when a new skill is warranted, first check the available skills; if `skill-creator` is installed, load it with skill_view(name='skill-creator') and follow its authoring/validation instructions; then persist with skill_manage(action='create'); fall back to built-in class-level rules if absent; never auto-install. Preserve the existing patch instruction."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "symbol": "MEMORY_GUIDANCE",
+      "currentSnippet": "\"If you've discovered a new way to do something, solved a problem that could be \"\n\"necessary later, save it as a skill with the skill tool.\\n\"",
+      "proposedReplacement": "Mirror the SKILLS_GUIDANCE redirect: before creating a new skill, consult installed `skill-creator` (load with skill_view), then persist with skill_manage; absence must not block creation; do not auto-install."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "symbol": "build_skills_system_prompt",
+      "currentSnippet": "\"If a skill has issues, fix it with skill_manage(action='patch').\\n\"\n\"After difficult/iterative tasks, offer to save as a skill. \"\n\"If a skill you loaded was missing steps, had wrong commands, or needed \"\n\"pitfalls you discovered, update it before finishing.\\n\"",
+      "proposedReplacement": "Add the same new-skill redirect here as in SKILLS_GUIDANCE, co-located with the 'offer to save as a skill' line: before creating a new skill, load `skill-creator` if it appears in the available-skills index; use as guidance only; persist with skill_manage; absence does not block creation; never install."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/background_review.py",
+      "symbol": "_SKILL_REVIEW_PROMPT",
+      "currentSnippet": "\"  4. CREATE A NEW CLASS-LEVEL UMBRELLA SKILL when no existing skill covers the class. \"\n\"The name MUST be at the class level. The name MUST NOT be a specific PR number, error string, feature \"\n\"codename, library-alone name, or 'fix-X / debug-Y / audit-Z-today' \"\n\"session artifact. If the proposed name only makes sense for \"\n\"today's task, it's wrong \u2014 fall back to (1), (2), or (3).\\n\\n\"",
+      "proposedReplacement": "Immediately before the actual skill_manage(action='create') step under option (4): call skills_list; if installed, load skill_manage `skill-creator` via skill_view(name='skill-creator') and follow its authoring/validation workflow; then create with skill_manage(action='create'); if absent, continue with built-in class-level rules; never install or fetch during background review."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/background_review.py",
+      "symbol": "_COMBINED_REVIEW_PROMPT",
+      "currentSnippet": "\"  4. CREATE A NEW CLASS-LEVEL UMBRELLA when nothing exists. \"\n\"Name at the class level \u2014 NOT a PR number, error string, \"\n\"codename, library-alone name, or 'fix-X / debug-Y' session \"\n\"artifact. If the name only fits today's task, fall back to (1), \"\n\"(2), or (3).\\n\\n\"",
+      "proposedReplacement": "Apply the identical redirect as in _SKILL_REVIEW_PROMPT option (4). Combined prompt must behave identically for new-skill creation; text must stay semantically synchronized."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/skill_manager_tool.py",
+      "symbol": "skill_manage schema description",
+      "currentSnippet": "\"name\": \"skill_manage\",\n\"description\": \"<current schema text>\"",
+      "proposedReplacement": "Optional schema-description clarification: \"`skill-creator`, when installed, provides authoring guidance only. Use skill_manage to persist all skill files.\" Do NOT make skill_manage import, install, invoke, or depend on skill-creator."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/website/docs/user-guide/features/skills.md",
+      "symbol": "Agent-Managed Skills section",
+      "currentSnippet": "Agent-Managed Skills section (current text not yet inspected)",
+      "proposedReplacement": "Clarify: Hermes still creates and updates skills through skill_manage; before a new skill is created, prompt guidance may load installed `skill-creator`; `skill-creator` is optional and can be installed from a hub; absence does not disable automatic skill creation; background review must never auto-install it. Do NOT describe skill-creator as bundled or mandatory."
+    }
+  ],
+  "reconciledFinalSet": [
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "symbolOrLine": "SKILLS_GUIDANCE (line 172)",
+      "sourceOfTruth": "both",
+      "finalReplacement": "Insert the new-skill redirect into SKILLS_GUIDANCE: when a new skill is warranted, check the available-skills index; if `skill-creator` is installed, load it with skill_view(name='skill-creator') and follow its authoring/validation guidance; then persist with skill_manage(action='create'). If absent, fall back to built-in class-level rules; never auto-install or fetch. Do NOT force skill-creator for small targeted patches \u2014 reserve it for new skills and major full rewrites. Preserve the existing patch-instruction line ('patch it immediately with skill_manage(action='patch')').",
+      "decisionRationale": "Both independent sweep and doc \u00a71.A agree exactly on this site. It is the primary foreground-agent instruction that tells the model to create skills via skill_manage. Synchronizing this constant is the highest-leverage change because it is injected via tool_guidance for every agent run that has skill_manage available."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "symbolOrLine": "MEMORY_GUIDANCE (line 143)",
+      "sourceOfTruth": "both",
+      "finalReplacement": "Mirror the SKILLS_GUIDANCE redirect at the 'save it as a skill with the skill tool' line: before creating a new skill, consult the available-skills index; if an installed `skill-creator` is present, load it with skill_view(name='skill-creator') and follow its authoring guidance; then persist with skill_manage(action='create'). If absent, continue with built-in class-level rules; absence must not block creation; never auto-install.",
+      "decisionRationale": "Independent sweep and doc \u00a71.B agree. MEMORY_GUIDANCE is a second foreground surface that already nudges the agent toward creating a skill on discovery; without the redirect here, an agent reading both prompts would receive contradictory cues."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/prompt_builder.py",
+      "symbolOrLine": "build_skills_system_prompt result string (line ~1373)",
+      "sourceOfTruth": "both",
+      "finalReplacement": "Co-locate the new-skill redirect next to the existing 'offer to save as a skill' line in the returned skills-index block: 'Before creating a new skill, load `skill-creator` if it appears in the available-skills index. Use it only as authoring guidance; persist the resulting skill with skill_manage. If `skill-creator` is absent, continue without it and do not install or fetch it.'",
+      "decisionRationale": "Independent sweep and doc \u00a71.C agree. This is a third foreground surface \u2014 the rendered skills-index block that ships in every system prompt with skills loaded. Co-locating with the existing 'offer to save as a skill' line keeps the rule visible exactly when the agent considers creating one."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/background_review.py",
+      "symbolOrLine": "_SKILL_REVIEW_PROMPT (line 45) option (4)",
+      "sourceOfTruth": "both",
+      "finalReplacement": "Insert the redirect immediately before the actual skill_manage(action='create') step under option (4): call skills_list; if an installed skill named `skill-creator` is returned, load it with skill_view(name='skill-creator') and follow its authoring/validation workflow when drafting the new SKILL.md; then create the skill with skill_manage(action='create'). If `skill-creator` is not installed or cannot be loaded, continue using the built-in class-level rules. Do not install, fetch, or network-look-up `skill-creator` during background review \u2014 absence must not block creation. Preserve existing (1)/(2)/(3)/(4) preference order, protected-skills rule, and do-not-capture guard rails.",
+      "decisionRationale": "Independent sweep and doc \u00a72.A agree. This is the automatic skill-creation path; without the redirect here, every background review would bypass the optional methodology. Placement immediately before the create call ensures the consult step happens before any persist."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/background_review.py",
+      "symbolOrLine": "_COMBINED_REVIEW_PROMPT (line 150) option (4)",
+      "sourceOfTruth": "both",
+      "finalReplacement": "Apply the identical redirect as in _SKILL_REVIEW_PROMPT option (4). Keep the wording semantically synchronized (prefer extracting one shared string constant for the rule text per doc \u00a72.C). Do not alter spawn_background_review_thread selection logic; it must continue selecting _COMBINED_REVIEW_PROMPT / _MEMORY_REVIEW_PROMPT / _SKILL_REVIEW_PROMPT based on review_memory / review_skills.",
+      "decisionRationale": "Independent sweep and doc \u00a72.B agree. The combined review path also creates skills, so it must mirror the skill-only path to avoid drift. Doc \u00a72.C explicitly permits (and prefers) a shared constant for the rule text."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/agent/system_prompt.py",
+      "symbolOrLine": "tool_guidance assembly (line ~117)",
+      "sourceOfTruth": "merged",
+      "finalReplacement": "No text replacement. Add a short comment at the tool_guidance.append sites for MEMORY_GUIDANCE and SKILLS_GUIDANCE noting that both constants already carry the opt-in skill-creator redirect for new-skill creation and that build_skills_system_prompt() carries the same redirect in the rendered skills-index block \u2014 see docs/maybe-patch-points.md for the synchronization contract. This pins drift-resistance without changing runtime behavior.",
+      "decisionRationale": "Independent sweep flagged this site because it is the assembly point that injects MEMORY_GUIDANCE and SKILLS_GUIDANCE. Doc does not name it. Since the redirect lives in the constants themselves, no behavioral change is needed here; the comment-only edit prevents accidental desynchronization when a future refactor splits the constants."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/tools/skill_manager_tool.py",
+      "symbolOrLine": "skill_manage schema description (line ~992)",
+      "sourceOfTruth": "doc",
+      "finalReplacement": "Optional clarification appended to the schema description: '`skill-creator`, when installed, provides authoring guidance only. Use skill_manage to persist all skill files.' Do NOT import, install, invoke, or depend on skill-creator from skill_manage.",
+      "decisionRationale": "Doc \u00a73 names this as an optional schema-description clarification. It does not change runtime behavior and keeps the skill-creator-vs-skill_manage boundary visible at the tool-introspection surface. Acceptance criterion still holds: skill_manage remains the writer and gains no dependency on the optional hub skill."
+    },
+    {
+      "filePath": "/Users/kiscsicska/.hermes/hermes-agent/website/docs/user-guide/features/skills.md",
+      "symbolOrLine": "Agent-Managed Skills section",
+      "sourceOfTruth": "doc",
+      "finalReplacement": "Update the Agent-Managed Skills section to clarify: (1) Hermes still creates and updates skills through skill_manage; (2) before a new skill is created, prompt guidance may load installed `skill-creator`; (3) skill-creator is optional and installable from a hub; (4) absence of skill-creator does not disable automatic skill creation; (5) background review must never auto-install it. Do NOT describe skill-creator as bundled or mandatory.",
+      "decisionRationale": "Doc \u00a74 names this. Independent sweep did not surface this site because the docs/ tree is outside the canonical hermes-agent code paths grepped. It is documentation-only and required by acceptance criteria so users understand the new optional behavior."
+    }
+  ],
+  "evidence": "Independent sweep (read-only) of /Users/kiscsicska/.hermes/hermes-agent at commit 368fcf1ff (v0.16.0) used grep -rn with patterns 'create.*skill', 'skill_manage', 'SKILLS_GUIDANCE', 'MEMORY_GUIDANCE', 'build_skills_system_prompt', '_SKILL_REVIEW_PROMPT', '_COMBINED_REVIEW_PROMPT', 'spawn_background_review_thread' across the entire install (not just agent/). Each match's surrounding context was read to determine whether it (a) ships into a foreground agent's system prompt or (b) drives a forked background review that itself creates skills. Seven prompt-text anchors qualified: SKILLS_GUIDANCE (prompt_builder.py:172), MEMORY_GUIDANCE (prompt_builder.py:143), build_skills_system_prompt result string (prompt_builder.py:~1373), _SKILL_REVIEW_PROMPT (background_review.py:45), _COMBINED_REVIEW_PROMPT (background_review.py:150), system_prompt.py tool_guidance assembly (~117), and the skill_manage schema description (skill_manager_tool.py:~992). Sites that were inspected but REJECTED as patch points: agent/curator.py CURATOR_REVIEW_PROMPT and CURATOR_DRY_RUN_BANNER (operator-triggered consolidation pass, not the automatic background-review path; the doc scopes the change to _SKILL_REVIEW_PROMPT / _COMBINED_REVIEW_PROMPT only), agent/curator.py:633 inline f-string (interpolated log/diagnostic line, not a prompt template), tools/skill_manager_tool.py:1042 'Required for create and edit' (argument-validation prose, not a behavior-shaping prompt), tools/skills_guard.py and tools/skill_provenance.py (storage/provenance layer, not prompt text), web_server.py create_skill (HTTP dashboard endpoint, not the agent prompt surface), and all __tests__/*.ts and ui-tui files (test fixtures, not shipped prompts). doc/maybe-patch-points.md (read after the independent sweep) names exactly six patch points across four files: prompt_builder.py \u00a71.A/\u00a71.B/\u00a71.C (SKILLS_GUIDANCE, MEMORY_GUIDANCE, build_skills_system_prompt), background_review.py \u00a72.A/\u00a72.B/\u00a72.C (_SKILL_REVIEW_PROMPT, _COMBINED_REVIEW_PROMPT, do-not-change-spawn_background_review_thread), tools/skill_manager_tool.py \u00a73 (optional schema-description clarification), and website/docs/user-guide/features/skills.md \u00a74 (Agent-Managed Skills). Reconciliation: five sites are sourceOfTruth=both (full agreement between sweep and doc): SKILLS_GUIDANCE, MEMORY_GUIDANCE, build_skills_system_prompt result string, _SKILL_REVIEW_PROMPT option (4), _COMBINED_REVIEW_PROMPT option (4). One site is sourceOfTruth=merged: system_prompt.py tool_guidance assembly (sweep-only, no text change \u2014 comment-only edit to pin the synchronization contract). Two sites are sourceOfTruth=doc: skill_manage schema-description clarification (doc \u00a73, optional) and website/docs/user-guide/features/skills.md (doc \u00a74, documentation-only). Net final set: eight reconciled patch points across four files plus one docs file, all read-only-verified, no patches executed."
+}
