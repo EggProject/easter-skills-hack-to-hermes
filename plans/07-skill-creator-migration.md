@@ -152,7 +152,7 @@ The migrated `scripts/run_eval.py` and `scripts/improve_description.py` import t
 - `scripts/package_skill.py` — tars up the skill dir for hub install.
 - `scripts/utils.py` — shared helpers.
 
-The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q3 is resolved, the translator is implemented as an adapter that reads the Hermes NDJSON event and emits an Anthropic-shaped dict to the rest of the pipeline, so the rest of the pipeline needs no change. Once Q3 is confirmed by reading `~/.hermes/hermes-agent/hermes_cli/streaming/`, the adapter is either (a) confirmed correct, or (b) updated to the new shape.
+The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q2 is resolved, the translator is implemented as an adapter that reads the Hermes NDJSON event and emits an Anthropic-shaped dict to the rest of the pipeline, so the rest of the pipeline needs no change. Once Q2 is confirmed by reading `~/.hermes/hermes-agent/hermes_cli/streaming/`, the adapter is either (a) confirmed correct, or (b) updated to the new shape.
 
 ## Strength-preservation matrix
 
@@ -216,4 +216,4 @@ The Hermes event-shape translator (T3.011) is the load-bearing piece. Until Q3 i
 - **AC-4.9** — Bilingual EN+HU on `--help` and console log lines.
 - **AC-4.10** — Plugin does not import, reference, or vendor the migrated skill; it surfaces an advisory only.
 
-<!-- end of file: 202 lines (budget 450) -->
+<!-- end of file: 219 lines (budget 450) -->

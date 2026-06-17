@@ -293,4 +293,4 @@ repos:
 - Every module has a top-of-file docstring with purpose, public API, and `See also: plans/XX-name.md` link to the relevant plan file.
 - Bilingual docstrings are NOT required (docstrings are for the next developer; the user-facing messages are bilingual).
 
-<!-- end of file: 247 lines (budget 250) -->
+<!-- end of file: 296 lines (budget 250) -->

@@ -1,5 +1,5 @@
 <!-- title: Architecture — component diagram, data flow, sequence, failure modes, safety -->
-<!-- scope: Cross-cutting. Replaces runtime monkey-patch with static-AST advisory; introduces hermes_home_scope; shows MIGRATION 3-file split. -->
+<!-- scope: Cross-cutting. Replaces runtime monkey-patch with static-AST advisory; introduces hermes_home_scope; shows MIGRATION 3-file split; adds Script #3 (reporter). -->
 <!-- ACs covered: AC-1.2, AC-1.3, AC-2.10, AC-3.4, AC-3.6, AC-4.10, AC-5.1, AC-5.2, AC-5.5 -->
 
 # 02 — Architecture, Component Diagram, Data Flow
@@ -9,17 +9,20 @@
 ```
                 +---------------------------------------------+
                 |          ~/.hermes  (READ-ONLY)             |
-                |  +----------+    +---------------------+    |
-                |  | agent/   |    | tools/skills_tool.py|    |
-                |  | skill_   |    | MAX_DESCRIPTION_    |    |
-                |  | utils.py |    | LENGTH = 1024       |    |
-                |  | [:647-   |    +---------------------+    |
-                |  |  655]    |                                |
-                |  +----+-----+                                |
-                |       |                                      |
-                |       v                                      |
-                |  agent/prompt_builder.py [:1090 call site]   |
-                |  (extract_skill_description, NO mutation)    |
+                |  +-----------------------------+            |
+                |  | agent/skill_utils.py        |            |
+                |  |   extract_skill_description  |            |
+                |  +-----------------------------+            |
+                |  +-----------------------------+            |
+                |  | agent/prompt_builder.py     |            |
+                |  |   build_available_skills_   |            |
+                |  |   block + clear_skills_     |            |
+                |  |   system_prompt_cache       |            |
+                |  +-----------------------------+            |
+                |  +-----------------------------+            |
+                |  | tools/skills_tool.py        |            |
+                |  | MAX_DESCRIPTION_LENGTH=1024 |            |
+                |  +-----------------------------+            |
                 +-----+---------------------------------------+
                       |
                       |  system-prompt injection (READ)
@@ -39,21 +42,21 @@
      ===================================================
                 +---------------------------------------------+
                 | hermes-skill-creator-plugin/                 |
-                |   plugin.json  (manifest)                    |
+                |   plugin.yaml  (manifest)                    |
+                |   __init__.py  (single register(ctx))        |
                 |   hooks.py     (on_session_start advisory)   |
                 |   _advisory.py (static-AST cap detection)   |
-                |   skill_register.py                          |
-                |   installer.py  (interactive, --yes bypass)  |
-                |   skills/skill-creator/  (migrated skill)    |
-                |     SKILL.md, agents/, scripts/, ...         |
+                |   _scope.py    (hermes_home_scope)          |
+                |   i18n/        (en + hu message bundles)     |
                 +---------------------------------------------+
                 | scripts/                                     |
                 |   script_1_patch.py    (TDD-first)           |
                 |   script_2_profiles.py (TDD-first)           |
+                |   script_3_report.py   (TDD-first, READ-ONLY)|
                 +---------------------------------------------+
                 | hermes_skill_creator_plugin/                 |
-                |   _scope.py     (hermes_home_scope)          |
-                |   _subprocess.py (hermes_subprocess_env)     |
+                |   _enabled_detection.py                      |
+                |     (get_enabled_skills — shared by #2 + #3)|
                 +---------------------------------------------+
                 | tests/  (unit, integration, fixtures)        |
                 +---------------------------------------------+
@@ -62,36 +65,36 @@
                 | MIGRATION.skill-port.md (migrated skill)     |
                 | pyproject.toml + .pre-commit-config.yaml     |
                 +---------------------------------------------+
+
+     +---------------------------------------------+
+     | skills/skill-creator/   (STANDALONE —       |
+     |   NOT inside the plugin box; sibling of     |
+     |   hermes-skill-creator-plugin/ at the       |
+     |   worktree root)                            |
+     |   SKILL.md, agents/, scripts/, _subprocess  |
+     +---------------------------------------------+
 ```
 
-The runtime monkey-patch path is GONE. The plugin is purely advisory (static AST read, no setattr). The cap-raise is a separate flow (Script #1, atomic write against a user-owned checkout).
+The runtime monkey-patch path is GONE. The plugin is purely advisory (static AST read, no setattr). The cap-raise is a separate flow (Script #1, atomic write against a user-owned checkout). The migrated skill is a SEPARATE worktree-root deliverable, NOT bundled inside the plugin package — the plugin never owns or registers it. Script #3 is a third, READ-ONLY script that reuses `_enabled_detection` from the plugin module.
 
 ## Data flow
 
-### 1. Plugin install path (operator-driven, opt-in, interactive by default)
+### 1. Plugin install + advisory path
 
-- Operator runs `uv run python -m hermes_skill_creator_plugin.install`.
-- The installer:
-  1. Parses `--hermes-home` (default: `$HERMES_HOME` or `~/.hermes`).
-  2. Safety check: if resolved target == real `~/.hermes`, requires TTY confirmation OR `--yes`; non-TTY without `--yes` → exit 5.
-  3. Enters `hermes_home_scope(target)` (single context manager for ALL writes).
-  4. Detects cap state via static AST read (if `HERMES_HERMES_AGENT_TARGET` is set; otherwise the cap check is deferred to the first session).
-  5. Validates the migrated skill's description against the active cap; aborts with bilingual error if it exceeds.
-  6. Copies the plugin + skill (sha256-based idempotency).
-  7. Exits the scope; restores `os.environ['HERMES_HOME']` and the override token.
+- The plugin is installed via the standard Hermes plugin loader (drops `plugin.yaml` + Python modules into the user-discovered plugin path). There is NO `python -m hermes_skill_creator_plugin.install` subcommand. The plugin does NOT bundle, own, or register the migrated skill.
 - On next Hermes session start, the plugin's `on_session_start` hook:
   1. Resolves the Hermes target (env override or live `~/.hermes/hermes-agent`); runs `_advisory.detect_cap_state` (static AST; no I/O beyond read).
   2. If `unpatched`: writes the marker file under `HERMES_HOME` and emits a one-time bilingual log line.
-  3. The plugin's `register` entry point calls `ctx.register_skill` with the bundled frontmatter.
+- The plugin's `__init__.py` `register(ctx)` is the ONLY entry point; it does NOT call `ctx.register_skill('skill-creator', ...)` — that registration is performed at install time by Script #2's `do_install` into `~/.hermes/skills/skill-creator/`.
 - The plugin does NOT modify Hermes source. The actual cap-raise is performed by Script #1 against a user-owned Hermes checkout (separate flow, see below).
 
 ### 2. Patch path (Script #1)
 
 - Operator runs `uv run hermes-skill-creator-patch --check --target <hermes-checkout-dir>`.
-- `--target` is REQUIRED. If unset, the script exits 4 with `[en] --target is required. Refusing to run. / [hu] A --target kötelező. A szkript megtagadja a futtatást.`
+- `--target` is REQUIRED. If unset, the script exits 4 with `[en] --target is required. Refusing to run. / [hu] A --target kötelező. A szkript megtagadja a futtatását.`
 - Safety check: `Path.resolve()(--target) == Path.resolve()(~/.hermes/hermes-agent)` → exit 4 with the exact resolved paths in both languages.
 - Safety check: `--target/agent/skill_utils.py` must exist; otherwise exit 4.
-- The script enumerates all patch sites (the cap-raise site in `agent/skill_utils.py`, plus the 7 Task E sites in `agent/prompt_builder.py`, `agent/background_review.py`, `tools/skill_manager_tool.py`, `website/docs/user-guide/features/skills.md`).
+- The script enumerates all patch sites (the cap-raise site at symbol `agent.skill_utils.extract_skill_description`, plus the 7 Task E sites in `agent/prompt_builder.py`, `agent/background_review.py`, `tools/skill_manager_tool.py`, `website/docs/user-guide/features/skills.md`).
 - For each site, it locates the file by path, then verifies BOTH the expected current text AND the expected line number. Mismatch → diagnostic; the script aborts.
 - On `--apply`, writes the patch atomically (write to `<file>.patch.tmp` + `os.replace`; restore on exception). A `.patch.rejected` report is written on any pre-validation failure.
 - `--force` retries only sites with `LINE_DRIFT`; requires `--i-accept-line-drift` second flag; pauses for TTY confirmation; appends to `~/.hermes/patch-audit.log`.
@@ -102,19 +105,19 @@ The runtime monkey-patch path is GONE. The plugin is purely advisory (static AST
 - Operator runs `uv run hermes-skill-creator-profiles` (dry-run by default) or `--apply`.
 - The script lists every profile via `hermes_cli.profiles.list_profiles()`; the default profile is always included.
 - For each profile, the script enters `hermes_home_scope(path)` (single context manager; sets BOTH `set_hermes_home_override(path)` AND `os.environ['HERMES_HOME']=str(path)`, restoring both on exit):
-  1. Reads the disabled-skill set via `agent.skill_utils.get_disabled_skill_names(platform=None)` — takes a `platform: str`, NOT a `config` dict.
-  2. Reads the installed skill set by walking the per-profile `skills/**/*.md` and parsing frontmatter with `python-frontmatter`.
+  1. Reads the enabled-skill set via `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, platform=None)` — the CANONICAL helper shared with Script #3. Returns a `frozenset[str]`.
+  2. Reads the disabled-skill set via `agent.skill_utils.get_disabled_skill_names(platform=None)` — takes a `platform: str`, NOT a `config` dict.
   3. Walks the `_PROFILE_DIRS` set: `{memories, sessions, skills, skins, logs, plans, workspace, cron, home}`. `gateway.pid` is a flat file in the profile root (read stat-only).
   4. Computes the desired state: `{openai: disabled, skills: disabled-if-present, skill-creator: installed-or-updated}`.
-  5. In `--apply`, writes the new disabled set via `hermes_cli.skills_config.save_disabled_skills(config, platform=None, names=sorted(desired_disabled))`; calls `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)` from `hermes_cli.skills_hub`.
-  6. Calls `clear_skills_system_prompt_cache(clear_snapshot=True)` (or, as a fallback if the function does not exist, deletes `~/.hermes/.skills_prompt_snapshot.json` directly).
+  5. In `--apply`, writes the new disabled set via `hermes_cli.skills_config.save_disabled_skills(config, disabled, platform=None)` (positional); calls `do_install("skill-creator", name_override="", force=True, skip_confirm=True, invalidate_cache=True)` from `hermes_cli.skills_hub`.
+  6. Calls `clear_skills_system_prompt_cache(clear_snapshot=True)` — the function lives at symbol `agent.prompt_builder.clear_skills_system_prompt_cache` with sig `(*, clear_snapshot=False)`. It EXISTS; there is no fallback.
 - Emits a deterministic JSON report per profile; exits 0 on success.
 
 ### 4. Migrated skill runtime path (after install)
 
-- Hermes loads `~/.hermes/skills/<cat>/skill-creator/SKILL.md` at session start.
+- Hermes loads `~/.hermes/skills/skill-creator/SKILL.md` at session start.
 - The skill's body instructs the agent to (a) call `skills_list`, (b) call `skill_view(name='hermes-agent-skill-authoring')` to load the validator rules, (c) follow the migrated authoring workflow, (d) persist with `skill_manage(action='create')`.
-- The `scripts/run_eval.py` and `scripts/improve_description.py` shell out to `hermes` (NOT `claude`) under `hermes_subprocess_env()` (the helper that strips `HERMES_SESSION` from the subprocess env only).
+- The `scripts/run_eval.py` and `scripts/improve_description.py` shell out to `hermes` (NOT `claude`) under `hermes_subprocess_env()` (the helper at `skills/skill-creator/_subprocess.py` that strips `HERMES_SESSION` from the subprocess env only).
 - The migrated skill's installer emits `MIGRATION.skill-port.md` (the T3 inventory table) at install time.
 
 ### 5. Migration note path (3-file split)
@@ -123,21 +126,31 @@ The runtime monkey-patch path is GONE. The plugin is purely advisory (static AST
 - `MIGRATION.hermes-patch.md` — generated by Script #1. Covers ONLY Script #1's patch sites (cap-raise + 7 Task E sites). Source-controlled.
 - `MIGRATION.skill-port.md` — generated by the migrated skill's installer. Covers the T3 inventory (per-binding Claude→Hermes replacements). Source-controlled.
 
-## Sequence — operator installs the plugin + runs the two scripts
+### 6. Report path (Script #3, READ-ONLY)
+
+- Operator runs `uv run hermes-skill-creator-report [--profile PATH] [--json PATH]`.
+- Script #3 is READ-ONLY. It NEVER writes to `~/.hermes`, NEVER modifies Hermes source, NEVER installs or removes a skill.
+- For each requested profile, it calls `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, platform=None)` — the SAME canonical helper used by Script #2 — to enumerate the enabled-skill set.
+- It cross-references the enabled set with `tools/skill_usage` usage counters (`last_used_at`, `last_viewed_at`, `last_patched_at`, `use_count`, `view_count`, `patch_count`) and emits:
+  - a human-readable report to STDOUT (table of profile, skill, status, last-used, counts), and
+  - a deterministic JSON document to `--json PATH` if provided.
+- Script #3 exits 0 on success, non-zero only on resolution/IO error (never on empty results).
+
+## Sequence — operator installs the plugin + runs the three scripts
 
 ```
 Operator
   |  uv venv + uv pip install -e ".[dev]"
   |  uv run pre-commit install
-  |  uv run hermes-skill-creator-patch --check --task-e-redirect --target ~/hermes-checkout
-  |  uv run hermes-skill-creator-patch --apply --task-e-redirect --target ~/hermes-checkout
+  |  uv run hermes-skill-creator-patch --check --target ~/hermes-checkout
+  |  uv run hermes-skill-creator-patch --apply --target ~/hermes-checkout
   |  uv run hermes-skill-creator-patch --emit-migration-note --target ~/hermes-checkout
   |  uv run hermes-skill-creator-profiles --apply
-  |  uv run python -m hermes_skill_creator_plugin.install
+  |  uv run hermes-skill-creator-report --json ~/reports/skills.json
   v
 Hermes next session
   |  plugin on_session_start: static AST read of target; one-time advisory if unpatched
-  |  plugin register: ctx.register_skill('skill-creator', ...)
+  |  script_2 do_install wrote ~/.hermes/skills/skill-creator/ flat path
   |  LLM sees <available_skills> index with up-to-1024-char descriptions (patched cap)
   v
 LLM authoring a new skill
@@ -158,10 +171,11 @@ Hermes persists the new skill; plugin re-validates on next session.
 
 - **Patch drift** → `LINE_DRIFT` diagnostic; operator runs `--force --i-accept-line-drift` to retry line-only.
 - **Hub install fails** → Script #2 emits a per-profile error block; operator can re-run `--apply` (idempotent).
-- **Plugin manifest rejects** → `hermes-skill-creator-plugin install` exits non-zero; no files written.
-- **Cache stale** → Script #2 calls `clear_skills_system_prompt_cache(clear_snapshot=True)` after every successful flip; falls back to direct delete if the function does not exist.
-- **Active cap guard fails** → installer exits 1 with bilingual error; the operator runs Script #1 and re-runs the installer.
+- **Plugin manifest rejects** → plugin loader exits non-zero; no files written.
+- **Cache stale** → Script #2 calls `clear_skills_system_prompt_cache(clear_snapshot=True)` after every successful flip.
+- **Active cap guard fails** → installer exits 1 with bilingual error; the operator runs Script #1 and re-runs Script #2's `--apply`.
 - **`os.environ['HERMES_HOME']` leak** → `hermes_home_scope` uses `try/finally` to restore both the override token and the env var; tested by `test_scope_restores_on_exception`.
+- **Script #3 source-read fail** → Script #3 exits non-zero with a bilingual diagnostic; STDOUT/JSON are NOT emitted.
 
 ## Safety recap (HARD)
 
@@ -169,16 +183,21 @@ Hermes persists the new skill; plugin re-validates on next session.
 - The plugin's `on_session_start` performs ZERO setattr on any Hermes module. ZERO file mutation of `~/.hermes/hermes-agent`.
 - Script #1's `--target` is REQUIRED. It refuses the resolved `~/.hermes/hermes-agent` path. It refuses a target that lacks `agent/skill_utils.py`.
 - Script #1's `--force` requires `--i-accept-line-drift`. It pauses for TTY confirmation. It appends to `~/.hermes/patch-audit.log`.
-- The installer is interactive by default; refuses the real `~/.hermes` without `--yes` (or TTY confirmation).
-- All file writes (installer + Script #2) go through `hermes_home_scope` which restores both `set_hermes_home_override` and `os.environ['HERMES_HOME']` on exit.
+- Script #2 is non-interactive (`skip_confirm=True`); refuses the resolved `~/.hermes` write target by going through `hermes_home_scope`, which restores both `set_hermes_home_override` and `os.environ['HERMES_HOME']` on exit.
+- Script #3 is READ-ONLY end-to-end: no writes, no installs, no setattr, no env mutations beyond the same `hermes_home_scope` read-scope used by Script #2.
+- All file writes (Script #2 only — Script #1 writes to the user-owned `--target` checkout, NOT `~/.hermes`) go through `hermes_home_scope` which restores both `set_hermes_home_override` and `os.environ['HERMES_HOME']` on exit.
 
 ## Fix ledger
 
 - Fixes [refuted claim 1] runtime monkey-patch — DELETED; replaced with static-AST advisory.
 - Fixes [refuted claim 3] `load_config(path=...)` / `save_config(path=...)` — replaced with `hermes_home_scope` + no-path-arg calls.
-- Fixes [refuted claim 4] `get_disabled_skills(config, platform)` — corrected to `agent.skill_utils.get_disabled_skill_names(platform=None)` and `hermes_cli.skills_config.save_disabled_skills` for the writer.
+- Fixes [refuted claim 4] `get_disabled_skills(config, platform)` — corrected to `agent.skill_utils.get_disabled_skill_names(platform=None)` for reads and `hermes_cli.skills_config.save_disabled_skills(config, disabled, platform=None)` for writes; enabled-detection routed through the canonical `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path, platform=None)`.
 - Fixes [refuted claim 9] `do_install` signature — corrected to `do_install(identifier, category="", force=False, console=None, skip_confirm=False, invalidate_cache=True, name_override="")`; uses `force=True, skip_confirm=True` for idempotent re-install.
 - Fixes [refuted claim 5] `gateway/` subdir — REMOVED; walks `_PROFILE_DIRS` and treats `gateway.pid` as a flat file.
 - Fixes [refuted claim 10] MIGRATION single file — split into 3 files with pinned locations.
+- Fixes [V4-R1] `plugin.json` → `plugin.yaml`; the migrated skill is STANDALONE at worktree-root `skills/skill-creator/`, NOT bundled inside the plugin package; the plugin does NOT call `ctx.register_skill('skill-creator', ...)`; `installer.py` and the `python -m hermes_skill_creator_plugin.install` subcommand are REMOVED.
+- Fixes [V4-R1] `clear_skills_system_prompt_cache` source-of-truth is `agent.prompt_builder`; the "if the function does not exist" fallback is DROPPED.
+- Fixes [V4-R4] ONE canonical enabled-detection name: `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills` — shared by Script #2 (writes) and Script #3 (reads).
+- Fixes [V4-R11] Script #3 has NO `--emit-migration-note`, NO `MIGRATION.report.md`. It is STDOUT + `--json PATH` only.
 
-<!-- end of file: 184 lines (budget 200) -->
+<!-- end of file: 202 lines (budget 200) -->

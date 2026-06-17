@@ -18,7 +18,7 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 | §5.4 | Migrated `skill-creator` skill: a STANDALONE top-level deliverable at `skills/skill-creator/` (worktree root, NOT nested inside the plugin package). Shipped/installed as a flat skill into `~/.hermes/skills/skill-creator/` via Script #2's `do_install`. Passes the hermes-agent-skill-authoring validator; every Claude-specific invocation replaced per the T3 inventory; Claude strengths preserved (subagent split, eval pipeline, eval viewer); `HERMES_SESSION` nesting-guard helper. | `07-skill-creator-migration.md` |
 | §5.5 | AI-readable migration note: 3-file split — `MIGRATION.md` (index) + `MIGRATION.hermes-patch.md` (Script #1) + `MIGRATION.skill-port.md` (migrated skill). | `08-migration-note-format.md` |
 | §5.6 | The plan files themselves (this output). | `00`–`12` |
-| §5.7 (NEW) | Script #3: read-only profile-skill token + usage reporter (`hermes-skill-creator-report`). Lists ENABLED skills per profile; reports per-skill token estimate + use/last-used stats from the Curator; sorts; emits NO writes. Bilingual `--help`. | `06b-script-3-report.md` (referenced by 09, 10, 11) |
+| §5.7 (NEW) | Script #3: read-only profile-skill token + usage reporter (`hermes-skill-creator-report`). Lists ENABLED skills per profile; reports per-skill token estimate + use/last-used stats from the Curator; sorts; emits NO writes. Bilingual `--help`. | `13-script-3-report.md` (referenced by 09, 10, 11) |
 
 ## Acceptance criteria
 
@@ -91,7 +91,7 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 
 - **AC-7.1** READ-ONLY: asserts zero bytes written against the fixture profile tree under all flag combinations (default, `--sort`, `--profile`, multi-profile). Implemented as an integration test that snapshots the tree, runs every flag combo, and re-snapshots to compare hashes.
 - **AC-7.2** `--profile <name>` selects a single profile; without it, iterates the `hermes` (default) profile AND every named profile returned by `hermes_cli.profiles.list_profiles()` (same enumeration as Script #2, AC-3.1).
-- **AC-7.3** Enabled-set detection REUSES Script #2's exact logic: the per-profile `config/skills.toml` `disabled` set, profile + platform combined with `platforms:` / conditional exclusions. NOT a re-implementation. A shared helper (`hermes_cli.skill_enablement.enabled_skills_for_profile`) is the single source of truth.
+- **AC-7.3** Enabled-set detection REUSES Script #2's exact logic: the per-profile `config/skills.toml` `disabled` set, profile + platform combined with `platforms:` / conditional exclusions. NOT a re-implementation. The shared helper `hermes_skill_creator_plugin._enabled_detection.get_enabled_skills(profile_path: Path, *, platform: Optional[str] = None) -> frozenset[str]` is the single source of truth.
 - **AC-7.4** Tokens: tokenize the RENDERED `name + " " + description` string with the configured model's tokenizer (loaded from the active model in `~/.hermes/config.yaml` or `HERMES_MODEL`); fallback to `len(text) // 4` when the tokenizer cannot be loaded. Report per-skill `tokens` and `total_tokens`; optionally project against the 1024 cap with a `% of cap` column.
 - **AC-7.5** Usage: `view_count`, `use_count`, `patch_count`, `last_used` (ISO 8601), sourced from the Curator (project ref #45). The integration test FIRST verifies the actual storage backend + field names against the current Hermes source (a fixture recorded at test-write time); where the field is absent in the current source, the column shows `n/a` (not `0`, not blank). The verification gate is a test fixture file, not a live network call.
 - **AC-7.6** Output: a sortable table (plain text default; `--format=json` optional) with columns `profile | name | tokens | use_count | patch_count | last_used | % of cap` (some columns may be hidden with `--columns`). `--sort tokens|use_count|last_used` reorders rows. `--help` is bilingual EN+HU, two-section ("Usage (English)" / "Használat (magyar)"), mirrored content.
@@ -117,7 +117,7 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 - **AC-4.6** tightened: nesting-guard helper is the single source of truth; parent process never `os.environ.pop`s. (Fixes [refuted claim 11] env-var centralization.)
 - **AC-1.4** rewritten: plugin is purely advisory; skill is surfaced by Script #2's flat-path install. `register_skill` cannot achieve `<available_skills>` visibility. (V3 [blocker B3] plugin API mismatches + [blocker B4] standalone skill.)
 - **AC-7.x** (NEW cluster): Script #3 read-only profile-skill token + usage reporter per brief §5.7.
-- **00-index.md** arithmetic recomputed: sum = 2229 (was 2089 / 2231 — corrected per V3 [minor m1]). New breakdown includes `06b-script-3-report.md` (~165 lines) and adjusts `06-script-2-profiles.md` to ~180 (was 165).
+- **00-index.md** arithmetic is the source of truth (total Actual 2814, total Budget 3570). Breakdown includes `13-script-3-report.md` (236 lines) and `06-script-2-profiles.md` (238 lines, was 185).
 - All hard line-number citations in AC text replaced with symbol + anchor-text references per V3 [major M3].
 
-<!-- end of file: 150 lines (budget 150) -->
+<!-- end of file: 123 lines (budget 150) -->

@@ -44,7 +44,7 @@
 
 ### Q6 — Per-file line budget table
 
-- **Question**: is the per-file line budget (00 90, 01 150, 02 200, 03 220, 04 400, 05 250, 06 400, 07 450, 08 180, 09 300, 10 250, 11 200, 12 200; sum 3490 < 4500) approved?
+- **Question**: is the per-file line budget (00 90, 01 150, 02 200, 03 250, 04 400, 05 250, 06 400, 07 450, 08 180, 09 300, 10 250, 11 200, 12 200, 13 250; sum 3570 < 4500) approved?
 - **Proposed default**: yes.
 - **Resolution path**: HITL gate. Pre-commit hook `check_line_count.py` enforces it.
 - **Escalation**: if any file blows the budget, the plan is rejected and that file is split or trimmed.
@@ -157,8 +157,8 @@
 | E2 | 2026-06-17 | (Q2) Hermes event shape | adapter-based, single canonical | default accepted | Adapter in `07 §Nesting-guard helper`; re-verify shape at Phase 5 by reading `~/.hermes/hermes-agent/hermes_cli/streaming/`. |
 | E3 | 2026-06-17 | (Q3) per-profile dir set | `_PROFILE_DIRS = {memories, sessions, skills, skins, logs, plans, workspace, cron, home}` per `hermes_cli/profiles.py:_PROFILE_DIRS` | default accepted | Script #2 re-reads `hermes_cli/profiles.py:_PROFILE_DIRS` at Phase 5 implementation; if the list changed, 06 is updated. |
 | E4 | 2026-06-17 | (Q4) cap-raise safety contract | --target REQUIRED, no runtime monkey-patch | **accepted** (--target REQUIRED + advisory-only) | Runtime monkey-patch removed from the plan; plugin is purely advisory (static AST read of user-owned checkout); Script #1 refuses to run if `--target == ~/.hermes/hermes-agent`. |
-| E5 | 2026-06-17 | (Q5) MIGRATION split | 3 files | **3 files** (confirmed) | `MIGRATION.md` (index) + `MIGRATION.hermes-patch.md` (Script #1's cap-raise + 7 Task E sites) + `MIGRATION.skill-port.md` (T3 inventory of 15 Claude-binding replacements). All three source-controlled. |
-| E6 | 2026-06-17 | (Q6) line budget | 3490 sum | default accepted | pre-commit hook `tools/check_line_count.py` enforces per-file budget; sum < 4500. |
+| E5 | 2026-06-17 | (Q5) MIGRATION split | 3 files | **3 files** (confirmed) | `MIGRATION.md` (index) + `MIGRATION.hermes-patch.md` (Script #1's cap-raise + 7 Task E sites) + `MIGRATION.skill-port.md` (T3 inventory of 18 Claude-binding replacements). All three source-controlled. |
+| E6 | 2026-06-17 | (Q6) line budget | 3570 sum | default accepted | pre-commit hook `tools/check_line_count.py` enforces per-file budget; sum < 4500. |
 | E7 | 2026-06-17 | (Q7) bilingual format | `[en] text / [hu] szöveg` single line + two-section `--help` | default accepted | pre-commit `tools/check_bilingual.py` enforces console format; `test_help_is_bilingual` enforces the two-section structure. |
 | E8 | 2026-06-17 | (Q8) installer interactive safety | TTY confirm + `--yes` bypass | default accepted | Installer prompts in TTY, refuses real `~/.hermes` without `--yes`; integration tests use `tmp_path HERMES_HOME` + `--yes`. |
 | E9 | 2026-06-17 | (Q9) active-cap detection | refuse if desc > active cap | **refuse + bilingual error** (confirmed) | Installer detects active cap (60 vs 1024) by static AST read of target; refuses install with bilingual error if description exceeds the cap; `--with-short-description` flag substitutes the truncated form. Tests cover both cap states. |
@@ -173,4 +173,4 @@
 - The 60-char code-point slicing (vs grapheme slicing) in `extract_skill_description` is a known limitation. If i18n skill descriptions include ZWJ-emoji, the slice may split a grapheme. This is documented in 04 (the patch inherits the same behaviour, with the same limitation). Fixing it (grapheme-safe slicing) is OUT OF SCOPE for this plan; follow-up work.
 - Registering the migrated `skill-creator` via the plugin's `ctx.register_skill(...)` is OUT OF SCOPE. `register_skill` does not place a plugin-registered skill in the flat `~/.hermes/skills/` tree and does not surface it in the system prompt `<available_skills>` index. The skill is shipped standalone and installed flat (see PC4).
 
-<!-- end of file: 120 lines (budget 200) -->
+<!-- end of file: 176 lines (budget 200) -->

@@ -10,22 +10,24 @@ List the ENABLED skills for a profile so the operator can decide what to turn of
 
 The reporter is the operator's "what is on right now, and what does it cost?" view. It is purely informational: NO file writes, NO config flips, NO install calls. Bilingual `--help`. Sortable output. 100% code + branch coverage.
 
+**Write contract (binding, per V5/R11).** Script #3 is STDOUT + `--json PATH` ONLY. It does NOT write to the worktree. It does NOT emit `MIGRATION.report.md`. It does NOT have an `--emit-migration-note` flag and does NOT have a `--write-report` flag. The only filesystem write is the operator-chosen `--json PATH`, which by default is `./skill-report.json` under cwd (an operator-chosen path OUTSIDE the fixture tree). The read-only contract test (`test_report_read_only_zero_writes`) snapshots a fixture HERMES_HOME tree, runs every flag combination, and asserts byte-identical snapshots before/after.
+
 ## CLI surface
 
 ```
 Usage (English):
-  uv run hermes-skill-creator-report [--profile <name>] [--sort tokens|use_count|last_used]
+  uv run hermes-skill-creator-report [--profile <name>] [--sort tokens|use_count|last_used_at]
                                      [--format text|json] [--json PATH] [--help]
 
 Használat (magyar):
-  uv run hermes-skill-creator-report [--profile <name>] [--sort tokens|use_count|last_used]
+  uv run hermes-skill-creator-report [--profile <name>] [--sort tokens|use_count|last_used_at]
                                      [--format text|json] [--json PATH] [--help]
 
 Options:
   --profile <name>    Report a single profile; default iterates the
                       `hermes` (default) profile AND every named profile
                       returned by `hermes_cli.profiles.list_profiles()`.
-  --sort <key>        Reorder rows: tokens | use_count | last_used.
+  --sort <key>        Reorder rows: tokens | use_count | last_used_at.
                       Default: tokens (descending). Stable secondary
                       key: skill name (ascending) for determinism.
   --format <fmt>      Output format: text (default) | json.
@@ -38,7 +40,7 @@ The reporter is a single console script `hermes-skill-creator-report` declared i
 
 ## Enabled-set detection (SHARED with Script #2)
 
-The reporter REUSES Script #2's exact enabled-detection logic. The single source of truth is the helper module `src/hermes_skill_creator_plugin/_enabled.py` (owned by D-script-2, consumed by G-report per 11):
+The reporter REUSES Script #2's exact enabled-detection logic. The single source of truth is the helper module `src/hermes_skill_creator_plugin/_enabled_detection` (owned by D-script-2, consumed by G-report per 11):
 
 ```python
 def get_enabled_skills(
@@ -54,13 +56,13 @@ def get_enabled_skills(
     """
 ```
 
-The reporter imports this function unchanged. It does NOT re-derive the set from `config.yaml` directly, does NOT walk the `skills/` tree and assume everything inside is enabled, and does NOT re-implement the platform filter. The integration test `test_report_shares_enabled_detection_with_script_2` asserts (a) the reporter imports from `_enabled.py`, (b) the set it returns is byte-identical to the set Script #2's apply path would compute for the same fixture, and (c) the function is NOT redefined inside the reporter package.
+The reporter imports this function unchanged. It does NOT re-derive the set from `config.yaml` directly, does NOT walk the `skills/` tree and assume everything inside is enabled, and does NOT re-implement the platform filter. The integration test `test_report_shares_enabled_detection_with_script_2` asserts (a) the reporter imports from `hermes_skill_creator_plugin._enabled_detection`, (b) the set it returns is byte-identical to the set Script #2's apply path would compute for the same fixture, and (c) the function is NOT redefined inside the reporter package.
 
 If the shared module is unavailable at import time (an extremely defensive fallback for the case where the operator has only installed the reporter subpackage), the reporter aborts with a bilingual error and exit code 6 — it does NOT fall back to a local re-implementation, because that would defeat the point of sharing the logic.
 
 ## Tokens (per-skill + total + % of cap)
 
-For each enabled skill, the reporter tokenizes the RENDERED name+description string — the same string the system prompt's `<available_skills>` index will display — and reports the count.
+For each enabled skill, the reporter tokenizes the rendered name+description string — `name` plus the FULL description (NOT the truncated index form) — and reports the count. The token count covers the full description for an accurate cost estimate; the operator should note that the system prompt's `<available_skills>` index renders the truncated form (see note below).
 
 ```python
 def estimate_tokens(name: str, description: str, *, tokenizer=None) -> int:
@@ -71,6 +73,8 @@ def estimate_tokens(name: str, description: str, *, tokenizer=None) -> int:
     """
 ```
 
+**Index form note (binding).** The system prompt's `<available_skills>` index line is `f"    - {name}: {desc}"` (`agent/prompt_builder.py:1399`), where `desc` is `extract_skill_description(frontmatter)` (`agent/skill_utils.py:682`) — a TRUNCATED form: `desc[:57] + "..."` when `len(desc) > 60`, otherwise the full description (`skill_utils.py:688-689`). The reporter tokenizes the FULL description for an accurate cost estimate; the operator sees that the index uses the truncated form (so the actual on-the-wire cost per skill is lower than the reporter's per-skill count would imply when the description is longer than 60 chars).
+
 The tokenizer is loaded from the active model in `~/.hermes/config.yaml` (or the `HERMES_MODEL` env var) via the standard transformers / tiktoken loader that Hermes already uses for its own prompt-budget reports. When the loader is unavailable, the reporter logs a one-line bilingual warning (`[en] tokenizer unavailable, falling back to chars/4 / [hu] a tokenizer nem elérhető, chars/4 becslés`) and proceeds with the deterministic fallback. The fallback estimate is the same approximation used elsewhere in the Hermes codebase for budget planning; the test fixture injects a known tokenizer stub so the integration test asserts the EXACT token count, not an approximation.
 
 The reporter prints:
@@ -78,9 +82,22 @@ The reporter prints:
 - A `total_tokens` row at the bottom of each profile block.
 - An optional `pct_of_cap` column showing `total_tokens / 1024` rounded to one decimal place. The 1024 cap is a constant `MAX_DESCRIPTION_LENGTH` imported from `tools.skills_tool` (98) when the import is safe; otherwise a local constant `_REPORTER_MAX_DESCRIPTION_LENGTH = 1024` is used to avoid an agent<->tools circular import (same direction-check the cap-raise patch in 04 uses).
 
-## Usage (view / use / patch counts + last_used)
+## Usage (view / use / patch counts + last_used_at)
 
-Usage stats come from the Curator (project ref #45). The reporter's first implementation step is a verification pass — BEFORE writing the reporter, the implementer MUST read the Curator's actual storage backend and field names in the current Hermes source tree and record the findings in a test fixture (`tests/fixtures/curator/recorded_fields.json`). The fixture captures: the storage class, the field names (`view_count`, `use_count`, `patch_count`, `last_used`), the field types, and the record-key format (e.g. is the key the skill name, a slug, or a `(profile, skill)` tuple?).
+Usage stats come from the Curator (project ref #45). The reporter's first implementation step is a verification pass — BEFORE writing the reporter, the implementer MUST read the Curator's actual storage backend and field names in the current Hermes source tree and record the findings in a test fixture (`tests/fixtures/curator/recorded_fields.json`). The fixture captures: the storage class, the field names (`view_count`, `use_count`, `patch_count`, `last_used_at`, `last_viewed_at`, `last_patched_at`), the field types, and the record-key format (e.g. is the key the skill name, a slug, or a `(profile, skill)` tuple?).
+
+**Curator field names (binding, per V5/R12a).** The real field names, verified against `tools/skill_usage.py:155, 169, 463-468`, are:
+
+| Field         | Type   | Source line | Meaning                                  |
+|---------------|--------|-------------|------------------------------------------|
+| `last_used_at`| ISO 8601 string or None | `skill_usage.py:465` | Timestamp of most recent `use_count` bump (skill_usage.py:600-607). |
+| `last_viewed_at` | ISO 8601 string or None | `skill_usage.py:466` | Timestamp of most recent `view_count` bump (skill_usage.py:588-595). |
+| `last_patched_at` | ISO 8601 string or None | `skill_usage.py:468` | Timestamp of most recent `patch_count` bump (skill_usage.py:612-618). |
+| `use_count`   | int    | `skill_usage.py:463` | Number of times the skill was actively used. |
+| `view_count`  | int    | `skill_usage.py:464` | Number of times the skill was loaded via `skill_view()`. |
+| `patch_count` | int    | `skill_usage.py:467` | Number of times the skill was patched/edited. |
+
+The reporter MUST NOT use the legacy `last_used` field (it does not exist in the current source — `skill_usage.py` uses the `_at` suffixed names per the verification above). The fixture `recorded_fields.json` enumerates these exact six field names; any reporter code that references a field NOT in this set fails `test_report_usage_does_not_invent_fields`.
 
 The verification pass is gated by a test: `test_report_curator_field_verification_recorded` reads the fixture and asserts it was updated within the current Phase 5 window (mtime < 7 days from HEAD). If the fixture is stale, the test FAILS and the implementer is forced to re-verify the actual source. This prevents the reporter from quoting field names that drifted since the fixture was recorded.
 
@@ -90,12 +107,12 @@ When the Curator IS present and the fields are recorded, the reporter joins the 
 
 ## Output (sortable table)
 
-Default format: a plain-text table rendered with a small in-tree formatter (no third-party tabulate dep). Columns: `profile | name | description (truncated to 60) | tokens | use_count | patch_count | last_used | % of cap`. The description is truncated to 60 chars with a trailing ellipsis (`...`) — this is the rendered form the system prompt's index uses under the unpatched cap, and it is what the operator will visually recognize from the agent's session output. The full description is preserved in the `--format=json` output.
+Default format: a plain-text table rendered with a small in-tree formatter (no third-party tabulate dep). Columns: `profile | name | description (truncated to 60) | tokens | use_count | patch_count | view_count | last_used_at | % of cap`. The description is truncated to 60 chars with a trailing ellipsis (`...`) — this matches the rendered form the system prompt's index uses under the unpatched cap (see "Index form note" above), and it is what the operator will visually recognize from the agent's session output. The full description is preserved in the `--format=json` output.
 
 Sorting:
 - `--sort tokens` (default): descending by token count, stable secondary key by skill name ascending.
 - `--sort use_count`: descending by `use_count`, stable secondary key by skill name ascending. Rows with `n/a` sort LAST (they represent unknown, not zero).
-- `--sort last_used`: descending by `last_used` (most recent first), stable secondary key by skill name ascending. Rows with `n/a` sort LAST.
+- `--sort last_used_at`: descending by `last_used_at` (most recent first), stable secondary key by skill name ascending. Rows with `n/a` sort LAST.
 
 The sort is stable: equal keys keep the order from the underlying enabled-detection walk, which itself walks the `skills/` directory in a sorted order. A test asserts the byte-identical output across two runs on the same fixture.
 
@@ -115,8 +132,11 @@ The sort is stable: equal keys keep the order from the underlying enabled-detect
           "description": "<full text, up to 1024 chars>",
           "tokens": 47,
           "use_count": 3,
+          "view_count": 5,
           "patch_count": 1,
-          "last_used": "2026-06-16T22:14:03Z",
+          "last_used_at": "2026-06-16T22:14:03Z",
+          "last_viewed_at": "2026-06-16T22:14:03Z",
+          "last_patched_at": "2026-06-10T08:00:00Z",
           "pct_of_cap": 4.6
         }
       ],
@@ -133,7 +153,7 @@ The sort is stable: equal keys keep the order from the underlying enabled-detect
 The reporter MUST NOT write to the filesystem under any flag combination. This is enforced by an integration test that:
 
 1. Snapshots a fixture HERMES_HOME tree (sha256 of every file under it).
-2. Runs the reporter with every flag combination: default, `--profile <name>`, `--sort tokens`, `--sort use_count`, `--sort last_used`, `--format=json`, `--json PATH` (which writes OUTSIDE the fixture, to a tmp path), and all combinations of the above.
+2. Runs the reporter with every flag combination: default, `--profile <name>`, `--sort tokens`, `--sort use_count`, `--sort last_used_at`, `--format=json`, `--json PATH` (which writes OUTSIDE the fixture, to a tmp path), and all combinations of the above.
 3. Re-snapshots the fixture HERMES_HOME tree.
 4. Asserts the two snapshots are byte-identical (the same sentinels Script #2 uses for its no-touch contract — see 09).
 
@@ -163,19 +183,22 @@ The reporter is a NEW standalone read-only entry point:
 - Entrypoint: `hermes_skill_creator_plugin.entrypoints:report_main` (10 already declares it).
 - Test location: `tests/report/` (unit + integration + the `curator/recorded_fields.json` fixture).
 - Plan references: this file is `13-script-3-report.md`. The 00-index, 01-overview, 09-test-strategy, 10-toolchain-and-conventions, and 11-sub-agent-delegation-map files all reference it; the index row is updated to reflect the actual line count after the file is written.
-- Dependency on the shared enabled-detection module: the reporter imports `get_enabled_skills` from `src/hermes_skill_creator_plugin/_enabled.py`. The implementer MUST verify the import direction (reporter depends on the shared module, not the other way around) — the shared module MUST NOT import from the reporter.
+- Dependency on the shared enabled-detection module: the reporter imports `get_enabled_skills` from `src/hermes_skill_creator_plugin/_enabled_detection`. The implementer MUST verify the import direction (reporter depends on the shared module, not the other way around) — the shared module MUST NOT import from the reporter.
 - Dependency on the Curator (project ref #45): gated on the field-verification fixture being recorded. If the Curator is not yet merged, the reporter renders `n/a` for the usage columns and exits 0; the verification-fixture mtime sentinel prevents shipping the reporter against an unverified Curator.
 
 ## TDD test list
 
 ### Read-only contract
-- `test_report_read_only_zero_writes` — snapshot the fixture HERMES_HOME; run every flag combination; re-snapshot; assert byte-identical (covers default, `--profile`, `--sort tokens`, `--sort use_count`, `--sort last_used`, `--format=json`, `--json PATH`, and every pairwise combination).
+- `test_report_read_only_zero_writes` — snapshot the fixture HERMES_HOME; run every flag combination; re-snapshot; assert byte-identical (covers default, `--profile`, `--sort tokens`, `--sort use_count`, `--sort last_used_at`, `--format=json`, `--json PATH`, and every pairwise combination).
 - `test_report_no_write_calls_in_source` — AST-grep the reporter's source tree; fail on `open(..., "w")`, `Path.write_text`, `Path.write_bytes`, `os.replace`, `shutil.copy`, `shutil.copytree`, `subprocess.run` with a write side-effect, `Path.unlink`, `os.remove`, `shutil.rmtree`.
 - `test_report_rejects_apply_flag` — pass `--apply`; assert the reporter exits non-zero with a bilingual error message ("apply not supported on the reporter / az apply nem támogatott a riporton"); the fixture tree is unchanged.
+- `test_report_rejects_emit_migration_note_flag` — pass `--emit-migration-note`; assert the reporter exits non-zero with a bilingual error message ("emit-migration-note is not a reporter flag / az emit-migration-note nem riport-flag"); the fixture tree is unchanged. Binds the V5/R11 contract: Script #3 has no migration-note flag.
+- `test_report_rejects_write_report_flag` — pass `--write-report`; assert the reporter exits non-zero with a bilingual error message ("write-report is not a reporter flag / a write-report nem riport-flag"); the fixture tree is unchanged. Binds the V5/R11 contract.
+- `test_report_no_migration_report_file_emitted` — run every flag combination; assert no `MIGRATION.report.md` file is created anywhere under cwd or fixture tree.
 - `test_report_json_path_outside_fixture` — `--json PATH` writes to PATH; PATH defaults to a tmp dir, NOT inside the fixture tree; if the operator passes an absolute path inside the fixture tree, the reporter exits 6 and does NOT write.
 
 ### Enabled-set detection (shared with Script #2)
-- `test_report_shares_enabled_detection_with_script_2` — assert (a) the reporter imports `get_enabled_skills` from `hermes_skill_creator_plugin._enabled`, (b) the import is at module top-level (not inside a function), (c) the function is NOT redefined in the reporter package, (d) the set returned for a fixture matches the set Script #2's apply path would compute.
+- `test_report_shares_enabled_detection_with_script_2` — assert (a) the reporter imports `get_enabled_skills` from `hermes_skill_creator_plugin._enabled_detection`, (b) the import is at module top-level (not inside a function), (c) the function is NOT redefined in the reporter package, (d) the set returned for a fixture matches the set Script #2's apply path would compute.
 - `test_report_default_profile` — fixture with default profile only; assert the report covers the `hermes` profile.
 - `test_report_named_profile` — `--profile work` selects the `work` profile only; assert the report does NOT include other profiles.
 - `test_report_multi_profile_default` — no `--profile`; fixture with `hermes` + two named profiles; assert all three are reported in stable sorted order.
@@ -184,7 +207,8 @@ The reporter is a NEW standalone read-only entry point:
 - `test_report_honors_conditional_exclusions` — fixture with a per-skill `disable_if` rule; assert the rule wins over the toggle list.
 
 ### Tokenization
-- `test_report_tokens_match_fixture` — fixture with a known tokenizer stub (returns a fixed token count per call); assert the rendered per-skill token count matches the stub's output for `f"{name} {description}"`.
+- `test_report_tokens_match_fixture` — fixture with a known tokenizer stub (returns a fixed token count per call); assert the rendered per-skill token count matches the stub's output for `f"{name} {description}"` (FULL description, not truncated).
+- `test_report_tokens_use_full_description_not_truncated` — fixture with a 200-char description; assert the tokenizer is called with the full 200-char text (the reporter tokenizes the full form for an accurate cost estimate; the index form is truncated separately).
 - `test_report_total_tokens` — assert the `total_tokens` row equals the sum of per-skill counts.
 - `test_report_pct_of_cap` — assert the `pct_of_cap` column equals `total_tokens / 1024 * 100` rounded to one decimal.
 - `test_report_tokenizer_fallback_chars_div_4` — fixture with no tokenizer; assert the reporter uses `len(rendered) // 4`; a bilingual warning is logged once.
@@ -192,24 +216,26 @@ The reporter is a NEW standalone read-only entry point:
 - `test_report_no_circular_import_with_tools_skills_tool` — assert the reporter does NOT import `tools.skills_tool` at module top-level (the import direction would be agent<->tools cyclic); the constant is local or imported lazily inside the function.
 
 ### Usage (Curator)
-- `test_report_curator_field_verification_recorded` — assert the fixture `tests/fixtures/curator/recorded_fields.json` exists, parses as JSON, and was updated within 7 days of HEAD (mtime sentinel).
+- `test_report_curator_field_verification_recorded` — assert the fixture `tests/fixtures/curator/recorded_fields.json` exists, parses as JSON, enumerates exactly the six documented field names (`use_count`, `view_count`, `patch_count`, `last_used_at`, `last_viewed_at`, `last_patched_at`), and was updated within 7 days of HEAD (mtime sentinel).
 - `test_report_usage_n_a_when_curator_absent` — fixture with no Curator module; assert every usage column renders `n/a`; the reporter exits 0.
 - `test_report_usage_n_a_for_unseen_skill` — fixture with Curator + a skill present in the enabled set but absent from the Curator's records; assert the per-row usage columns render `n/a` for that skill.
-- `test_report_usage_view_use_patch_counts` — fixture with a known Curator record; assert `use_count`, `patch_count`, and `view_count` (if recorded) match the fixture's recorded values.
-- `test_report_usage_last_used_iso8601` — assert `last_used` is rendered as an ISO 8601 string; assert the column is sortable.
-- `test_report_usage_does_not_invent_fields` — assert the reporter does NOT render any field name that is not in `recorded_fields.json` (defensive against Curator schema drift).
+- `test_report_usage_view_use_patch_counts` — fixture with a known Curator record; assert `use_count`, `view_count`, `patch_count` match the fixture's recorded values.
+- `test_report_usage_last_used_at_iso8601` — assert `last_used_at` is rendered as an ISO 8601 string (NOT the legacy `last_used`); assert the column is sortable.
+- `test_report_usage_last_viewed_at_and_last_patched_at_present` — fixture with a Curator record that has `last_viewed_at` and `last_patched_at` populated; assert both columns render their ISO 8601 values.
+- `test_report_usage_does_not_invent_fields` — assert the reporter does NOT render any field name that is not in `recorded_fields.json` (defensive against Curator schema drift); the legacy `last_used` field MUST NOT appear anywhere in reporter output.
+- `test_report_uses_at_suffixed_timestamps` — assert the reporter code references `last_used_at`, `last_viewed_at`, `last_patched_at` (the `_at` suffixed forms) and does NOT reference the unsuffixed `last_used` form (which does not exist in `tools/skill_usage.py`).
 
 ### Sorting
 - `test_report_sort_by_tokens` — fixture with three skills of different token counts; assert the rendered order is descending by tokens.
 - `test_report_sort_by_use_count` — fixture with three skills of different use counts; assert the rendered order is descending by use_count, with `n/a` rows last.
-- `test_report_sort_by_last_used` — fixture with three skills of different last_used timestamps; assert the rendered order is most-recent first, with `n/a` rows last.
+- `test_report_sort_by_last_used_at` — fixture with three skills of different `last_used_at` timestamps; assert the rendered order is most-recent first, with `n/a` rows last.
 - `test_report_sort_stable_secondary_key_by_name` — fixture with two skills of equal primary key; assert the secondary sort is by name ascending.
 - `test_report_default_sort_is_tokens` — no `--sort`; assert the rendered order matches `--sort tokens`.
 
 ### Output format
-- `test_report_text_format_columns` — fixture; assert the plain-text output contains all expected columns and the rows are aligned.
-- `test_report_text_format_truncates_description_to_60` — fixture with a 200-char description; assert the text output shows 60 chars + ellipsis; the JSON output preserves the full text.
-- `test_report_json_format_shape` — `--format=json`; assert the JSON shape matches the documented schema (profile_name, enabled_skills[], total_tokens).
+- `test_report_text_format_columns` — fixture; assert the plain-text output contains all expected columns (incl. `view_count`, `last_viewed_at`, `last_patched_at`) and the rows are aligned.
+- `test_report_text_format_truncates_description_to_60` — fixture with a 200-char description; assert the text output shows 60 chars + ellipsis (matching `extract_skill_description` form); the JSON output preserves the full text.
+- `test_report_json_format_shape` — `--format=json`; assert the JSON shape matches the documented schema (profile_name, enabled_skills[] with all six usage fields, total_tokens).
 - `test_report_json_deterministic_with_frozen_time` — run twice with `HERMES_SKILL_CREATOR_FROZEN_TIME` set; assert sha256 of output is byte-identical.
 - `test_report_json_path_default_under_cwd` — `--format=json` with no `--json`; assert the file is written to `./skill-report.json` under cwd; absolute path is also accepted.
 
@@ -225,12 +251,12 @@ The reporter is a NEW standalone read-only entry point:
 
 ## ACs covered
 
-- **AC-7.1** READ-ONLY — `test_report_read_only_zero_writes` + `test_report_no_write_calls_in_source` + `test_report_rejects_apply_flag` + `test_report_json_path_outside_fixture`.
+- **AC-7.1** READ-ONLY — `test_report_read_only_zero_writes` + `test_report_no_write_calls_in_source` + `test_report_rejects_apply_flag` + `test_report_rejects_emit_migration_note_flag` + `test_report_rejects_write_report_flag` + `test_report_no_migration_report_file_emitted` + `test_report_json_path_outside_fixture`.
 - **AC-7.2** `--profile`, `--sort`, `--format`, `--json` — `test_report_named_profile` + sort tests + `test_report_text_format_columns` + `test_report_json_format_shape`.
 - **AC-7.3** `--help` bilingual two-section — `test_report_help_is_bilingual`.
 - **AC-7.4** shares enabled-detection with Script #2 — `test_report_shares_enabled_detection_with_script_2` + the platform / toggle / conditional-exclusion tests.
-- **AC-7.5** tokens from rendered name+description — `test_report_tokens_match_fixture` + `test_report_total_tokens` + `test_report_pct_of_cap` + `test_report_tokenizer_fallback_chars_div_4` + `test_report_tokenizer_raises_uses_fallback`.
-- **AC-7.6** usage from Curator, n/a when missing — `test_report_curator_field_verification_recorded` + `test_report_usage_n_a_when_curator_absent` + `test_report_usage_n_a_for_unseen_skill` + `test_report_usage_does_not_invent_fields`.
+- **AC-7.5** tokens from rendered name+description — `test_report_tokens_match_fixture` + `test_report_tokens_use_full_description_not_truncated` + `test_report_total_tokens` + `test_report_pct_of_cap` + `test_report_tokenizer_fallback_chars_div_4` + `test_report_tokenizer_raises_uses_fallback`.
+- **AC-7.6** usage from Curator, n/a when missing — `test_report_curator_field_verification_recorded` + `test_report_usage_n_a_when_curator_absent` + `test_report_usage_n_a_for_unseen_skill` + `test_report_usage_does_not_invent_fields` + `test_report_uses_at_suffixed_timestamps`.
 - **AC-7.7** 100% coverage, TDD — `test_report_coverage_100_percent` + the TDD ordering documented in "Definition of Done".
 
-<!-- end of file: 236 lines (budget 400) -->
+<!-- end of file: 262 lines (budget 400) -->

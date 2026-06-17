@@ -210,7 +210,7 @@ All Script #3 tests use the `hermes_home_writable` fixture and assert zero bytes
 - `test_report_tokens_projected_against_1024_cap` — when the column projection is enabled, assert each row shows a `(tokens / 1024)` percentage and the total row shows an aggregate.
 - `test_report_usage_n_a_when_curator_absent` — when the Curator store is missing or the skill has no usage record, the `use_count` and `last_used` columns show `n/a` (and the row still renders); assert no exception is raised.
 - `test_report_usage_present_when_curator_available` — when the Curator returns `(view_count, use_count, patch_count, last_used)`, the row shows them in the correct columns.
-- `test_report_shares_enabled_detection_with_script_2` — import `scripts.script_3_report`; assert it imports the same `get_enabled_skills` helper that `scripts.script_2_profiles` uses; assert the helper signature matches the one in `hermes_cli.skills_config.save_disabled_skills` (positional `disabled: Set[str]`, optional `platform: Optional[str]`).
+- `test_report_shares_enabled_detection_with_script_2` — import `scripts.script_3_report`; assert it imports `get_enabled_skills` from `hermes_skill_creator_plugin._enabled_detection`; assert it is the SAME helper that `scripts.script_2_profiles` uses (single canonical import path, function name `get_enabled_skills(profile_path: Path, *, platform: Optional[str] = None) -> frozenset[str]`).
 - `test_report_help_is_bilingual` — `script_3_report.py --help` output contains both the English "Usage (English)" section and the Hungarian "Hasznalat (magyar)" section; assert the option table is mirrored (each `--option` appears in both halves).
 - `test_report_console_log_lines_match_bilingual_regex` — AST-grep the source: walk every `print(...)` and `logger.{info,warning,error}(...)` call in `scripts/script_3_report.py`; assert each format-string constant matches `^\[en\] .+ / \[hu\] .+$`; assert each f-string contains both `[en]` and `[hu]` markers.
 - `test_report_honors_platforms_conditional` — when a profile disables a skill for a specific platform only, the reporter (called without `--platform`) lists it as enabled; with `--platform linux` it lists it as disabled. Assert the same logic as Script #2.
@@ -288,34 +288,36 @@ future Hermes release moves the cap-raise site or changes the slice
 idiom, the meta-tests fail first, naming the drifted anchor, and the
 fixture is updated to match.
 
-## T3 contract inventory (18 rows)
+## C3 contract inventory (18 rows)
 
-The T3 inventory below is the binding contract between the migrated
+> **Namespace note (R5).** The `T3.*` namespace belongs to **07's skill-port inventory** (Claude-binding replacements). The `C3.*` namespace is **09's contract inventory** (acceptance criteria + patch anchors). Different namespaces prevent ID collision when cross-referencing 07 and 09 from 12-Q6.
+
+The C3 inventory below is the binding contract between the migrated
 plugin and the upstream Hermes agent. Each row is enforced by a dedicated
-contract test (`test_T3_001` through `test_T3_018`).
+contract test (`test_C3_001` through `test_C3_018`).
 
 | ID | Site | Hermes string (forbidden) | Migrated string (required) | AC ref |
 | --- | --- | --- | --- | --- |
-| T3.001 | `agent/prompt_builder.py` SKILLS_GUIDANCE | (none — additive append) | appended: "Before creating a NEW skill, check installed skills; if skill-creator is installed, skill_view(name='skill-creator') and follow its authoring/validation guidance; persist with skill_manage(action='create'); if absent, continue with built-in class-level rules; NEVER auto-install it." | AC-1.1 |
-| T3.002 | `agent/prompt_builder.py` MEMORY_GUIDANCE | "If you've discovered a new way to do something, solved a problem that could be necessary later, save it as a skill with the skill tool." | "...save it as a skill with the skill tool. Before creating a NEW skill, consult skill-creator (if installed) for authoring/validation guidance; otherwise follow built-in class-level rules." | AC-1.1 |
-| T3.003 | `agent/prompt_builder.py` `build_skills_system_prompt` near `skill_manage(action='patch')` | "If a skill has issues, fix it with skill_manage(action='patch')." | same + appended new-skill rule | AC-1.1 |
-| T3.004 | `agent/prompt_builder.py` `build_skills_system_prompt` near "offer to save as a skill" | "After difficult/iterative tasks, offer to save as a skill." | same + appended new-skill rule | AC-1.1 |
-| T3.005 | `agent/background_review.py` `_SKILL_REVIEW_PROMPT` option 4 | "4. CREATE A NEW CLASS-LEVEL UMBRELLA SKILL when no existing skill covers the class." | same + inserted skill-creator consultation step before `skill_manage(action='create')` | AC-1.1 |
-| T3.006 | `agent/background_review.py` `_COMBINED_REVIEW_PROMPT` option 4 | "4. CREATE A NEW CLASS-LEVEL UMBRELLA when nothing exists." | same + inserted skill-creator consultation step; shares constant with T3.005 | AC-1.1 |
-| T3.007 | `tools/skill_manager_tool.py` `SKILL_MANAGE_SCHEMA` | (no skill-creator language today) | appended clarifier: "skill-creator, when installed, provides authoring guidance only. Use skill_manage to persist all skill files." | AC-1.1 |
-| T3.008 | `website/docs/user-guide/features/skills.md` "## Agent-Managed Skills (skill_manage tool)" | (no skill-creator language today) | appended maybe-patch-points clarifications (skill_manage is the writer; skill-creator is optional/hub-installed/NOT bundled/NOT mandatory; absence doesn't disable auto-creation; background never auto-installs) | AC-1.1 |
-| T3.009 | `agent/skill_utils.py` `extract_skill_description` cap-raise | `if len(desc) > 60:` | `if len(desc) > MAX_DESCRIPTION_LENGTH:` | AC-1.2 |
-| T3.010 | `agent/skill_utils.py` `extract_skill_description` slice | `return desc[:57] + "..."` | `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` | AC-1.2 |
-| T3.011 | `tools/skill_manager_tool.py` `SKILL_MANAGE_SCHEMA` | (preserved verbatim) | unchanged | AC-1.3 |
-| T3.012 | `hermes_cli/skills_config.py` `save_disabled_skills` callsite (Script #2) | `save_disabled_skills(config, names=disabled, platform=plat)` | `save_disabled_skills(config, disabled, platform=plat)` (positional `Set[str]`) | AC-1.4 |
-| T3.013 | Plugin install path for `skill-creator` | (nested `src/hermes_skill_creator_plugin/skills/skill-creator/`) | flat `~/.hermes/skills/skill-creator/` (standalone top-level deliverable) | AC-4.1 |
-| T3.014 | Plugin manifest format | `plugin.json` | `plugin.yaml` (manifest fields: name/version/description/author/provides_hooks; no `kind`) | AC-1.1 |
-| T3.015 | Plugin entry-point model | split `hooks:register` + `skill_register:register` | single `register(ctx)` in `__init__.py` calling `ctx.register_hook` + `ctx.register_skill` (advisory only) | AC-1.1 |
-| T3.016 | `clear_skills_system_prompt_cache` callsite | `clear_skills_system_prompt_cache` (location TBD) | `agent.prompt_builder.clear_skills_system_prompt_cache(clear_snapshot=True)` | AC-1.4 |
-| T3.017 | `spawn_background_review_thread` selection logic | (preserved verbatim) | unchanged: patch → update-umbrella → support-file → create | AC-1.1 |
-| T3.018 | `description[:1021]` true-cap test | (no test today) | parametrized test injecting a 1100-char description; asserts the returned string is `1100 chars → 1021 chars + "..."` (NOT `60 chars`) | AC-1.2 |
+| C3.001 | `agent/prompt_builder.py` SKILLS_GUIDANCE | (none — additive append) | appended: "Before creating a NEW skill, check installed skills; if skill-creator is installed, skill_view(name='skill-creator') and follow its authoring/validation guidance; persist with skill_manage(action='create'); if absent, continue with built-in class-level rules; NEVER auto-install it." | AC-1.1 |
+| C3.002 | `agent/prompt_builder.py` MEMORY_GUIDANCE | "If you've discovered a new way to do something, solved a problem that could be necessary later, save it as a skill with the skill tool." | "...save it as a skill with the skill tool. Before creating a NEW skill, consult skill-creator (if installed) for authoring/validation guidance; otherwise follow built-in class-level rules." | AC-1.1 |
+| C3.003 | `agent/prompt_builder.py` `build_skills_system_prompt` near `skill_manage(action='patch')` | "If a skill has issues, fix it with skill_manage(action='patch')." | same + appended new-skill rule | AC-1.1 |
+| C3.004 | `agent/prompt_builder.py` `build_skills_system_prompt` near "offer to save as a skill" | "After difficult/iterative tasks, offer to save as a skill." | same + appended new-skill rule | AC-1.1 |
+| C3.005 | `agent/background_review.py` `_SKILL_REVIEW_PROMPT` option 4 | "4. CREATE A NEW CLASS-LEVEL UMBRELLA SKILL when no existing skill covers the class." | same + inserted skill-creator consultation step before `skill_manage(action='create')` | AC-1.1 |
+| C3.006 | `agent/background_review.py` `_COMBINED_REVIEW_PROMPT` option 4 | "4. CREATE A NEW CLASS-LEVEL UMBRELLA when nothing exists." | same + inserted skill-creator consultation step; shares constant with C3.005 | AC-1.1 |
+| C3.007 | `tools/skill_manager_tool.py` `SKILL_MANAGE_SCHEMA` | (no skill-creator language today) | appended clarifier: "skill-creator, when installed, provides authoring guidance only. Use skill_manage to persist all skill files." | AC-1.1 |
+| C3.008 | `website/docs/user-guide/features/skills.md` "## Agent-Managed Skills (skill_manage tool)" | (no skill-creator language today) | appended maybe-patch-points clarifications (skill_manage is the writer; skill-creator is optional/hub-installed/NOT bundled/NOT mandatory; absence doesn't disable auto-creation; background never auto-installs) | AC-1.1 |
+| C3.009 | `agent/skill_utils.py` `extract_skill_description` cap-raise | `if len(desc) > 60:` | `if len(desc) > MAX_DESCRIPTION_LENGTH:` | AC-1.2 |
+| C3.010 | `agent/skill_utils.py` `extract_skill_description` slice | `return desc[:57] + "..."` | `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` | AC-1.2 |
+| C3.011 | `tools/skill_manager_tool.py` `SKILL_MANAGE_SCHEMA` | (preserved verbatim) | unchanged | AC-1.3 |
+| C3.012 | `hermes_cli/skills_config.py` `save_disabled_skills` callsite (Script #2) | `save_disabled_skills(config, names=disabled, platform=plat)` | `save_disabled_skills(config, disabled, platform=plat)` (positional `Set[str]`) | AC-1.4 |
+| C3.013 | Plugin install path for `skill-creator` | (nested `src/hermes_skill_creator_plugin/skills/skill-creator/`) | flat `~/.hermes/skills/skill-creator/` (standalone top-level deliverable) | AC-4.1 |
+| C3.014 | Plugin manifest format | `plugin.json` | `plugin.yaml` (manifest fields: name/version/description/author/provides_hooks; no `kind`) | AC-1.1 |
+| C3.015 | Plugin entry-point model | split `hooks:register` + `skill_register:register` | single `register(ctx)` in `__init__.py` calling `ctx.register_hook` + `ctx.register_skill` (advisory only) | AC-1.1 |
+| C3.016 | `clear_skills_system_prompt_cache` callsite | `clear_skills_system_prompt_cache` (location TBD) | `agent.prompt_builder.clear_skills_system_prompt_cache(clear_snapshot=True)` | AC-1.4 |
+| C3.017 | `spawn_background_review_thread` selection logic | (preserved verbatim) | unchanged: patch → update-umbrella → support-file → create | AC-1.1 |
+| C3.018 | `description[:1021]` true-cap test | (no test today) | parametrized test injecting a 1100-char description; asserts the returned string is `1100 chars → 1021 chars + "..."` (NOT `60 chars`) | AC-1.2 |
 
-The T3 contract tests are parametrized via `pytest.mark.parametrize` so
+The C3 contract tests are parametrized via `pytest.mark.parametrize` so
 each binding replacement is verified individually:
 
 ```python
@@ -336,10 +338,10 @@ each binding replacement is verified individually:
      'return desc[:57] + "..."',
      'return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."',
      "def extract_skill_description"),
-    # ... 14 more rows, one per T3 ID ...
+    # ... 14 more rows, one per C3 ID ...
 ])
-def test_T3_binding_replacement(site, forbidden, required, anchor, hermes_checkout):
+def test_C3_binding_replacement(site, forbidden, required, anchor, hermes_checkout):
     ...
 ```
 
-<!-- end of file: 237 lines (budget 300) -->
+<!-- end of file: 345 lines (budget 300) -->

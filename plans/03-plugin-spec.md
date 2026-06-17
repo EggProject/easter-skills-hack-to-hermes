@@ -42,7 +42,7 @@ skills/
     ... (agents/, scripts/, eval-viewer/, references/, assets/)
 ```
 
-This directory is a STANDALONE deliverable. It is shipped/installed by Script #2's `do_install` (see `06-script-2-install.md`) into the flat path `~/.hermes/skills/skill-creator/`, which is what makes it appear as `skill-creator` in the `<available_skills>` index.
+This directory is a STANDALONE deliverable. It is shipped/installed by Script #2's `do_install` (see `06-script-2-profiles.md`) into the flat path `~/.hermes/skills/skill-creator/`, which is what makes it appear as `skill-creator` in the `<available_skills>` index.
 
 ## plugin.yaml (manifest)
 
@@ -219,8 +219,8 @@ NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_descr
 
 - `04-script-1-patch.md` — Script #1 performs the actual cap-raise (AST rewrite of `agent/skill_utils.py`).
 - `05-script-1-task-e-toggle.md` — Script #1 also patches the Task E site in Hermes.
-- `06-script-2-install.md` — Script #2 ships the standalone `skill-creator` skill into `~/.hermes/skills/skill-creator/` via `do_install`. The plugin does NOT own the skill.
-- `07-migrated-skill.md` — the migrated skill body (lives at `skills/skill-creator/` at the worktree root).
-- `10-packaging-toolchain.md` — `[project.scripts]` does NOT include an installer entry point for the plugin; the plugin has no `python -m ... install` subcommand. The plugin is installable via the standard Hermes plugin loader (pip-installed, `plugin.yaml` discovered).
+- `06-script-2-profiles.md` — Script #2 ships the standalone `skill-creator` skill into `~/.hermes/skills/skill-creator/` via `do_install`. The plugin does NOT own the skill.
+- `07-skill-creator-migration.md` — the migrated skill body (lives at `skills/skill-creator/` at the worktree root).
+- `10-toolchain-and-conventions.md` — `[project.scripts]` does NOT include an installer entry point for the plugin; the plugin has no `python -m ... install` subcommand. The plugin is installable via the standard Hermes plugin loader (pip-installed, `plugin.yaml` discovered).
 
-<!-- end of file: 226 lines (budget 220) -->
+<!-- end of file: 226 lines (budget 250) -->

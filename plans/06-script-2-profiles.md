@@ -96,7 +96,7 @@ class DesiredState:
 The reporter (Script #3) and the apply path (Script #2) MUST agree on what "enabled" means for a profile — otherwise Script #3's view of the world drifts from Script #2's flips. The detection logic lives in a small module under the plugin package and is exported as a single function:
 
 ```python
-# hermes_skill_creator_plugin.enabled_detection
+# hermes_skill_creator_plugin._enabled_detection
 
 from pathlib import Path
 from typing import Optional
@@ -235,4 +235,4 @@ Script #2 calls this to compute `installed_now` and the diff between current and
 
 100% line + branch. Every branch of the apply sequence, every error path, every bilingual message reachable. The shared `get_enabled_skills` module is covered by Script #2's tests; Script #3 (reporter) re-uses those fixtures and adds only its own tokenization + Curator-lookup coverage.
 
-<!-- end of file: 185 lines (budget 400) -->
+<!-- end of file: 238 lines (budget 400) -->

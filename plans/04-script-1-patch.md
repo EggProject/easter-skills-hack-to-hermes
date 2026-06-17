@@ -8,6 +8,16 @@
 
 Raise the silent 60-char `extract_skill_description` cap (and, opt-in, redirect the 7 Task E built-in-prompt sites) in a **user-owned** Hermes checkout. The script MUST refuse to run against `~/.hermes/hermes-agent`. The plugin performs NO cap-raise — Script #1 is the SOLE writer.
 
+## Provenance
+
+- **GitHub issue(s):** TBD (verify via WebFetch at Phase 5 implementation; do NOT emit unverified refs into `MIGRATION.hermes-patch.md` — same gate as 08).
+- **Upstream commit:** `36ae958473b8530ffb1a395c4944b8cdbcae82fe` (NousResearch/hermes-agent @ main). Commit SHA is verified against the local `~/.hermes/hermes-agent` checkout used during planning; do NOT mark the *reason* the cap-raise is needed as verified by this SHA alone — the cap-raise need is a **code-shape** fact observable from `agent/skill_utils.py` regardless of upstream issue state.
+- **Cap-raise target:** `agent/skill_utils.py` `extract_skill_description` — TWO co-located sites that MUST be patched together:
+  1. The length-check predicate `if len(desc) > 60:` (the silent drop threshold).
+  2. The slice-and-ellipsis return `return desc[:57] + "..."` (the truncation expression).
+
+  Both sites encode the same 60-char cap in two places; raising only one breaks the function (the check passes but the slice still chops, or the slice is loosened but the check still drops). They are a single logical edit (`S1.cap`) and Script #1 patches them atomically (see "All-or-nothing gate" below).
+
 ## Cap-raise sites (the one default site, with both B2 lines)
 
 The cap-raise has TWO co-located edits in `agent/skill_utils.py` (function `extract_skill_description`). Both MUST be applied atomically as `S1.cap` — if either fails, neither is written.
@@ -199,4 +209,4 @@ Every `print()` and `logger.{info,warning,error}` call MUST match `^\[en\] .+ / 
 
 100% line + branch coverage. Branches enumerated above. Every `argparse` choice exercised. Every exit code reachable by at least one test.
 
-<!-- end of file: 202 lines (budget 400) -->
+<!-- end of file: 212 lines (budget 400) -->
