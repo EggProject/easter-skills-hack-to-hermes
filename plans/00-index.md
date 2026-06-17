@@ -34,9 +34,9 @@
 | 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 157 |
 | 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 204 |
 | 13 | `13-script-3-report.md` | Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY) — NOTE: §5.7 in the original brief is the continuously-maintained Todo list, NOT this deliverable | [emitted] | 400 | 304 |
-| | **Total** | | | **3960** | **3317** |
+| | **Total** | | | **3960** | **3320** |
 
-Sum 3317 < 4500 (sum of budgets 3960). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
+Sum 3320 < 4500 (sum of budgets 3960). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
 
 ## Hard constraints (HARD)
 
