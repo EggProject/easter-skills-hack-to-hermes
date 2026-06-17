@@ -11,13 +11,11 @@ import json
 import re
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from hermes_skill_creator_plugin import cli_report
 from hermes_skill_creator_plugin.cli_report import HELP_EN_HEADER, HELP_HU_HEADER, main
 from tests.report._fixtures import _write_profile
-
 
 # --- help + bilingual ---
 
@@ -77,9 +75,7 @@ def test_exit_zero_on_success(hermes_home: Path) -> None:
     assert rc == 0
 
 
-def test_exit_six_when_enabled_detection_unavailable(
-    hermes_home: Path, monkeypatch
-) -> None:
+def test_exit_six_when_enabled_detection_unavailable(hermes_home: Path, monkeypatch) -> None:
     _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
 
     def _boom(*a, **kw):  # noqa: ANN001
@@ -197,6 +193,26 @@ def test_json_default_under_cwd(hermes_home: Path, monkeypatch, tmp_path: Path) 
     assert (tmp_path / "skill-report.json").exists()
 
 
+def test_json_default_aborts_when_cwd_inside_hermes_home(hermes_home: Path, monkeypatch) -> None:
+    """The default `./skill-report.json` MUST be safety-checked against HERMES_HOME.
+
+    Regression sentinel: if cwd is INSIDE hermes_home, the default json_path
+    would resolve inside the live install. The reporter must abort with
+    exit 6 instead of writing the file.
+    """
+    _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
+    monkeypatch.chdir(hermes_home)
+    rc = cli_report.run(
+        profile="hermes",
+        sort="tokens",
+        fmt="json",
+        json_path=None,
+    )
+    assert rc == 6
+    # The file was NOT created.
+    assert not (hermes_home / "skill-report.json").exists()
+
+
 def test_json_deterministic_with_frozen_time(
     hermes_home: Path, tmp_path: Path, monkeypatch
 ) -> None:
@@ -206,9 +222,10 @@ def test_json_deterministic_with_frozen_time(
     out2 = tmp_path / "report2.json"
     cli_report.run(profile="hermes", sort="tokens", fmt="json", json_path=out1)
     cli_report.run(profile="hermes", sort="tokens", fmt="json", json_path=out2)
-    assert hashlib.sha256(out1.read_bytes()).hexdigest() == hashlib.sha256(
-        out2.read_bytes()
-    ).hexdigest()
+    assert (
+        hashlib.sha256(out1.read_bytes()).hexdigest()
+        == hashlib.sha256(out2.read_bytes()).hexdigest()
+    )
 
 
 # --- sort modes ---
@@ -234,9 +251,7 @@ def test_sort_by_use_count(hermes_home: Path) -> None:
 
 def test_sort_by_last_used_at(hermes_home: Path) -> None:
     _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
-    rc = cli_report.run(
-        profile="hermes", sort="last_used_at", fmt="text", json_path=None
-    )
+    rc = cli_report.run(profile="hermes", sort="last_used_at", fmt="text", json_path=None)
     assert rc == 0
 
 
@@ -269,9 +284,7 @@ def test_report_curator_field_verification_recorded() -> None:
     import time
     from pathlib import Path
 
-    fixture = (
-        Path(__file__).resolve().parents[1] / "fixtures" / "curator" / "recorded_fields.json"
-    )
+    fixture = Path(__file__).resolve().parents[1] / "fixtures" / "curator" / "recorded_fields.json"
     assert fixture.is_file(), f"missing fixture: {fixture}"
     obj = json.loads(fixture.read_text(encoding="utf-8"))
     fields = set(obj["fields"].keys())
@@ -298,7 +311,6 @@ def test_report_usage_n_a_when_curator_absent(hermes_home: Path) -> None:
 
 def test_report_usage_does_not_invent_fields() -> None:
     """The reporter source must reference only the six documented field names."""
-    import ast
     import re
     from pathlib import Path
 
@@ -312,7 +324,11 @@ def test_report_usage_does_not_invent_fields() -> None:
             stripped = line.strip()
             if stripped.startswith("#"):
                 continue
-            if pat.search(stripped) and "last_used" in stripped and "_at" not in stripped.split("last_used")[1][:8]:
+            if (
+                pat.search(stripped)
+                and "last_used" in stripped
+                and "_at" not in stripped.split("last_used")[1][:8]
+            ):
                 # The legacy unsuffixed "last_used" form is forbidden.
                 if re.search(r"\blast_used\b(?!_at)", stripped):
                     bad.append(stripped)
@@ -335,6 +351,6 @@ def test_report_uses_at_suffixed_timestamps() -> None:
             # identifier chars.
             for m in re.finditer(rf"\b{legacy}\b", src):
                 tail = src[m.end() : m.end() + 4]
-                assert tail.startswith("_at"), (
-                    f"legacy field {legacy!r} in {mod.__name__} at offset {m.start()}"
-                )
+                assert tail.startswith(
+                    "_at"
+                ), f"legacy field {legacy!r} in {mod.__name__} at offset {m.start()}"

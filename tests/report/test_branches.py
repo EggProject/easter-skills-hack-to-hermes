@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from hermes_skill_creator_plugin import cli_report
 from hermes_skill_creator_plugin.cli_report import main
 from tests.report._fixtures import _write_profile
-
 
 # --- _resolve_hermes_home ---
 
@@ -147,10 +143,16 @@ class _Entry:
 def test_build_usage_rows_with_persisted_true() -> None:
     curator = SimpleNamespace(
         usage_report=lambda **kw: [
-            _Entry(name="a", use_count=3, view_count=5, patch_count=1,
-                   last_used_at="2026-06-16T00:00:00Z",
-                   last_viewed_at="2026-06-16T00:00:00Z",
-                   last_patched_at="2026-06-10T00:00:00Z", _persisted=True)
+            _Entry(
+                name="a",
+                use_count=3,
+                view_count=5,
+                patch_count=1,
+                last_used_at="2026-06-16T00:00:00Z",
+                last_viewed_at="2026-06-16T00:00:00Z",
+                last_patched_at="2026-06-10T00:00:00Z",
+                _persisted=True,
+            )
         ]
     )
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))
@@ -160,9 +162,7 @@ def test_build_usage_rows_with_persisted_true() -> None:
 
 def test_build_usage_rows_with_persisted_false() -> None:
     curator = SimpleNamespace(
-        usage_report=lambda **kw: [
-            _Entry(name="a", use_count=99, _persisted=False)
-        ]
+        usage_report=lambda **kw: [_Entry(name="a", use_count=99, _persisted=False)]
     )
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))
     assert out["a"]["use_count"] is None
@@ -179,9 +179,7 @@ def test_build_usage_rows_curator_raises() -> None:
 
 
 def test_build_usage_rows_entry_without_name() -> None:
-    curator = SimpleNamespace(
-        usage_report=lambda **kw: [_Entry(use_count=1)]
-    )
+    curator = SimpleNamespace(usage_report=lambda **kw: [_Entry(use_count=1)])
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))
     # The nameless entry is skipped, and "a" is backfilled with n/a values.
     assert "a" in out
@@ -199,9 +197,7 @@ def test_build_usage_rows_entry_not_in_enabled_set() -> None:
 
 
 def test_build_usage_rows_entry_with_missing_attributes() -> None:
-    curator = SimpleNamespace(
-        usage_report=lambda **kw: [_Entry(name="a", _persisted=True)]
-    )
+    curator = SimpleNamespace(usage_report=lambda **kw: [_Entry(name="a", _persisted=True)])
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))
     assert out["a"]["use_count"] == 0  # default 0 when attr is missing
     assert out["a"]["_persisted"] is True

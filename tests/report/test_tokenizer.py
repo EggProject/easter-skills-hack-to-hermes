@@ -8,8 +8,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
 from hermes_skill_creator_plugin import _tokenizer
 
 
@@ -76,9 +74,7 @@ def test_estimate_tokens_warning_logged_once() -> None:
         warned["flag"] = True
 
     _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=warn, warned=warned["flag"])
-    _tokenizer.estimate_tokens(
-        "c", "d", tokenizer=None, warning=warn, warned=warned["flag"]
-    )
+    _tokenizer.estimate_tokens("c", "d", tokenizer=None, warning=warn, warned=warned["flag"])
     # warned flag wasn't passed back; both calls log.
     assert len(seen) >= 1
     for line in seen:

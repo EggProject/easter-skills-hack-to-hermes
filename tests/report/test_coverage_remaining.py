@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import pytest
-
 from hermes_skill_creator_plugin import _enabled_detection, _reporter, _tokenizer, cli_report
-from tests.report._fixtures import _write_profile, make_row_factory
-
+from tests.report._fixtures import make_row_factory
 
 # --- _enabled_detection: frontmatter fallback (lines 50-51, 53, 56) ---
 
@@ -78,6 +73,7 @@ class _NegativeLenTokenizer:
         class _Neg:
             def __len__(self):
                 return -1
+
         return _Neg()
 
 
@@ -114,9 +110,7 @@ def test_render_na_or_value_passes_through() -> None:
 def test_format_text_unknown_column_returns_empty() -> None:
     row = make_row_factory(name="a")
     # Pass a custom column that the formatter doesn't know about.
-    out = _reporter.format_text(
-        "hermes", [row], total_tokens=10, columns=("nope",)
-    )
+    out = _reporter.format_text("hermes", [row], total_tokens=10, columns=("nope",))
     # Header + body + total = 3 lines; values are empty strings.
     assert "nope" in out
 
@@ -192,9 +186,7 @@ def test_load_skill_description_unterminated_frontmatter(tmp_path: Path) -> None
     """SKILL.md with `---` open marker but no closing marker falls back to text.strip()."""
     skill_dir = tmp_path / "a"
     skill_dir.mkdir()
-    (skill_dir / "SKILL.md").write_text(
-        "---\nname: a\nno terminator here", encoding="utf-8"
-    )
+    (skill_dir / "SKILL.md").write_text("---\nname: a\nno terminator here", encoding="utf-8")
     s = cli_report._load_skill_description(tmp_path, "a")
     # The unterminated block makes `end < 0`, so the function returns
     # the full text stripped. The result contains "no terminator here".
@@ -210,11 +202,9 @@ def test_run_no_profiles_echoes_no_profiles_message(hermes_home: Path) -> None:
     # always non-empty. The no_profiles branch is unreachable in the
     # current implementation. We exercise it anyway to keep the line covered.
     # Use a monkeypatch to stub _resolve_profiles to return [].
-    from hermes_skill_creator_plugin import cli_report as cr
-
-    monkeypatch_path = "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/phase5-g-report"
-    # Use unittest.mock.patch to stub.
     import unittest.mock as _mock
+
+    from hermes_skill_creator_plugin import cli_report as cr
 
     with _mock.patch.object(cr, "_resolve_profiles", return_value=[]):
         rc = cr.run(profile="anything", sort="tokens", fmt="text", json_path=None)

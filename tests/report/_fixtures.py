@@ -16,9 +16,7 @@ def _make_skill_dir(root: Path, name: str, *, description: str = "x" * 10) -> Pa
     skill = root / name
     skill.mkdir(parents=True, exist_ok=True)
     skill_md = skill / "SKILL.md"
-    body = (
-        f"---\nname: {name}\ndescription: '{description}'\n---\n\n# {name}\n"
-    )
+    body = f"---\nname: {name}\ndescription: '{description}'\n---\n\n# {name}\n"
     skill_md.write_text(body, encoding="utf-8")
     return skill
 

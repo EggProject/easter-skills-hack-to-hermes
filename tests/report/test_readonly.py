@@ -109,9 +109,20 @@ def test_report_no_write_calls_in_source() -> None:
             bad.append((node.lineno, f"Path.{func.attr}"))
         if isinstance(func, ast.Name) and func.id in {"remove", "rmtree"}:
             bad.append((node.lineno, func.id))
-        if isinstance(func, ast.Attribute) and func.attr in {"remove", "rmtree", "copy", "copytree", "replace"}:
-            if isinstance(func.value, ast.Name) and func.value.id in {"os", "shutil"}:
-                bad.append((node.lineno, f"{func.value.id}.{func.attr}"))
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr
+            in {
+                "remove",
+                "rmtree",
+                "copy",
+                "copytree",
+                "replace",
+            }
+            and isinstance(func.value, ast.Name)
+            and func.value.id in {"os", "shutil"}
+        ):
+            bad.append((node.lineno, f"{func.value.id}.{func.attr}"))
     assert not bad, f"write calls found: {bad}"
 
 

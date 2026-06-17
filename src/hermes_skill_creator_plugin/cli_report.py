@@ -32,8 +32,7 @@ TDD test cases for this module:
 from __future__ import annotations
 
 import os
-import re
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -58,7 +57,6 @@ REJECTED_FLAGS = {
 
 HELP_EN_HEADER = "Usage (English):"
 HELP_HU_HEADER = "Hasznalat (magyar):"
-BILINGUAL_LINE = re.compile(r"\[en\].+/\[hu\].+")
 
 
 def _resolve_hermes_home() -> Path:
@@ -262,8 +260,6 @@ def _now_iso() -> str:
     frozen = os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME", "").strip()
     if frozen:
         return frozen
-    from datetime import datetime
-
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -372,6 +368,11 @@ def run(
         click.echo(EN.report_opt_format, err=True)
         return 2
     hermes_home = _resolve_hermes_home()
+    # Resolve the json_path target BEFORE the safety check so the default
+    # `./skill-report.json` is also guarded. (Previously the default bypassed
+    # _check_json_path, allowing a write inside HERMES_HOME when cwd==hermes_home.)
+    if json_path is None and fmt == "json":
+        json_path = Path("./skill-report.json")
     if json_path is not None and _check_json_path(json_path, hermes_home):
         click.echo(EN.report_json_path_inside_hermes_home, err=True)
         return 6
@@ -404,9 +405,9 @@ def run(
             )
     output = "\n\n".join(all_sections)
     if fmt == "json":
-        # JSON mode: write to json_path or stdout (single profile only).
-        if json_path is None:
-            json_path = Path("./skill-report.json")
+        # JSON mode: write to json_path (resolved above; default
+        # `./skill-report.json` is operator-chosen, OUTSIDE the fixture tree).
+        assert json_path is not None  # set above when fmt == "json"
         json_path.write_text(output, encoding="utf-8")
         click.echo(EN.report_opt_json)
     else:

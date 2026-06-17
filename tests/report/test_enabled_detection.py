@@ -10,12 +10,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
-from hermes_skill_creator_plugin import _enabled_detection
-from hermes_skill_creator_plugin import cli_report
+from hermes_skill_creator_plugin import _enabled_detection, cli_report
 from tests.report._fixtures import _write_profile
-
 
 # --- _enabled_detection.get_enabled_skills ---
 
@@ -60,9 +56,7 @@ def test_get_enabled_skills_honors_platform_filter(tmp_path: Path) -> None:
 
 
 def test_get_enabled_skills_honors_conditional_exclusions(tmp_path: Path) -> None:
-    profile_dir = _write_profile(
-        tmp_path, name="hermes", config=None, skills={"baz": "z"}
-    )
+    profile_dir = _write_profile(tmp_path, name="hermes", config=None, skills={"baz": "z"})
     # Per-skill frontmatter disable_if: platform: [darwin]
     skill_dir = profile_dir / "skills" / "baz"
     (skill_dir / "SKILL.md").write_text(
@@ -76,12 +70,11 @@ def test_get_enabled_skills_honors_conditional_exclusions(tmp_path: Path) -> Non
 
 
 def test_get_enabled_skills_honors_platforms_frontmatter(tmp_path: Path) -> None:
-    profile_dir = _write_profile(
-        tmp_path, name="hermes", config=None, skills={"qux": "q"}
-    )
+    profile_dir = _write_profile(tmp_path, name="hermes", config=None, skills={"qux": "q"})
     skill_dir = profile_dir / "skills" / "qux"
     (skill_dir / "SKILL.md").write_text(
-        "---\nname: qux\ndescription: 'q'\nplatforms:\n  - disable_if_platform_present: [darwin]\n---\n\n# qux\n",
+        "---\nname: qux\ndescription: 'q'\nplatforms:\n"
+        "  - disable_if_platform_present: [darwin]\n---\n\n# qux\n",
         encoding="utf-8",
     )
     out = _enabled_detection.get_enabled_skills(profile_dir, platform="darwin")

@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from hermes_skill_creator_plugin import _enabled_detection
 from tests.report._fixtures import _write_profile
@@ -59,9 +56,7 @@ def test_load_config_invalid_yaml(tmp_path: Path) -> None:
 
 
 def test_disabled_set_non_list_disabled(tmp_path: Path) -> None:
-    s = _enabled_detection._disabled_set(
-        {"skills": {"disabled": "not-a-list"}}, platform=None
-    )
+    s = _enabled_detection._disabled_set({"skills": {"disabled": "not-a-list"}}, platform=None)
     assert s == set()
 
 
@@ -100,17 +95,12 @@ def test_platform_blocked_no_platforms_key() -> None:
 
 
 def test_platform_blocked_platforms_not_list() -> None:
-    assert (
-        _enabled_detection._platform_blocked({"platforms": "x"}, platform="darwin")
-        is False
-    )
+    assert _enabled_detection._platform_blocked({"platforms": "x"}, platform="darwin") is False
 
 
 def test_platform_blocked_entry_not_dict() -> None:
     assert (
-        _enabled_detection._platform_blocked(
-            {"platforms": ["string-entry"]}, platform="darwin"
-        )
+        _enabled_detection._platform_blocked({"platforms": ["string-entry"]}, platform="darwin")
         is False
     )
 
@@ -127,9 +117,7 @@ def test_platform_blocked_blocked_field_not_list() -> None:
 
 def test_conditional_excluded_rule_not_dict() -> None:
     assert (
-        _enabled_detection._conditional_excluded(
-            {"disable_if": "string"}, platform="darwin"
-        )
+        _enabled_detection._conditional_excluded({"disable_if": "string"}, platform="darwin")
         is False
     )
 

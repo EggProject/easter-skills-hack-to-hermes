@@ -6,21 +6,17 @@ TDD: tests for hermes_skill_creator_plugin._reporter (formatting, sorting, n/a).
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
 from hermes_skill_creator_plugin import _reporter
 from hermes_skill_creator_plugin._reporter import (
     DOCUMENTED_USAGE_FIELDS,
-    SkillRow,
     format_json,
     format_text,
-    make_row,
     sort_rows,
 )
 from tests.report._fixtures import make_row_factory
-
 
 # --- format_text ---
 
@@ -96,7 +92,14 @@ def test_format_json_shape() -> None:
     assert prof["total_tokens"] == 10
     assert len(prof["enabled_skills"]) == 1
     skill = prof["enabled_skills"][0]
-    for f in ("use_count", "view_count", "patch_count", "last_used_at", "last_viewed_at", "last_patched_at"):
+    for f in (
+        "use_count",
+        "view_count",
+        "patch_count",
+        "last_used_at",
+        "last_viewed_at",
+        "last_patched_at",
+    ):
         assert f in skill, f"missing field {f!r}"
 
 
@@ -120,9 +123,11 @@ def test_format_json_deterministic_with_frozen_time() -> None:
     )
     assert out1 == out2
     import hashlib
-    assert hashlib.sha256(out1.encode("utf-8")).hexdigest() == hashlib.sha256(
-        out2.encode("utf-8")
-    ).hexdigest()
+
+    assert (
+        hashlib.sha256(out1.encode("utf-8")).hexdigest()
+        == hashlib.sha256(out2.encode("utf-8")).hexdigest()
+    )
 
 
 def test_format_json_includes_pct_of_cap() -> None:
