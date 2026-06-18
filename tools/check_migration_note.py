@@ -158,11 +158,11 @@ def check_migration_files(root: Path) -> list[Finding]:
     for p in _iter_migration_files(root):
         rel = p.relative_to(root)
         try:
-            content = p.read_text(encoding="utf-8", errors="replace")
+            contents = p.read_text(encoding="utf-8", errors="replace")
         except OSError:
             findings.append(Finding(path=p, message=f"could not read {rel}"))
             continue
-        findings.extend(_inspect_one(_CheckInputs(p, rel, content, manifest)))
+        findings.extend(_inspect_one(_CheckInputs(p, rel, contents, manifest)))
     return findings
 
 
@@ -176,11 +176,11 @@ def _parse_args(argv: Iterable[str]) -> argparse.Namespace:
 
 
 def _emit(message: str) -> None:
-    sys.stderr.write(message + "\n")
+    sys.stderr.write(f"{message}\n")
 
 
 def _emit_ok(message: str) -> None:
-    sys.stdout.write(message + "\n")
+    sys.stdout.write(f"{message}\n")
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -189,8 +189,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     _parse_args(argv)
     findings = run_all_checks(REPO_ROOT)
     if findings:
-        for f in findings:
-            _emit(f"[check_migration_note] FAIL: {f.message}")
+        for finding in findings:
+            _emit(f"[check_migration_note] FAIL: {finding.message}")
         summary = (
             f"[check_migration_note] {len(findings)} finding(s) — "
             f"MIGRATION*.md must be regenerated, not hand-edited."
