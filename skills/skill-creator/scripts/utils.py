@@ -10,7 +10,6 @@ TDD test cases for this module:
 from __future__ import annotations
 
 import sys
-from typing import Any
 
 BILINGUAL_PATTERN = r"^\[en\] .+ / \[hu\] .+$"
 
@@ -26,41 +25,4 @@ def emit(en: str, hu: str) -> None:
     sys.stdout.flush()
 
 
-def bilingual_help(english: str, magyar: str) -> str:
-    """Return a two-section help string with mirrored content.
-
-    The returned string contains both `Usage (English)` and `Hasznalat (magyar)`
-    sections. The English and Magyar option tables are provided by the caller
-    in the `english` and `magyar` arguments; this helper joins them with
-    bilingual section headers.
-
-    Args:
-        english: English help text (e.g. argparse --help formatted).
-        magyar: Hungarian help text (e.g. argparse --help in hu).
-
-    Returns:
-        A string with two top-level sections in order: English first, Magyar
-        second. Both sections are present so the bilingual help test passes.
-    """
-    return (
-        "Usage (English)\n"
-        "---------------\n"
-        f"{english}\n"
-        "\n"
-        "Hasznalat (magyar)\n"
-        "------------------\n"
-        f"{magyar}\n"
-    )
-
-
-def parse_args_and_emit_help(parser: Any, *, en_help: str, hu_help: str) -> None:
-    """If `--help` is in argv, print the bilingual help and exit 0.
-
-    Helper for click-style or argparse-style CLIs that want bilingual help.
-    """
-    if "--help" in sys.argv or "-h" in sys.argv:
-        sys.stdout.write(bilingual_help(en_help, hu_help))
-        sys.exit(0)
-
-
-__all__ = ["BILINGUAL_PATTERN", "emit", "bilingual_help", "parse_args_and_emit_help"]
+__all__ = ["BILINGUAL_PATTERN", "emit"]

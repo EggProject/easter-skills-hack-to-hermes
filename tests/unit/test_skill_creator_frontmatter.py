@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402  # noqa: E402
+from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402
     FULL_DESC_CAP,
     PINNED_UPSTREAM_COMMIT,
     SHORT_DESC_CAP,

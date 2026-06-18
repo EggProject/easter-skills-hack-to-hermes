@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import os
 import re
 import subprocess
 import sys
@@ -76,7 +77,7 @@ def test_run_eval_restores_hermes_guard_on_exit(
     monkeypatch.setattr(subprocess, "run", _fake_run)
     run_eval_mod = _load_module(SCRIPTS / "run_eval.py", "run_eval_restore_test")
     run_eval_mod.run_eval([], hermes_home=hermes_home, category="c", target="t")
-    assert "HERMES_SESSION" in __import__("os").environ
+    assert "HERMES_SESSION" in os.environ
 
 
 @assert_hermes_agent_untouched
@@ -166,7 +167,7 @@ def test_improve_description_restores_hermes_guard_on_exit(
     monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _FakeProc())
     mod = _load_module(SCRIPTS / "improve_description.py", "improve_desc_restore_test")
     mod.propose_description("old")
-    assert "HERMES_SESSION" in __import__("os").environ
+    assert "HERMES_SESSION" in os.environ
 
 
 @assert_hermes_agent_untouched

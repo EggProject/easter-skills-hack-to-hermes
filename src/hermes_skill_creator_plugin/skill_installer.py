@@ -287,7 +287,12 @@ def install(
         raise FileNotFoundError(f"skill source not found: {skill_source}")
 
     target_dir = hermes_home / "skills" / "skill-creator"
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # Re-install: clear the prior copy so leftover files from a previous
+    # install (e.g. a SKILL.md.short from a prior unpatched-cap install) do
+    # not shadow the new SKILL.md.
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    target_dir.mkdir(parents=True)
     # Copy the whole skill dir tree.
     for child in skill_source.rglob("*"):
         rel = child.relative_to(skill_source)
