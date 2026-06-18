@@ -14,22 +14,23 @@ plans/10-toolchain-and-conventions.md.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import click
 
-from ._patcher import (
+from hermes_skill_creator_plugin._patcher import (
     EXIT_OK,
     generate_migration_note,
     is_hermes_agent,
     run_patch,
 )
-from .i18n.messages_en import (
+from hermes_skill_creator_plugin.i18n.messages_en import (
     MIGRATION_REGENERATED,
     TARGET_IS_HERMES_AGENT,
     TARGET_REQUIRED,
 )
+
+_GIT_REV_PARSE_TIMEOUT_SEC = 5
 
 HELP_EN = """\
 Usage (English):
@@ -41,27 +42,30 @@ Usage (English):
   uv run hermes-skill-creator-patch --help
 
 Options:
-  --target DIR                 REQUIRED. User-owned Hermes checkout. Refuses
-                               ~/.hermes/hermes-agent (resolve() comparison).
+  --target DIR                 REQUIRED. User-owned Hermes checkout.
+                               Refuses ~/.hermes/hermes-agent (resolve()).
   --check                      Audit only; no writes. Default.
   --apply                      Write the patch atomically.
   --task-e-redirect            Opt-in: also patch the 7 Task E sites.
-  --no-schema-redirect         Skip the OPTIONAL E6 schema description site
-                               (under --task-e-redirect).
-  --i-accept-line-drift        Required iff --force is set; explicit second
-                               confirmation. Without it, --force exits 5.
-  --force                      Line-only override. Requires --i-accept-line-drift.
-                               Retries ONLY sites with LINE_DRIFT diagnostic.
-  --emit-migration-note        Regenerates MIGRATION.hermes-patch.md and
-                               MIGRATION.md index in the WORKTREE (not the
-                               target). See 08-migration-note-format.md.
-  --yes                        Suppresses interactive TTY confirmation for
-                               --force. --yes alone does not bypass --target
-                               refusal.
+  --no-schema-redirect         Skip the OPTIONAL E6 schema description
+                               site (under --task-e-redirect).
+  --i-accept-line-drift        Required iff --force is set; explicit
+                               second confirmation. Without it, --force
+                               exits 5.
+  --force                      Line-only override. Requires
+                               --i-accept-line-drift. Retries ONLY
+                               sites with LINE_DRIFT diagnostic.
+  --emit-migration-note        Regenerates MIGRATION.hermes-patch.md
+                               and MIGRATION.md index in the WORKTREE
+                               (not the target). See 08-migration.
+  --yes                        Suppresses interactive TTY confirmation
+                               for --force. --yes alone does not bypass
+                               --target refusal.
   --verbose                    Print bilingual per-site diagnostics.
   --help                       Show this help.
 
-Exit codes: 0 OK / 1 validation / 2 drift / 3 permission / 4 I/O / 5 user-abort.
+Exit codes: 0 OK / 1 validation / 2 drift / 3 permission / 4 I/O /
+            5 user-abort.
 """
 
 HELP_HU = """\
@@ -74,33 +78,85 @@ Használat (magyar):
   uv run hermes-skill-creator-patch --help
 
 Opciok:
-  --target DIR                 KOTELEZO. Felhasznai tulajdonu Hermes checkout.
-                               Megtagadja a ~/.hermes/hermes-agent celt
+  --target DIR                 KOTELEZO. Felhasznai tulajdonu Hermes
+                               checkout. Megtagadja a
+                               ~/.hermes/hermes-agent celt
                                (resolve() osszehasonlitas).
   --check                      Csak audit; nem ir. Alapertelmezett.
   --apply                      Atomikusan vegzi a patch-et.
   --task-e-redirect            Opt-in: a 7 Task E helyet is javitja.
-  --no-schema-redirect         Kihagyja az OPCIONÁLIS E6 schema description
-                               helyet (a --task-e-redirect alatt).
-  --i-accept-line-drift        Kotelezo, ha a --force be van allitva; masodik
-                               megerosites. Nelkule a --force 5-re kilep.
-  --force                      Sor-alapu feluliras. --i-accept-line-drift kell
-                               hozza. Csak a LINE_DRIFT diagnosztikaju helyeket
+  --no-schema-redirect         Kihagyja az OPCIONALIS E6 schema
+                               description helyet (a --task-e-redirect
+                               alatt).
+  --i-accept-line-drift        Kotelezo, ha a --force be van allitva;
+                               masodik megerosites. Nelkule a --force
+                               5-re kilep.
+  --force                      Sor-alapu feluliras.
+                               --i-accept-line-drift kell hozza. Csak
+                               a LINE_DRIFT diagnosztikaju helyeket
                                probalja ujra.
-  --emit-migration-note        Ujrageneralja a MIGRATION.hermes-patch.md-t es
-                               a MIGRATION.md indexet a WORKTREE gyokerben
-                               (NEM a celban). Ld. 08-migration-note-format.md.
-  --yes                        Elnyomja a --force interaktiv TTY megerositeset.
-                               A --yes onmagaban nem keruli meg a --target
-                               megtagadast.
+  --emit-migration-note        Ujrageneralja a MIGRATION.hermes-patch.md-t
+                               es a MIGRATION.md indexet a WORKTREE
+                               gyokerben (NEM a celban). Ld. 08-migration.
+  --yes                        Elnyomja a --force interaktiv TTY
+                               megerositeset. A --yes onmagaban nem
+                               keruli meg a --target megtagadast.
   --verbose                    Bilingual per-hely diagnosztikat nyomtat.
   --help                       Ezt a sugot mutatja.
 
-Kilepesi kodok: 0 OK / 1 validacio / 2 drift / 3 jogosultsag / 4 I/O / 5 user-abort.
+Kilepesi kodok: 0 OK / 1 validacio / 2 drift / 3 jogosultsag / 4 I/O /
+                5 user-abort.
 """
 
 
 # --- the click command ----------------------------------------------------
+
+
+def _resolve_target(target_str: str | None) -> Path | None:
+    return Path(target_str).resolve() if target_str else None
+
+
+def _refuse_hermes_agent(target_path: Path) -> None:
+    click.echo(
+        TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
+        err=True,
+    )
+    raise SystemExit(4)
+
+
+def _emit_migration_note_flow(
+    target_path: Path,
+    *,
+    task_e_redirect: bool,
+    no_schema_redirect: bool,
+) -> None:
+    if is_hermes_agent(target_path):
+        _refuse_hermes_agent(target_path)
+    worktree = Path.cwd()
+    try:
+        git_head = _git_head(target_path)
+    except Exception:
+        # _git_head swallows its own exceptions, but a future change
+        # might let one slip through; the migration note must still be
+        # emitted.
+        git_head = ""
+    path = generate_migration_note(
+        target=target_path,
+        worktree=worktree,
+        task_e_redirect=task_e_redirect,
+        no_schema_redirect=no_schema_redirect,
+        git_head=git_head,
+    )
+    click.echo(MIGRATION_REGENERATED.format(path=str(path)))
+    raise SystemExit(EXIT_OK)
+
+
+def _emit_diagnostics(patcher_result, *, verbose: bool) -> None:
+    for diagnostic in patcher_result.diagnostics:
+        if verbose:
+            click.echo(f"[verbose] {diagnostic}")
+        else:
+            click.echo(diagnostic)
 
 
 @click.command(
@@ -110,8 +166,20 @@ Kilepesi kodok: 0 OK / 1 validacio / 2 drift / 3 jogosultsag / 4 I/O / 5 user-ab
 @click.option("--target", type=click.Path(), default=None, help=())
 @click.option("--check", is_flag=True, default=False, help=())
 @click.option("--apply", "do_apply", is_flag=True, default=False, help=())
-@click.option("--task-e-redirect", "task_e_redirect", is_flag=True, default=False, help=())
-@click.option("--no-schema-redirect", "no_schema_redirect", is_flag=True, default=False, help=())
+@click.option(
+    "--task-e-redirect",
+    "task_e_redirect",
+    is_flag=True,
+    default=False,
+    help=(),
+)
+@click.option(
+    "--no-schema-redirect",
+    "no_schema_redirect",
+    is_flag=True,
+    default=False,
+    help=(),
+)
 @click.option(
     "--i-accept-line-drift",
     "i_accept_line_drift",
@@ -120,7 +188,13 @@ Kilepesi kodok: 0 OK / 1 validacio / 2 drift / 3 jogosultsag / 4 I/O / 5 user-ab
     help=(),
 )
 @click.option("--force", is_flag=True, default=False, help=())
-@click.option("--emit-migration-note", "emit_migration_note", is_flag=True, default=False, help=())
+@click.option(
+    "--emit-migration-note",
+    "emit_migration_note",
+    is_flag=True,
+    default=False,
+    help=(),
+)
 @click.option("--yes", is_flag=True, default=False, help=())
 @click.option("--verbose", is_flag=True, default=False, help=())
 def main(
@@ -136,35 +210,17 @@ def main(
     verbose: bool,
 ) -> None:
     """Idempotent Hermes patcher (cap raise + 7 Task E sites)."""
-    target_path: Path | None = Path(target).resolve() if target else None
+    target_path: Path | None = _resolve_target(target)
 
     if emit_migration_note:
         if target_path is None:
             click.echo(TARGET_REQUIRED, err=True)
             raise SystemExit(4)
-        if is_hermes_agent(target_path):
-            click.echo(
-                TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
-                err=True,
-            )
-            raise SystemExit(4)
-        worktree = Path.cwd()
-        # Outer try/except is a defensive double-wrap: _git_head catches
-        # its own exceptions, but a future change might let one slip
-        # through; the migration note must still be emitted.
-        try:
-            git_head = _git_head(target_path)
-        except Exception:
-            git_head = ""
-        path = generate_migration_note(
-            target=target_path,
-            worktree=worktree,
+        _emit_migration_note_flow(
+            target_path,
             task_e_redirect=task_e_redirect,
             no_schema_redirect=no_schema_redirect,
-            git_head=git_head,
         )
-        click.echo(MIGRATION_REGENERATED.format(path=str(path)))
-        raise SystemExit(EXIT_OK)
 
     if not check and not do_apply:
         # default: --check
@@ -174,7 +230,7 @@ def main(
     # run_patch (which returns EXIT_USER_ABORT). No click-level guard
     # is needed here.
 
-    result = run_patch(
+    patcher_result = run_patch(
         target=target_path,
         check=check,
         apply=do_apply,
@@ -187,13 +243,8 @@ def main(
         git_head=_git_head(target_path) if target_path is not None else "",
     )
 
-    for d in result.diagnostics:
-        if verbose:
-            click.echo(f"[verbose] {d}")
-        else:
-            click.echo(d)
-
-    raise SystemExit(result.exit_code)
+    _emit_diagnostics(patcher_result, verbose=verbose)
+    raise SystemExit(patcher_result.exit_code)
 
 
 def _git_head(target: Path) -> str:
@@ -201,14 +252,14 @@ def _git_head(target: Path) -> str:
     import subprocess
 
     try:
-        out = subprocess.run(
+        proc = subprocess.run(
             ["git", "-C", str(target), "rev-parse", "HEAD"],
             capture_output=True,
             check=True,
             text=True,
-            timeout=5,
+            timeout=_GIT_REV_PARSE_TIMEOUT_SEC,
         )
-        return out.stdout.strip()
+        return proc.stdout.strip()
     except Exception:
         return ""
 
