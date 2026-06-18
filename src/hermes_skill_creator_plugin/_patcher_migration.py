@@ -34,7 +34,7 @@ import os
 from collections.abc import Iterable
 from pathlib import Path
 
-from ._patcher_sites import S1_CAP_SITE, Site, sites_for_mode
+from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, Site, sites_for_mode
 
 # Cap-raise row anchor (the primary 8+ char anchor for S1.cap).
 # The 5-column schema is: site_id | location | current | replacement | anchor.

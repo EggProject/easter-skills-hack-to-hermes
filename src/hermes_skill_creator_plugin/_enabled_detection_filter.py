@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ._enabled_detection_parse import (
+from hermes_skill_creator_plugin._enabled_detection_parse import (
     _DISABLED_IF_PLATFORM_KEY,
     _DISABLED_KEY,
     _PLATFORMS_KEY,

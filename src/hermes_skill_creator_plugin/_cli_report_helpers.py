@@ -11,8 +11,8 @@ from typing import Any
 
 import click
 
-from ._reporter import ProfileSection, format_json, format_text
-from .i18n import messages_en as EN
+from hermes_skill_creator_plugin._reporter import ProfileSection, format_json, format_text
+from hermes_skill_creator_plugin.i18n import messages_en as EN
 
 
 REJECTED_FLAGS = {
@@ -118,7 +118,9 @@ def reject_unwanted_flags(argv: list[str]) -> int | None:
         for prefix, key in REJECTED_FLAGS.items():
             with_eq = prefix + sep
             if arg == prefix or arg.startswith(with_eq):
-                from ._cli_report_ui import reject_flag as _reject
+                from hermes_skill_creator_plugin._cli_report_ui import (
+                    reject_flag as _reject,
+                )
 
                 return _reject(key)
     return None

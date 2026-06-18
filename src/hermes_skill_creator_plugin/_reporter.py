@@ -35,7 +35,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from ._tokenizer import MAX_DESCRIPTION_LENGTH
+from hermes_skill_creator_plugin._tokenizer import MAX_DESCRIPTION_LENGTH
 
 # Curator's 6 documented field names (verified against tools/skill_usage.py:463-468).
 DOCUMENTED_USAGE_FIELDS = frozenset(

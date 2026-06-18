@@ -4,9 +4,9 @@ Bilingual help/rejection messages for the reporter CLI.
 """
 from __future__ import annotations
 
-from ._cli_report_helpers import HELP_EN_HEADER, HELP_HU_HEADER
-from .i18n import messages_en as EN
-from .i18n import messages_hu as HU
+from hermes_skill_creator_plugin._cli_report_helpers import HELP_EN_HEADER, HELP_HU_HEADER
+from hermes_skill_creator_plugin.i18n import messages_en as EN
+from hermes_skill_creator_plugin.i18n import messages_hu as HU
 
 
 _USAGE_LINE = (

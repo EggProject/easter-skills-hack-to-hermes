@@ -7,12 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ._cli_report_helpers import (
+from hermes_skill_creator_plugin._cli_report_helpers import (
     EMPTY_USAGE,
     emit_tokenizer_warning,
     load_skill_description,
 )
-from ._reporter import SkillRow, make_row
+from hermes_skill_creator_plugin._reporter import SkillRow, make_row
 
 
 class EnabledDetectionUnavailable(Exception):

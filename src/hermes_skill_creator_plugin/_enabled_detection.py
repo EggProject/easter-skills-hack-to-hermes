@@ -40,41 +40,41 @@ from pathlib import Path
 import frontmatter
 import yaml
 
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     apply_conditional_exclusions as _apply_conditional_exclusions,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     apply_platform_filter as _apply_platform_filter,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     conditional_excluded as _conditional_excluded,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     disabled_set as _disabled_set,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     drop_disabled as _drop_disabled,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     find_skill_md as _find_skill_md,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     platform_blocked as _platform_blocked,
 )
-from ._enabled_detection_filter import (
+from hermes_skill_creator_plugin._enabled_detection_filter import (
     platform_disables as _platform_disables,
 )
-from ._enabled_detection_inline import (
+from hermes_skill_creator_plugin._enabled_detection_inline import (
     extract_disabled_from_inline as _extract_disabled_from_inline,
 )
-from ._enabled_detection_inline import (
+from hermes_skill_creator_plugin._enabled_detection_inline import (
     split_top_level_commas as _split_top_level_commas,
 )
-from ._enabled_detection_inline import strip_quotes as _strip_quotes
-from ._enabled_detection_parse import (
+from hermes_skill_creator_plugin._enabled_detection_inline import strip_quotes as _strip_quotes
+from hermes_skill_creator_plugin._enabled_detection_parse import (
     load_config as _load_config,
 )
-from ._enabled_detection_parse import (
+from hermes_skill_creator_plugin._enabled_detection_parse import (
     parse_frontmatter as _parse_frontmatter,
 )
 
