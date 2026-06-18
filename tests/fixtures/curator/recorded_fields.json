@@ -1,0 +1,16 @@
+{
+  "storage_class": "SkillUsageStore",
+  "storage_module": "tools.skill_usage",
+  "record_key_format": "skill_name",
+  "fields": {
+    "use_count": {"type": "int", "source_line": 463, "meaning": "Number of times the skill was actively used."},
+    "view_count": {"type": "int", "source_line": 464, "meaning": "Number of times the skill was loaded via skill_view()."},
+    "patch_count": {"type": "int", "source_line": 467, "meaning": "Number of times the skill was patched/edited."},
+    "last_used_at": {"type": "string|None", "source_line": 465, "meaning": "ISO 8601 timestamp of most recent use_count bump."},
+    "last_viewed_at": {"type": "string|None", "source_line": 466, "meaning": "ISO 8601 timestamp of most recent view_count bump."},
+    "last_patched_at": {"type": "string|None", "source_line": 468, "meaning": "ISO 8601 timestamp of most recent patch_count bump."}
+  },
+  "known_legacy_fields_NOT_used": ["last_used", "last_view", "last_patch"],
+  "n_a_uses_persisted_flag": true,
+  "usage_report_returns_persisted_flag": true
+}
