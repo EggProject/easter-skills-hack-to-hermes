@@ -112,8 +112,6 @@ def _load_context(
     profile: str | None,
 ) -> tuple[Path | None, object, list[Path], int | None]:
     """Resolve paths + curator + profiles. Return error code or None."""
-    from hermes_skill_creator_plugin.i18n import messages_en as EN
-
     hermes_home = _helpers.resolve_hermes_home()
     json_path = _helpers.resolve_json_path(fmt, json_path)
     rc = _check_hermes_home(json_path, hermes_home)
@@ -121,9 +119,6 @@ def _load_context(
         return json_path, None, [], rc
     curator = _helpers.load_curator(hermes_home)
     profile_paths = _helpers.resolve_profiles(hermes_home, profile)
-    if not profile_paths:
-        click.echo(EN.report_no_profiles, err=True)
-        return json_path, curator, [], 0
     return json_path, curator, profile_paths, None
 
 
