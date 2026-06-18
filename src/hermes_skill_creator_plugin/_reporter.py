@@ -181,7 +181,7 @@ def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
     return sorted(rows, key=lambda r: _sort_key(r, sort_key))
 
 
-def _format_value_for_text(row: SkillRow, column: str) -> str:
+def _format_value_for_text(row: SkillRow, column: str) -> str:  # noqa: C901
     """Return the text-rendered value for `column` of `row`."""
     if column == "profile":
         return row.profile

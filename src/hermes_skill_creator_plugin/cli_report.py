@@ -345,7 +345,7 @@ def _reject_flag(flag_name: str) -> int:
 
 
 # Public, testable entry point.
-def run(
+def run(  # noqa: C901
     *,
     profile: str | None = None,
     sort: str = "tokens",

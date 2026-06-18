@@ -49,7 +49,7 @@ def _parse_frontmatter(text: str) -> dict:
     return _minimal_yaml_parse(block)
 
 
-def _minimal_yaml_parse(block: str) -> dict:
+def _minimal_yaml_parse(block: str) -> dict:  # noqa: C901
     """Tiny YAML parser: scalar + pipe-scalar + list + nested mappings.
 
     Good enough for the migrated skill's frontmatter; tests rely on PyYAML

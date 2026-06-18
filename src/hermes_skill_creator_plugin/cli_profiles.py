@@ -118,7 +118,7 @@ class AuditReport:
     def __contains__(self, key: str) -> bool:
         return key in self.to_dict()
 
-    def __hash__(self) -> int:  # type: ignore[no-untyped-def]
+    def __hash__(self) -> int:
         # Hash on a frozen view of to_dict(); lists are not hashable so
         # we freeze the profiles list into a tuple of tuples.
         d = self.to_dict()
@@ -174,7 +174,7 @@ def _walk_skills(skills_dir: Path) -> set[str]:
     directory name is the fallback. Directories without SKILL.md are
     ignored. The walk is robust to read errors (the skill is dropped).
     """
-    from agent.skill_utils import parse_frontmatter
+    from agent.skill_utils import parse_frontmatter  # type: ignore[import-not-found]
 
     if not skills_dir.is_dir():
         return set()
@@ -214,7 +214,7 @@ def _diff(current: set[str], desired: set[str]) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 
-def _audit_profile(
+def _audit_profile(  # noqa: C901
     profile_path: Path,
     *,
     apply: bool,
@@ -228,11 +228,11 @@ def _audit_profile(
     ``do_install`` / ``save_config`` calls resolve against the
     scoped HERMES_HOME (per plan 06 D4 + AC-3.4 / AC-3.6).
     """
-    from agent.prompt_builder import clear_skills_system_prompt_cache
+    from agent.prompt_builder import clear_skills_system_prompt_cache  # type: ignore[import-not-found]
     from agent.skill_utils import get_disabled_skill_names
-    from hermes_cli.config import load_config, save_config
-    from hermes_cli.skills_config import save_disabled_skills
-    from hermes_cli.skills_hub import do_install
+    from hermes_cli.config import load_config, save_config  # type: ignore[import-not-found]
+    from hermes_cli.skills_config import save_disabled_skills  # type: ignore[import-not-found]
+    from hermes_cli.skills_hub import do_install  # type: ignore[import-not-found]
 
     row: dict[str, Any] = {
         "profile_name": profile_path.name or "hermes",
@@ -256,9 +256,9 @@ def _audit_profile(
         # Look up the mutator at call time so monkeypatch.setattr on
         # the module works. The top-of-function import caches a
         # reference; the test infrastructure may rebind it.
-        import hermes_cli.skills_config as _skills_config_mod
+        import hermes_cli.skills_config as _skills_config_mod  # type: ignore[import-not-found]
 
-        save_disabled_skills = _skills_config_mod.save_disabled_skills
+        save_disabled_skills = _skills_config_mod.save_disabled_skills  # noqa: F811
 
         # 1. config snapshot.
         try:
@@ -374,7 +374,7 @@ def run_audit(
     Returns:
         The ``AuditReport`` (also written to ``json_path`` if given).
     """
-    from hermes_cli.profiles import list_profiles
+    from hermes_cli.profiles import list_profiles  # type: ignore[import-not-found]
 
     # 0. Live-install refusal (safety contract). The refusal fires
     #    whenever HERMES_HOME resolves to the LIVE install AND --yes is

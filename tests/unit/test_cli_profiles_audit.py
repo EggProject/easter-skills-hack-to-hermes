@@ -101,7 +101,7 @@ class _CallLog:
 # ---------------------------------------------------------------------------
 
 
-def _install_fake_hermes_apis(
+def _install_fake_hermes_apis(  # noqa: C901
     monkeypatch: pytest.MonkeyPatch,
     *,
     profile_paths: list[Path],

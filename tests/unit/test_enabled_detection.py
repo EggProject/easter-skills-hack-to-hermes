@@ -62,7 +62,7 @@ def _write_config(profile_path: Path, **skills_section: Any) -> None:
 
 
 @pytest.fixture
-def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
+def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:  # noqa: C901
     """Replace ``agent.skill_utils`` with a tiny fake exposing
     ``parse_frontmatter(content) -> (frontmatter_dict, body)``.
 

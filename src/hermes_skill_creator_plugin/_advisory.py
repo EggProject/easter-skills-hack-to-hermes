@@ -54,7 +54,7 @@ def resolve_target_dir() -> Path:
     return Path(os.path.expanduser("~/.hermes/hermes-agent"))
 
 
-def detect_cap_state(target_dir: Path) -> str:
+def detect_cap_state(target_dir: Path) -> str:  # noqa: C901
     """Return one of: 'patched', 'unpatched', 'unknown'.
 
     target_dir: a USER-OWNED Hermes checkout (NOT ~/.hermes/hermes-agent in CI).

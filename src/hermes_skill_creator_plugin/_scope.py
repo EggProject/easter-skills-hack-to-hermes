@@ -58,7 +58,7 @@ def hermes_home_scope(path: Path) -> Iterator[None]:
     """
     # Imports are local so that tests can monkeypatch ``hermes_constants``
     # in ``sys.modules`` before the call site runs.
-    from hermes_constants import (
+    from hermes_constants import (  # type: ignore[import-not-found]
         get_hermes_home_override,
         reset_hermes_home_override,
         set_hermes_home_override,

@@ -144,7 +144,7 @@ def _disabled_set(config: dict[str, Any], platform: str | None) -> set[str]:
     return out
 
 
-def _platform_blocked(frontmatter_dict: dict[str, Any], platform: str | None) -> bool:
+def _platform_blocked(frontmatter_dict: dict[str, Any], platform: str | None) -> bool:  # noqa: C901
     """Return True when the skill's frontmatter ``platforms:`` section blocks ``platform``.
 
     Supports BOTH the reporter's contract (list of dicts with
