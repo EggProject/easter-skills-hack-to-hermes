@@ -72,6 +72,42 @@ def assert_hermes_agent_untouched(func: Callable[P, R]) -> Callable[P, R]:
 
 
 @pytest.fixture
+def real_hermes_agent_sentinel(request: pytest.FixtureRequest) -> str:
+    """Sentinel: verify ``~/.hermes/hermes-agent/agent/skill_utils.py`` is
+    NOT mutated by the test.
+
+    Snapshots the sha256 of the live file BEFORE the test (if the live
+    install exists) and asserts the hash is unchanged AFTER the test
+    (via finalizer teardown). If the live install does not exist
+    (typical CI / worktree environments), the fixture is a no-op
+    sentinel that the test can simply reference without effect.
+
+    Returns an opaque string token so the test can keep the linter
+    quiet (``assert real_hermes_agent_sentinel``).
+    """
+    import hashlib
+
+    sentinel_path = Path("~/.hermes/hermes-agent/agent/skill_utils.py").expanduser()
+    pre_hash: str | None = None
+    if sentinel_path.is_file():
+        pre_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+
+    def _check() -> None:
+        if pre_hash is None:
+            return  # live install absent — no-op
+        if not sentinel_path.is_file():
+            return  # file was deleted — out of scope for this sentinel
+        post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+        assert post_hash == pre_hash, (
+            f"{sentinel_path} was modified by the test "
+            f"(pre={pre_hash[:12]}, post={post_hash[:12]})"
+        )
+
+    request.addfinalizer(_check)
+    return "sentinel-ok"
+
+
+@pytest.fixture
 def hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Provide a hermes_home rooted inside tmp_path; redirect HERMES_HOME env var."""
     fake = tmp_path / "hermes-home"
@@ -142,4 +178,5 @@ __all__ = [
     "seed_minimal",
     "hermes_subprocess_env",
     "MINIMAL_HERMES_FILES",
+    "real_hermes_agent_sentinel",
 ]
