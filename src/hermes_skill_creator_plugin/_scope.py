@@ -34,6 +34,16 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+HERMES_HOME_ENV_KEY = "HERMES_HOME"
+
+
+def _restore_env(prev_value: str | None) -> None:
+    """Restore the HERMES_HOME env var to its previous state."""
+    if prev_value is None:
+        os.environ.pop(HERMES_HOME_ENV_KEY, None)
+        return
+    os.environ[HERMES_HOME_ENV_KEY] = prev_value
+
 
 @contextmanager
 def hermes_home_scope(path: Path) -> Iterator[None]:
@@ -41,9 +51,10 @@ def hermes_home_scope(path: Path) -> Iterator[None]:
 
     Restores BOTH on exit, even on exception. The previous override
     token is captured via ``get_hermes_home_override()`` (which returns
-    ``None`` when no override is set); the previous ``os.environ['HERMES_HOME']``
-    is captured via ``os.environ.get``. On exit the env var is restored
-    first (cheap), then the override token is reset.
+    ``None`` when no override is set); the previous
+    ``os.environ['HERMES_HOME']`` is captured via ``os.environ.get``.
+    On exit the env var is restored first (cheap), then the override
+    token is reset.
 
     Args:
         path: The scoped ``HERMES_HOME`` for the duration of the block.
@@ -65,20 +76,19 @@ def hermes_home_scope(path: Path) -> Iterator[None]:
     )
 
     prev_override = get_hermes_home_override()
-    prev_env = os.environ.get("HERMES_HOME")
+    prev_env = os.environ.get(HERMES_HOME_ENV_KEY)
     token = set_hermes_home_override(str(path))
-    os.environ["HERMES_HOME"] = str(path)
+    os.environ[HERMES_HOME_ENV_KEY] = str(path)
     try:
         yield
     finally:
-        # Restore env first (cheap), then the override token.
-        if prev_env is None:
-            os.environ.pop("HERMES_HOME", None)
-        else:
-            os.environ["HERMES_HOME"] = prev_env
+        _restore_env(prev_env)
         reset_hermes_home_override(token)
         # ``prev_override`` is captured for symmetry; the live state is
         # already restored by ``reset_hermes_home_override`` (the token
         # was captured against that earlier state). Reference the name
         # to keep the binding obvious to readers.
         _ = prev_override
+
+
+__all__ = ["hermes_home_scope"]

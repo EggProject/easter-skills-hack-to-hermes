@@ -43,19 +43,23 @@ UNKNOWN_STATE = "unknown"
 
 # Target function whose Compare nodes carry the cap marker.
 _EXTRACT_FUNC_NAME = "extract_skill_description"
+_TARGET_ENV_KEY = "HERMES_HERMES_AGENT_TARGET"
+_DEFAULT_TARGET_SUFFIX = "~/.hermes/hermes-agent"
+_SKILL_UTILS_REL_PARTS = ("agent", "skill_utils.py")
+_MARKER_PAYLOAD = "advisory shown\n"
 
 
 def resolve_target_dir() -> Path:
     """Return the Hermes checkout to inspect.
 
-    Honors HERMES_HERMES_AGENT_TARGET (set by Script #1 + CI). Falls back to
-    ~/.hermes/hermes-agent ONLY in interactive operator use; CI must always
-    set the env var to avoid the live read.
+    Honors HERMES_HERMES_AGENT_TARGET (set by Script #1 + CI). Falls back
+    to ~/.hermes/hermes-agent ONLY in interactive operator use; CI must
+    always set the env var to avoid the live read.
     """
-    env = os.environ.get("HERMES_HERMES_AGENT_TARGET")
+    env = os.environ.get(_TARGET_ENV_KEY)
     if env:
         return Path(env)
-    return Path(os.path.expanduser("~/.hermes/hermes-agent"))
+    return Path(os.path.expanduser(_DEFAULT_TARGET_SUFFIX))
 
 
 def detect_cap_state(target_dir: Path) -> str:
@@ -66,7 +70,7 @@ def detect_cap_state(target_dir: Path) -> str:
     extract_skill_description function for the literal '60' or the
     MAX_DESCRIPTION_LENGTH reference.
     """
-    skill_utils = target_dir / "agent" / "skill_utils.py"
+    skill_utils = target_dir.joinpath(*_SKILL_UTILS_REL_PARTS)
     if not skill_utils.exists():
         return UNKNOWN_STATE
     try:
@@ -115,9 +119,17 @@ def _scan_comparators(comparators: list[ast.expr]) -> str | None:
 
 def _match_comparator(comparator: ast.expr) -> str | None:
     """Return the cap state for one Compare comparator, or ``None``."""
-    if isinstance(comparator, ast.Constant) and comparator.value == UNPATCHED_CAP:
+    is_unpatched = (
+        isinstance(comparator, ast.Constant)
+        and comparator.value == UNPATCHED_CAP
+    )
+    if is_unpatched:
         return UNPATCHED_STATE
-    if isinstance(comparator, ast.Name) and comparator.id == PATCHED_CAP_REFERENCE:
+    is_patched = (
+        isinstance(comparator, ast.Name)
+        and comparator.id == PATCHED_CAP_REFERENCE
+    )
+    if is_patched:
         return PATCHED_STATE
     return None
 
@@ -130,10 +142,7 @@ def should_emit_advisory(advisory_marker: Path) -> bool:
 def emit_advisory(advisory_marker: Path) -> None:
     """Best-effort write of the one-time marker. Never raises."""
     try:
-        advisory_marker.write_text(
-            "advisory shown\n",
-            encoding="utf-8",
-        )
+        advisory_marker.write_text(_MARKER_PAYLOAD, encoding="utf-8")
     except OSError:
         # Best-effort: the marker is advisory, not a hard contract.
         return

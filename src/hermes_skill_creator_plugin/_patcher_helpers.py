@@ -10,7 +10,7 @@ re-exports them).
 Functions:
 
 - :func:`hermes_agent_path` / :func:`is_hermes_agent` — the no-touch
-  sentinel resolver (plans/04 §Safety gates + ``conftest.py``).
+  sentinel resolver (plans/04 Safety gates + ``conftest.py``).
 - :func:`file_has_circular_import` — cycle-detection pre-flight
   against ``agent/skill_utils.py`` (plans/04 D2).
 - :func:`locate_anchor` — multi-signal anchor matcher; 0 means "not
@@ -32,23 +32,16 @@ import os
 import tempfile
 from pathlib import Path
 
-from ._patcher_sites import Anchor, Site
+from hermes_skill_creator_plugin._patcher_sites import Anchor, Site
 
-__all__ = [
-    "hermes_agent_path",
-    "is_hermes_agent",
-    "file_has_circular_import",
-    "locate_anchor",
-    "site_already_patched",
-    "site_in_state",
-    "cross_filesystem",
-    "now_iso",
-]
+DEFAULT_CYCLE_MARKER = "from tools.skills_tool import"
+FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
+HOME_DIR_PARTS = (".hermes", "hermes-agent")
 
 
 def hermes_agent_path() -> Path:
     """Resolved path to ``~/.hermes/hermes-agent`` (the no-touch sentinel)."""
-    return (Path.home() / ".hermes" / "hermes-agent").resolve()
+    return (Path.home().joinpath(*HOME_DIR_PARTS)).resolve()
 
 
 def is_hermes_agent(target: Path) -> bool:
@@ -56,13 +49,17 @@ def is_hermes_agent(target: Path) -> bool:
     return target.resolve() == hermes_agent_path()
 
 
-def file_has_circular_import(skill_utils_path: Path, *, cycle_marker: str = "from tools.skills_tool import") -> bool:
+def file_has_circular_import(
+    skill_utils_path: Path,
+    *,
+    cycle_marker: str = DEFAULT_CYCLE_MARKER,
+) -> bool:
     """True iff the top of ``agent/skill_utils.py`` already imports from tools.
 
-    The pre-flight rejects the import strategy for ``MAX_DESCRIPTION_LENGTH``
-    when the file already imports from ``tools.skills_tool`` to avoid an
-    agent <-> tools cycle; the fallback is a local constant
-    ``_MAX_DESCRIPTION_LENGTH = 1024``.
+    The pre-flight rejects the import strategy for
+    ``MAX_DESCRIPTION_LENGTH`` when the file already imports from
+    ``tools.skills_tool`` to avoid an agent <-> tools cycle; the
+    fallback is a local constant ``_MAX_DESCRIPTION_LENGTH = 1024``.
     """
     if not skill_utils_path.exists():
         return False
@@ -71,7 +68,7 @@ def file_has_circular_import(skill_utils_path: Path, *, cycle_marker: str = "fro
 
 
 def locate_anchor(text: str, anchor: Anchor) -> int:
-    """Return the 1-based line number where ``anchor.text`` appears in ``text``.
+    """Return the 1-based line number where ``anchor.text`` appears.
 
     Returns 0 when the anchor is not found. Matches the FULL line bytes
     (no implicit-concat normalization).
@@ -94,8 +91,10 @@ def site_in_state(state: dict[str, str], site_id: str, *, status: str) -> bool:
 
 
 def cross_filesystem(target: Path) -> bool:
-    """Best-effort cross-filesystem detector (returns False on platforms
-    that do not support ``os.statvfs``)."""
+    """Best-effort cross-filesystem detector.
+
+    Returns False on platforms that do not support ``os.statvfs``.
+    """
     try:
         target_stat = os.statvfs(target)
     except (OSError, AttributeError):
@@ -109,7 +108,19 @@ def cross_filesystem(target: Path) -> bool:
 
 def now_iso() -> str:
     """ISO-8601 UTC timestamp; honors HERMES_SKILL_CREATOR_FROZEN_TIME."""
-    frozen = os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME")
+    frozen = os.environ.get(FROZEN_TIME_ENV_KEY)
     if frozen:
         return frozen
     return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+__all__ = [
+    "hermes_agent_path",
+    "is_hermes_agent",
+    "file_has_circular_import",
+    "locate_anchor",
+    "site_already_patched",
+    "site_in_state",
+    "cross_filesystem",
+    "now_iso",
+]
