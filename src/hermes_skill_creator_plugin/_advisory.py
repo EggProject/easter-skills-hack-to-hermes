@@ -21,7 +21,8 @@ TDD test cases for this module:
     test_advisory_no_setattr_on_skill_utils
     test_advisory_pin_values
 
-See also: docs/plans/03-plugin-spec.md (Cap-raise mechanism, static-AST, NOT runtime)
+See also: docs/plans/03-plugin-spec.md
+(Cap-raise mechanism, static-AST, NOT runtime)
 """
 
 from __future__ import annotations
@@ -40,6 +41,9 @@ PATCHED_STATE = "patched"
 UNPATCHED_STATE = "unpatched"
 UNKNOWN_STATE = "unknown"
 
+# Target function whose Compare nodes carry the cap marker.
+_EXTRACT_FUNC_NAME = "extract_skill_description"
+
 
 def resolve_target_dir() -> Path:
     """Return the Hermes checkout to inspect.
@@ -57,8 +61,8 @@ def resolve_target_dir() -> Path:
 def detect_cap_state(target_dir: Path) -> str:
     """Return one of: 'patched', 'unpatched', 'unknown'.
 
-    target_dir: a USER-OWNED Hermes checkout (NOT ~/.hermes/hermes-agent in CI).
-    Reads agent/skill_utils.py with ast.parse; inspects the
+    target_dir: a USER-OWNED Hermes checkout (NOT ~/.hermes/hermes-agent
+    in CI). Reads agent/skill_utils.py with ast.parse; inspects the
     extract_skill_description function for the literal '60' or the
     MAX_DESCRIPTION_LENGTH reference.
     """
@@ -66,29 +70,67 @@ def detect_cap_state(target_dir: Path) -> str:
     if not skill_utils.exists():
         return UNKNOWN_STATE
     try:
-        tree = ast.parse(skill_utils.read_text(encoding="utf-8"))
+        source = skill_utils.read_text(encoding="utf-8")
+    except OSError:
+        return UNKNOWN_STATE
+    try:
+        tree = ast.parse(source)
     except SyntaxError:
         return UNKNOWN_STATE
+    state = _walk_tree_for_marker(tree)
+    if state is None:
+        return UNKNOWN_STATE
+    return state
+
+
+def _walk_tree_for_marker(tree: ast.AST) -> str | None:
+    """Walk ``tree`` and return the first matching cap state, if any."""
     for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name == "extract_skill_description":
-            for sub in ast.walk(node):
-                if isinstance(sub, ast.Compare):
-                    for comparator in sub.comparators:
-                        if isinstance(comparator, ast.Constant) and comparator.value == UNPATCHED_CAP:
-                            return UNPATCHED_STATE
-                        if isinstance(comparator, ast.Name) and comparator.id == PATCHED_CAP_REFERENCE:
-                            return PATCHED_STATE
-    return UNKNOWN_STATE
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        if node.name != _EXTRACT_FUNC_NAME:
+            continue
+        state = _scan_func_for_marker(node)
+        if state is not None:
+            return state
+    return None
+
+
+def _scan_func_for_marker(func: ast.FunctionDef) -> str | None:
+    """Return the cap state encoded in any Compare inside ``func``."""
+    for sub in ast.walk(func):
+        if not isinstance(sub, ast.Compare):
+            continue
+        state = _scan_comparators(sub.comparators)
+        if state is not None:
+            return state
+    return None
+
+
+def _scan_comparators(comparators: list[ast.expr]) -> str | None:
+    """Map a Compare's comparator list to its cap state, or ``None``."""
+    for comparator in comparators:
+        is_constant = isinstance(comparator, ast.Constant)
+        is_name = isinstance(comparator, ast.Name)
+        if is_constant and comparator.value == UNPATCHED_CAP:
+            return UNPATCHED_STATE
+        if is_name and comparator.id == PATCHED_CAP_REFERENCE:
+            return PATCHED_STATE
+    return None
 
 
 def should_emit_advisory(advisory_marker: Path) -> bool:
-    """Return True iff the advisory marker file is absent (one-time semantics)."""
+    """Return True iff the advisory marker is absent (one-time semantics)."""
     return not advisory_marker.exists()
 
 
 def emit_advisory(advisory_marker: Path) -> None:
     """Best-effort write of the one-time marker. Never raises."""
     try:
-        advisory_marker.write_text("advisory shown\n", encoding="utf-8")
+        advisory_marker.write_text(
+            "advisory shown\n",
+            encoding="utf-8",
+        )
     except OSError:
-        pass  # best-effort
+        # Best-effort: the marker is advisory, not a hard contract.
+        return
