@@ -72,6 +72,70 @@ report_json_path_inside_hermes_home = (
 )
 report_no_profiles = "[hu] nem találhatók profilok / [en] no profiles found"
 
+# Patcher preflight diagnostics (HU half — EN half lives in messages_en.py).
+CIRCULAR_IMPORT_PREFLIGHT = (
+    "[hu] potenciális körkörös import észlelve az agent/skill_utils.py-ban "
+    "(importál a tools.skills_tool-ból) / [en] potential circular import "
+    "detected in agent/skill_utils.py (imports from tools.skills_tool)"
+)
+
+# Patcher diagnostics (HU half — mirrored with messages_en.py).
+TARGET_REQUIRED = (
+    "[hu] a --target megadása kötelező / [en] --target is required"
+)
+TARGET_IS_HERMES_AGENT = (
+    "[hu] az élő hermes-agent checkout patchelése megtagadva: {resolved} / "
+    "[en] refusing to patch the live hermes-agent checkout: {resolved}"
+)
+TARGET_MISSING_SKILL_UTILS = (
+    "[hu] a célpontból hiányzik az agent/skill_utils.py: {path} / "
+    "[en] target missing agent/skill_utils.py: {path}"
+)
+FORCE_REQUIRES_I_ACCEPT = (
+    "[hu] a --force használatához --i-accept-line-drift szükséges / "
+    "[en] --force requires --i-accept-line-drift"
+)
+LINE_DRIFT = (
+    "[hu] sor-eltérés a {site_id} helyen (sor {line}) / "
+    "[en] line drift detected at site {site_id} (line {line})"
+)
+VALIDATION_FAILED = (
+    "[hu] az érvényesítés sikertelen a {site_id} helyen / "
+    "[en] validation failed at site {site_id}"
+)
+OK_ALREADY_PATCHED = (
+    "[hu] OK: a {site_id} hely már javítva / [en] OK: site {site_id} already patched"
+)
+OK_PATCHED = (
+    "[hu] OK: a {site_id} hely sikeresen javítva / "
+    "[en] OK: site {site_id} patched successfully"
+)
+PERMISSION_DENIED = (
+    "[hu] írási engedély megtagadva: {path} / [en] permission denied writing {path}"
+)
+IO_ERROR = (
+    "[hu] I/O hiba a {path} írásakor: {error} / "
+    "[en] I/O error writing {path}: {error}"
+)
+CROSS_FS_WARN = (
+    "[hu] figyelmeztetés: a cél és az ideiglenes könyvtár különböző "
+    "fájlrendszeren van / [en] warning: target and tmp live on different filesystems"
+)
+FORCE_AUDIT_LOG = (
+    "[hu] --force audit bejegyzés hozzáfűzve: timestamp={timestamp} site={site_id} "
+    "diff_sha256={diff_sha} target={target} / "
+    "[en] --force audit log entry appended: timestamp={timestamp} site={site_id} "
+    "diff_sha256={diff_sha} target={target}"
+)
+TEXT_DRIFT = (
+    "[hu] szöveg-eltérés a {site_id} helyen / "
+    "[en] text drift detected at site {site_id}"
+)
+MIGRATION_REGENERATED = (
+    "[hu] migrációs jegyzet újragenerálva itt: {path} / "
+    "[en] migration note regenerated at {path}"
+)
+
 # Column headers (Hungarian half).
 col_profile = "profil"
 col_name = "név"

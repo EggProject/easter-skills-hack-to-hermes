@@ -1,9 +1,12 @@
 """tests/conftest.py — shared fixtures for the hermes-skill-creator-plugin test suite.
 
-The headline invariant is the @assert_hermes_agent_untouched decorator: any test
-that resolves `~/.hermes/hermes-agent` is automatically skipped if the path
-would be live, so the plugin (and its migration scripts) can never accidentally
-mutate the user's real Hermes install.
+Merged conftest (Phase 7 / PR #5): combines:
+  - main's hermes_home / hermes_checkout / skill_creator_home / real_hermes_agent_sentinel
+  - branch's SKILL_UTILS_PATCHED / SKILL_UTILS_BODY / PROMPT_BUILDER_PATCHED /
+    BACKGROUND_REVIEW_PATCHED / SKILL_MANAGER_TOOL_PATCHED / SKILLS_DOC_BODY /
+    worktree / frozen_time / assert_hermes_agent_untouched (function)
+  - hermes_checkout is overridden to lay down the padded branch content
+    inside main's hermes_home so both main-tests AND branch-tests pass.
 
 TDD test cases for this module:
   test_assert_hermes_agent_untouched_skips_when_path_live
@@ -18,16 +21,165 @@ TDD test cases for this module:
 
 from __future__ import annotations
 
+import hashlib
 import os
-from collections.abc import Callable
+import sys
+from collections.abc import Callable, Generator
 from functools import wraps
 from pathlib import Path
-from typing import ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 import pytest
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+# ensure src/ is on sys.path even when pytest is invoked from a different cwd
+_SRC = Path(__file__).resolve().parent.parent / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
+
+# --- branch (workstream-C) padded anchor constants ------------------------
+
+SKILL_UTILS_BODY = '''\
+"""Skill utility helpers (test fixture stand-in for agent/skill_utils.py)."""
+
+from typing import Any, Dict
+
+
+def extract_skill_description(frontmatter: Dict[str, Any]) -> str:
+    """Extract a truncated description from parsed frontmatter."""
+    raw_desc = frontmatter.get("description", "")
+    if not raw_desc:
+        return ""
+    desc = str(raw_desc).strip().strip('\'"')
+    if len(desc) > 60:
+        return desc[:57] + "..."
+    return desc
+'''
+
+
+def _build_skill_utils_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 677):
+        lines.append(f"# padding line {i}\n")
+    lines.append(SKILL_UTILS_BODY)
+    return "".join(lines)
+
+
+SKILL_UTILS_PATCHED = _build_skill_utils_padded()
+
+
+PROMPT_BUILDER_BODY = '''\
+"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""
+
+# --- MEMORY_GUIDANCE (E2 anchor is L158) ---
+MEMORY_GUIDANCE = (
+    "If you've discovered a new way to do something, "
+    "solved a problem that could be "
+    "necessary later, save it as a skill with the skill tool.\\n"
+    ")  # end MEMORY_GUIDANCE
+'''
+
+
+def _build_prompt_builder_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 158):
+        lines.append(f"# padding {i}\n")
+    lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
+    for i in range(159, 179):
+        lines.append(f"# padding {i}\n")
+    lines.append('    "Skills that aren\'t maintained become liabilities."\n')
+    for i in range(180, 1421):
+        lines.append(f"# padding {i}\n")
+    lines.append('            "After difficult/iterative tasks, offer to save as a skill. "\n')
+    for i in range(1422, 1440):
+        lines.append(f"# padding {i}\n")
+    return "".join(lines)
+
+
+PROMPT_BUILDER_PATCHED = _build_prompt_builder_padded()
+
+
+BACKGROUND_REVIEW_BODY = '''\
+"""Background review (test fixture stand-in for agent/background_review.py)."""
+'''
+
+
+def _build_background_review_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 105):
+        lines.append(f"# padding {i}\n")
+    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"\n")
+    for i in range(106, 192):
+        lines.append(f"# padding {i}\n")
+    lines.append('    "(2), or (3).\\n\\n"\n')
+    for i in range(193, 220):
+        lines.append(f"# padding {i}\n")
+    return "".join(lines)
+
+
+BACKGROUND_REVIEW_PATCHED = _build_background_review_padded()
+
+
+SKILL_MANAGER_TOOL_BODY = '''\
+"""Skill manager (test fixture stand-in for tools/skill_manager_tool.py)."""
+'''
+
+
+def _build_skill_manager_tool_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 1099):
+        lines.append(f"# padding {i}\n")
+    lines.append("SKILL_MANAGE_SCHEMA = {\n")
+    lines.append('    "name": "skill_manage",\n')
+    lines.append('    "description": (\n')
+    for i in range(1102, 1129):
+        lines.append(f'        "padding line {i} of description. "\n')
+    lines.append('        "pitfalls come up; pin only guards against irrecoverable loss."\n')
+    lines.append("    ),\n")
+    for i in range(1131, 1150):
+        lines.append(f"# padding {i}\n")
+    return "".join(lines)
+
+
+SKILL_MANAGER_TOOL_PATCHED = _build_skill_manager_tool_padded()
+
+
+SKILLS_DOC_BODY = """\
+# Skills
+
+## Agent-Managed Skills (skill_manage tool)
+
+The agent can create, update, and delete its own skills via the
+`skill_manage` tool. This is the agent's **procedural memory** — when it
+figures out a non-trivial workflow, it saves the approach as a skill for
+future reuse.
+
+### When the Agent Creates Skills
+"""
+
+
+def _build_skills_doc_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 378):
+        lines.append(f"<!-- padding {i} -->\n")
+    lines.append("## Agent-Managed Skills (skill_manage tool)\n")
+    lines.append("\n")
+    lines.append(
+        "The agent can create, update, and delete its own skills via the "
+        "`skill_manage` tool. This is the agent's **procedural memory** — "
+        "when it figures out a non-trivial workflow, it saves the approach "
+        "as a skill for future reuse.\n"
+    )
+    return "".join(lines)
+
+
+SKILLS_DOC_PATCHED = _build_skills_doc_padded()
+
+
+# --- main (B-plugin) fixtures ---------------------------------------------
 
 # Default sentinel path: the operator's live Hermes install. Tests must NEVER
 # write here. The decorator resolves HERMES_HOME lazily so that monkeypatched
@@ -44,21 +196,20 @@ def _resolve_hermes_home() -> Path:
 HERMES_HOME = _resolve_hermes_home()
 
 
-def assert_hermes_agent_untouched(func: Callable[P, R]) -> Callable[P, R]:
-    """Decorator: skip the test if `HERMES_HOME` resolves to a live, writable path.
+def assert_hermes_agent_untouched(pre: str | None) -> None:
+    """Assert the live Hermes install is byte-identical to the pre-test hash."""
+    if pre is None:
+        return
+    target = Path.home() / ".hermes" / "hermes-agent" / "agent" / "skill_utils.py"
+    post = hashlib.sha256(target.read_bytes()).hexdigest()
+    assert pre == post, f"HERMES-AGENT TOUCHED: {target} sha changed {pre} -> {post}"
 
-    Inside a tmp_path fixture, HERMES_HOME is monkey-patched to a tmp subdir,
-    so tests pass through. If a test resolves the real `~/.hermes/hermes-agent`
-    (i.e. HERMES_HOME was NOT monkey-patched), pytest.skip the test.
 
-    The sentinel check reads os.environ lazily so monkeypatch.setenv inside
-    a fixture is observed at call time.
-    """
+def assert_hermes_agent_untouched_decorator(func: Callable[P, R]) -> Callable[P, R]:
+    """Decorator: skip the test if `HERMES_HOME` resolves to a live, writable path."""
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        # The sentinel: if HERMES_HOME still points at the real ~/.hermes/hermes-agent,
-        # the test is touching the live install and must be skipped.
         current = _resolve_hermes_home()
         if current == _LIVE_HERMES_AGENT and current.exists():
             pytest.skip(
@@ -76,17 +227,8 @@ def real_hermes_agent_sentinel(request: pytest.FixtureRequest) -> str:
     """Sentinel: verify ``~/.hermes/hermes-agent/agent/skill_utils.py`` is
     NOT mutated by the test.
 
-    Snapshots the sha256 of the live file BEFORE the test (if the live
-    install exists) and asserts the hash is unchanged AFTER the test
-    (via finalizer teardown). If the live install does not exist
-    (typical CI / worktree environments), the fixture is a no-op
-    sentinel that the test can simply reference without effect.
-
-    Returns an opaque string token so the test can keep the linter
-    quiet (``assert real_hermes_agent_sentinel``).
+    Returns an opaque string token so the test can keep the linter quiet.
     """
-    import hashlib
-
     sentinel_path = Path("~/.hermes/hermes-agent/agent/skill_utils.py").expanduser()
     pre_hash: str | None = None
     if sentinel_path.is_file():
@@ -94,9 +236,9 @@ def real_hermes_agent_sentinel(request: pytest.FixtureRequest) -> str:
 
     def _check() -> None:
         if pre_hash is None:
-            return  # live install absent — no-op
+            return
         if not sentinel_path.is_file():
-            return  # file was deleted — out of scope for this sentinel
+            return
         post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
         assert post_hash == pre_hash, (
             f"{sentinel_path} was modified by the test "
@@ -117,24 +259,57 @@ def hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def hermes_checkout(hermes_home: Path) -> Path:
-    """A 6-file synthetic Hermes checkout inside the hermes_home fixture."""
-    return seed_minimal(hermes_home)
+def hermes_checkout(hermes_home: Path) -> Generator[Path, None, None]:
+    """Synthetic Hermes checkout for tests; lays down the padded branch anchor
+    files (SKILL_UTILS_PATCHED, etc.) so both main-tests and branch-tests work."""
+    checkout = hermes_home / "checkout"
+    (checkout / "agent").mkdir(parents=True, exist_ok=True)
+    (checkout / "tools").mkdir(parents=True, exist_ok=True)
+    (checkout / "hermes_cli").mkdir(parents=True, exist_ok=True)
+    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(
+        parents=True, exist_ok=True
+    )
+    (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
+    (checkout / "agent" / "prompt_builder.py").write_text(
+        PROMPT_BUILDER_PATCHED, encoding="utf-8"
+    )
+    (checkout / "agent" / "background_review.py").write_text(
+        BACKGROUND_REVIEW_PATCHED, encoding="utf-8"
+    )
+    (checkout / "tools" / "skill_manager_tool.py").write_text(
+        SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8"
+    )
+    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
+        SKILLS_DOC_PATCHED, encoding="utf-8"
+    )
+    yield checkout
 
 
 @pytest.fixture
 def skill_creator_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """HERMES_HOME rooted inside tmp_path with skills/ and profiles/ subdirs.
-
-    Used by E-skill's installer tests so the installer can write to a
-    tmp_path HERMES_HOME without ever touching the live install. Mirrors the
-    E-skill ownership of this fixture (see 26525c4:tests/conftest.py).
-    """
+    """HERMES_HOME rooted inside tmp_path with skills/ and profiles/ subdirs."""
     home = tmp_path / "hermes-skill-creator-home"
     (home / "skills").mkdir(parents=True)
     (home / "profiles").mkdir(parents=True)
     monkeypatch.setenv("HERMES_HOME", str(home))
     return home
+
+
+# --- branch fixtures ------------------------------------------------------
+
+
+@pytest.fixture
+def frozen_time(monkeypatch: pytest.MonkeyPatch) -> str:
+    monkeypatch.setenv("HERMES_SKILL_CREATOR_FROZEN_TIME", "2026-06-17T00:00:00Z")
+    return "2026-06-17T00:00:00Z"
+
+
+@pytest.fixture
+def worktree(tmp_path: Path) -> Generator[Path, None, None]:
+    """A bare tmp worktree root for --emit-migration-note output."""
+    wt = tmp_path / "worktree"
+    wt.mkdir()
+    yield wt
 
 
 # Minimal 6-file synthetic Hermes checkout, suitable for migration tests.
@@ -159,11 +334,7 @@ def seed_minimal(root: Path) -> Path:
 
 def hermes_subprocess_env() -> dict[str, str]:
     """Return a child-process env that strips HERMES_SESSION without popping it
-    from the parent process. Owned by E-skill (see _subprocess.py).
-
-    Placeholder: the real implementation is owned by E-skill. The contract here
-    is that the parent process's HERMES_SESSION is NEVER touched via os.environ.pop.
-    """
+    from the parent process."""
     env = os.environ.copy()
     env.pop("HERMES_SESSION", None)
     return env
@@ -171,10 +342,20 @@ def hermes_subprocess_env() -> dict[str, str]:
 
 __all__ = [
     "HERMES_HOME",
+    "SKILL_UTILS_PATCHED",
+    "SKILL_UTILS_BODY",
+    "PROMPT_BUILDER_PATCHED",
+    "BACKGROUND_REVIEW_PATCHED",
+    "SKILL_MANAGER_TOOL_PATCHED",
+    "SKILLS_DOC_BODY",
+    "SKILLS_DOC_PATCHED",
     "assert_hermes_agent_untouched",
+    "assert_hermes_agent_untouched_decorator",
     "hermes_home",
     "hermes_checkout",
     "skill_creator_home",
+    "frozen_time",
+    "worktree",
     "seed_minimal",
     "hermes_subprocess_env",
     "MINIMAL_HERMES_FILES",
