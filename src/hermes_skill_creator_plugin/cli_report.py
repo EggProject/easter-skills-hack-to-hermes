@@ -36,166 +36,180 @@ from pathlib import Path
 
 import click
 
-from ._cli_report_helpers import (
-    HELP_EN_HEADER,
-    HELP_HU_HEADER,
-    REJECTED_FLAGS,
-    emit_tokenizer_warning as _emit_tokenizer_warning,
-    load_curator as _load_curator,
-    load_skill_description as _load_skill_description,
-    now_iso as _now_iso,
-    resolve_hermes_home as _resolve_hermes_home,
-    resolve_profiles as _resolve_profiles,
-)
-from ._cli_report_rows import (
-    EnabledDetectionUnavailable as _EnabledDetectionUnavailable,
-    build_rows_for_profile as _build_rows_for_profile,
-    build_usage_rows as _build_usage_rows,
-    check_json_path as _check_json_path,
-)
-from ._enabled_detection import get_enabled_skills
-from ._cli_report_ui import emit_bilingual_help, reject_flag
-from ._reporter import ProfileSection, format_json, format_text, sort_rows
-from ._tokenizer import estimate_tokens
-from .i18n import messages_en as EN
+from hermes_skill_creator_plugin import _cli_report_helpers as _helpers
+from hermes_skill_creator_plugin import _cli_report_rows as _rows
+from hermes_skill_creator_plugin._cli_report_cmd import main
+from hermes_skill_creator_plugin._cli_report_ui import emit_bilingual_help
+from hermes_skill_creator_plugin._enabled_detection import get_enabled_skills
+from hermes_skill_creator_plugin._reporter import ProfileSection, sort_rows
+from hermes_skill_creator_plugin._tokenizer import estimate_tokens
+
+
+HELP_EN_HEADER = _helpers.HELP_EN_HEADER
+HELP_HU_HEADER = _helpers.HELP_HU_HEADER
+FORMAT_TEXT = _helpers.FORMAT_TEXT
+SORT_TOKENS = _helpers.SORT_TOKENS
+EnabledDetectionUnavailable = _rows.EnabledDetectionUnavailable
+_build_rows_for_profile = _rows.build_rows_for_profile
+_build_usage_rows = _rows.build_usage_rows
+_check_json_path = _rows.check_json_path
+_load_curator = _helpers.load_curator
+_load_skill_description = _helpers.load_skill_description
+_now_iso = _helpers.now_iso
+_resolve_hermes_home = _helpers.resolve_hermes_home
+_resolve_profiles = _helpers.resolve_profiles
+
+
+def _check_hermes_home(
+    json_path: Path | None, hermes_home: Path,
+) -> int | None:
+    """Return 6 when json_path falls under hermes_home, else None."""
+    from hermes_skill_creator_plugin.i18n import messages_en as EN
+
+    if json_path is not None and _check_json_path(
+        json_path, hermes_home,
+    ):
+        click.echo(EN.report_json_path_inside_hermes_home, err=True)
+        return 6
+    return None
+
+
+def _build_profile_sections(
+    profile_paths: list[Path],
+    *,
+    fmt: str,
+    sort: str,
+    platform: str | None,
+    curator,
+) -> tuple[list[str], list[ProfileSection], int | None]:
+    """Build text/json sections for all profiles. Error code or None."""
+    from hermes_skill_creator_plugin.i18n import messages_en as EN
+
+    text_sections: list[str] = []
+    json_sections: list[ProfileSection] = []
+    for prof in profile_paths:
+        try:
+            rows, total = _build_rows_for_profile(
+                prof, platform=platform, curator=curator,
+                estimate_tokens_fn=estimate_tokens,
+                enabled_skills_fn=get_enabled_skills,
+            )
+        except EnabledDetectionUnavailable:
+            click.echo(EN.report_enabled_detection_unavailable, err=True)
+            return text_sections, json_sections, 6
+        rows = sort_rows(rows, sort)
+        section = _helpers.make_section(fmt, prof.name, rows, total)
+        if fmt == FORMAT_TEXT:
+            text_sections.append(section)  # type: ignore[arg-type]
+        else:
+            json_sections.append(section)  # type: ignore[arg-type]
+    return text_sections, json_sections, None
+
+
+def _load_context(
+    fmt: str,
+    json_path: Path | None,
+    profile: str | None,
+) -> tuple[Path | None, object, list[Path], int | None]:
+    """Resolve paths + curator + profiles. Return error code or None."""
+    from hermes_skill_creator_plugin.i18n import messages_en as EN
+
+    hermes_home = _helpers.resolve_hermes_home()
+    json_path = _helpers.resolve_json_path(fmt, json_path)
+    rc = _check_hermes_home(json_path, hermes_home)
+    if rc is not None:
+        return json_path, None, [], rc
+    curator = _helpers.load_curator(hermes_home)
+    profile_paths = _helpers.resolve_profiles(hermes_home, profile)
+    if not profile_paths:
+        click.echo(EN.report_no_profiles, err=True)
+        return json_path, curator, [], 0
+    return json_path, curator, profile_paths, None
+
+
+def _emit_sections(
+    fmt: str,
+    json_path: Path | None,
+    text_sections: list[str],
+    json_sections: list[ProfileSection],
+) -> None:
+    """Render and write/print the final output."""
+    output = _helpers.render_output(
+        fmt, text_sections, json_sections, _helpers.now_iso(),
+    )
+    _helpers.emit_output(fmt, output, json_path)
+
+
+def _make_run_kwargs(
+    *,
+    profile: str | None,
+    sort: str,
+    fmt: str,
+    json_path: Path | None,
+    platform: str | None,
+    show_help: bool,
+    argv: list[str] | None,
+) -> dict[str, object]:
+    """Bundle the run kwargs into a dict for _dispatch."""
+    return {
+        "profile": profile, "sort": sort, "fmt": fmt,
+        "json_path": json_path, "platform": platform,
+        "show_help": show_help, "argv": argv,
+    }
 
 
 def run(
     *,
     profile: str | None = None,
-    sort: str = "tokens",
-    fmt: str = "text",
+    sort: str = SORT_TOKENS,
+    fmt: str = FORMAT_TEXT,
     json_path: Path | None = None,
     platform: str | None = None,
     show_help: bool = False,
     argv: list[str] | None = None,
 ) -> int:
     """Run the reporter. Returns the exit code (0 on success)."""
-    if argv is not None:
-        for arg in argv:
-            for prefix, key in REJECTED_FLAGS.items():
-                if arg == prefix or arg.startswith(prefix + "="):
-                    return reject_flag(key)
-    if show_help:
-        emit_bilingual_help()
-        return 0
-    if sort not in {"tokens", "use_count", "last_used_at"}:
-        click.echo(EN.report_opt_sort, err=True)
-        return 2
-    if fmt not in {"text", "json"}:
-        click.echo(EN.report_opt_format, err=True)
-        return 2
-    hermes_home = _resolve_hermes_home()
-    if json_path is None and fmt == "json":
-        json_path = Path("./skill-report.json")
-    if json_path is not None and _check_json_path(json_path, hermes_home):
-        click.echo(EN.report_json_path_inside_hermes_home, err=True)
-        return 6
-    curator = _load_curator(hermes_home)
-    profile_paths = _resolve_profiles(hermes_home, profile)
-    if not profile_paths:
-        click.echo(EN.report_no_profiles, err=True)
-        return 0
-    generated_at = _now_iso()
-    text_sections: list[str] = []
-    json_sections: list[ProfileSection] = []
-    for p in profile_paths:
-        try:
-            rows, total = _build_rows_for_profile(
-                p,
-                platform=platform,
-                curator=curator,
-                estimate_tokens_fn=estimate_tokens,
-                enabled_skills_fn=get_enabled_skills,
-            )
-        except _EnabledDetectionUnavailable:
-            click.echo(EN.report_enabled_detection_unavailable, err=True)
-            return 6
-        rows = sort_rows(rows, sort)
-        if fmt == "text":
-            text_sections.append(
-                format_text(p.name, rows, total_tokens=total)
-            )
-        else:
-            json_sections.append(
-                ProfileSection(
-                    profile_name=p.name, rows=rows, total_tokens=total
-                )
-            )
-    if fmt == "text":
-        output = "\n\n".join(text_sections)
-    else:
-        output = format_json(
-            tool="hermes-skill-creator-report",
-            version="0.1.0",
-            generated_at=generated_at,
-            sections=json_sections,
-        )
-    if fmt == "json":
-        assert json_path is not None
-        json_path.write_text(output, encoding="utf-8")
-        click.echo(EN.report_opt_json)
-    else:
-        click.echo(output)
-    return 0
+    return _dispatch(**_make_run_kwargs(
+        profile=profile, sort=sort, fmt=fmt,
+        json_path=json_path, platform=platform,
+        show_help=show_help, argv=argv,
+    ))
 
 
-@click.command(
-    help=EN.report_help_short + "\n\n" + EN.report_help_long,
-    context_settings={
-        "help_option_names": [],
-        "ignore_unknown_options": True,
-    },
-)
-@click.option("--profile", default=None, help=EN.report_opt_profile)
-@click.option(
-    "--sort",
-    type=click.Choice(["tokens", "use_count", "last_used_at"]),
-    default="tokens",
-    help=EN.report_opt_sort,
-)
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    help=EN.report_opt_format,
-)
-@click.option(
-    "--json",
-    "json_path",
-    type=click.Path(),
-    default=None,
-    help=EN.report_opt_json,
-)
-@click.option(
-    "--help", "show_help", is_flag=True, default=False,
-    help=EN.report_opt_help,
-)
-def main(
+def _dispatch(
+    *,
     profile: str | None,
     sort: str,
     fmt: str,
-    json_path: str | None,
+    json_path: Path | None,
+    platform: str | None,
     show_help: bool,
-) -> None:
-    """Bilingual EN+HU reporter. See --help for details."""
-    import sys
-
-    argv = sys.argv[1:]
+    argv: list[str] | None,
+) -> int:
+    """Validate, resolve paths, build sections, emit."""
     if show_help:
         emit_bilingual_help()
-        raise SystemExit(0)
-    jp: Path | None = Path(json_path) if json_path else None
-    raise SystemExit(
-        run(
-            profile=profile,
-            sort=sort,
-            fmt=fmt,
-            json_path=jp,
-            argv=argv,
-        )
+        return 0
+    if argv is not None:
+        rc = _helpers.reject_unwanted_flags(argv)
+        if rc is not None:
+            return rc
+    rc = _helpers.validate_sort_and_fmt(sort, fmt)
+    if rc is not None:
+        return rc
+    json_path, curator, profile_paths, err = _load_context(
+        fmt, json_path, profile,
     )
+    if err is not None:
+        return err
+    text_sections, json_sections, build_err = _build_profile_sections(
+        profile_paths, fmt=fmt, sort=sort,
+        platform=platform, curator=curator,
+    )
+    if build_err is not None:
+        return build_err
+    _emit_sections(fmt, json_path, text_sections, json_sections)
+    return 0
 
 
 def _main_entry() -> None:
