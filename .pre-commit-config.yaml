@@ -26,19 +26,19 @@ repos:
     hooks:
       - id: check-bilingual
         name: Bilingual format check (en/hu single-line + two-section help)
-        entry: python tools/check_bilingual.py
+        entry: python3 tools/check_bilingual.py
         language: system
         types: [python]
         pass_filenames: false
       - id: check-line-count
         name: Per-file 500-line cap + plan footer drift + budget table Total + per-cell guard
-        entry: python tools/check_line_count.py --enforce-footer --enforce-budget-table --enforce-per-cell
+        entry: python3 tools/check_line_count.py --enforce-footer --enforce-budget-table --enforce-per-cell
         language: system
         files: '^(src/|tests/|tools/|docs/plans/).*\.(py|md)$'
         pass_filenames: false
       - id: check-migration-note
         name: MIGRATION*.md is generated, not hand-edited
-        entry: python tools/check_migration_note.py
+        entry: python3 tools/check_migration_note.py
         language: system
         files: '^(MIGRATION\.md|MIGRATION\.hermes-patch\.md|MIGRATION\.skill-port\.md|\.migration_manifest\.json)$'
         pass_filenames: false
