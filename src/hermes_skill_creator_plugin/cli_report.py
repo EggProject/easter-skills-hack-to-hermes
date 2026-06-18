@@ -62,6 +62,19 @@ HELP_EN_HEADER = "Usage (English):"
 HELP_HU_HEADER = "Hasznalat (magyar):"
 
 
+def _emit_tokenizer_warning(_msg: str) -> None:
+    """Bilingual `click.echo` callback for `_tokenizer.estimate_tokens(warning=...)`.
+
+    The D6 spec mandates that the reporter wires a bilingual warning callback
+    into every `estimate_tokens` call so the operator sees exactly one
+    `chars/4 fallback` notice per process. The module-level guard in
+    `_tokenizer` (`_WARNED_ONCE`) ensures this callback fires at most once
+    even when many skills are tokenized in one run. The bilingual constant
+    lives in `i18n/messages_en.py::report_tokenizer_unavailable`.
+    """
+    click.echo(EN.report_tokenizer_unavailable, err=True)
+
+
 def _resolve_hermes_home() -> Path:
     """Resolve HERMES_HOME from env, default to ~/.hermes (the LIVE install).
 
@@ -228,7 +241,7 @@ def _build_rows_for_profile(
     total = 0
     for name in sorted(enabled):
         description = _load_skill_description(skills_dir, name)
-        tokens = estimate_tokens(name, description)
+        tokens = estimate_tokens(name, description, warning=_emit_tokenizer_warning)
         total += tokens
         u = usage.get(
             name,

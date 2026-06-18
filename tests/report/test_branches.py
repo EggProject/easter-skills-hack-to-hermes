@@ -259,3 +259,49 @@ def test_main_with_unknown_flag_passes_through(monkeypatch, hermes_home: Path) -
     # acceptable behaviors for an unknown option. The test ensures the
     # rejected-flags scan does NOT trip on it.
     assert result.exit_code in (0, 2)
+
+
+# --- warning callback wiring (D6 spec mandate) ---
+
+
+def test_emit_tokenizer_warning_is_bilingual() -> None:
+    """The wired callback MUST emit a single bilingual line (en/hu on one line)."""
+    from hermes_skill_creator_plugin import _tokenizer
+
+    captured: list[str] = []
+
+    def _capture(msg: str) -> None:
+        captured.append(msg)
+
+    _tokenizer.reset_warning_state()
+    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=_capture)
+    assert len(captured) == 1
+    line = captured[0]
+    assert "[en]" in line and "[hu]" in line, f"non-bilingual warning: {line!r}"
+
+
+def test_cli_report_wires_warning_callback(monkeypatch, hermes_home: Path) -> None:
+    """cli_report._build_rows_for_profile MUST pass a warning= callback to estimate_tokens.
+
+    D6 spec mandate: every estimate_tokens call from the reporter MUST thread
+    the bilingual warning callback so the operator sees exactly one
+    `chars/4 fallback` notice per process. This test asserts the kwarg is
+    wired (rather than relying on incidental coverage).
+    """
+    _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
+    from hermes_skill_creator_plugin import _tokenizer
+
+    seen: dict[str, object] = {}
+
+    real_estimate = _tokenizer.estimate_tokens
+
+    def _spy(name, description, **kwargs):
+        seen["warning"] = kwargs.get("warning")
+        return real_estimate(name, description, **kwargs)
+
+    monkeypatch.setattr(cli_report, "estimate_tokens", _spy)
+    _tokenizer.reset_warning_state()
+    rc = cli_report.run(profile="hermes", sort="tokens", fmt="text", json_path=None)
+    assert rc == 0
+    assert seen["warning"] is not None, "warning= kwarg was NOT wired into estimate_tokens"
+    assert callable(seen["warning"])

@@ -12,6 +12,7 @@ import pytest
 from hermes_skill_creator_plugin import _reporter
 from hermes_skill_creator_plugin._reporter import (
     DOCUMENTED_USAGE_FIELDS,
+    TEXT_COLUMNS,
     ProfileSection,
     format_json,
     format_text,
@@ -25,9 +26,14 @@ from tests.report._fixtures import make_row_factory
 def test_format_text_columns_present() -> None:
     rows = [make_row_factory(name="a", tokens=10)]
     out = format_text("hermes", rows, total_tokens=10)
-    # All expected headers must appear.
-    for col in ("profile", "name", "description", "tokens", "use_count", "pct_of_cap"):
-        assert col in out
+    # Every TEXT_COLUMNS header must appear in the rendered table. This
+    # covers the six documented usage fields (view_count, patch_count,
+    # last_used_at, last_viewed_at, last_patched_at) plus the structural
+    # columns (profile, name, description, tokens, use_count, pct_of_cap).
+    header_line = out.splitlines()[0]
+    rendered_headers = set(header_line.split())
+    for col in TEXT_COLUMNS:
+        assert col in rendered_headers, f"missing column header {col!r} in {header_line!r}"
 
 
 def test_format_text_truncates_description_to_60() -> None:
