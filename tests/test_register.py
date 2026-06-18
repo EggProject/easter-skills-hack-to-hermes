@@ -178,10 +178,11 @@ def test_register_silent_when_marker_already_seen(
     assert ctx.log_calls == []
 
 
-def test_register_warns_when_hermes_home_unset(
+def test_register_silent_when_hermes_home_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """If HERMES_HOME is not in the env, register(ctx) still completes without raising."""
+    """If HERMES_HOME is not in the env, register(ctx) stays silent (no log) and
+    does not raise. Per plan 03 TDD list: test_register_silent_when_hermes_home_unset."""
     from hermes_skill_creator_plugin import register
 
     checkout = tmp_path / "checkout"

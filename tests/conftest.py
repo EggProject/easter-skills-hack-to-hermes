@@ -29,8 +29,19 @@ import pytest
 P = ParamSpec("P")
 R = TypeVar("R")
 
+# Default sentinel path: the operator's live Hermes install. Tests must NEVER
+# write here. The decorator resolves HERMES_HOME lazily so that monkeypatched
+# env vars set inside a fixture are honored at call time.
+_LIVE_HERMES_AGENT = Path("~/.hermes/hermes-agent").expanduser()
+
+
+def _resolve_hermes_home() -> Path:
+    """Resolve HERMES_HOME from the current os.environ (post-monkeypatch)."""
+    return Path(os.environ.get("HERMES_HOME", "~/.hermes/hermes-agent")).expanduser()
+
+
 # Anchor for the live Hermes install. Tests must NEVER write here.
-HERMES_HOME = Path(os.environ.get("HERMES_HOME", "~/.hermes/hermes-agent")).expanduser()
+HERMES_HOME = _resolve_hermes_home()
 
 
 def assert_hermes_agent_untouched(func: Callable[P, R]) -> Callable[P, R]:
@@ -39,16 +50,20 @@ def assert_hermes_agent_untouched(func: Callable[P, R]) -> Callable[P, R]:
     Inside a tmp_path fixture, HERMES_HOME is monkey-patched to a tmp subdir,
     so tests pass through. If a test resolves the real `~/.hermes/hermes-agent`
     (i.e. HERMES_HOME was NOT monkey-patched), pytest.skip the test.
+
+    The sentinel check reads os.environ lazily so monkeypatch.setenv inside
+    a fixture is observed at call time.
     """
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         # The sentinel: if HERMES_HOME still points at the real ~/.hermes/hermes-agent,
         # the test is touching the live install and must be skipped.
-        if HERMES_HOME == Path("~/.hermes/hermes-agent").expanduser() and HERMES_HOME.exists():
+        current = _resolve_hermes_home()
+        if current == _LIVE_HERMES_AGENT and current.exists():
             pytest.skip(
                 f"refusing to run {func.__name__!r}: "
-                f"HERMES_HOME={HERMES_HOME} resolves to the live install. "
+                f"HERMES_HOME={current} resolves to the live install. "
                 "Use the hermes_home / hermes_checkout fixture to redirect to tmp_path."
             )
         return func(*args, **kwargs)

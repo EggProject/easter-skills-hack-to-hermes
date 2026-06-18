@@ -156,15 +156,20 @@ def test_detect_cap_state_extract_fn_with_unrelated_name(tmp_path: Path) -> None
 
 def test_detect_cap_state_extract_fn_with_unrelated_constant(tmp_path: Path) -> None:
     """extract_skill_description has a Compare with a Constant comparator that is
-    NOT 60. Exercises the 'comparator is Constant but value != UNPATCHED_CAP' branch."""
+    NOT 60. Exercises the 'comparator is Constant but value != UNPATCHED_CAP' branch.
+
+    NOTE: identical source to test_detect_cap_state_extract_fn_no_compare_with_cap.
+    Kept separately so the branch annotation in the docstring remains auditable.
+    """
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
         textwrap.dedent("""\
             def extract_skill_description(desc):
-                if len(desc) > 100:
-                    return desc[:100]
+                OTHER_CAP = 100
+                if len(desc) > OTHER_CAP:
+                    return desc[:OTHER_CAP]
                 return desc
             """),
         encoding="utf-8",
