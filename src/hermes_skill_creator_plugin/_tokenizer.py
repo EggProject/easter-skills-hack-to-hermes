@@ -43,7 +43,7 @@ class TokenizerProtocol(Protocol):
     """Protocol for a tokenizer. Implementations return an int >= 0."""
 
     def encode(self, text_to_encode: str) -> list[int]:
-        return []
+        """Encode a string into a list of token ids."""
 
 
 def chars_div_four(text: str) -> int:

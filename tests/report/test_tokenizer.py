@@ -97,3 +97,19 @@ def test_estimate_tokens_never_imports_tools_skills_tool() -> None:
                 assert not alias.name.startswith("tools.skills_tool")
         elif isinstance(node, ast.ImportFrom):
             assert not (node.module or "").startswith("tools.skills_tool")
+
+
+class _NonSizedTokenizer:
+    """encode() returns a value whose len() raises (TypeError)."""
+
+    def encode(self, text: str) -> int:  # type: ignore[override]
+        return 42  # int has no __len__
+
+
+def test_estimate_tokens_falls_back_when_tokenizer_returns_non_sized() -> None:
+    n = _tokenizer.estimate_tokens(
+        "foo",
+        "x" * 100,
+        tokenizer=_NonSizedTokenizer(),
+    )
+    assert n == len("foo " + "x" * 100) // 4
