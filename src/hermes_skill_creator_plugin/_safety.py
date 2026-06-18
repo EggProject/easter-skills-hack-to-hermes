@@ -20,8 +20,8 @@ from functools import wraps
 from pathlib import Path
 from typing import ParamSpec, TypeVar
 
-Params = ParamSpec("Params")
-Return = TypeVar("Return")
+FnParams = ParamSpec("FnParams")
+FnReturn = TypeVar("FnReturn")
 
 # Anchor for the live Hermes install. Tests must NEVER write here.
 # Tests monkey-patch this attribute to a tmp_path.
@@ -37,7 +37,8 @@ _SKIP_TEMPLATE = (
 
 def _current_hermes_home() -> Path:
     """Resolve HERMES_HOME at CALL time (after monkeypatch)."""
-    return Path(os.environ.get("HERMES_HOME", DEFAULT_HERMES_AGENT)).expanduser()
+    env_home = os.environ.get("HERMES_HOME", DEFAULT_HERMES_AGENT)
+    return Path(env_home).expanduser()
 
 
 # Module-level convenience for non-test use.
@@ -45,8 +46,8 @@ HERMES_HOME = _current_hermes_home()
 
 
 def assert_hermes_agent_untouched(
-    func: Callable[Params, Return],
-) -> Callable[Params, Return]:
+    func: Callable[FnParams, FnReturn],
+) -> Callable[FnParams, FnReturn]:
     """Decorator: skip the test if HERMES_HOME resolves to the live install.
 
     Inside a tmp_path fixture, HERMES_HOME is monkey-patched to a tmp
@@ -56,19 +57,14 @@ def assert_hermes_agent_untouched(
     """
 
     @wraps(func)
-    def wrapper(*args: Params.args, **kwargs: Params.kwargs) -> Return:
-        if (
-            _current_hermes_home() == _LIVE_HERMES_AGENT
-            and _LIVE_HERMES_AGENT.exists()
-        ):
+    def wrapper(*args: FnParams.args, **kwargs: FnParams.kwargs) -> FnReturn:
+        if _current_hermes_home() == _LIVE_HERMES_AGENT and _LIVE_HERMES_AGENT.exists():
             import pytest as _pytest
 
-            _pytest.skip(
-                _SKIP_TEMPLATE.format(
-                    name=func.__name__,
-                    home=_current_hermes_home(),
-                )
-            )
+            _pytest.skip(_SKIP_TEMPLATE.format(
+                name=func.__name__,
+                home=_current_hermes_home(),
+            ))
         return func(*args, **kwargs)
 
     return wrapper
