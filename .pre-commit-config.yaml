@@ -33,3 +33,10 @@ repos:
         pass_filenames: false
         types: [python]
         files: '^src/hermes_skill_creator_plugin/(?:__init__|_advisory)\.py$'
+  # wemake-python-styleguide (strictest). Required by 00-index.md Hard constraints
+  # and 10-toolchain-and-conventions.md D1. Scoped to B-plugin owned files.
+  - repo: https://github.com/wemake-services/wemake-python-styleguide
+    rev: 1.6.2
+    hooks:
+      - id: wemake-python-styleguide
+        files: '^(src/hermes_skill_creator_plugin/(?:__init__|_advisory)\.py|src/hermes_skill_creator_plugin/i18n/.*\.py|tests/.*\.py)$'
