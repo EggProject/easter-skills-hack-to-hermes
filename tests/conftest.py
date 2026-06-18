@@ -1,28 +1,38 @@
-"""Shared pytest fixtures for the hermes-skill-creator-plugin.
+"""tests/conftest.py — shared fixtures for the hermes-skill-creator-plugin test suite.
 
-The workstream-C deliverable (``_patcher.py`` + ``cli_patch.py`` +
-migration note) only needs a minimum Hermes-shaped checkout: a few
-files at the canonical paths with the byte-exact anchor lines the
-patcher matches against.
+Merged conftest (Phase 7 / PR #5): combines:
+  - main's hermes_home / hermes_checkout / skill_creator_home / real_hermes_agent_sentinel
+  - branch's SKILL_UTILS_PATCHED / SKILL_UTILS_BODY / PROMPT_BUILDER_PATCHED /
+    BACKGROUND_REVIEW_PATCHED / SKILL_MANAGER_TOOL_PATCHED / SKILLS_DOC_BODY /
+    worktree / frozen_time / assert_hermes_agent_untouched (function)
+  - hermes_checkout is overridden to lay down the padded branch content
+    inside main's hermes_home so both main-tests AND branch-tests pass.
 
-We use an INLINE minimal checkout here (per the workstream-C task
-spec: "for now, inline a minimal tmp_path fixture"). A separate
-``tests/fixtures/minimal_hermes/seed_minimal.py`` will be added in
-workstream F (the meta workstream) and will replace this inline
-fixture once F lands.
-
-The no-touch sentinel (``real_hermes_agent_sentinel``) wraps every
-patcher unit test to guarantee the live install is never written.
+TDD test cases for this module:
+  test_assert_hermes_agent_untouched_skips_when_path_live
+  test_assert_hermes_agent_untouched_runs_when_path_inside_tmp
+  test_hermes_home_fixture_resolves_under_tmp
+  test_hermes_checkout_fixture_provides_a_6_file_synthetic_repo
+  test_seed_minimal_creates_known_layout
+  test_hermes_subprocess_env_never_pops_hermes_session
+  test_decorator_preserves_test_return_value
+  test_decorator_propagates_assertion_errors
 """
 
 from __future__ import annotations
 
 import hashlib
+import os
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
+from functools import wraps
 from pathlib import Path
+from typing import Any, ParamSpec, TypeVar
 
 import pytest
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # ensure src/ is on sys.path even when pytest is invoked from a different cwd
 _SRC = Path(__file__).resolve().parent.parent / "src"
@@ -30,7 +40,7 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 
-# --- anchor lines (byte-exact, copied from the pinned Hermes source) ------
+# --- branch (workstream-C) padded anchor constants ------------------------
 
 SKILL_UTILS_BODY = '''\
 """Skill utility helpers (test fixture stand-in for agent/skill_utils.py)."""
@@ -50,9 +60,6 @@ def extract_skill_description(frontmatter: Dict[str, Any]) -> str:
 '''
 
 
-# We need 688 / 689 to be the line numbers of the cap-raise / slice lines.
-# SKILL_UTILS_BODY places them at L9/L10 of the body (12 body lines), so we
-# pad with 676 leading comment lines to land them at L688/L689.
 def _build_skill_utils_padded() -> str:
     lines: list[str] = []
     for i in range(1, 677):
@@ -77,29 +84,16 @@ MEMORY_GUIDANCE = (
 
 
 def _build_prompt_builder_padded() -> str:
-    """Pad so that:
-
-    - L158 is the E2 anchor (``necessary later, save it as a skill...``)
-    - L179 is the E1 anchor (``Skills that aren't maintained...``)
-    - L1421 is the E3 anchor (``After difficult/iterative tasks...``)
-    """
     lines: list[str] = []
-    # E2 lands at L158 -> 157 lines of padding BEFORE it
     for i in range(1, 158):
         lines.append(f"# padding {i}\n")
-    # L158 — E2 anchor
     lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
-    # 20 padding lines (L159..L178) -> E1 lands at L179
     for i in range(159, 179):
         lines.append(f"# padding {i}\n")
-    # L179 — E1 anchor (within SKILLS_GUIDANCE)
     lines.append('    "Skills that aren\'t maintained become liabilities."\n')
-    # 1241 padding lines (L180..L1420) -> E3 lands at L1421
     for i in range(180, 1421):
         lines.append(f"# padding {i}\n")
-    # L1421 — E3 anchor (12-space indent)
     lines.append('            "After difficult/iterative tasks, offer to save as a skill. "\n')
-    # trailing padding
     for i in range(1422, 1440):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
@@ -114,23 +108,12 @@ BACKGROUND_REVIEW_BODY = '''\
 
 
 def _build_background_review_padded() -> str:
-    """Pad so that:
-
-    - L105 is the E4 anchor (the closing of the option-4 paragraph)
-    - L192 is the E5 anchor
-    """
     lines: list[str] = []
-    # 104 padding lines (L1..L104) -> E4 lands at L105
     for i in range(1, 105):
         lines.append(f"# padding {i}\n")
-    # L105 — E4 anchor
-    # Use the actual em-dash (U+2014) bytes (e2 80 94), NOT the literal
-    # 6-character escape sequence "\\u2014".
     lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"\n")
-    # 86 padding lines (L106..L191) -> E5 lands at L192
     for i in range(106, 192):
         lines.append(f"# padding {i}\n")
-    # L192 — E5 anchor
     lines.append('    "(2), or (3).\\n\\n"\n')
     for i in range(193, 220):
         lines.append(f"# padding {i}\n")
@@ -146,26 +129,15 @@ SKILL_MANAGER_TOOL_BODY = '''\
 
 
 def _build_skill_manager_tool_padded() -> str:
-    """Pad so that:
-
-    - L1099/1100/1101 are the compound symbol locator
-    - L1129 is the E6 single-line anchor
-    - L1130 is the closing ``),``
-    """
     lines: list[str] = []
-    # 1098 padding lines (L1..L1098)
     for i in range(1, 1099):
         lines.append(f"# padding {i}\n")
-    # L1099 / L1100 / L1101 — compound symbol locator
     lines.append("SKILL_MANAGE_SCHEMA = {\n")
     lines.append('    "name": "skill_manage",\n')
     lines.append('    "description": (\n')
-    # L1102..L1128: implicit-concat description body (27 lines)
     for i in range(1102, 1129):
         lines.append(f'        "padding line {i} of description. "\n')
-    # L1129 — single-line anchor (unique end-of-value)
     lines.append('        "pitfalls come up; pin only guards against irrecoverable loss."\n')
-    # L1130
     lines.append("    ),\n")
     for i in range(1131, 1150):
         lines.append(f"# padding {i}\n")
@@ -190,22 +162,11 @@ future reuse.
 
 
 def _build_skills_doc_padded() -> str:
-    """Pad so L380 is the E7 anchor (the first paragraph under the
-    ``## Agent-Managed Skills (skill_manage tool)`` heading).
-
-    Layout:
-      L378 = ``## Agent-Managed Skills (skill_manage tool)`` heading
-      L379 = blank
-      L380 = the E7 anchor (the first paragraph)
-    """
     lines: list[str] = []
     for i in range(1, 378):
         lines.append(f"<!-- padding {i} -->\n")
-    # L378 = heading
     lines.append("## Agent-Managed Skills (skill_manage tool)\n")
-    # L379 = blank line
     lines.append("\n")
-    # L380 = the E7 anchor (the first paragraph)
     lines.append(
         "The agent can create, update, and delete its own skills via the "
         "`skill_manage` tool. This is the agent's **procedural memory** — "
@@ -215,57 +176,24 @@ def _build_skills_doc_padded() -> str:
     return "".join(lines)
 
 
-# --- the fixture ----------------------------------------------------------
+SKILLS_DOC_PATCHED = _build_skills_doc_padded()
 
 
-@pytest.fixture
-def hermes_checkout(tmp_path: Path) -> Generator[Path]:
-    """A USER-OWNED fake Hermes checkout (the --target for Script #1).
+# --- main (B-plugin) fixtures ---------------------------------------------
 
-    Lays down the minimum tree so Script #1's pre-validation can resolve
-    all anchors. NEVER touches the real ``~/.hermes/``.
-    """
-    checkout = tmp_path / "hermes-checkout"
-    (checkout / "agent").mkdir(parents=True)
-    (checkout / "tools").mkdir(parents=True)
-    (checkout / "hermes_cli").mkdir(parents=True)
-    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(parents=True)
-    (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
-    (checkout / "agent" / "prompt_builder.py").write_text(PROMPT_BUILDER_PATCHED, encoding="utf-8")
-    (checkout / "agent" / "background_review.py").write_text(
-        BACKGROUND_REVIEW_PATCHED, encoding="utf-8"
-    )
-    (checkout / "tools" / "skill_manager_tool.py").write_text(
-        SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8"
-    )
-    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
-        _build_skills_doc_padded(), encoding="utf-8"
-    )
-    # also create the "tools.skills_tool" so the import-strategy pre-flight
-    # can run a sanity import. (For the test path the script reads
-    # `from tools.skills_tool import` -- it only needs the IMPORT LINE
-    # to be absent, not the module to be importable.)
-    yield checkout
+# Default sentinel path: the operator's live Hermes install. Tests must NEVER
+# write here. The decorator resolves HERMES_HOME lazily so that monkeypatched
+# env vars set inside a fixture are honored at call time.
+_LIVE_HERMES_AGENT = Path("~/.hermes/hermes-agent").expanduser()
 
 
-@pytest.fixture
-def frozen_time(monkeypatch: pytest.MonkeyPatch) -> str:
-    monkeypatch.setenv("HERMES_SKILL_CREATOR_FROZEN_TIME", "2026-06-17T00:00:00Z")
-    return "2026-06-17T00:00:00Z"
+def _resolve_hermes_home() -> Path:
+    """Resolve HERMES_HOME from the current os.environ (post-monkeypatch)."""
+    return Path(os.environ.get("HERMES_HOME", "~/.hermes/hermes-agent")).expanduser()
 
 
-@pytest.fixture
-def real_hermes_agent_sentinel() -> str | None:
-    """Hash ~/.hermes/hermes-agent/agent/skill_utils.py before the test.
-
-    Returns the pre-test hash; tests can re-hash after the run and assert
-    equality. If the live install is missing, the fixture returns None and
-    tests should skip the no-touch check.
-    """
-    target = Path.home() / ".hermes" / "hermes-agent" / "agent" / "skill_utils.py"
-    if not target.exists():
-        return None
-    return hashlib.sha256(target.read_bytes()).hexdigest()
+# Anchor for the live Hermes install. Tests must NEVER write here.
+HERMES_HOME = _resolve_hermes_home()
 
 
 def assert_hermes_agent_untouched(pre: str | None) -> None:
@@ -277,9 +205,159 @@ def assert_hermes_agent_untouched(pre: str | None) -> None:
     assert pre == post, f"HERMES-AGENT TOUCHED: {target} sha changed {pre} -> {post}"
 
 
+def assert_hermes_agent_untouched_decorator(func: Callable[P, R]) -> Callable[P, R]:
+    """Decorator: skip the test if `HERMES_HOME` resolves to a live, writable path."""
+
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        current = _resolve_hermes_home()
+        if current == _LIVE_HERMES_AGENT and current.exists():
+            pytest.skip(
+                f"refusing to run {func.__name__!r}: "
+                f"HERMES_HOME={current} resolves to the live install. "
+                "Use the hermes_home / hermes_checkout fixture to redirect to tmp_path."
+            )
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @pytest.fixture
-def worktree(tmp_path: Path) -> Generator[Path]:
+def real_hermes_agent_sentinel(request: pytest.FixtureRequest) -> str:
+    """Sentinel: verify ``~/.hermes/hermes-agent/agent/skill_utils.py`` is
+    NOT mutated by the test.
+
+    Returns an opaque string token so the test can keep the linter quiet.
+    """
+    sentinel_path = Path("~/.hermes/hermes-agent/agent/skill_utils.py").expanduser()
+    pre_hash: str | None = None
+    if sentinel_path.is_file():
+        pre_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+
+    def _check() -> None:
+        if pre_hash is None:
+            return
+        if not sentinel_path.is_file():
+            return
+        post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+        assert post_hash == pre_hash, (
+            f"{sentinel_path} was modified by the test "
+            f"(pre={pre_hash[:12]}, post={post_hash[:12]})"
+        )
+
+    request.addfinalizer(_check)
+    return "sentinel-ok"
+
+
+@pytest.fixture
+def hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Provide a hermes_home rooted inside tmp_path; redirect HERMES_HOME env var."""
+    fake = tmp_path / "hermes-home"
+    fake.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HERMES_HOME", str(fake))
+    return fake
+
+
+@pytest.fixture
+def hermes_checkout(hermes_home: Path) -> Generator[Path, None, None]:
+    """Synthetic Hermes checkout for tests; lays down the padded branch anchor
+    files (SKILL_UTILS_PATCHED, etc.) so both main-tests and branch-tests work."""
+    checkout = hermes_home / "checkout"
+    (checkout / "agent").mkdir(parents=True, exist_ok=True)
+    (checkout / "tools").mkdir(parents=True, exist_ok=True)
+    (checkout / "hermes_cli").mkdir(parents=True, exist_ok=True)
+    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(
+        parents=True, exist_ok=True
+    )
+    (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
+    (checkout / "agent" / "prompt_builder.py").write_text(
+        PROMPT_BUILDER_PATCHED, encoding="utf-8"
+    )
+    (checkout / "agent" / "background_review.py").write_text(
+        BACKGROUND_REVIEW_PATCHED, encoding="utf-8"
+    )
+    (checkout / "tools" / "skill_manager_tool.py").write_text(
+        SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8"
+    )
+    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
+        SKILLS_DOC_PATCHED, encoding="utf-8"
+    )
+    yield checkout
+
+
+@pytest.fixture
+def skill_creator_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """HERMES_HOME rooted inside tmp_path with skills/ and profiles/ subdirs."""
+    home = tmp_path / "hermes-skill-creator-home"
+    (home / "skills").mkdir(parents=True)
+    (home / "profiles").mkdir(parents=True)
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    return home
+
+
+# --- branch fixtures ------------------------------------------------------
+
+
+@pytest.fixture
+def frozen_time(monkeypatch: pytest.MonkeyPatch) -> str:
+    monkeypatch.setenv("HERMES_SKILL_CREATOR_FROZEN_TIME", "2026-06-17T00:00:00Z")
+    return "2026-06-17T00:00:00Z"
+
+
+@pytest.fixture
+def worktree(tmp_path: Path) -> Generator[Path, None, None]:
     """A bare tmp worktree root for --emit-migration-note output."""
     wt = tmp_path / "worktree"
     wt.mkdir()
     yield wt
+
+
+# Minimal 6-file synthetic Hermes checkout, suitable for migration tests.
+MINIMAL_HERMES_FILES: dict[str, str] = {
+    "pyproject.toml": "[project]\nname = 'hermes-agent'\nversion = '0.0.0'\n",
+    "README.md": "# hermes-agent (synthetic fixture)\n",
+    "src/hermes_agent/__init__.py": "",
+    "src/hermes_agent/cli.py": "def main() -> None: pass\n",
+    "src/hermes_agent/skills.py": "SKILL_CAP = 12\n",
+    "skills/.gitkeep": "",
+}
+
+
+def seed_minimal(root: Path) -> Path:
+    """Materialize the 6-file synthetic Hermes checkout under `root`. Returns root."""
+    for rel, content in MINIMAL_HERMES_FILES.items():
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+    return root
+
+
+def hermes_subprocess_env() -> dict[str, str]:
+    """Return a child-process env that strips HERMES_SESSION without popping it
+    from the parent process."""
+    env = os.environ.copy()
+    env.pop("HERMES_SESSION", None)
+    return env
+
+
+__all__ = [
+    "HERMES_HOME",
+    "SKILL_UTILS_PATCHED",
+    "SKILL_UTILS_BODY",
+    "PROMPT_BUILDER_PATCHED",
+    "BACKGROUND_REVIEW_PATCHED",
+    "SKILL_MANAGER_TOOL_PATCHED",
+    "SKILLS_DOC_BODY",
+    "SKILLS_DOC_PATCHED",
+    "assert_hermes_agent_untouched",
+    "assert_hermes_agent_untouched_decorator",
+    "hermes_home",
+    "hermes_checkout",
+    "skill_creator_home",
+    "frozen_time",
+    "worktree",
+    "seed_minimal",
+    "hermes_subprocess_env",
+    "MINIMAL_HERMES_FILES",
+    "real_hermes_agent_sentinel",
+]
