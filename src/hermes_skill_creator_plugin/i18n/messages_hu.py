@@ -1,5 +1,7 @@
 """Hungarian i18n messages for hermes-skill-creator-plugin.
 
+See also: plans/03-plugin-spec.md (owner)
+
 TDD test cases:
     test_advisory_cap_hu_is_bilingual_line
 

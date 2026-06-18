@@ -228,6 +228,30 @@ def test_json_deterministic_with_frozen_time(
     )
 
 
+def test_json_multi_profile_is_single_valid_document(
+    hermes_home: Path, tmp_path: Path
+) -> None:
+    """Regression: default profile iteration writes ONE JSON object with all profiles.
+
+    Previously, format_json was called per-profile and concatenated with \\n\\n,
+    producing N separate JSON objects that parsers reject.
+    """
+    _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
+    # Named profiles live under <hermes_home>/profiles/<name> per _resolve_profiles.
+    _write_profile(hermes_home, name="profiles/work", config=None, skills={"b": "y"})
+    out = tmp_path / "report.json"
+    rc = cli_report.run(profile=None, sort="tokens", fmt="json", json_path=out)
+    assert rc == 0
+    obj = json.loads(out.read_text(encoding="utf-8"))  # MUST parse as one object.
+    assert len(obj["profiles"]) == 2
+    names = {p["profile_name"] for p in obj["profiles"]}
+    assert names == {"hermes", "work"}
+    # Top-level fields appear exactly once.
+    text = out.read_text(encoding="utf-8")
+    assert text.count('"tool":') == 1
+    assert text.count('"version":') == 1
+
+
 # --- sort modes ---
 
 

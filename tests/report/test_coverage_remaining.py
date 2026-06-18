@@ -99,12 +99,26 @@ def test_estimate_tokens_negative_count_uses_fallback() -> None:
     assert n == len("a bb") // 4
 
 
-# --- _reporter: render_na_or_value and unknown column (lines 98, 228) ---
+def test_estimate_tokens_negative_len_uses_fallback() -> None:
+    """Tokenizer whose encode() returns a sized object with negative __len__.
+
+    Exercises the `if n < 0: return None` branch in _try_tokenize.
+    """
+
+    class _NegLen:
+        def __len__(self) -> int:
+            return -3
+
+    class _Bad:
+        def encode(self, text: str):  # noqa: ARG002
+            return _NegLen()
+
+    n = _tokenizer.estimate_tokens("a", "bb", tokenizer=_Bad())
+    # _try_tokenize returns None on negative n, falling back to chars/4.
+    assert n == len("a bb") // 4
 
 
-def test_render_na_or_value_passes_through() -> None:
-    assert _reporter.render_na_or_value(5) == 5
-    assert _reporter.render_na_or_value(None) is None
+# --- _reporter: unknown column (lines 98, 228) ---
 
 
 def test_format_text_unknown_column_returns_empty() -> None:

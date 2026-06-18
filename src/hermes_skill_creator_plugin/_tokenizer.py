@@ -2,6 +2,8 @@
 
 Real model tokenizer with a deterministic `chars // 4` fallback.
 
+See also: plans/13-script-3-report.md
+
 TDD test cases for this module:
   test_estimate_tokens_uses_full_description
   test_estimate_tokens_calls_tokenizer_with_rendered_string
@@ -46,15 +48,31 @@ def _try_tokenize(tokenizer: Tokenizer | None, text: str) -> int | None:
         return None
     try:
         result = tokenizer.encode(text)
-    except Exception:
+    except (TypeError, ValueError, RuntimeError, OSError):
+        # Realistic tokenizer-failure modes: invalid input (TypeError/
+        # ValueError), model load failure (RuntimeError), or backing-store
+        # IO error (OSError). KeyboardInterrupt / SystemExit MUST propagate.
         return None
     # Real tokenizers (tiktoken, transformers) return a list of token ids.
-    # We honor the count semantics: len() of the result.
+    # We honor the count semantics: len() of the result. Python's `len()`
+    # raises TypeError for non-sized objects and ValueError for negative
+    # __len__ — both are valid signals to fall back to chars/4.
     try:
-        n = len(result)
-    except TypeError:
+        return len(result)
+    except (TypeError, ValueError):
         return None
-    return n
+
+
+# Module-level guard for the "warned once per run" contract. The reporter
+# iterates over many skills in a single run; we MUST emit the warning at
+# most once. Tests can call reset_warning_state() to clear this between cases.
+_WARNED_ONCE: bool = False
+
+
+def reset_warning_state() -> None:
+    """Reset the module-level 'warned' flag. Test-only — not for runtime use."""
+    global _WARNED_ONCE
+    _WARNED_ONCE = False
 
 
 def estimate_tokens(
@@ -63,7 +81,6 @@ def estimate_tokens(
     *,
     tokenizer: Tokenizer | None = None,
     warning: Callable[[str], None] | None = None,
-    warned: bool = False,
 ) -> int:
     """Tokenize `f"{name} {description}"` with the configured model's tokenizer.
 
@@ -79,18 +96,19 @@ def estimate_tokens(
         description: full skill description (NOT the truncated index form).
         tokenizer: optional tokenizer (any object with an `encode(str) -> Iterable[int]`
             method). When None or raising, the chars/4 fallback is used.
-        warning: optional callback invoked ONCE when the fallback is used
-            (a single-line bilingual warning).
-        warned: state flag — set True after the warning has been emitted so
-            the warning is logged once per run, not once per skill.
+        warning: optional callback invoked ONCE per process when the fallback
+            is used (a single-line bilingual warning). State is tracked at
+            module level so callers do not have to thread a flag.
 
     Returns:
         Non-negative int. Token count of the rendered name+description string.
     """
+    global _WARNED_ONCE
     rendered = f"{name} {description}"
     n = _try_tokenize(tokenizer, rendered)
     if n is None:
-        if warning is not None and not warned:
+        if warning is not None and not _WARNED_ONCE:
+            _WARNED_ONCE = True
             warning(
                 "[en] tokenizer unavailable, falling back to chars/4 "
                 "/ [hu] a tokenizer nem elérhető, chars/4 becslés"
@@ -99,4 +117,4 @@ def estimate_tokens(
     return n
 
 
-__all__ = ["estimate_tokens", "MAX_DESCRIPTION_LENGTH"]
+__all__ = ["estimate_tokens", "MAX_DESCRIPTION_LENGTH", "reset_warning_state"]

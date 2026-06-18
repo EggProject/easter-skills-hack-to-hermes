@@ -12,6 +12,7 @@ import pytest
 from hermes_skill_creator_plugin import _reporter
 from hermes_skill_creator_plugin._reporter import (
     DOCUMENTED_USAGE_FIELDS,
+    ProfileSection,
     format_json,
     format_text,
     sort_rows,
@@ -77,9 +78,7 @@ def test_format_json_shape() -> None:
         tool="x",
         version="0.1.0",
         generated_at="2026-06-17T00:00:00Z",
-        profile_name="hermes",
-        rows=rows,
-        total_tokens=10,
+        sections=[ProfileSection(profile_name="hermes", rows=rows, total_tokens=10)],
     )
     obj = json.loads(out)
     assert obj["tool"] == "x"
@@ -105,21 +104,12 @@ def test_format_json_shape() -> None:
 
 def test_format_json_deterministic_with_frozen_time() -> None:
     rows = [make_row_factory(name="a", tokens=10)]
+    sections = [ProfileSection(profile_name="hermes", rows=rows, total_tokens=10)]
     out1 = format_json(
-        tool="x",
-        version="0.1.0",
-        generated_at="2026-06-17T00:00:00Z",
-        profile_name="hermes",
-        rows=rows,
-        total_tokens=10,
+        tool="x", version="0.1.0", generated_at="2026-06-17T00:00:00Z", sections=sections
     )
     out2 = format_json(
-        tool="x",
-        version="0.1.0",
-        generated_at="2026-06-17T00:00:00Z",
-        profile_name="hermes",
-        rows=rows,
-        total_tokens=10,
+        tool="x", version="0.1.0", generated_at="2026-06-17T00:00:00Z", sections=sections
     )
     assert out1 == out2
     import hashlib
@@ -136,9 +126,7 @@ def test_format_json_includes_pct_of_cap() -> None:
         tool="x",
         version="0.1.0",
         generated_at="2026-06-17T00:00:00Z",
-        profile_name="hermes",
-        rows=rows,
-        total_tokens=512,
+        sections=[ProfileSection(profile_name="hermes", rows=rows, total_tokens=512)],
     )
     obj = json.loads(out)
     assert obj["profiles"][0]["enabled_skills"][0]["pct_of_cap"] == 50.0
@@ -151,12 +139,45 @@ def test_format_json_full_description_preserved() -> None:
         tool="x",
         version="0.1.0",
         generated_at="2026-06-17T00:00:00Z",
-        profile_name="hermes",
-        rows=rows,
-        total_tokens=10,
+        sections=[ProfileSection(profile_name="hermes", rows=rows, total_tokens=10)],
     )
     obj = json.loads(out)
     assert obj["profiles"][0]["enabled_skills"][0]["description"] == desc
+
+
+def test_format_json_multi_profile_is_single_valid_document() -> None:
+    """Regression: multi-profile JSON output MUST be a single valid JSON object.
+
+    Previously the reporter called format_json per-profile and joined the
+    outputs with newlines, producing N concatenated JSON objects that
+    downstream consumers (jq, JSON parsers) reject with 'Extra data'.
+    """
+    sections = [
+        ProfileSection(
+            profile_name="hermes",
+            rows=[make_row_factory(name="a", tokens=10)],
+            total_tokens=10,
+        ),
+        ProfileSection(
+            profile_name="work",
+            rows=[make_row_factory(name="b", tokens=20)],
+            total_tokens=20,
+        ),
+    ]
+    out = format_json(
+        tool="x",
+        version="0.1.0",
+        generated_at="2026-06-17T00:00:00Z",
+        sections=sections,
+    )
+    obj = json.loads(out)  # MUST parse as a single JSON object.
+    assert len(obj["profiles"]) == 2
+    assert obj["profiles"][0]["profile_name"] == "hermes"
+    assert obj["profiles"][1]["profile_name"] == "work"
+    # Top-level fields appear ONCE (not repeated per profile).
+    assert out.count('"tool":') == 1
+    assert out.count('"version":') == 1
+    assert out.count('"generated_at":') == 1
 
 
 # --- sort_rows ---

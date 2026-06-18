@@ -66,19 +66,18 @@ def test_estimate_tokens_chars_div_4_is_integer_division() -> None:
 
 
 def test_estimate_tokens_warning_logged_once() -> None:
+    _tokenizer.reset_warning_state()
     seen: list[str] = []
-    warned = {"flag": False}
 
     def warn(msg: str) -> None:
         seen.append(msg)
-        warned["flag"] = True
 
-    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=warn, warned=warned["flag"])
-    _tokenizer.estimate_tokens("c", "d", tokenizer=None, warning=warn, warned=warned["flag"])
-    # warned flag wasn't passed back; both calls log.
-    assert len(seen) >= 1
-    for line in seen:
-        assert "[en]" in line and "[hu]" in line
+    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=warn)
+    _tokenizer.estimate_tokens("c", "d", tokenizer=None, warning=warn)
+    _tokenizer.estimate_tokens("e", "f", tokenizer=None, warning=warn)
+    # The module-level guard ensures the warning fires exactly once.
+    assert len(seen) == 1
+    assert "[en]" in seen[0] and "[hu]" in seen[0]
 
 
 def test_estimate_tokens_no_warning_logged_when_tokenizer_ok() -> None:

@@ -2,6 +2,8 @@
 
 Hermes skill-creator reporter (READ-ONLY) — Script #3.
 
+See also: plans/13-script-3-report.md
+
 The reporter is the operator's "what is on right now, and what does it
 cost?" view. It is purely informational: NO file writes (except the
 operator-chosen --json PATH), NO config flips, NO install calls.
@@ -40,6 +42,7 @@ import click
 
 from ._enabled_detection import get_enabled_skills
 from ._reporter import (
+    ProfileSection,
     SkillRow,
     format_json,
     format_text,
@@ -382,7 +385,8 @@ def run(
         click.echo(EN.report_no_profiles, err=True)
         return 0
     generated_at = _now_iso()
-    all_sections: list[str] = []
+    text_sections: list[str] = []
+    json_sections: list[ProfileSection] = []
     for p in profile_paths:
         try:
             rows, total = _build_rows_for_profile(p, platform=platform, curator=curator)
@@ -391,19 +395,20 @@ def run(
             return 6
         rows = sort_rows(rows, sort)
         if fmt == "text":
-            all_sections.append(format_text(p.name, rows, total_tokens=total))
+            text_sections.append(format_text(p.name, rows, total_tokens=total))
         else:
-            all_sections.append(
-                format_json(
-                    tool="hermes-skill-creator-report",
-                    version="0.1.0",
-                    generated_at=generated_at,
-                    profile_name=p.name,
-                    rows=rows,
-                    total_tokens=total,
-                )
+            json_sections.append(
+                ProfileSection(profile_name=p.name, rows=rows, total_tokens=total)
             )
-    output = "\n\n".join(all_sections)
+    if fmt == "text":
+        output = "\n\n".join(text_sections)
+    else:
+        output = format_json(
+            tool="hermes-skill-creator-report",
+            version="0.1.0",
+            generated_at=generated_at,
+            sections=json_sections,
+        )
     if fmt == "json":
         # JSON mode: write to json_path (resolved above; default
         # `./skill-report.json` is operator-chosen, OUTSIDE the fixture tree).

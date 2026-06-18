@@ -3,6 +3,8 @@
 Single source of truth for "which skills are enabled for a profile?" — shared
 by Script #2 (apply) and Script #3 (reporter). Owns: hermes_skill_creator_plugin.
 
+See also: plans/06-script-2-profiles.md (owner), plans/13-script-3-report.md (consumer)
+
 The reporter (Script #3) imports get_enabled_skills() from this module at
 module top level. Script #2 also imports it. Neither re-implements the
 detection logic locally. If this module is unavailable at import time the

@@ -2,6 +2,8 @@
 
 Format text/JSON output and sort rows for the reporter. Owns: hermes_skill_creator_plugin.
 
+See also: plans/13-script-3-report.md
+
 n/a-vs-0 (binding, V8/W4 fix): render `n/a` iff the Curator row's
 `_persisted` flag is `False` (or the Curator module is absent). Render the
 recorded integer when `_persisted` is `True`, even if the count is `0`.
@@ -89,15 +91,6 @@ class SkillRow:
         object.__setattr__(self, "_sort_name", self.name)
 
 
-def render_na_or_value(value: int | None) -> int | None:
-    """Return the value unchanged — the n/a decision is made by the caller.
-
-    This helper exists so the call site is explicit about n/a handling.
-    It does NOT mutate the value.
-    """
-    return value
-
-
 def _truncate_for_display(description: str, *, width: int = 60) -> str:
     """Truncate `description` to `width` chars with a trailing ellipsis when over.
 
@@ -168,30 +161,19 @@ def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
     Rows with `n/a` on the primary sort column sort LAST.
     """
     if sort_key == "last_used_at":
-        # n/a rows sort LAST; non-na rows sorted by ISO 8601 descending
-        # (most-recent first), with skill name as the stable secondary key
-        # (ascending). We use a per-group sort: n/a rows go to the end with
-        # name asc, non-na rows are sorted by name asc and then we reverse
-        # the entire non-na list to put the most recent timestamp first
-        # while preserving name-asc within equal timestamps (because the
-        # sort is stable).
-        na_rows = sorted([r for r in rows if r.last_used_at is None], key=lambda r: r.name)
-        non_na = [r for r in rows if r.last_used_at is not None]
-        # Sort by (timestamp asc, name asc) — stable, name asc per bucket.
-        non_na.sort(key=lambda r: (r.last_used_at, r.name))
-        # Reverse the whole list. Within a bucket of equal timestamps, the
-        # names are now in DESC order (because of the whole-list reverse).
-        # To restore name asc within a bucket, sort AGAIN by name asc and
-        # use a custom key that puts the most-recent timestamp first.
-        # Simpler: group by timestamp, then within each group sort by name
-        # asc, then concatenate groups in REVERSE timestamp order.
+        # n/a rows sort LAST (name asc within the n/a group).
+        # non-na rows: most-recent first; within equal timestamps, name asc.
+        # Implementation: group by timestamp, name-asc sort within each
+        # group, then concatenate groups in reverse timestamp order.
         from collections import OrderedDict
 
+        na_rows = sorted([r for r in rows if r.last_used_at is None], key=lambda r: r.name)
         groups: OrderedDict[str, list[SkillRow]] = OrderedDict()
-        for r in non_na:
-            groups.setdefault(r.last_used_at or "", []).append(r)
+        for r in rows:
+            if r.last_used_at is not None:
+                groups.setdefault(r.last_used_at, []).append(r)
         for ts in groups:
-            groups[ts].sort(key=lambda r: r.name)  # name asc within bucket
+            groups[ts].sort(key=lambda r: r.name)
         out: list[SkillRow] = []
         for ts in reversed(list(groups.keys())):
             out.extend(groups[ts])
@@ -275,40 +257,61 @@ def format_text(
     return "\n".join(lines)
 
 
+@dataclass(frozen=True)
+class ProfileSection:
+    """One profile's section inside a multi-profile JSON report."""
+
+    profile_name: str
+    rows: list[SkillRow]
+    total_tokens: int
+
+
+def _skill_to_dict(r: SkillRow) -> dict[str, Any]:
+    return {
+        "name": r.name,
+        "description": r.description_full,
+        "tokens": r.tokens,
+        "use_count": r.use_count,
+        "view_count": r.view_count,
+        "patch_count": r.patch_count,
+        "last_used_at": r.last_used_at,
+        "last_viewed_at": r.last_viewed_at,
+        "last_patched_at": r.last_patched_at,
+        "pct_of_cap": r.pct_of_cap,
+    }
+
+
 def format_json(
     *,
     tool: str,
     version: str,
     generated_at: str,
-    profile_name: str,
-    rows: list[SkillRow],
-    total_tokens: int,
+    sections: list[ProfileSection],
 ) -> str:
-    """Render a deterministic JSON document for `profile_name`."""
+    """Render a deterministic JSON document for one OR MANY profiles.
+
+    Args:
+        tool: tool name (top-level).
+        version: tool version (top-level).
+        generated_at: ISO 8601 timestamp (top-level).
+        sections: list of ProfileSection, one per profile. The single-profile
+            case is `sections=[ProfileSection(...)]`; the output is always
+            a single valid JSON object with a `profiles: [...]` array.
+
+    Returns:
+        String with the rendered JSON document (sort_keys=True for stability).
+    """
     payload: dict[str, Any] = {
         "tool": tool,
         "version": version,
         "generated_at": generated_at,
         "profiles": [
             {
-                "profile_name": profile_name,
-                "enabled_skills": [
-                    {
-                        "name": r.name,
-                        "description": r.description_full,
-                        "tokens": r.tokens,
-                        "use_count": r.use_count,
-                        "view_count": r.view_count,
-                        "patch_count": r.patch_count,
-                        "last_used_at": r.last_used_at,
-                        "last_viewed_at": r.last_viewed_at,
-                        "last_patched_at": r.last_patched_at,
-                        "pct_of_cap": r.pct_of_cap,
-                    }
-                    for r in rows
-                ],
-                "total_tokens": total_tokens,
+                "profile_name": s.profile_name,
+                "enabled_skills": [_skill_to_dict(r) for r in s.rows],
+                "total_tokens": s.total_tokens,
             }
+            for s in sections
         ],
     }
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2)
@@ -316,12 +319,12 @@ def format_json(
 
 __all__ = [
     "SkillRow",
+    "ProfileSection",
     "make_row",
     "sort_rows",
     "format_text",
     "format_json",
     "TEXT_COLUMNS",
     "DOCUMENTED_USAGE_FIELDS",
-    "render_na_or_value",
     "_truncate_for_display",
 ]
