@@ -101,8 +101,7 @@ class _CallLog:
 # ---------------------------------------------------------------------------
 
 
-def _install_fake_hermes_apis(  # noqa: C901
-    monkeypatch: pytest.MonkeyPatch,
+def _install_fake_hermes_apis(monkeypatch: pytest.MonkeyPatch,
     *,
     profile_paths: list[Path],
     profile_names: list[str],
@@ -120,9 +119,9 @@ def _install_fake_hermes_apis(  # noqa: C901
 
     # 1) hermes_constants
     fake_hc = types.ModuleType("hermes_constants")
-    fake_hc.get_hermes_home_override = hc.get_hermes_home_override  # type: ignore[attr-defined]
-    fake_hc.set_hermes_home_override = hc.set_hermes_home_override  # type: ignore[attr-defined]
-    fake_hc.reset_hermes_home_override = hc.reset_hermes_home_override  # type: ignore[attr-defined]
+    fake_hc.get_hermes_home_override = hc.get_hermes_home_override
+    fake_hc.set_hermes_home_override = hc.set_hermes_home_override
+    fake_hc.reset_hermes_home_override = hc.reset_hermes_home_override
     monkeypatch.setitem(sys.modules, "hermes_constants", fake_hc)
 
     # 2) hermes_cli.profiles
@@ -136,7 +135,7 @@ def _install_fake_hermes_apis(  # noqa: C901
         log.list_profiles_calls += 1
         return list(infos)
 
-    fake_profiles.list_profiles = list_profiles  # type: ignore[attr-defined]
+    fake_profiles.list_profiles = list_profiles
     monkeypatch.setitem(sys.modules, "hermes_cli.profiles", fake_profiles)
     fake_hermes_cli = types.ModuleType("hermes_cli")
     monkeypatch.setitem(sys.modules, "hermes_cli", fake_hermes_cli)
@@ -157,10 +156,10 @@ def _install_fake_hermes_apis(  # noqa: C901
         cfg_state["saved"].append(dict(cfg))
 
     fake_config = types.ModuleType("hermes_cli.config")
-    fake_config.load_config = load_config  # type: ignore[attr-defined]
-    fake_config.save_config = save_config  # type: ignore[attr-defined]
+    fake_config.load_config = load_config
+    fake_config.save_config = save_config
     monkeypatch.setitem(sys.modules, "hermes_cli.config", fake_config)
-    fake_hermes_cli.config = fake_config  # type: ignore[attr-defined]
+    fake_hermes_cli.config = fake_config
 
     # 4) hermes_cli.skills_config — save_disabled_skills (the mutator)
     def save_disabled_skills(config, disabled, platform=None):
@@ -172,9 +171,9 @@ def _install_fake_hermes_apis(  # noqa: C901
         return config
 
     fake_sk = types.ModuleType("hermes_cli.skills_config")
-    fake_sk.save_disabled_skills = save_disabled_skills  # type: ignore[attr-defined]
+    fake_sk.save_disabled_skills = save_disabled_skills
     monkeypatch.setitem(sys.modules, "hermes_cli.skills_config", fake_sk)
-    fake_hermes_cli.skills_config = fake_sk  # type: ignore[attr-defined]
+    fake_hermes_cli.skills_config = fake_sk
 
     # 5) agent.skill_utils — get_disabled_skill_names (read-only; takes platform str)
     installed_now = set(skills_installed) if skills_installed is not None else set()
@@ -188,11 +187,11 @@ def _install_fake_hermes_apis(  # noqa: C901
         return {}, content
 
     fake_asu = types.ModuleType("agent.skill_utils")
-    fake_asu.get_disabled_skill_names = get_disabled_skill_names  # type: ignore[attr-defined]
-    fake_asu.parse_frontmatter = parse_frontmatter  # type: ignore[attr-defined]
-    fake_asu._installed_now = installed_now  # type: ignore[attr-defined]
+    fake_asu.get_disabled_skill_names = get_disabled_skill_names
+    fake_asu.parse_frontmatter = parse_frontmatter
+    fake_asu._installed_now = installed_now
     agent_pkg = types.ModuleType("agent")
-    agent_pkg.skill_utils = fake_asu  # type: ignore[attr-defined]
+    agent_pkg.skill_utils = fake_asu
     monkeypatch.setitem(sys.modules, "agent", agent_pkg)
     monkeypatch.setitem(sys.modules, "agent.skill_utils", fake_asu)
 
@@ -203,9 +202,9 @@ def _install_fake_hermes_apis(  # noqa: C901
             raise log.clear_cache_raises
 
     fake_pb = types.ModuleType("agent.prompt_builder")
-    fake_pb.clear_skills_system_prompt_cache = clear_skills_system_prompt_cache  # type: ignore[attr-defined]
+    fake_pb.clear_skills_system_prompt_cache = clear_skills_system_prompt_cache
     monkeypatch.setitem(sys.modules, "agent.prompt_builder", fake_pb)
-    agent_pkg.prompt_builder = fake_pb  # type: ignore[attr-defined]
+    agent_pkg.prompt_builder = fake_pb
 
     # 7) hermes_cli.skills_hub — do_install
     def do_install(
@@ -236,9 +235,9 @@ def _install_fake_hermes_apis(  # noqa: C901
         (target / "SKILL.md").write_text("---\nname: skill-creator\ndescription: migrated\n---\n")
 
     fake_sh = types.ModuleType("hermes_cli.skills_hub")
-    fake_sh.do_install = do_install  # type: ignore[attr-defined]
+    fake_sh.do_install = do_install
     monkeypatch.setitem(sys.modules, "hermes_cli.skills_hub", fake_sh)
-    fake_hermes_cli.skills_hub = fake_sh  # type: ignore[attr-defined]
+    fake_hermes_cli.skills_hub = fake_sh
 
     # Stash references on the test for assertions.
     monkeypatch.setattr("hermes_skill_creator_plugin._scope._fhc_for_test", hc, raising=False)
@@ -259,7 +258,7 @@ def fake_agent_module(monkeypatch: pytest.MonkeyPatch):
 
     state: dict = {"calls": []}
 
-    def parse_frontmatter(content):  # type: ignore[no-untyped-def]
+    def parse_frontmatter(content):
         state["calls"].append(content)
         if not content.startswith("---\n"):
             return {}, content
@@ -288,10 +287,10 @@ def fake_agent_module(monkeypatch: pytest.MonkeyPatch):
         return fm, body
 
     fake = types.ModuleType("agent.skill_utils")
-    fake.parse_frontmatter = parse_frontmatter  # type: ignore[attr-defined]
-    fake.get_disabled_skill_names = lambda platform=None: set()  # type: ignore[attr-defined]
+    fake.parse_frontmatter = parse_frontmatter
+    fake.get_disabled_skill_names = lambda platform=None: set()
     agent_pkg = types.ModuleType("agent")
-    agent_pkg.skill_utils = fake  # type: ignore[attr-defined]
+    agent_pkg.skill_utils = fake
     monkeypatch.setitem(sys.modules, "agent", agent_pkg)
     monkeypatch.setitem(sys.modules, "agent.skill_utils", fake)
     return fake
@@ -1018,11 +1017,11 @@ def test_audit_load_config_failure_recorded(installed, tmp_path: Path) -> None:
     import hermes_cli.config as hcc
 
     original = hcc.load_config
-    hcc.load_config = lambda: (_ for _ in ()).throw(RuntimeError("boom"))  # type: ignore[assignment]
+    hcc.load_config = lambda: (_ for _ in ()).throw(RuntimeError("boom"))
     try:
         report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
     finally:
-        hcc.load_config = original  # type: ignore[assignment]
+        hcc.load_config = original
     assert len(report["profiles"]) == 1
     assert any("load_config" in e for e in report["profiles"][0]["errors"])
 
@@ -1035,13 +1034,13 @@ def test_audit_get_disabled_failure_recorded(installed, tmp_path: Path) -> None:
     import agent.skill_utils as asu
 
     original = asu.get_disabled_skill_names
-    asu.get_disabled_skill_names = lambda platform=None: (_ for _ in ()).throw(  # type: ignore[assignment]
+    asu.get_disabled_skill_names = lambda platform=None: (_ for _ in ()).throw(
         RuntimeError("boom")
     )
     try:
         report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
     finally:
-        asu.get_disabled_skill_names = original  # type: ignore[assignment]
+        asu.get_disabled_skill_names = original
     assert any("get_disabled_skill_names" in e for e in report["profiles"][0]["errors"])
 
 
@@ -1061,11 +1060,11 @@ def test_audit_apply_save_disabled_failure_recorded(installed, tmp_path: Path) -
     )
     import hermes_cli.skills_config as hcsc
 
-    def _raiser(config, disabled, platform=None):  # type: ignore[no-untyped-def]
+    def _raiser(config, disabled, platform=None):
         raise RuntimeError("boom")
 
     original = hcsc.save_disabled_skills
-    hcsc.save_disabled_skills = _raiser  # type: ignore[assignment]
+    hcsc.save_disabled_skills = _raiser
     try:
         report = cli.run_audit(
             apply=True,
@@ -1073,7 +1072,7 @@ def test_audit_apply_save_disabled_failure_recorded(installed, tmp_path: Path) -
             frozen_time="2026-06-17T00:00:00Z",
         )
     finally:
-        hcsc.save_disabled_skills = original  # type: ignore[assignment]
+        hcsc.save_disabled_skills = original
     assert any("save_disabled_skills" in e for e in report["profiles"][0]["errors"])
 
 
@@ -1092,7 +1091,7 @@ def test_audit_apply_save_config_failure_recorded(installed, tmp_path: Path) -> 
     import hermes_cli.config as hcc
 
     original = hcc.save_config
-    hcc.save_config = lambda cfg: (_ for _ in ()).throw(RuntimeError("save_config boom"))  # type: ignore[assignment]
+    hcc.save_config = lambda cfg: (_ for _ in ()).throw(RuntimeError("save_config boom"))
     try:
         report = cli.run_audit(
             apply=True,
@@ -1100,7 +1099,7 @@ def test_audit_apply_save_config_failure_recorded(installed, tmp_path: Path) -> 
             frozen_time="2026-06-17T00:00:00Z",
         )
     finally:
-        hcc.save_config = original  # type: ignore[assignment]
+        hcc.save_config = original
     errors = report["profiles"][0]["errors"]
     # The error is attributed to save_config, NOT save_disabled_skills.
     assert any("save_config failed" in e for e in errors)
@@ -1148,7 +1147,7 @@ def test_walk_skills_skips_files(fake_agent_module, tmp_path: Path) -> None:
     assert _walk_skills(skills) == {"real"}
 
 
-def _write_skill_simple(skills_dir, name, frontmatter):  # type: ignore[no-untyped-def]
+def _write_skill_simple(skills_dir, name, frontmatter):
     skill_dir = skills_dir / name
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(f"---\n{frontmatter}\n---\n")
@@ -1291,7 +1290,7 @@ def test_walk_skills_handles_oserror(fake_agent_module, tmp_path: Path, monkeypa
 
     original_read_text = P.read_text
 
-    def patched(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched(self, *a, **k):
         if str(self).endswith("/broken/SKILL.md"):
             raise OSError("simulated")
         return original_read_text(self, *a, **k)
@@ -1377,7 +1376,7 @@ def test_audit_report_eq_with_dict_and_report() -> None:
         profiles=[],
     )
     # Non-dict, non-AuditReport → NotImplemented (Python falls back to False).
-    assert (r == 42) is False  # type: ignore[comparison-overlap]
+    assert (r == 42) is False
 
 
 def test_audit_report_hash() -> None:

@@ -272,7 +272,7 @@ def test_emit_advisory_swallows_oserror(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_advisory_no_setattr_on_skill_utils() -> None:  # noqa: C901
+def test_advisory_no_setattr_on_skill_utils() -> None:
     """Static check: the _advisory module does NOT import or setattr on
     agent.skill_utils. Per the plan: 'NO setattr(agent.skill_utils, ...). NO
     rebind of prompt_builder.extract_skill_description.'

@@ -78,7 +78,7 @@ def test_exit_zero_on_success(hermes_home: Path) -> None:
 def test_exit_six_when_enabled_detection_unavailable(hermes_home: Path, monkeypatch) -> None:
     _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
 
-    def _boom(*a, **kw):  # noqa: ANN001
+    def _boom(*a, **kw):
         raise ImportError("simulated missing _enabled_detection")
 
     monkeypatch.setattr(cli_report, "get_enabled_skills", _boom)
@@ -255,7 +255,6 @@ def test_sort_by_tokens(hermes_home: Path) -> None:
         config=None,
         skills={"a": "x" * 100, "b": "y" * 5, "c": "z" * 50},
     )
-    out = tmp_path_str_path = hermes_home.parent  # noqa: F841
     rc = cli_report.run(profile="hermes", sort="tokens", fmt="text", json_path=None)
     assert rc == 0
 
@@ -365,3 +364,17 @@ def test_report_uses_at_suffixed_timestamps() -> None:
             for m in re.finditer(rf"\b{legacy}\b", src):
                 tail = src[m.end() : m.end() + 4]
                 assert tail.startswith("_at"), f"legacy field {legacy!r} in {mod.__name__} at offset {m.start()}"
+
+
+def test_cli_report_main_entry_invokes_main(monkeypatch) -> None:
+    """Calling the _main_entry function exercises the standalone CLI path."""
+    from hermes_skill_creator_plugin import cli_report
+
+    called = {"n": 0}
+
+    def stub_main() -> None:
+        called["n"] += 1
+
+    monkeypatch.setattr(cli_report, "main", stub_main)
+    cli_report._main_entry()
+    assert called["n"] == 1

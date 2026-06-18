@@ -33,7 +33,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import frontmatter  # type: ignore[import-not-found]
+import frontmatter
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ def _disabled_set(config: dict[str, Any], platform: str | None) -> set[str]:
     return out
 
 
-def _platform_blocked(frontmatter_dict: dict[str, Any], platform: str | None) -> bool:  # noqa: C901
+def _platform_blocked(frontmatter_dict: dict[str, Any], platform: str | None) -> bool:
     """Return True when the skill's frontmatter ``platforms:`` section blocks ``platform``.
 
     Supports BOTH the reporter's contract (list of dicts with

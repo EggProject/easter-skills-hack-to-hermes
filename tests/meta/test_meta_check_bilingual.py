@@ -397,7 +397,7 @@ def test_help_text_skip_when_unreadable(tmp_path: Path, monkeypatch) -> None:
     def failing_read_text(self: Path, *args: object, **kwargs: object) -> str:
         if "ok.py" in str(self):
             raise OSError("intentional")
-        return real_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+        return real_read_text(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "read_text", failing_read_text)
     findings = run_all_checks(tmp_path)
@@ -448,13 +448,13 @@ def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.Mo
     )
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
     monkeypatch.setattr("sys.argv", ["check_bilingual.py"])
-    main_module = types.ModuleType("__main__")
-    main_module.__dict__.update(check_bilingual.__dict__)
-    main_module.__name__ = "__main__"
-    src = Path(check_bilingual.__file__).read_text(encoding="utf-8")
-    code = compile(src, check_bilingual.__file__, "exec")
+    # Use runpy to execute the tool's source as __main__ (no exec() per S102).
+    import runpy
     try:
-        exec(code, main_module.__dict__)  # noqa: S102
+        runpy.run_path(
+            str(check_bilingual.__file__),
+            run_name="__main__",
+        )
     except SystemExit as e:
         assert e.code in (0, 1)
 

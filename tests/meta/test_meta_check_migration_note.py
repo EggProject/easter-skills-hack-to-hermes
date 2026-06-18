@@ -142,7 +142,7 @@ def test_unreadable_migration_file_yields_finding(tmp_path: Path, monkeypatch) -
     def failing_read_text(self: Path, *args: object, **kwargs: object) -> str:
         if self.name == "MIGRATION.md":
             raise OSError("intentional")
-        return real_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+        return real_read_text(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "read_text", failing_read_text)
     findings = check_migration_files(tmp_path)
@@ -248,12 +248,12 @@ def test_main_module_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
     monkeypatch.setattr("sys.argv", ["check_migration_note.py"])
-    main_module = types.ModuleType("__main__")
-    main_module.__dict__.update(check_migration_note.__dict__)
-    main_module.__name__ = "__main__"
-    src = Path(check_migration_note.__file__).read_text(encoding="utf-8")
-    code = compile(src, check_migration_note.__file__, "exec")
+    # Use runpy to execute the tool's source as __main__ (no exec() per S102).
+    import runpy
     try:
-        exec(code, main_module.__dict__)  # noqa: S102
+        runpy.run_path(
+            str(check_migration_note.__file__),
+            run_name="__main__",
+        )
     except SystemExit as e:
         assert e.code in (0, 1)

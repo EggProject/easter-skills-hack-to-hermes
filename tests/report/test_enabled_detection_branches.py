@@ -14,8 +14,7 @@ def test_parse_frontmatter_fallback_when_module_missing(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\nname: foo\ndescription: x\n---\n# body\n", encoding="utf-8")
 
-    def _boom(*a, **kw):  # noqa: ANN001
-        raise ImportError("simulated")
+    def _boom(*a, **kw):raise ImportError("simulated")
 
     with patch.object(_enabled_detection.frontmatter, "load", _boom):
         meta = _enabled_detection._parse_frontmatter(p)

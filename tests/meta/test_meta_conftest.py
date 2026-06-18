@@ -35,7 +35,7 @@ def test_assert_hermes_agent_untouched_skips_when_path_live(monkeypatch: pytest.
     importlib.reload(conftest)
 
     @conftest.assert_hermes_agent_untouched
-    def would_touch_live() -> str:  # pragma: no cover - unreachable when guarded
+    def would_touch_live() -> str:
         return "TOUCHED"
 
     live_path = Path("~/.hermes/hermes-agent").expanduser()

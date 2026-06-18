@@ -58,7 +58,6 @@ repos:
           - --max-complexity=10
           - --select=E,W,F,C
           - --extend-select=B,PIE,Q,I,N,D,SIM,RSE,RET,ARG,SLF
-          - --extend-ignore=E203,E501,W503,E731
           - --show-source
           - --statistics
         files: '^(src/|tests/|tools/).*\.py$'

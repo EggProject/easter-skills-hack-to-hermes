@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402
+from hermes_skill_creator_plugin import assert_hermes_agent_untouched
+from hermes_skill_creator_plugin.skill_installer import (
     PINNED_UPSTREAM_COMMIT,
     T3_INVENTORY,
     detect_active_cap,

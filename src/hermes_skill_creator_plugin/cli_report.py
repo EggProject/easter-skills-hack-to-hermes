@@ -96,7 +96,7 @@ def _load_curator(hermes_home: Path) -> Any | None:
     (the reporter must not invent usage values).
     """
     try:
-        import tools.skill_usage as usage_mod  # type: ignore[import-not-found]
+        import tools.skill_usage as usage_mod
     except Exception:
         return None
     if not hasattr(usage_mod, "usage_report"):
@@ -345,8 +345,7 @@ def _reject_flag(flag_name: str) -> int:
 
 
 # Public, testable entry point.
-def run(  # noqa: C901
-    *,
+def run(*,
     profile: str | None = None,
     sort: str = "tokens",
     fmt: str = "text",
@@ -481,5 +480,6 @@ def main(
     )
 
 
-if __name__ == "__main__":
-    main()  # pragma: no cover
+def _main_entry() -> None:
+    """Module entry point — extracted for testability."""
+    main()

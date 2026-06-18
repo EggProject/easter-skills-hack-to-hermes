@@ -12,8 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-
+from hermes_skill_creator_plugin import assert_hermes_agent_untouched
 SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "skill-creator"
 SCRIPTS = SKILL_DIR / "scripts"
 EVAL_VIEWER = SKILL_DIR / "eval-viewer"

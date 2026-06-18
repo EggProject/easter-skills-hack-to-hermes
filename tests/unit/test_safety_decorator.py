@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_skill_creator_plugin._safety import (  # noqa: E402
+from hermes_skill_creator_plugin._safety import (
     _LIVE_HERMES_AGENT,
     HERMES_HOME,
     _current_hermes_home,
@@ -60,7 +60,7 @@ def test_decorator_skips_when_hermes_home_resolves_to_live(monkeypatch: pytest.M
     def inner() -> int:
         return 42
 
-    with pytest.raises(pytest.skip.Exception):  # type: ignore[misc]
+    with pytest.raises(pytest.skip.Exception):
         inner()
 
 

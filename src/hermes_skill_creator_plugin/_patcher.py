@@ -200,8 +200,7 @@ class PatcherResult:
 # --- the main entry point -------------------------------------------------
 
 
-def run_patch(  # noqa: C901
-    *,
+def run_patch(*,
     target: Path | None,
     check: bool,
     apply: bool,

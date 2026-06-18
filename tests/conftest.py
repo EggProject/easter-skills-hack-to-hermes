@@ -41,8 +41,10 @@ R = TypeVar("R")
 
 # ensure src/ is on sys.path even when pytest is invoked from a different cwd
 _SRC = Path(__file__).resolve().parent.parent / "src"
-if str(_SRC) not in sys.path:  # pragma: no cover
-    sys.path.insert(0, str(_SRC))
+# Always ensure src/ is at the front of sys.path. Idempotent: if it's already
+# there this is a no-op move; if not, it gets prepended.
+sys.path = [p for p in sys.path if p != str(_SRC)]
+sys.path.insert(0, str(_SRC))
 
 
 # --- branch (workstream-C) padded anchor constants ------------------------
@@ -201,15 +203,24 @@ def _resolve_hermes_home() -> Path:
 HERMES_HOME = _resolve_hermes_home()
 
 
-def assert_hermes_agent_untouched_sentinel(pre: str | None) -> None:  # pragma: no cover
+def assert_hermes_agent_untouched_sentinel(pre: str | None) -> None:
     """Sentinel: assert live install byte-identical.
 
     Function-form companion to the decorator exported by the plugin package.
     Currently unused by the test suite (the decorator form is used), but kept
-    in __all__ for external consumers that need a callable form. Marked
-    ``pragma: no cover`` so the 100% coverage gate does not flag it.
+    in __all__ for external consumers that need a callable form. When ``pre``
+    is provided we verify the post-install hash matches; when ``pre`` is
+    ``None`` the sentinel is a no-op (no live install to guard).
     """
-    return None
+    if pre is None:
+        return
+    sentinel_path = Path("~/.hermes/hermes-agent/agent/skill_utils.py").expanduser()
+    if not sentinel_path.is_file():
+        return
+    post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+    assert post_hash == pre, (
+        f"HERMES AGENT LIVE INSTAL MUTATED! pre={pre} post={post_hash}"
+    )
 
 
 @pytest.fixture
@@ -219,16 +230,34 @@ def real_hermes_agent_sentinel(request: pytest.FixtureRequest) -> str:
 
     Returns an opaque string token so the test can keep the linter quiet.
     """
+    return _real_hermes_agent_sentinel_impl(request)
+
+
+def _real_hermes_agent_sentinel_impl(request: pytest.FixtureRequest) -> str:
+    """Implementation factored out for direct unit testability."""
     sentinel_path = Path("~/.hermes/hermes-agent/agent/skill_utils.py").expanduser()
-    pre_hash: str | None = None
-    if sentinel_path.is_file():
-        pre_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
-    else:  # pragma: no cover
+    if not sentinel_path.is_file():
         # No live install — sentinel is a no-op for this run.
-        return "sentinel-no-live-install"
+        return _no_live_install_sentinel()
+    pre_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+    _install_sentinel_finalizer(request, sentinel_path, pre_hash)
+    return "sentinel-ok"
+
+
+def _no_live_install_sentinel() -> str:
+    """Return the no-live-install sentinel token."""
+    return "sentinel-no-live-install"
+
+
+def _install_sentinel_finalizer(
+    request: pytest.FixtureRequest,
+    sentinel_path: Path,
+    pre_hash: str,
+) -> None:
+    """Register a finalizer that checks the live install was not mutated."""
 
     def _check() -> None:
-        if not sentinel_path.is_file():  # pragma: no cover
+        if not sentinel_path.is_file():
             return
         post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
         assert post_hash == pre_hash, (
@@ -331,3 +360,4 @@ __all__ = [
     "MINIMAL_HERMES_FILES",
     "real_hermes_agent_sentinel",
 ]
+

@@ -62,11 +62,11 @@ def _make_fake_hermes_constants(
     }
 
     def get_hermes_home_override() -> str | None:
-        state["get_calls"] = int(state["get_calls"]) + 1  # type: ignore[arg-type]
-        return state["current"]  # type: ignore[return-value]
+        state["get_calls"] = int(state["get_calls"]) + 1
+        return state["current"]
 
     def set_hermes_home_override(path: str | Path | None) -> _FakeOverrideToken:
-        prev = state["current"]  # type: ignore[index]
+        prev = state["current"]
         state["set_calls"].append(path)
         state["current"] = str(path) if path is not None else None
         return _FakeOverrideToken(prev)
@@ -76,10 +76,10 @@ def _make_fake_hermes_constants(
         state["current"] = token.prev
 
     fake = types.ModuleType(module_name)
-    fake.get_hermes_home_override = get_hermes_home_override  # type: ignore[attr-defined]
-    fake.set_hermes_home_override = set_hermes_home_override  # type: ignore[attr-defined]
-    fake.reset_hermes_home_override = reset_hermes_home_override  # type: ignore[attr-defined]
-    fake._state = state  # type: ignore[attr-defined]
+    fake.get_hermes_home_override = get_hermes_home_override
+    fake.set_hermes_home_override = set_hermes_home_override
+    fake.reset_hermes_home_override = reset_hermes_home_override
+    fake._state = state
     monkeypatch.setitem(sys.modules, module_name, fake)
     return fake
 
@@ -134,12 +134,12 @@ def scope_path(tmp_path: Path) -> Path:
 
 def test_set_hermes_home_override_called(scope_module, fake_hermes_constants, scope_path: Path) -> None:
     """Entering the scope calls ``set_hermes_home_override(str(path))``."""
-    state = fake_hermes_constants._state  # type: ignore[attr-defined]
+    state = fake_hermes_constants._state
     with scope_module.hermes_home_scope(scope_path):
         # While inside the scope the override should match the path.
         assert state["current"] == str(scope_path)
-        assert len(state["set_calls"]) == 1  # type: ignore[arg-type]
-        assert str(state["set_calls"][0]) == str(scope_path)  # type: ignore[index]
+        assert len(state["set_calls"]) == 1
+        assert str(state["set_calls"][0]) == str(scope_path)
 
 
 def test_env_var_mirrored_into_os_environ(scope_module, scope_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -169,20 +169,20 @@ def test_scope_restores_on_normal_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """On normal exit both the override token AND env var are restored."""
-    state = fake_hermes_constants._state  # type: ignore[attr-defined]
+    state = fake_hermes_constants._state
     prev_env = "/prev/hermes/home"
     monkeypatch.setenv("HERMES_HOME", prev_env)
-    state["current"] = prev_env  # type: ignore[assignment]
+    state["current"] = prev_env
 
     with scope_module.hermes_home_scope(scope_path):
         # Inside: both are set to the scoped path.
         assert os.environ["HERMES_HOME"] == str(scope_path)
-        assert state["current"] == str(scope_path)  # type: ignore[comparison]
+        assert state["current"] == str(scope_path)
 
     # After: both restored to the prior values.
     assert os.environ["HERMES_HOME"] == prev_env
-    assert state["current"] == prev_env  # type: ignore[comparison]
-    assert len(state["reset_calls"]) == 1  # type: ignore[arg-type]
+    assert state["current"] == prev_env
+    assert len(state["reset_calls"]) == 1
 
 
 def test_scope_restores_on_exception(
@@ -192,18 +192,18 @@ def test_scope_restores_on_exception(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """An exception inside the scope still restores both values."""
-    state = fake_hermes_constants._state  # type: ignore[attr-defined]
+    state = fake_hermes_constants._state
     prev_env = "/prev/hermes/home"
     monkeypatch.setenv("HERMES_HOME", prev_env)
-    state["current"] = prev_env  # type: ignore[assignment]
+    state["current"] = prev_env
 
     with pytest.raises(RuntimeError, match="boom"):
         with scope_module.hermes_home_scope(scope_path):
             raise RuntimeError("boom")
 
     assert os.environ["HERMES_HOME"] == prev_env
-    assert state["current"] == prev_env  # type: ignore[comparison]
-    assert len(state["reset_calls"]) == 1  # type: ignore[arg-type]
+    assert state["current"] == prev_env
+    assert len(state["reset_calls"]) == 1
 
 
 def test_scope_restores_when_env_was_unset_before(
@@ -213,12 +213,12 @@ def test_scope_restores_when_env_was_unset_before(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """If the env var was unset before, it is unset after exit (not left as str(path))."""
-    state = fake_hermes_constants._state  # type: ignore[attr-defined]
+    state = fake_hermes_constants._state
     monkeypatch.delenv("HERMES_HOME", raising=False)
-    state["current"] = None  # type: ignore[assignment]
+    state["current"] = None
 
     with scope_module.hermes_home_scope(scope_path):
         assert os.environ["HERMES_HOME"] == str(scope_path)
 
     assert "HERMES_HOME" not in os.environ
-    assert state["current"] is None  # type: ignore[comparison]
+    assert state["current"] is None

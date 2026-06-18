@@ -242,3 +242,11 @@ def test_cli_emit_migration_note_with_git_failure(hermes_checkout: Path, monkeyp
         assert r.exit_code == EXIT_OK
         out_path = Path(td) / "MIGRATION.hermes-patch.md"
         assert out_path.exists()
+
+
+def test_cli_patch_main_entry_returns_main_exit_code(monkeypatch) -> None:
+    """Calling the _main_entry function exercises the standalone CLI path."""
+    from hermes_skill_creator_plugin import cli_patch
+
+    monkeypatch.setattr(cli_patch.main, "main", lambda standalone_mode=False: 0)
+    assert cli_patch._main_entry() == 0

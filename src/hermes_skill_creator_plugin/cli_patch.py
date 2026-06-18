@@ -213,5 +213,6 @@ def _git_head(target: Path) -> str:
         return ""
 
 
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main.main(standalone_mode=True))
+def _main_entry() -> int:
+    """Module entry point — extracted for testability."""
+    return main.main(standalone_mode=True)

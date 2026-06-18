@@ -28,9 +28,9 @@ dev = [
 ]
 
 [project.scripts]
-hermes-skill-creator-patch = "hermes_skill_creator_plugin.cli_patch:main"
+hermes-skill-creator-patch = "hermes_skill_creator_plugin.cli_patch:_main_entry"
 hermes-skill-creator-profiles = "hermes_skill_creator_plugin.cli_profiles:main"
-hermes-skill-creator-report = "hermes_skill_creator_plugin.cli_report:main"
+hermes-skill-creator-report = "hermes_skill_creator_plugin.cli_report:_main_entry"
 hermes-skill-creator-install = "hermes_skill_creator_plugin.skill_installer:install"
 
 [build-system]

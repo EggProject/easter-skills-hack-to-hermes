@@ -109,7 +109,7 @@ class AuditReport:
     def to_json_bytes(self) -> bytes:
         return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":")).encode("utf-8")
 
-    def __iter__(self):  # type: ignore[no-untyped-def]
+    def __iter__(self):
         return iter(self.to_dict())
 
     def __getitem__(self, key: str) -> Any:
@@ -174,7 +174,7 @@ def _walk_skills(skills_dir: Path) -> set[str]:
     directory name is the fallback. Directories without SKILL.md are
     ignored. The walk is robust to read errors (the skill is dropped).
     """
-    from agent.skill_utils import parse_frontmatter  # type: ignore[import-not-found]
+    from agent.skill_utils import parse_frontmatter
 
     if not skills_dir.is_dir():
         return set()
@@ -214,26 +214,8 @@ def _diff(current: set[str], desired: set[str]) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 
-def _audit_profile(  # noqa: C901
-    profile_path: Path,
-    *,
-    apply: bool,
-    skip_install: bool,
-    frozen_time: str | None,
-) -> dict[str, Any]:
-    """Audit (and optionally apply) a single profile.
-
-    Returns the per-profile row of the report. The call runs inside
-    ``hermes_home_scope(profile_path)`` so all ``load_config`` /
-    ``do_install`` / ``save_config`` calls resolve against the
-    scoped HERMES_HOME (per plan 06 D4 + AC-3.4 / AC-3.6).
-    """
-    from agent.prompt_builder import clear_skills_system_prompt_cache  # type: ignore[import-not-found]
-    from agent.skill_utils import get_disabled_skill_names
-    from hermes_cli.config import load_config, save_config  # type: ignore[import-not-found]
-    from hermes_cli.skills_config import save_disabled_skills  # type: ignore[import-not-found]
-    from hermes_cli.skills_hub import do_install  # type: ignore[import-not-found]
-
+def _new_row(profile_path: Path) -> tuple[dict[str, Any], list[str], list[str]]:
+    """Build the initial empty row + convenience handles for actions/errors."""
     row: dict[str, Any] = {
         "profile_name": profile_path.name or "hermes",
         "current_disabled": [],
@@ -249,99 +231,171 @@ def _audit_profile(  # noqa: C901
         "actions_taken": [],
         "errors": [],
     }
-    actions = row["actions_taken"]
-    errors = row["errors"]
+    return row, row["actions_taken"], row["errors"]
+
+
+def _load_config_or_error(
+    load_config: Any, errors: list[str], row: dict[str, Any]
+) -> Any:
+    """Call ``load_config``; on failure record the error and return the row sentinel."""
+    try:
+        return load_config()
+    except Exception as exc:
+        errors.append(f"load_config failed: {exc}")
+        return row
+
+
+def _read_disabled_or_empty(
+    get_disabled_skill_names: Any, errors: list[str]
+) -> set[str]:
+    """Read the currently-disabled skill names; fall back to an empty set on error."""
+    try:
+        return set(get_disabled_skill_names(platform=None))
+    except Exception as exc:
+        errors.append(f"get_disabled_skill_names failed: {exc}")
+        return set()
+
+
+def _populate_diff_row(
+    row: dict[str, Any],
+    disabled_now: set[str],
+    installed_now: set[str],
+) -> None:
+    """Fill in current/desired/diff sub-fields on ``row``."""
+    desired_disabled: set[str] = set(disabled_now) - NEVER_DISABLE
+    desired_installed: set[str] = set(installed_now) | {DESIRED_SKILL}
+    row["current_disabled"] = sorted(disabled_now)
+    row["current_installed"] = sorted(installed_now)
+    row["desired_disabled"] = sorted(desired_disabled)
+    row["desired_installed"] = sorted(desired_installed)
+    diff_disabled = _diff(disabled_now, desired_disabled)
+    diff_installed = _diff(installed_now, desired_installed)
+    row["diff"] = {
+        "added_disabled": diff_disabled["added"],
+        "removed_disabled": diff_disabled["removed"],
+        "added_installed": diff_installed["added"],
+        "removed_installed": diff_installed["removed"],
+    }
+
+
+def _apply_save_disabled(
+    save_disabled_skills: Any,
+    save_config: Any,
+    config: Any,
+    desired_disabled: set[str],
+    disabled_now: set[str],
+    actions: list[str],
+    errors: list[str],
+) -> None:
+    """Persist the desired-disabled set when it actually changes."""
+    if desired_disabled == disabled_now:
+        return
+    try:
+        save_disabled_skills(config, sorted(desired_disabled), platform=None)
+    except Exception as exc:
+        errors.append(f"save_disabled_skills failed: {exc}")
+        return
+    actions.append("save_disabled_skills")
+    try:
+        save_config(config)
+    except Exception as exc:
+        errors.append(f"save_config failed: {exc}")
+        return
+    actions.append("save_config")
+
+
+def _apply_do_install(
+    do_install: Any,
+    row: dict[str, Any],
+    actions: list[str],
+    errors: list[str],
+) -> None:
+    """Install (or refresh) the migrated skill-creator via the hub."""
+    try:
+        do_install(
+            DESIRED_SKILL,
+            category="",
+            force=True,
+            console=None,
+            skip_confirm=True,
+            invalidate_cache=True,
+            name_override="",
+        )
+    except Exception as exc:
+        msg = _bilingual("profiles_msg_hub_error", name=row["profile_name"], err=exc)
+        click.echo(msg)
+        errors.append(f"hub install failed: {exc}")
+        return
+    actions.append("do_install")
+
+
+def _apply_clear_cache(
+    clear_skills_system_prompt_cache: Any,
+    row: dict[str, Any],
+    actions: list[str],
+    errors: list[str],
+) -> None:
+    """Clear the system-prompt cache (warn-and-continue on failure)."""
+    try:
+        clear_skills_system_prompt_cache(clear_snapshot=True)
+    except Exception as exc:
+        msg = _bilingual("profiles_msg_cache_warn", name=row["profile_name"], err=exc)
+        click.echo(msg)
+        errors.append(f"cache clear failed: {exc}")
+        return
+    actions.append("clear_skills_system_prompt_cache")
+
+
+def _audit_profile(
+    profile_path: Path,
+    *,
+    apply: bool,
+    skip_install: bool,
+    frozen_time: str | None,
+) -> dict[str, Any]:
+    """Audit (and optionally apply) a single profile.
+
+    Returns the per-profile row of the report. The call runs inside
+    ``hermes_home_scope(profile_path)`` so all ``load_config`` /
+    ``do_install`` / ``save_config`` calls resolve against the
+    scoped HERMES_HOME (per plan 06 D4 + AC-3.4 / AC-3.6).
+    """
+    from agent.prompt_builder import clear_skills_system_prompt_cache
+    from agent.skill_utils import get_disabled_skill_names
+    from hermes_cli.config import load_config, save_config
+    from hermes_cli.skills_hub import do_install
+
+    row, actions, errors = _new_row(profile_path)
 
     with hermes_home_scope(profile_path):
         # Look up the mutator at call time so monkeypatch.setattr on
         # the module works. The top-of-function import caches a
         # reference; the test infrastructure may rebind it.
-        import hermes_cli.skills_config as _skills_config_mod  # type: ignore[import-not-found]
+        from hermes_cli.skills_config import save_disabled_skills
 
-        save_disabled_skills = _skills_config_mod.save_disabled_skills  # noqa: F811
-
-        # 1. config snapshot.
-        try:
-            config = load_config()
-        except Exception as exc:  # noqa: BLE001 — surface as a row error.
-            errors.append(f"load_config failed: {exc}")
+        config = _load_config_or_error(load_config, errors, row)
+        if config is row:
             return row
 
-        # 2. disabled_now (read from agent.skill_utils, NOT hermes_cli.skills_config).
-        try:
-            disabled_now: set[str] = set(get_disabled_skill_names(platform=None))
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"get_disabled_skill_names failed: {exc}")
-            disabled_now = set()
-
-        # 3. installed_now (walk the skills dir).
+        disabled_now = _read_disabled_or_empty(get_disabled_skill_names, errors)
         installed_now: set[str] = _walk_skills(profile_path / "skills")
+        _populate_diff_row(row, disabled_now, installed_now)
 
-        # 4. desired_disabled = disabled_now. NEVER add NEVER_DISABLE entries.
-        desired_disabled: set[str] = set(disabled_now) - NEVER_DISABLE
+        if not apply:
+            return row
 
-        # 5. desired_installed = installed_now ∪ {DESIRED_SKILL}.
-        desired_installed: set[str] = set(installed_now) | {DESIRED_SKILL}
-
-        row["current_disabled"] = sorted(disabled_now)
-        row["current_installed"] = sorted(installed_now)
-        row["desired_disabled"] = sorted(desired_disabled)
-        row["desired_installed"] = sorted(desired_installed)
-
-        diff_disabled = _diff(disabled_now, desired_disabled)
-        diff_installed = _diff(installed_now, desired_installed)
-        row["diff"] = {
-            "added_disabled": diff_disabled["added"],
-            "removed_disabled": diff_disabled["removed"],
-            "added_installed": diff_installed["added"],
-            "removed_installed": diff_installed["removed"],
-        }
-
-        # 6. apply writes.
-        if apply:
-            # 6a. save_disabled_skills (only if it would change).
-            if desired_disabled != disabled_now:
-                try:
-                    save_disabled_skills(config, sorted(desired_disabled), platform=None)
-                except Exception as exc:  # noqa: BLE001
-                    errors.append(f"save_disabled_skills failed: {exc}")
-                else:
-                    actions.append("save_disabled_skills")
-                    try:
-                        save_config(config)
-                    except Exception as exc:  # noqa: BLE001
-                        errors.append(f"save_config failed: {exc}")
-                    else:
-                        actions.append("save_config")
-
-            # 6b. do_install (always — even when installed_now already
-            # contains DESIRED_SKILL, the apply is idempotent and the
-            # migrated copy is authoritative).
-            if not skip_install:
-                try:
-                    do_install(
-                        DESIRED_SKILL,
-                        category="",
-                        force=True,
-                        console=None,
-                        skip_confirm=True,
-                        invalidate_cache=True,
-                        name_override="",
-                    )
-                    actions.append("do_install")
-                except Exception as exc:  # noqa: BLE001
-                    msg = _bilingual("profiles_msg_hub_error", name=row["profile_name"], err=exc)
-                    click.echo(msg)
-                    errors.append(f"hub install failed: {exc}")
-
-            # 6c. clear_skills_system_prompt_cache (warn-and-continue).
-            try:
-                clear_skills_system_prompt_cache(clear_snapshot=True)
-                actions.append("clear_skills_system_prompt_cache")
-            except Exception as exc:  # noqa: BLE001
-                msg = _bilingual("profiles_msg_cache_warn", name=row["profile_name"], err=exc)
-                click.echo(msg)
-                errors.append(f"cache clear failed: {exc}")
+        _apply_save_disabled(
+            save_disabled_skills,
+            save_config,
+            config,
+            set(disabled_now) - NEVER_DISABLE,
+            disabled_now,
+            actions,
+            errors,
+        )
+        if not skip_install:
+            _apply_do_install(do_install, row, actions, errors)
+        _apply_clear_cache(clear_skills_system_prompt_cache, row, actions, errors)
 
     return row
 
@@ -374,7 +428,7 @@ def run_audit(
     Returns:
         The ``AuditReport`` (also written to ``json_path`` if given).
     """
-    from hermes_cli.profiles import list_profiles  # type: ignore[import-not-found]
+    from hermes_cli.profiles import list_profiles
 
     # 0. Live-install refusal (safety contract). The refusal fires
     #    whenever HERMES_HOME resolves to the LIVE install AND --yes is

@@ -31,7 +31,7 @@ MAX_DESCRIPTION_LENGTH = _REPORTER_MAX_DESCRIPTION_LENGTH
 class Tokenizer(Protocol):
     """Protocol for a tokenizer. Implementations return an int >= 0."""
 
-    def encode(self, text: str) -> list[int]: ...  # noqa: E704
+    def encode(self, text: str) -> list[int]: ...
 
 
 def _chars_div_4(text: str) -> int:

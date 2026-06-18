@@ -452,7 +452,7 @@ def test_file_map_paths_handles_unreadable_index(tmp_path: Path, monkeypatch: py
     def failing_read_text(self: Path, *args: object, **kwargs: object) -> str:
         if self.name == "00-index.md":
             raise OSError("intentional")
-        return real_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+        return real_read_text(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "read_text", failing_read_text)
     assert check_line_count._file_map_paths(tmp_path) is None
@@ -605,7 +605,7 @@ def test_footer_drift_handles_unreadable_index(tmp_path: Path, monkeypatch: pyte
     def failing_read_text(self: Path, *args: object, **kwargs: object) -> str:
         if self.name == "00-index.md":
             raise OSError("intentional")
-        return real_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+        return real_read_text(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "read_text", failing_read_text)
     # _iter_plan_files falls back to glob when file map is None.
@@ -665,7 +665,7 @@ def test_budget_table_total_handles_unreadable_index(tmp_path: Path, monkeypatch
     def failing_read_text(self: Path, *args: object, **kwargs: object) -> str:
         if self.name == "00-index.md":
             raise OSError("intentional")
-        return real_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+        return real_read_text(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "read_text", failing_read_text)
     failures = check_line_count.check_budget_table_total(tmp_path)
@@ -692,14 +692,16 @@ def test_main_block_executes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(check_line_count, "REPO_ROOT", tmp_path)
     monkeypatch.setattr("sys.argv", ["check_line_count.py"])
     # Create a fresh module-like object whose __name__ is "__main__" so the
-    # `if __name__ == "__main__":` block fires when the file's source is exec'd.
+    # `if __name__ == "__main__":` block fires when the file's source is
+    # executed as __main__ via runpy (no exec() per S102).
+    import runpy
     main_module = types.ModuleType("__main__")
-    main_module.__dict__.update(check_line_count.__dict__)
     main_module.__name__ = "__main__"
-    src = Path(check_line_count.__file__).read_text(encoding="utf-8")
-    code = compile(src, check_line_count.__file__, "exec")
     try:
-        exec(code, main_module.__dict__)  # noqa: S102
+        runpy.run_path(
+            str(check_line_count.__file__),
+            run_name="__main__",
+        )
     except SystemExit as e:
         # The block calls sys.exit(main()); SystemExit is expected.
         assert e.code in (0, 1)

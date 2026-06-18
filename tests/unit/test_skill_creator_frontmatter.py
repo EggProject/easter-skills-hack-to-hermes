@@ -13,8 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from hermes_skill_creator_plugin import assert_hermes_agent_untouched  # noqa: F401
-from hermes_skill_creator_plugin.skill_installer import (  # noqa: E402
+from hermes_skill_creator_plugin import assert_hermes_agent_untouched
+from hermes_skill_creator_plugin.skill_installer import (
     FULL_DESC_CAP,
     SHORT_DESC_CAP,
 )
@@ -49,7 +49,7 @@ def _parse_frontmatter(text: str) -> dict:
     return _minimal_yaml_parse(block)
 
 
-def _minimal_yaml_parse(block: str) -> dict:  # noqa: C901
+def _minimal_yaml_parse(block: str) -> dict:
     """Tiny YAML parser: scalar + pipe-scalar + list + nested mappings.
 
     Good enough for the migrated skill's frontmatter; tests rely on PyYAML

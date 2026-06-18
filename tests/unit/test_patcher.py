@@ -96,7 +96,7 @@ def _split_markdown_row(row: str) -> list[str]:
     return cells
 
 
-def assert_hermes_agent_untouched_decorator(func):  # type: ignore[no-untyped-def]
+def assert_hermes_agent_untouched_decorator(func):
     """Apply the conftest ``assert_hermes_agent_untouched`` sentinel as a
     decorator: snapshots the live ``~/.hermes/hermes-agent`` pre-test
     hash, runs the wrapped test, and asserts the live file is
@@ -111,7 +111,7 @@ def assert_hermes_agent_untouched_decorator(func):  # type: ignore[no-untyped-de
     positional and keyword arguments (fixtures are passed by name).
     """
 
-    def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+    def wrapper(*args, **kwargs):
         target = Path.home() / ".hermes" / "hermes-agent" / "agent" / "skill_utils.py"
         pre: str | None = None
         if target.exists():
@@ -1059,13 +1059,13 @@ def test_cross_filesystem_different_fsid(
     import sys as _sys
     from collections import namedtuple
 
-    if _sys.platform == "win32":  # pragma: no cover
+    if _sys.platform == "win32":
         pytest.skip("POSIX-only statvfs test")
 
     StatVfs = namedtuple("StatVfs", "f_fsid")
     counter = {"n": 0}
 
-    def fake_statvfs(path):  # type: ignore[no-untyped-def]
+    def fake_statvfs(path):
         counter["n"] += 1
         return StatVfs(f_fsid=counter["n"])
 
@@ -1078,7 +1078,7 @@ def test_cross_filesystem_target_statvfs_raises(
 ) -> None:
     """When target's statvfs raises OSError, returns False."""
 
-    def fake_statvfs(_path):  # type: ignore[no-untyped-def]
+    def fake_statvfs(_path):
         raise OSError("simulated statvfs failure on target")
 
     monkeypatch.setattr("os.statvfs", fake_statvfs)
@@ -1094,7 +1094,7 @@ def test_cross_filesystem_tmp_statvfs_raises(
     StatVfs = namedtuple("StatVfs", "f_fsid")
     counter = {"n": 0}
 
-    def fake_statvfs(_path):  # type: ignore[no-untyped-def]
+    def fake_statvfs(_path):
         counter["n"] += 1
         if counter["n"] == 1:
             return StatVfs(f_fsid=42)
@@ -1114,7 +1114,7 @@ def test_apply_emits_cross_fs_warning(
     StatVfs = namedtuple("StatVfs", "f_fsid")
     counter = {"n": 0}
 
-    def fake_statvfs(_path):  # type: ignore[no-untyped-def]
+    def fake_statvfs(_path):
         counter["n"] += 1
         return StatVfs(f_fsid=counter["n"])
 
@@ -1268,9 +1268,9 @@ def test_assert_hermes_agent_untouched_actually_fires_on_tamper(
     # Monkeypatch Path.home() inside the decorator's scope by
     # monkeypatching the target resolution. We do this by writing
     # our own small wrapper that targets our sentinel file.
-    def make_decorator_for(target: Path):  # type: ignore[no-untyped-def]
-        def deco(func):  # type: ignore[no-untyped-def]
-            def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+    def make_decorator_for(target: Path):
+        def deco(func):
+            def wrapper(*args, **kwargs):
                 pre = hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None
                 try:
                     return func(target, pre, *args, **kwargs)

@@ -62,7 +62,7 @@ def _write_config(profile_path: Path, **skills_section: Any) -> None:
 
 
 @pytest.fixture
-def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:  # noqa: C901
+def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     """Replace ``agent.skill_utils`` with a tiny fake exposing
     ``parse_frontmatter(content) -> (frontmatter_dict, body)``.
 
@@ -73,7 +73,7 @@ def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     state: dict[str, object] = {"calls": []}
 
     def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
-        state["calls"].append(content)  # type: ignore[attr-defined]
+        state["calls"].append(content)
         if not content.startswith("---\n"):
             return {}, content
         end = content.find("\n---", 4)
@@ -185,16 +185,16 @@ def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
         return out
 
     fake = types.ModuleType("agent.skill_utils")
-    fake.parse_frontmatter = parse_frontmatter  # type: ignore[attr-defined]
-    fake._state = state  # type: ignore[attr-defined]
+    fake.parse_frontmatter = parse_frontmatter
+    fake._state = state
     # Also fake the get_disabled_skill_names symbol (not used by the
     # detection helper but used elsewhere in the audit pipeline; tests
     # can monkeypatch if needed).
-    fake.get_disabled_skill_names = lambda platform=None: set()  # type: ignore[attr-defined]
+    fake.get_disabled_skill_names = lambda platform=None: set()
     # Create a parent ``agent`` module so ``from agent.skill_utils
     # import ...`` works in the production code path.
     agent_pkg = types.ModuleType("agent")
-    agent_pkg.skill_utils = fake  # type: ignore[attr-defined]
+    agent_pkg.skill_utils = fake
     monkeypatch.setitem(sys.modules, "agent", agent_pkg)
     monkeypatch.setitem(sys.modules, "agent.skill_utils", fake)
     return fake
@@ -509,7 +509,7 @@ def test_get_enabled_skills_oserror_on_read_skill_md(
     original_read_text = P.read_text
     call_count = {"n": 0}
 
-    def patched_read_text(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched_read_text(self, *a, **k):
         call_count["n"] += 1
         if call_count["n"] >= 2:
             raise OSError("simulated")
@@ -538,7 +538,7 @@ def test_get_enabled_skills_oserror_on_walk_skill_md(
     original_read_text = P.read_text
     state = {"broken_seen": False}
 
-    def patched_read_text(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched_read_text(self, *a, **k):
         if self.name == "SKILL.md" and "broken" in str(self):
             state["broken_seen"] = True
             raise OSError("simulated")
@@ -568,7 +568,7 @@ def test_get_enabled_skills_walk_read_oserror_in_conditional_pass(
     original_read_text = P.read_text
     call_count = {"n": 0}
 
-    def patched_read_text(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched_read_text(self, *a, **k):
         call_count["n"] += 1
         if call_count["n"] >= 3:  # let both first walks succeed, fail on the conditional pass
             raise OSError("simulated")
@@ -742,13 +742,13 @@ def test_get_enabled_skills_platform_filter_skill_md_missing(enabled_detection, 
     from hermes_skill_creator_plugin import _enabled_detection as ed
 
     real_walk = ed._walk_installed_skill_names
-    ed._walk_installed_skill_names = lambda d: {"synthetic"}  # type: ignore[assignment]
+    ed._walk_installed_skill_names = lambda d: {"synthetic"}
     try:
         enabled = ed.get_enabled_skills(profile, platform="darwin")
         # synthetic is in installed_names, has no SKILL.md → kept.
         assert "synthetic" in enabled
     finally:
-        ed._walk_installed_skill_names = real_walk  # type: ignore[assignment]
+        ed._walk_installed_skill_names = real_walk
 
 
 def test_get_enabled_skills_conditional_skill_md_missing(enabled_detection, tmp_path: Path) -> None:
@@ -761,13 +761,13 @@ def test_get_enabled_skills_conditional_skill_md_missing(enabled_detection, tmp_
     from hermes_skill_creator_plugin import _enabled_detection as ed
 
     real_walk = ed._walk_installed_skill_names
-    ed._walk_installed_skill_names = lambda d: {"synthetic"}  # type: ignore[assignment]
+    ed._walk_installed_skill_names = lambda d: {"synthetic"}
     try:
         enabled = ed.get_enabled_skills(profile)
         # synthetic is in installed_names, has no SKILL.md → kept.
         assert "synthetic" in enabled
     finally:
-        ed._walk_installed_skill_names = real_walk  # type: ignore[assignment]
+        ed._walk_installed_skill_names = real_walk
 
 
 def test_get_enabled_skills_find_skill_md_cross_reference(enabled_detection, tmp_path: Path) -> None:
@@ -803,7 +803,7 @@ def test_get_enabled_skills_find_skill_md_cross_reference_oserror(
     original_read_text = P.read_text
     state = {"b_failed": False}
 
-    def patched_read_text(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched_read_text(self, *a, **k):
         if self.name == "SKILL.md" and str(self).endswith("/b/SKILL.md"):
             state["b_failed"] = True
             raise OSError("simulated")
@@ -896,7 +896,7 @@ def test_find_skill_md_skips_subdirs_with_unreadable_skill_md(
     original_read_text = P.read_text
     state = {"broken_failed": False}
 
-    def patched_read_text(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched_read_text(self, *a, **k):
         if str(self).endswith("/broken/SKILL.md"):
             state["broken_failed"] = True
             raise OSError("simulated")
@@ -1041,7 +1041,7 @@ def test_find_skill_md_skips_subdir_with_unreadable_skill_md_in_loop(
 
     original_read_text = P.read_text
 
-    def patched_read_text(self, *a, **k):  # type: ignore[no-untyped-def]
+    def patched_read_text(self, *a, **k):
         if str(self).endswith("/broken/SKILL.md"):
             raise OSError("simulated")
         return original_read_text(self, *a, **k)
@@ -1111,13 +1111,13 @@ def test_apply_platform_filter_skill_md_none(enabled_detection, tmp_path: Path) 
     from hermes_skill_creator_plugin import _enabled_detection as ed
 
     real_walk = ed._walk_installed_skill_names
-    ed._walk_installed_skill_names = lambda d: {"synthetic"}  # type: ignore[assignment]
+    ed._walk_installed_skill_names = lambda d: {"synthetic"}
     try:
         result = ed._apply_platform_filter({"synthetic"}, tmp_path, "darwin")
         # skill_md is None for "synthetic" → kept.
         assert "synthetic" in result
     finally:
-        ed._walk_installed_skill_names = real_walk  # type: ignore[assignment]
+        ed._walk_installed_skill_names = real_walk
 
 
 def test_split_top_level_commas_trailing_comma(

@@ -16,11 +16,9 @@ def test_parse_frontmatter_fallback_handles_oserror(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\nname: x\n---\n", encoding="utf-8")
 
-    def _boom(*a, **kw):  # noqa: ANN001
-        raise ImportError("nope")
+    def _boom(*a, **kw):raise ImportError("nope")
 
-    def _oserror(*a, **kw):  # noqa: ANN001
-        raise OSError("disk gone")
+    def _oserror(*a, **kw):raise OSError("disk gone")
 
     with patch.object(_enabled_detection.frontmatter, "load", _boom):
         with patch.object(Path, "read_text", _oserror):
@@ -31,8 +29,7 @@ def test_parse_frontmatter_no_frontmatter_marker(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("no frontmatter\n", encoding="utf-8")
 
-    def _boom(*a, **kw):  # noqa: ANN001
-        raise ImportError("no frontmatter lib")
+    def _boom(*a, **kw):raise ImportError("no frontmatter lib")
 
     with patch.object(_enabled_detection.frontmatter, "load", _boom):
         assert _enabled_detection._parse_frontmatter(p) == {}
@@ -42,8 +39,7 @@ def test_parse_frontmatter_unterminated_block(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\nname: x\n", encoding="utf-8")  # no terminator
 
-    def _boom(*a, **kw):  # noqa: ANN001
-        raise ImportError("no frontmatter lib")
+    def _boom(*a, **kw):raise ImportError("no frontmatter lib")
 
     with patch.object(_enabled_detection.frontmatter, "load", _boom):
         assert _enabled_detection._parse_frontmatter(p) == {}
@@ -53,8 +49,7 @@ def test_load_config_handles_oserror(tmp_path: Path) -> None:
     p = tmp_path / "config.yaml"
     p.write_text("a: 1\n", encoding="utf-8")
 
-    def _boom(*a, **kw):  # noqa: ANN001
-        raise OSError("disk gone")
+    def _boom(*a, **kw):raise OSError("disk gone")
 
     with patch.object(Path, "read_text", _boom):
         assert _enabled_detection._load_config(tmp_path) == {}
@@ -110,8 +105,7 @@ def test_estimate_tokens_negative_len_uses_fallback() -> None:
             return -3
 
     class _Bad:
-        def encode(self, text: str):  # noqa: ARG002
-            return _NegLen()
+        def encode(self, text: str):return _NegLen()
 
     n = _tokenizer.estimate_tokens("a", "bb", tokenizer=_Bad())
     # _try_tokenize returns None on negative n, falling back to chars/4.
@@ -155,8 +149,7 @@ def test_run_with_no_profiles_returns_zero(monkeypatch, hermes_home: Path) -> No
 
 
 def test_check_json_path_oserror_on_resolve(monkeypatch, tmp_path: Path) -> None:
-    def _boom(self):  # noqa: ANN001
-        raise OSError("nope")
+    def _boom(self):raise OSError("nope")
 
     with patch.object(Path, "resolve", _boom):
         # When both resolves fail, returns False.
@@ -167,7 +160,7 @@ def test_check_json_path_hermes_home_resolves_raises(monkeypatch, tmp_path: Path
     """When only the hermes_home.resolve() raises, the function returns False."""
     real = Path.resolve
 
-    def _wrapped(self, *a, **kw):  # noqa: ANN001
+    def _wrapped(self, *a, **kw):
         s = str(self)
         # Raise only for the hermes_home (tmp_path), not for the json_path.
         if s == str(tmp_path):
