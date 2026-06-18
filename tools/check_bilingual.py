@@ -34,7 +34,11 @@ SRC_DIRS = ("src", "scripts", "skills")
 
 # `print` and `logger.{info,warning,error}` calls.
 CONSOLE_FUNCS = frozenset({"print", "info", "warning", "error", "debug", "critical"})
-BILINGUAL_RE = re.compile(r"\[en\][^/]+/ \[hu\]")
+# The bilingual surface: `[en] <any content, may contain '/'> / [hu] <any content>`.
+# Non-greedy `+?` keeps the en-side tight so the FIRST `/ [hu]` separator wins.
+# `\S` after each marker requires non-empty content on both sides — a bare
+# `[en] / [hu]` (zero-length message) is not a real bilingual message.
+BILINGUAL_RE = re.compile(r"\[en\]\s*\S.*?/ \[hu\]\s*\S")
 HELP_EN_SECTION = "Usage (English)"
 HELP_HU_SECTION = "Használat (magyar)"
 

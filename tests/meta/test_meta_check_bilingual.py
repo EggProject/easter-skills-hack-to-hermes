@@ -95,19 +95,23 @@ def test_console_message_with_hu_on_separate_line_fails(tmp_path: Path) -> None:
     assert len(bilingual_findings) >= 2
 
 
-def test_click_echo_calls_in_src_have_bilingual_argument(tmp_path: Path) -> None:
-    """`click.echo("[en] ... / [hu] ...")` is bilingual => no finding."""
-    # click.echo resolves to attribute 'echo' — not in CONSOLE_FUNCS so it's a no-op.
-    # This test asserts the converse: a click.echo with NON-bilingual text is NOT
-    # flagged (because echo isn't a print). The bilingual surface here is the
-    # console-message check covering `print` and `logger.{info,warning,error}`.
+def test_click_echo_calls_are_not_in_console_funcs(tmp_path: Path) -> None:
+    """click.echo resolves to attribute 'echo' — not in CONSOLE_FUNCS, so it is skipped.
+
+    The console-message check covers `print` and `logger.{info,warning,error,debug,
+    critical}` only; `click.echo` is intentionally OUT of scope. A click.echo with
+    non-bilingual text MUST NOT be flagged (its bilingual surface is the click
+    command's --help docstring, asserted separately by `test_help_text_*`).
+    """
     _write_src(
         tmp_path,
         "cli.py",
         """\
+        import click
         def run() -> None:
-            print("[en] hello / [hu] szia")
-            """,
+            click.echo("[en] hello / [hu] szia")
+            click.echo("plain non-bilingual")  # would be a violation if echo were checked
+        """,
     )
     assert check_console_messages(tmp_path) == []
 
@@ -230,6 +234,22 @@ def test_console_message_with_dynamic_string_skipped(tmp_path: Path) -> None:
     )
     findings = check_console_messages(tmp_path)
     # Dynamic strings are skipped (the runtime contract enforces bilingual at runtime).
+    assert findings == []
+
+
+def test_console_message_with_embedded_slash_passes(tmp_path: Path) -> None:
+    """Slashes inside the en/hu content (paths, URLs) MUST NOT break the match."""
+    _write_src(
+        tmp_path,
+        "url.py",
+        """\
+        def run() -> None:
+            print("[en] see /tmp/x / [hu] lásd /tmp/x")
+            print("[en] http://example.com / [hu] http://example.com")
+            print("[en] step 1/2 done / [hu] 1/2 lépés kész")
+        """,
+    )
+    findings = check_console_messages(tmp_path)
     assert findings == []
 
 
