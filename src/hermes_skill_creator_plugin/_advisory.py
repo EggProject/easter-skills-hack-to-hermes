@@ -69,20 +69,15 @@ def detect_cap_state(target_dir: Path) -> str:
     skill_utils = target_dir / "agent" / "skill_utils.py"
     if not skill_utils.exists():
         return UNKNOWN_STATE
-    state = _read_and_parse(skill_utils)
-    if state is None:
-        return UNKNOWN_STATE
-    return state
-
-
-def _read_and_parse(skill_utils: Path) -> str | None:
-    """Read and parse ``skill_utils``; return its cap state or ``None``."""
     try:
         source = skill_utils.read_text(encoding="utf-8")
         tree = ast.parse(source)
     except (OSError, SyntaxError):
-        return None
-    return _walk_tree_for_marker(tree)
+        return UNKNOWN_STATE
+    state = _walk_tree_for_marker(tree)
+    if state is None:
+        return UNKNOWN_STATE
+    return state
 
 
 def _walk_tree_for_marker(tree: ast.AST) -> str | None:
@@ -112,12 +107,18 @@ def _scan_func_for_marker(func: ast.FunctionDef) -> str | None:
 def _scan_comparators(comparators: list[ast.expr]) -> str | None:
     """Map a Compare's comparator list to its cap state, or ``None``."""
     for comparator in comparators:
-        is_constant = isinstance(comparator, ast.Constant)
-        is_name = isinstance(comparator, ast.Name)
-        if is_constant and comparator.value == UNPATCHED_CAP:
-            return UNPATCHED_STATE
-        if is_name and comparator.id == PATCHED_CAP_REFERENCE:
-            return PATCHED_STATE
+        state = _match_comparator(comparator)
+        if state is not None:
+            return state
+    return None
+
+
+def _match_comparator(comparator: ast.expr) -> str | None:
+    """Return the cap state for one Compare comparator, or ``None``."""
+    if isinstance(comparator, ast.Constant) and comparator.value == UNPATCHED_CAP:
+        return UNPATCHED_STATE
+    if isinstance(comparator, ast.Name) and comparator.id == PATCHED_CAP_REFERENCE:
+        return PATCHED_STATE
     return None
 
 

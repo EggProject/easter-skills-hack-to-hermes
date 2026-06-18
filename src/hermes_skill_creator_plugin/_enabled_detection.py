@@ -375,7 +375,7 @@ def get_enabled_skills(
     return frozenset(installed)
 
 
-PUBLIC_NAMES = [
+__all__ = [
     "get_enabled_skills",
     # Original helpers.
     "_parse_frontmatter",

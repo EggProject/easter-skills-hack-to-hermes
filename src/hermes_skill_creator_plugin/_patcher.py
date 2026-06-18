@@ -122,7 +122,7 @@ _MISSING_FILE = "<file missing>"
 _NOT_FOUND = "<not found>"
 _OUT_OF_RANGE = "<out of range>"
 
-PUBLIC_NAMES = [
+__all__ = [
     # exit codes
     "EXIT_OK",
     "EXIT_VALIDATION",
@@ -227,12 +227,13 @@ def run_patch(*, target: Path | None, check: bool, apply: bool,
     preflight = _run_preflight(target, force, i_accept_line_drift)
     if preflight is not None:
         return _empty_result([*diagnostics, preflight[1]], preflight[0])
-    target_path = Path(target).resolve()
+    assert target is not None  # narrowed by preflight
+    target_path = target.resolve()
     skill_utils = target_path / TOOLS_SKILL_UTILS_REL
     if file_has_circular_import(skill_utils):
         diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
         return _empty_result(diagnostics, EXIT_IO)
-    sites = sites_for_mode(task_e_redirect=task_e_redirect, no_schema_redirect=no_schema_redirect)
+    sites = list(sites_for_mode(task_e_redirect=task_e_redirect, no_schema_redirect=no_schema_redirect))
     state = load_state(target_path)
     sites_patched: list[str] = []
     sites_already: list[str] = []
