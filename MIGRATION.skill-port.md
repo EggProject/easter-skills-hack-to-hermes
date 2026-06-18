@@ -7,7 +7,7 @@
 | Source skill | skill-creator |
 | Pinned upstream commit | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
 | Hermes nesting-guard var | HERMES_SESSION |
-| Generated at | 2026-06-18T21:23:34Z |
+| Generated at | 2026-06-18T21:27:15Z |
 
 ## Per-binding replacements (T3)
 
