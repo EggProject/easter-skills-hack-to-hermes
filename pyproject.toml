@@ -8,6 +8,9 @@ license = { text = "Proprietary" }
 authors = [{ name = "Hermes Skills Hack Team" }]
 dependencies = [
     "click>=8.1",
+    # ruamel.yaml (not pyyaml) — preserves comment order + round-trips
+    # frontmatter. Required by plans/08-migration-note-format.md (D6
+    # determinism: byte-identical output across runs).
     "ruamel.yaml>=0.18",
     "pyyaml>=6",
     "python-frontmatter>=1.1",
@@ -28,6 +31,7 @@ dev = [
 hermes-skill-creator-patch = "hermes_skill_creator_plugin.cli_patch:main"
 hermes-skill-creator-profiles = "hermes_skill_creator_plugin.cli_profiles:main"
 hermes-skill-creator-report = "hermes_skill_creator_plugin.cli_report:main"
+hermes-skill-creator-install = "hermes_skill_creator_plugin.skill_installer:install"
 
 [build-system]
 requires = ["hatchling"]
@@ -59,5 +63,4 @@ warn_redundant_casts = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=hermes_skill_creator_plugin --cov-branch --cov-fail-under=100"
-pythonpath = ["src"]
+addopts = "--cov=hermes_skill_creator_plugin --cov=tools --cov=tests.conftest --cov-branch --cov-fail-under=100"
