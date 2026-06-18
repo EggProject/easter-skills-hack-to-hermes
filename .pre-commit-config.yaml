@@ -38,7 +38,7 @@ repos:
         pass_filenames: false
       - id: check-migration-note
         name: MIGRATION*.md is generated, not hand-edited
-        entry: python3 tools/check_migration_note.py
+        entry: python3 -m tools.check_migration_note
         language: system
         files: '^(MIGRATION\.md|MIGRATION\.hermes-patch\.md|MIGRATION\.skill-port\.md|\.migration_manifest\.json)$'
         pass_filenames: false
@@ -83,6 +83,6 @@ repos:
     rev: v1.11.2
     hooks:
       - id: mypy
-        additional_dependencies: [click, ruamel.yaml, types-PyYAML]
+        additional_dependencies: [click, ruamel.yaml, types-PyYAML, pytest, python-frontmatter]
         args: ["--strict"]
         files: '^src/.*\.py$'
