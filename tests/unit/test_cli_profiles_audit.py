@@ -1093,6 +1093,40 @@ def test_audit_apply_save_disabled_failure_recorded(installed, tmp_path: Path) -
     assert any("save_disabled_skills" in e for e in report["profiles"][0]["errors"])
 
 
+def test_audit_apply_save_config_failure_recorded(installed, tmp_path: Path) -> None:
+    """A failing ``save_config`` AFTER ``save_disabled_skills`` succeeds is
+    reported as ``save_config failed`` (NOT misattributed to
+    ``save_disabled_skills`` — the F2 code-review fix)."""
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(
+        profile_paths=[profile],
+        profile_names=["hermes"],
+        config_data={"skills": {"disabled": ["openai", "unrelated"]}},
+        disabled_now={"openai", "unrelated"},
+    )
+    import hermes_cli.config as hcc
+
+    original = hcc.save_config
+    hcc.save_config = lambda cfg: (_ for _ in ()).throw(RuntimeError("save_config boom"))  # type: ignore[assignment]
+    try:
+        report = cli.run_audit(
+            apply=True,
+            json_path=None,
+            frozen_time="2026-06-17T00:00:00Z",
+        )
+    finally:
+        hcc.save_config = original  # type: ignore[assignment]
+    errors = report["profiles"][0]["errors"]
+    # The error is attributed to save_config, NOT save_disabled_skills.
+    assert any("save_config failed" in e for e in errors)
+    assert not any("save_disabled_skills failed" in e for e in errors)
+    # save_disabled_skills was attempted successfully (action recorded).
+    assert "save_disabled_skills" in report["profiles"][0]["actions_taken"]
+    # save_config did NOT succeed → NOT in actions_taken.
+    assert "save_config" not in report["profiles"][0]["actions_taken"]
+
+
 def test_audit_apply_skip_install(installed, tmp_path: Path) -> None:
     """``--skip-install`` does not call do_install but still applies other writes."""
     profile = tmp_path / "default"

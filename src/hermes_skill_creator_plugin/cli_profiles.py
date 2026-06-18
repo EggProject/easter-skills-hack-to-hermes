@@ -303,11 +303,16 @@ def _audit_profile(
             if desired_disabled != disabled_now:
                 try:
                     save_disabled_skills(config, sorted(desired_disabled), platform=None)
-                    actions.append("save_disabled_skills")
-                    save_config(config)
-                    actions.append("save_config")
                 except Exception as exc:  # noqa: BLE001
                     errors.append(f"save_disabled_skills failed: {exc}")
+                else:
+                    actions.append("save_disabled_skills")
+                    try:
+                        save_config(config)
+                    except Exception as exc:  # noqa: BLE001
+                        errors.append(f"save_config failed: {exc}")
+                    else:
+                        actions.append("save_config")
 
             # 6b. do_install (always — even when installed_now already
             # contains DESIRED_SKILL, the apply is idempotent and the
