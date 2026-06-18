@@ -7,6 +7,8 @@ Bilingual contract: every string here is the HU half of `[en] ... / [hu] ...`.
 The full single-line is composed at log time; the HU half must be a plain
 sentence (no [en] / [hu] markers), so the composed line matches the regex
 `^\\[en\\] .+ / \\[hu\\] .+$`.
+
+See also: plans/03-plugin-spec.md, plans/10-toolchain-and-conventions.md.
 """
 
 # Cap-state advisory (HU half). Emitted when the 60-character skill-description
