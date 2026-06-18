@@ -42,7 +42,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import click
 
@@ -109,7 +109,7 @@ class AuditReport:
     def to_json_bytes(self) -> bytes:
         return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":")).encode("utf-8")
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self.to_dict())
 
     def __getitem__(self, key: str) -> Any:
