@@ -1,0 +1,89 @@
+# .pre-commit-config.yaml — CANONICAL UNIFIED (Phase 5b)
+#
+# Strictest hooks per docs/plans/00-index.md Hard constraints +
+# docs/plans/10-toolchain-and-conventions.md D1. Unified across
+# all 6 phase5 worktrees (B-plugin, C-script-1, D-script-2, E-skill,
+# F-meta, G-report). Per operator instruction: strictest settings,
+# uniform across workstreams.
+#
+# SCOPE: runs on src/, tests/, tools/. EXCLUDES docs/research/ which
+# is vendored upstream skill-creator reference (never edited).
+#
+# HOOKS (in order of strictness):
+#   1. wemake-python-styleguide (rev 1.6.2) — strictest Python linter
+#   2. flake8 (strictest) — secondary strictest Python lint
+#   3. ruff + ruff-format — fast lint + format
+#   4. black — secondary formatter
+#   5. mypy --strict — static type check
+#   6. check-bilingual (F-meta local) — en/hu single-line + two-section help
+#   7. check-line-count (F-meta local) — per-file cap + footer + budget table + per-cell
+#   8. check-migration-note (F-meta local) — MIGRATION*.md not hand-edited
+
+exclude: ^docs/research/
+
+repos:
+  - repo: local
+    hooks:
+      - id: check-bilingual
+        name: Bilingual format check (en/hu single-line + two-section help)
+        entry: python tools/check_bilingual.py
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: check-line-count
+        name: Per-file 500-line cap + plan footer drift + budget table Total + per-cell guard
+        entry: python tools/check_line_count.py --enforce-footer --enforce-budget-table --enforce-per-cell
+        language: system
+        files: `^(src/|tests/|tools/|docs/plans/).*\.(py|md)$`
+        pass_filenames: false
+      - id: check-migration-note
+        name: MIGRATION*.md is generated, not hand-edited
+        entry: python tools/check_migration_note.py
+        language: system
+        files: `^(MIGRATION\.md|MIGRATION\.hermes-patch\.md|MIGRATION\.skill-port\.md|\.migration_manifest\.json)$`
+        pass_filenames: false
+
+  - repo: https://github.com/wemake-services/wemake-python-styleguide
+    rev: 1.6.2
+    hooks:
+      - id: wemake-python-styleguide
+        files: `^(src/|tests/|tools/).*\.py$`
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args:
+          - --max-line-length=120
+          - --max-complexity=10
+          - --select=E,W,F,C
+          - --extend-select=B,PIE,Q,I,N,D,SIM,RSE,RET,ARG,SLF
+          - --extend-ignore=E203,E501,W503,E731
+          - --show-source
+          - --statistics
+        files: `^(src/|tests/|tools/).*\.py$`
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+        files: `^(src/|tests/|tools/).*\.py$`
+      - id: ruff-format
+        files: `^(src/|tests/|tools/).*\.py$`
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        args: ["--line-length=120"]
+        files: `^(src/|tests/|tools/).*\.py$`
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [click, ruamel.yaml, types-PyYAML]
+        args: ["--strict"]
+        files: `^src/.*\.py$`
