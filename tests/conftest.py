@@ -86,6 +86,21 @@ def hermes_checkout(hermes_home: Path) -> Path:
     return seed_minimal(hermes_home)
 
 
+@pytest.fixture
+def skill_creator_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """HERMES_HOME rooted inside tmp_path with skills/ and profiles/ subdirs.
+
+    Used by E-skill's installer tests so the installer can write to a
+    tmp_path HERMES_HOME without ever touching the live install. Mirrors the
+    E-skill ownership of this fixture (see 26525c4:tests/conftest.py).
+    """
+    home = tmp_path / "hermes-skill-creator-home"
+    (home / "skills").mkdir(parents=True)
+    (home / "profiles").mkdir(parents=True)
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    return home
+
+
 # Minimal 6-file synthetic Hermes checkout, suitable for migration tests.
 MINIMAL_HERMES_FILES: dict[str, str] = {
     "pyproject.toml": "[project]\nname = 'hermes-agent'\nversion = '0.0.0'\n",
@@ -123,6 +138,7 @@ __all__ = [
     "assert_hermes_agent_untouched",
     "hermes_home",
     "hermes_checkout",
+    "skill_creator_home",
     "seed_minimal",
     "hermes_subprocess_env",
     "MINIMAL_HERMES_FILES",
