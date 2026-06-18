@@ -88,3 +88,61 @@ col_last_patched_at = "last_patched_at"
 col_pct_of_cap = "% of cap"
 na_value = "n/a"
 total_row_label = "total"
+
+# M dict - grouped keys for cli_profiles.py (Script #2 per-profile audit/flip)
+M = {
+    # CLI: hermes-skill-creator-profiles
+    "profiles_help_short": (
+        "Per-profile audit/flip for the migrated skill-creator skill (Script #2). "
+        "Installs/replaces the skill-creator skill at the flat "
+        "~/.hermes/skills/skill-creator/ path under each profile. "
+        "Default mode is dry-run; pass --apply to perform the writes."
+    ),
+    "profiles_help_long": (
+        "Walks every Hermes profile (the default 'hermes' profile and "
+        "every named profile returned by hermes_cli.profiles.list_profiles()) "
+        "and audits the per-profile skills tree. With --apply, the script "
+        "calls hermes_cli.skills_hub.do_install() to install/replace the "
+        "migrated skill-creator in-place at ~/.hermes/skills/skill-creator/ "
+        "and clears the skills system-prompt cache. With --json PATH, the "
+        "deterministic JSON report is written to PATH. With --yes, the "
+        "interactive TTY confirmation is suppressed. The script runs under "
+        "the hermes_home_scope() context manager, mirroring HERMES_HOME in "
+        "both the override token and os.environ['HERMES_HOME']."
+    ),
+    "profiles_opt_apply": ("Perform the writes (default is dry-run)."),
+    "profiles_opt_audit": ("Run audit only; do not perform any writes (alias for the default)."),
+    "profiles_opt_profile": ("Restrict the run to a single profile (default: every profile)."),
+    "profiles_opt_json": (
+        "Write the deterministic JSON report to PATH (default: ./profile-audit.json)."
+    ),
+    "profiles_opt_yes": ("Suppress the interactive TTY confirmation (CI / non-TTY runs)."),
+    "profiles_opt_skip_install": ("Audit only; do not call hub_install_or_update."),
+    "profiles_opt_frozen_time": ("Pin the report's generated_at to a stable ISO 8601 UTC string."),
+    "profiles_opt_help": ("Show this bilingual help and exit."),
+    "profiles_section_usage_en": "Usage (English)",
+    "profiles_section_usage_hu": "Használat (magyar)",
+    # Bilingual runtime messages
+    "profiles_msg_scanning": "Scanning profiles...",
+    "profiles_msg_profile_count": "Found {n} profile(s) to audit.",
+    "profiles_msg_audit_default": ("Default mode: dry-run (use --apply to perform writes)."),
+    "profiles_msg_applying": "Applying per-profile flip...",
+    "profiles_msg_profile_audit": (
+        "profile={name} current_disabled={disabled} current_installed={installed}"
+    ),
+    "profiles_msg_diff": (
+        "diff added_disabled={ad} removed_disabled={rd} "
+        "added_installed={ai} removed_installed={ri}"
+    ),
+    "profiles_msg_cache_warn": (
+        "profile={name} clear_skills_system_prompt_cache raised: {err} (continuing)"
+    ),
+    "profiles_msg_hub_error": ("profile={name} hub install failed: {err} (continuing)."),
+    "profiles_msg_json_written": "Report written to {path}.",
+    "profiles_msg_refuse_no_yes": (
+        "Refusing to run against the live HERMES_HOME without --yes. "
+        "Re-run with --yes to confirm."
+    ),
+    "profiles_msg_no_profiles": ("No profiles found (default + named). Nothing to audit."),
+    "profiles_msg_done": "Done. Profiles processed: {n}.",
+}
