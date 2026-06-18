@@ -31,16 +31,20 @@ from typing import NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIRS = ("src", "scripts", "skills")
+PREVIEW_CHARS = 80  # magic number: chars shown in human messages.
 
 # `print` and `logger.{info,warning,error}` calls.
-CONSOLE_FUNCS = frozenset({"print", "info", "warning", "error", "debug", "critical"})
-# The bilingual surface: `[en] <any content, may contain '/'> / [hu] <any content>`.
+CONSOLE_FUNCS = frozenset(
+    {"print", "info", "warning", "error", "debug", "critical"},
+)
+# The bilingual surface: `[en] <any content> / [hu] <any content>`.
 # Non-greedy `+?` keeps the en-side tight so the FIRST `/ [hu]` separator wins.
 # `\S` after each marker requires non-empty content on both sides — a bare
 # `[en] / [hu]` (zero-length message) is not a real bilingual message.
 BILINGUAL_RE = re.compile(r"\[en\]\s*\S.*?/ \[hu\]\s*\S")
 HELP_EN_SECTION = "Usage (English)"
 HELP_HU_SECTION = "Használat (magyar)"
+SKIP_DIRS = (".venv", ".git", "__pycache__")
 
 
 class Finding(NamedTuple):
@@ -51,17 +55,35 @@ class Finding(NamedTuple):
     message: str
 
 
+def _is_skipped(parts: tuple[str, ...]) -> bool:
+    """True when any path part matches a skip-list directory name."""
+    return any(part in SKIP_DIRS for part in parts)
+
+
+def _collect_python_files(d: Path) -> list[Path]:
+    """Walk one subdir for .py files, skipping SKIP_DIRS members."""
+    return [p for p in d.rglob("*.py") if not _is_skipped(p.parts)]
+
+
 def _iter_python_files(root: Path) -> list[Path]:
     out: list[Path] = []
     for sub in SRC_DIRS:
         d = root / sub
         if not d.exists():
             continue
-        for p in d.rglob("*.py"):
-            if ".venv" in p.parts or ".git" in p.parts or "__pycache__" in p.parts:
-                continue
-            out.append(p)
+        out.extend(_collect_python_files(d))
     return out
+
+
+def _constant_part(v: ast.AST) -> str | None:
+    """Resolve one JoinedStr value node to its static string, else None."""
+    if isinstance(v, ast.Constant) and isinstance(v.value, str):
+        return v.value
+    if isinstance(v, ast.FormattedValue):
+        cv = v.value
+        if isinstance(cv, ast.Constant) and isinstance(cv.value, str):
+            return cv.value
+    return None
 
 
 def _string_value(node: ast.AST | None) -> str | None:
@@ -75,17 +97,10 @@ def _string_value(node: ast.AST | None) -> str | None:
     if isinstance(node, ast.JoinedStr):
         parts: list[str] = []
         for v in node.values:
-            if isinstance(v, ast.Constant) and isinstance(v.value, str):
-                parts.append(v.value)
-            elif isinstance(v, ast.FormattedValue):
-                # Only accept static placeholders that resolve to known literals.
-                cv = v.value
-                if isinstance(cv, ast.Constant) and isinstance(cv.value, str):
-                    parts.append(cv.value)
-                else:
-                    return None  # dynamic -> skip
-            else:
+            part = _constant_part(v)
+            if part is None:
                 return None
+            parts.append(part)
         return "".join(parts)
     return None
 
@@ -106,65 +121,101 @@ def _walk_calls(tree: ast.AST) -> Iterable[ast.Call]:
             yield node
 
 
+def _parse_tree(p: Path) -> ast.AST | None:
+    """Read and parse a Python file; return AST or None on any failure."""
+    try:
+        text = p.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    try:
+        return ast.parse(text, filename=str(p))
+    except SyntaxError:
+        return None
+
+
+def _inspect_call(call: ast.Call) -> Finding | None:
+    """Return a Finding if `call` is a non-bilingual console message."""
+    name = _func_name(call)
+    if name not in CONSOLE_FUNCS:
+        return None
+    if not call.args:
+        return None
+    value = _string_value(call.args[0])
+    if value is None:
+        return None  # dynamic — caller must use bilingual format at runtime
+    if BILINGUAL_RE.search(value):
+        return None
+    preview = value[:PREVIEW_CHARS]
+    return Finding(
+        path=call.lineno and Path(""),  # placeholder; filled by caller
+        lineno=call.lineno,
+        message=f"console message lacks bilingual format: {preview!r}",
+    )
+
+
+def _inspect_file(p: Path) -> list[Finding]:
+    """Walk a single Python file and return its bilingual findings."""
+    tree = _parse_tree(p)
+    if tree is None:
+        return []
+    out: list[Finding] = []
+    for call in _walk_calls(tree):
+        finding = _inspect_call(call)
+        if finding is not None:
+            out.append(finding._replace(path=p))
+    return out
+
+
 def check_console_messages(root: Path) -> list[Finding]:
     """Walk every .py file and assert console messages are bilingual."""
     findings: list[Finding] = []
     for p in _iter_python_files(root):
-        try:
-            text = p.read_text(encoding="utf-8", errors="replace")
-            tree = ast.parse(text, filename=str(p))
-        except (OSError, SyntaxError):
-            continue
-        for call in _walk_calls(tree):
-            name = _func_name(call)
-            if name not in CONSOLE_FUNCS:
-                continue
-            if not call.args:
-                continue
-            arg = call.args[0]
-            value = _string_value(arg)
-            if value is None:
-                continue  # dynamic — caller must use bilingual format at runtime
-            if not BILINGUAL_RE.search(value):
-                findings.append(
-                    Finding(
-                        path=p,
-                        lineno=call.lineno,
-                        message=f"console message lacks bilingual format: {value[:80]!r}",
-                    )
-                )
+        findings.extend(_inspect_file(p))
     return findings
 
 
+def _help_section_state(text: str) -> tuple[bool, bool]:
+    """Return (has_en, has_hu) for the docstring section markers."""
+    has_en = HELP_EN_SECTION in text
+    has_hu = HELP_HU_SECTION in text
+    return has_en, has_hu
+
+
+def _missing_section_finding(
+    p: Path,
+    present: str,
+    missing: str,
+) -> Finding:
+    """Build a finding for a help-text missing the other language section."""
+    msg = f"help text has `{present}` but is missing `{missing}`"
+    return Finding(path=p, lineno=1, message=msg)
+
+
+def _inspect_help_text(p: Path) -> list[Finding]:
+    """Return findings for one file's help-text section coverage."""
+    try:
+        text = p.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    has_en, has_hu = _help_section_state(text)
+    if not has_en and not has_hu:
+        return []  # not a help docstring — skip
+    if has_en and not has_hu:
+        return [
+            _missing_section_finding(p, HELP_EN_SECTION, HELP_HU_SECTION),
+        ]
+    if has_hu and not has_en:
+        return [
+            _missing_section_finding(p, HELP_HU_SECTION, HELP_EN_SECTION),
+        ]
+    return []
+
+
 def check_help_text(root: Path) -> list[Finding]:
-    """Assert Click-command docstrings contain both English and Hungarian help sections."""
+    """Assert Click docstrings contain English + Hungarian sections."""
     findings: list[Finding] = []
     for p in _iter_python_files(root):
-        try:
-            text = p.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        if HELP_EN_SECTION not in text and HELP_HU_SECTION not in text:
-            continue  # not a help docstring — skip
-        # If either section is present, both must be present.
-        has_en = HELP_EN_SECTION in text
-        has_hu = HELP_HU_SECTION in text
-        if has_en and not has_hu:
-            findings.append(
-                Finding(
-                    path=p,
-                    lineno=1,
-                    message=f"help text has `{HELP_EN_SECTION}` but is missing `{HELP_HU_SECTION}`",
-                )
-            )
-        elif has_hu and not has_en:
-            findings.append(
-                Finding(
-                    path=p,
-                    lineno=1,
-                    message=f"help text has `{HELP_HU_SECTION}` but is missing `{HELP_EN_SECTION}`",
-                )
-            )
+        findings.extend(_inspect_help_text(p))
     return findings
 
 
@@ -180,6 +231,19 @@ def _parse_args(argv: Iterable[str]) -> argparse.Namespace:
     return parser.parse_args(list(argv))
 
 
+def _emit_error(message: str) -> None:
+    sys.stderr.write(message + "\n")
+
+
+def _emit_ok(message: str) -> None:
+    sys.stdout.write(message + "\n")
+
+
+def _format_failure(f: Finding) -> str:
+    rel = f.path.relative_to(REPO_ROOT)
+    return f"[check_bilingual] FAIL: {rel}:{f.lineno}: {f.message}"
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
@@ -187,18 +251,15 @@ def main(argv: Iterable[str] | None = None) -> int:
     findings = run_all_checks(REPO_ROOT)
     if findings:
         for f in findings:
-            rel = f.path.relative_to(REPO_ROOT)
-            print(
-                f"[check_bilingual] FAIL: {rel}:{f.lineno}: {f.message}",
-                file=sys.stderr,
-            )
-        print(
-            f"[check_bilingual] {len(findings)} finding(s) — "
-            f"console messages must be `[en] ... / [hu] ...` on a single line.",
-            file=sys.stderr,
+            _emit_error(_format_failure(f))
+        summary = (
+            "[check_bilingual] "
+            f"{len(findings)} finding(s) — "
+            "console messages must be `[en] ... / [hu] ...` on a single line."
         )
+        _emit_error(summary)
         return 1
-    print("[check_bilingual] OK (en/hu single-line + two-section help)")
+    _emit_ok("[check_bilingual] OK (en/hu single-line + two-section help)")
     return 0
 
 

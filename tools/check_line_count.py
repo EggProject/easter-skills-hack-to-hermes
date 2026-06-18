@@ -4,11 +4,9 @@
   2. footer drift       — `<!-- end of file: NN lines (budget BB) -->`
                           MUST have NN == wc -l (00-index uses bare marker)
   3. budget-table Total — 00-index.md's Total cell AND `Sum NNNN` prose
-                          MUST equal the live sum of wc -l across every plan file
-  4. per-cell guard     — for every file-map row in 00-index.md, the per-file
-                          Actual cell MUST equal `wc -l` of the cited path, AND
-                          the per-file Budget cell MUST equal the budget the
-                          hook was handed (defaults to the live value in the table).
+                          MUST equal the live sum of wc -l across every plan
+  4. per-cell guard     — for every file-map row in 00-index.md, Actual MUST
+                          equal `wc -l`, Budget MUST equal the cell value.
 
 TDD test cases (mirror of tests/meta/test_meta_check_line_count.py):
 
@@ -37,12 +35,29 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PER_FILE_CAP = 500
 PLANS_GLOB = "docs/plans/*.md"
+PLANS_DIR_PARTS = ("docs", "plans")
 INDEX_FILE = "docs/plans/00-index.md"
-FOOTER_RE = re.compile(r"<!--\s*end of file:\s*(\d+)\s*lines(?:\s*\(budget\s*(\d+)\))?\s*-->")
+INDEX_BASENAME = "00-index.md"
+WC_BIN = "wc"
+WC_L_FLAG = "-l"
+
+FOOTER_RE = re.compile(
+    r"<!--\s*end of file:\s*(\d+)\s*lines(?:\s*\(budget\s*(\d+)\))?\s*-->",
+)
 BARE_FOOTER_RE = re.compile(r"<!--\s*end of file\s*-->")
 ROW_RE = re.compile(
-    r"^\|\s*(?P<num>\d{2})\s*\|\s*`?(?P<path>[^`]+?)`?\s*\|.*?\|\s*(?P<status>\[[^\]]+\])\s*\|\s*(?P<budget>\d+)\s*\|\s*(?P<actual>\d+)\s*\|\s*$"
+    r"^\|\s*(?P<num>\d{2})\s*\|"
+    r"\s*`?(?P<path>[^`]+?)`?\s*\|"
+    r".*?"
+    r"\|\s*(?P<status>\[[^\]]+\])\s*\|"
+    r"\s*(?P<budget>\d+)\s*\|"
+    r"\s*(?P<actual>\d+)\s*\|\s*$",
 )
+TOTAL_BOLD_RE = re.compile(r"\|\s*\*\*(\d+)\*\*\s*\|")
+TOTAL_PLAIN_RE = re.compile(r"\|\s*(\d+)\s*\|\s*$")
+TOTAL_BOLD_MARKER = "**Total**"
+TOTAL_PLAIN_MARKER = " | Total |"
+SUM_PROSE_RE = re.compile(r"Sum\s+(\d+)\s*<\s*(\d+)")
 
 
 @dataclass(frozen=True)
@@ -58,53 +73,62 @@ class Row:
 
 def _wc_l(path: Path) -> int:
     """Return live wc -l for path."""
-    return int(subprocess.check_output(["wc", "-l", str(path)], text=True).split()[0])
+    out = subprocess.check_output(
+        [WC_BIN, WC_L_FLAG, str(path)],
+        text=True,
+    )
+    return int(out.split()[0])
 
 
 def _iter_plan_files(root: Path) -> list[Path]:
-    """Iterate plan files listed in the 00-index file map (deterministic order).
+    """Iterate plan files in 00-index file map (deterministic order).
 
-    The 00-index file map is the contract source of truth; auxiliary archive
-    files (e.g. ``_diagnose.md``) under ``docs/plans/`` are NOT plan files in
-    the budget-table sense, so they are excluded. If 00-index is missing or
-    the file map cannot be parsed, the iterator falls back to the on-disk
-    listing minus 00-index.
+    Auxiliary archive files (e.g. ``_diagnose.md``) under ``docs/plans/``
+    are NOT plan files in the budget-table sense and are excluded. If
+    00-index is missing or the file map cannot be parsed, the iterator
+    falls back to the on-disk listing minus 00-index.
     """
     listed = _file_map_paths(root)
     if listed is None:
-        plans_dir = root / "docs" / "plans"
-        if not plans_dir.exists():
-            return []
-        return sorted(p for p in plans_dir.glob("*.md") if p.name != "00-index.md")
-    out: list[Path] = []
-    for rel in listed:
-        if rel.name == "00-index.md":
-            continue
-        out.append(rel)
-    return out
+        return _fallback_plan_glob(root)
+    return [rel for rel in listed if rel.name != INDEX_BASENAME]
+
+
+def _fallback_plan_glob(root: Path) -> list[Path]:
+    """Return on-disk plan listing, sorted, minus 00-index."""
+    plans_dir = Path(root, *PLANS_DIR_PARTS)
+    if not plans_dir.exists():
+        return []
+    return sorted(
+        p for p in plans_dir.glob("*.md") if p.name != INDEX_BASENAME
+    )
 
 
 def _iter_plan_files_including_index(root: Path) -> list[Path]:
-    """Iterate every plan file (00-index + file-map rows) in deterministic order.
+    """Iterate every plan file (00-index + file-map rows), deterministic.
 
-    The 00-index file map is the contract source of truth; we also always
+    The 00-index file map is the contract source of truth; we always also
     include ``00-index.md`` itself (it is the budget-table carrier and is
-    counted in the Total per D2). Auxiliary archive files under
-    ``docs/plans/`` (e.g. ``_diagnose.md``) are NOT plan files in the
-    budget-table sense and are excluded.
+    counted in the Total per D2). Archive files like ``_diagnose.md`` are
+    excluded.
     """
-    index_path = root / INDEX_FILE
     listed = _file_map_paths(root)
-    plans_dir = root / "docs" / "plans"
+    index_path = root / INDEX_FILE
     if listed is None:
-        if not plans_dir.exists():
-            return [index_path] if index_path.exists() else []
-        files = sorted(plans_dir.glob("*.md"))
-        return sorted(files, key=lambda p: (p.name != "00-index.md", p.name))
+        return _fallback_including_index(root, index_path)
     out: list[Path] = list(listed)
     if index_path.exists() and index_path not in out:
         out.append(index_path)
-    return sorted(out, key=lambda p: (p.name != "00-index.md", p.name))
+    return sorted(out, key=lambda p: (p.name != INDEX_BASENAME, p.name))
+
+
+def _fallback_including_index(root: Path, index_path: Path) -> list[Path]:
+    """Return on-disk plan listing sorted, with 00-index first."""
+    plans_dir = Path(root, *PLANS_DIR_PARTS)
+    if not plans_dir.exists():
+        return [index_path] if index_path.exists() else []
+    files = sorted(plans_dir.glob("*.md"))
+    return sorted(files, key=lambda p: (p.name != INDEX_BASENAME, p.name))
 
 
 def _file_map_paths(root: Path) -> list[Path] | None:
@@ -116,16 +140,26 @@ def _file_map_paths(root: Path) -> list[Path] | None:
         text = index_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    rows = _parse_file_map(text)
+    return _paths_from_rows(_parse_file_map(text), root)
+
+
+def _paths_from_rows(rows: list[Row], root: Path) -> list[Path] | None:
+    """Map Row.path values to absolute Path; None when no rows."""
     if not rows:
         return None
     out: list[Path] = []
     for row in rows:
-        rel = Path(row.path)
-        if rel.parent == Path(""):
-            rel = Path("docs/plans") / row.path
+        rel = _normalize_row_path(row.path)
         out.append(root / rel)
     return out
+
+
+def _normalize_row_path(raw: str) -> Path:
+    """If the row's path is bare, prefix it with docs/plans/."""
+    rel = Path(raw)
+    if rel.parent == Path(""):
+        return Path(*PLANS_DIR_PARTS) / raw
+    return rel
 
 
 def check_per_file_cap(root: Path) -> list[str]:
@@ -135,8 +169,35 @@ def check_per_file_cap(root: Path) -> list[str]:
         loc = _wc_l(p)
         if loc > PER_FILE_CAP:
             rel = p.relative_to(root)
-            failures.append(f"per-file cap: {rel} has {loc} LOC > {PER_FILE_CAP}")
+            msg = f"per-file cap: {rel} has {loc} LOC > {PER_FILE_CAP}"
+            failures.append(msg)
     return failures
+
+
+def _check_index_bare_marker(rel: Path, text: str) -> list[str]:
+    """00-index.md MUST carry a bare `<!-- end of file -->` marker."""
+    if BARE_FOOTER_RE.search(text):
+        return []
+    return [
+        f"footer drift: {rel} missing bare `<!-- end of file -->` marker",
+    ]
+
+
+def _check_footer_for_file(rel: Path, text: str, loc: int) -> list[str]:
+    """One non-index plan file MUST have a declared footer matching wc -l."""
+    m = FOOTER_RE.search(text)
+    if m is None:
+        prefix = "footer drift: "
+        suffix = (
+            f"{rel} missing `<!-- end of file: NN lines` footer"
+        )
+        return [prefix + suffix]
+    declared = int(m.group(1))
+    if declared == loc:
+        return []
+    return [
+        f"footer drift: {rel} footer says {declared} lines but wc -l is {loc}",
+    ]
 
 
 def check_footer_drift(root: Path) -> list[str]:
@@ -146,17 +207,10 @@ def check_footer_drift(root: Path) -> list[str]:
         rel = p.relative_to(root)
         loc = _wc_l(p)
         text = p.read_text(encoding="utf-8", errors="replace")
-        if rel.name == "00-index.md":
-            if not BARE_FOOTER_RE.search(text):
-                failures.append(f"footer drift: {rel} missing bare `<!-- end of file -->` marker")
+        if rel.name == INDEX_BASENAME:
+            failures.extend(_check_index_bare_marker(rel, text))
             continue
-        m = FOOTER_RE.search(text)
-        if m is None:
-            failures.append(f"footer drift: {rel} missing `<!-- end of file: NN lines (budget BB) -->` footer")
-            continue
-        declared = int(m.group(1))
-        if declared != loc:
-            failures.append(f"footer drift: {rel} footer says {declared} lines but wc -l is {loc}")
+        failures.extend(_check_footer_for_file(rel, text, loc))
     return failures
 
 
@@ -167,15 +221,14 @@ def _parse_file_map(index_text: str) -> list[Row]:
         m = ROW_RE.match(line)
         if m is None:
             continue
-        num = m.group("num")
         rows.append(
             Row(
-                num=num,
+                num=m.group("num"),
                 path=m.group("path").strip(),
                 status=m.group("status").strip(),
                 budget=int(m.group("budget")),
                 actual=int(m.group("actual")),
-            )
+            ),
         )
     return rows
 
@@ -187,77 +240,157 @@ def _total_cell_value(index_text: str) -> int | None:
     we accept either `**Total**` or `Total` in the path cell.
     """
     for line in index_text.splitlines():
-        if "**Total**" not in line and " | Total |" not in line:
+        if TOTAL_BOLD_MARKER not in line and TOTAL_PLAIN_MARKER not in line:
             continue
-        # Match: | | **Total** | ... | | **N** |
-        m = re.search(r"\|\s*\*\*(\d+)\*\*\s*\|", line)
-        if m is not None:
-            return int(m.group(1))
-        m = re.search(r"\|\s*(\d+)\s*\|\s*$", line)
-        if m is not None:
-            return int(m.group(1))
+        bold = TOTAL_BOLD_RE.search(line)
+        if bold is not None:
+            return int(bold.group(1))
+        plain = TOTAL_PLAIN_RE.search(line)
+        if plain is not None:
+            return int(plain.group(1))
     return None
 
 
 def _sum_prose_value(index_text: str) -> int | None:
-    """Extract the `Sum NNNN < Total` prose token near the bottom of the file."""
-    m = re.search(r"Sum\s+(\d+)\s*<\s*(\d+)", index_text)
-    if m is not None:
-        return int(m.group(1))
-    return None
+    """Extract the `Sum NNNN < Total` prose near the bottom of the file."""
+    m = SUM_PROSE_RE.search(index_text)
+    if m is None:
+        return None
+    return int(m.group(1))
+
+
+def _total_cell_failure(total_cell: int | None, live_total: int) -> list[str]:
+    """Build failures for the Total cell mismatch (or missing) case."""
+    if total_cell is None:
+        return ["budget table: could not find Total cell in 00-index.md"]
+    if total_cell == live_total:
+        return []
+    msg = (
+        f"budget table: 00-index Total cell is {total_cell} "
+        f"but live sum is {live_total}"
+    )
+    return [msg]
+
+
+def _sum_prose_failure(sum_prose: int | None, live_total: int) -> list[str]:
+    """Build failures for the `Sum NNNN` prose mismatch case."""
+    if sum_prose is None or sum_prose == live_total:
+        return []
+    msg = (
+        f"budget table: `Sum NNNN` prose is {sum_prose} "
+        f"but live sum is {live_total}"
+    )
+    return [msg]
+
+
+def _live_plan_total(root: Path) -> int:
+    """Sum of wc -l across every plan file (00-index included)."""
+    return sum(_wc_l(p) for p in _iter_plan_files_including_index(root))
+
+
+def _load_index_text(root: Path) -> str | None:
+    """Read 00-index.md text; return None when file is missing."""
+    index_path = root / INDEX_FILE
+    if not index_path.exists():
+        return None
+    return index_path.read_text(encoding="utf-8", errors="replace")
 
 
 def check_budget_table_total(root: Path) -> list[str]:
-    """Invariant 3: 00-index.md Total cell == live sum of wc -l across plan files."""
-    index_path = root / INDEX_FILE
-    if not index_path.exists():
+    """Invariant 3: 00-index.md Total cell == live sum of wc -l."""
+    index_text = _load_index_text(root)
+    if index_text is None:
         return [f"budget table: missing {INDEX_FILE}"]
-    index_text = index_path.read_text(encoding="utf-8", errors="replace")
-    live_total = sum(_wc_l(p) for p in _iter_plan_files_including_index(root))
-    failures: list[str] = []
+    live_total = _live_plan_total(root)
     total_cell = _total_cell_value(index_text)
-    if total_cell is None:
-        failures.append("budget table: could not find Total cell in 00-index.md")
-    elif total_cell != live_total:
-        failures.append(f"budget table: 00-index Total cell is {total_cell} but live sum is {live_total}")
     sum_prose = _sum_prose_value(index_text)
-    if sum_prose is not None and sum_prose != live_total:
-        failures.append(f"budget table: `Sum NNNN` prose is {sum_prose} but live sum is {live_total}")
+    failures: list[str] = []
+    failures.extend(_total_cell_failure(total_cell, live_total))
+    failures.extend(_sum_prose_failure(sum_prose, live_total))
     return failures
+
+
+def _check_row_actual(row: Row, rel: Path, loc: int) -> list[str]:
+    """Per-row Actual cell MUST equal the live wc -l of the cited path."""
+    if row.actual == loc:
+        return []
+    msg = (
+        f"per-cell guard: row {row.num} ({rel}) "
+        f"Actual cell is {row.actual} but wc -l is {loc}"
+    )
+    return [msg]
+
+
+def _check_row_budget(row: Row, rel: Path, loc: int) -> list[str]:
+    """Per-row Budget cell MUST be >= live wc -l (cap not violated)."""
+    if row.budget >= loc:
+        return []
+    msg = (
+        f"per-cell guard: row {row.num} ({rel}) "
+        f"Budget {row.budget} < Actual {loc}"
+    )
+    return [msg]
+
+
+@dataclass(frozen=True)
+class _RowCheckInputs:
+    """Inputs for one per-cell guard iteration."""
+
+    row: Row
+    root: Path
+    rel: Path
+    target: Path
+
+
+def _check_row_target(inputs: _RowCheckInputs) -> list[str]:
+    """Apply per-row Actual + Budget checks to a resolved target path."""
+    loc = _wc_l(inputs.target)
+    failures: list[str] = []
+    failures.extend(_check_row_actual(inputs.row, inputs.rel, loc))
+    failures.extend(_check_row_budget(inputs.row, inputs.rel, loc))
+    return failures
+
+
+def _missing_target_finding(row: Row, rel: Path) -> list[str]:
+    """Per-cell guard finding for a row whose target path does not exist."""
+    msg = f"per-cell guard: row {row.num} cites {rel} which does not exist"
+    return [msg]
+
+
+def _resolve_row_target(root: Path, row: Row) -> tuple[Path, Path]:
+    """Return (rel, target) for one row's file-map path entry."""
+    rel = _normalize_row_path(row.path)
+    return rel, root / rel
+
+
+def _check_one_row(
+    row: Row,
+    root: Path,
+    seen: set[str],
+    failures: list[str],
+) -> None:
+    """Run the per-row Actual + Budget checks, mutating seen/failures."""
+    if row.num in seen:
+        return
+    seen.add(row.num)
+    rel, target = _resolve_row_target(root, row)
+    if not target.exists():
+        failures.extend(_missing_target_finding(row, rel))
+        return
+    inputs = _RowCheckInputs(row=row, root=root, rel=rel, target=target)
+    failures.extend(_check_row_target(inputs))
 
 
 def check_per_cell_guard(root: Path) -> list[str]:
     """Invariant 4: per-row Actual==wc -l AND per-row Budget==budget value."""
-    index_path = root / INDEX_FILE
-    if not index_path.exists():
+    index_text = _load_index_text(root)
+    if index_text is None:
         return [f"per-cell guard: missing {INDEX_FILE}"]
-    index_text = index_path.read_text(encoding="utf-8", errors="replace")
     rows = _parse_file_map(index_text)
     failures: list[str] = []
     seen: set[str] = set()
     for row in rows:
-        if row.num in seen:
-            continue
-        seen.add(row.num)
-        # Path is relative to repo root (e.g. `docs/plans/09-test-strategy.md`).
-        rel = Path(row.path)
-        # If the row has just the filename, assume docs/plans/.
-        if rel.parent == Path(""):
-            rel = Path("docs/plans") / row.path
-        target = root / rel
-        if not target.exists():
-            failures.append(f"per-cell guard: row {row.num} cites {rel} which does not exist")
-            continue
-        loc = _wc_l(target)
-        if row.actual != loc:
-            failures.append(f"per-cell guard: row {row.num} ({rel}) Actual cell is " f"{row.actual} but wc -l is {loc}")
-        # Budget cell — the per-file budget cap. We assert the row's Budget cell
-        # is at least as large as the live Actual (otherwise the cap is violated).
-        # The brief also says "per-file Budget == budget" — we interpret this as
-        # the table cell being a coherent integer that the hook can re-validate
-        # against the operator's hand. Compare against the row's own claim.
-        if row.budget < loc:
-            failures.append(f"per-cell guard: row {row.num} ({rel}) Budget {row.budget} < Actual {loc}")
+        _check_one_row(row, root, seen, failures)
     return failures
 
 
@@ -268,7 +401,7 @@ def run_all_checks(
     enforce_budget_table: bool = True,
     enforce_per_cell: bool = True,
 ) -> list[str]:
-    """Run all four invariants; return the list of failure messages (empty == OK)."""
+    """Run all four invariants; return the list of failure messages."""
     failures: list[str] = []
     failures.extend(check_per_file_cap(root))
     if enforce_footer:
@@ -280,31 +413,49 @@ def run_all_checks(
     return failures
 
 
-def _parse_args(argv: Iterable[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--no-footer", dest="footer", action="store_false")
-    parser.add_argument("--no-budget-table", dest="budget", action="store_false")
-    parser.add_argument("--no-per-cell", dest="per_cell", action="store_false")
-    parser.add_argument("--enforce-footer", dest="footer", action="store_true", default=True)
+def _add_enforce_flag(
+    parser: argparse.ArgumentParser,
+    *,
+    flag: str,
+    dest: str,
+) -> None:
+    """Register both --no-X and --enforce-X flags for a boolean invariant."""
+    parser.add_argument(f"--no-{flag}", dest=dest, action="store_false")
     parser.add_argument(
-        "--enforce-budget-table",
-        dest="budget",
+        f"--enforce-{flag}",
+        dest=dest,
         action="store_true",
         default=True,
     )
-    parser.add_argument("--enforce-per-cell", dest="per_cell", action="store_true", default=True)
-    parser.set_defaults(
-        footer=True,
-        budget=True,
-        per_cell=True,  # explicit defaults
-    )
+
+
+def _parse_args(argv: Iterable[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    _add_enforce_flag(parser, flag="footer", dest="footer")
+    _add_enforce_flag(parser, flag="budget-table", dest="budget")
+    _add_enforce_flag(parser, flag="per-cell", dest="per_cell")
+    parser.set_defaults(footer=True, budget=True, per_cell=True)
     return parser.parse_args(list(argv))
 
 
-def main(argv: Iterable[str] | None = None) -> int:
-    if argv is None:
-        argv = sys.argv[1:]
-    args = _parse_args(argv)
+def _emit_error(message: str) -> None:
+    sys.stderr.write(message + "\n")
+
+
+def _emit_ok(message: str) -> None:
+    sys.stdout.write(message + "\n")
+
+
+def _emit_failure_summary(failures: list[str]) -> None:
+    """Emit one FAIL line per failure + the summary count to stderr."""
+    for line in failures:
+        _emit_error(f"[check_line_count] FAIL: {line}")
+    summary = f"[check_line_count] {len(failures)} invariant(s) violated"
+    _emit_error(summary)
+
+
+def _run_main(args: argparse.Namespace) -> int:
+    """Run all checks against REPO_ROOT; return 0/1."""
     failures = run_all_checks(
         REPO_ROOT,
         enforce_footer=args.footer,
@@ -312,15 +463,18 @@ def main(argv: Iterable[str] | None = None) -> int:
         enforce_per_cell=args.per_cell,
     )
     if failures:
-        for line in failures:
-            print(f"[check_line_count] FAIL: {line}", file=sys.stderr)
-        print(
-            f"[check_line_count] {len(failures)} invariant(s) violated",
-            file=sys.stderr,
-        )
+        _emit_failure_summary(failures)
         return 1
-    print("[check_line_count] OK (per-file cap + footer + budget table + per-cell)")
+    ok_msg = "[check_line_count] OK"
+    _emit_ok(ok_msg + " (per-file cap + footer + budget table + per-cell)")
     return 0
+
+
+def main(argv: Iterable[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    args = _parse_args(argv)
+    return _run_main(args)
 
 
 if __name__ == "__main__":
