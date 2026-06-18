@@ -133,12 +133,11 @@ def assert_hermes_agent_untouched_decorator(func):  # type: ignore[no-untyped-de
     wrapper = functools.wraps(func)(wrapper)
     return wrapper
 
+
 # --- TDD happy path ------------------------------------------------------
 
 
-def test_apply_cap_only_default_idempotent(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_cap_only_default_idempotent(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """First --apply patches S1.cap; second --apply exits 0 with
     'OK: already patched' diagnostics."""
     r1 = run_patch(
@@ -185,9 +184,7 @@ def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str 
     assert pre == post
 
 
-def test_apply_creates_state_sidecar(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_creates_state_sidecar(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--apply writes .patch.state.json with S1.cap=patched."""
     r = run_patch(
         target=hermes_checkout,
@@ -205,9 +202,7 @@ def test_apply_creates_state_sidecar(
     assert raw["S1.cap"] in {"patched", "matched"}
 
 
-def test_force_retries_only_drifted_sites(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_force_retries_only_drifted_sites(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """After a successful run, a subsequent --force exits 0 with the
     state sidecar preserving the patched status."""
     run_patch(
@@ -239,16 +234,13 @@ def test_force_retries_only_drifted_sites(
 # --- cap-raise specifics (B2) --------------------------------------------
 
 
-def test_apply_cap_raise_two_sites_atomic(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """When S1.cap.b is corrupted, --apply exits non-zero AND target
     file is byte-identical to pre-run."""
     checkout = tmp_path / "corrupt-cap"
     (checkout / "agent").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 687)
-        + '\n    if len(desc) > 60:\n        return desc[:57] + "ELLIPSIS"\n',
+        "\n".join(["# pad"] * 687) + '\n    if len(desc) > 60:\n        return desc[:57] + "ELLIPSIS"\n',
         encoding="utf-8",
     )
     pre = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
@@ -337,9 +329,7 @@ def test_task_e_redirect_on(hermes_checkout: Path, real_hermes_agent_sentinel: s
     assert expected.issubset(set(r.state.keys()))
 
 
-def test_no_schema_redirect_skips_e6(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_no_schema_redirect_skips_e6(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--task-e-redirect --no-schema-redirect patches 7 sites (skips E6)."""
     r = run_patch(
         target=hermes_checkout,
@@ -391,9 +381,7 @@ def test_target_resolves_to_hermes_agent_refused(
     assert any(str(hermes_agent_path()) in d for d in r.diagnostics)
 
 
-def test_target_missing_agent_skill_utils_exits_4(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_target_missing_agent_skill_utils_exits_4(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--target without agent/skill_utils.py -> exit 4."""
     checkout = tmp_path / "empty"
     checkout.mkdir()
@@ -409,9 +397,7 @@ def test_target_missing_agent_skill_utils_exits_4(
     assert r.exit_code == EXIT_IO
 
 
-def test_circular_import_preflight_exits_4(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_circular_import_preflight_exits_4(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """agent/skill_utils.py already imports from tools.skills_tool
     -> exit 4 with a 'potential circular import' diagnostic."""
     checkout = tmp_path / "cycle"
@@ -449,9 +435,7 @@ def test_force_without_i_accept_line_drift_exits_5(
     assert r.exit_code == EXIT_USER_ABORT
 
 
-def test_line_drift_exits_2_with_diagnostic(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_line_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Cap-raise comparator matches anchor; the LINE is wrong -> LINE_DRIFT."""
     checkout = tmp_path / "line-drift"
     (checkout / "agent").mkdir(parents=True)
@@ -472,9 +456,7 @@ def test_line_drift_exits_2_with_diagnostic(
     assert r.exit_code == EXIT_DRIFT
 
 
-def test_text_drift_exits_2_with_diagnostic(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Anchor text does not match -> TEXT_DRIFT (treated as exit 2 here)."""
     checkout = tmp_path / "text-drift"
     (checkout / "agent").mkdir(parents=True)
@@ -540,9 +522,7 @@ def test_apply_atomic_on_rename_failure(
     assert leftovers == []
 
 
-def test_apply_preserves_mode_bits(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_preserves_mode_bits(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Original mode 0o600 survives the patch."""
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     os.chmod(target_file, 0o600)
@@ -560,9 +540,7 @@ def test_apply_preserves_mode_bits(
     assert post_mode == 0o600
 
 
-def test_apply_cross_filesystem_target_warns(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_cross_filesystem_target_warns(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """The cross-FS warning is emitted only when statvfs reports different
     fsids. We can't easily synthesize a different fsid in a unit test, so
     we just check the warning path is reachable (no error when statvfs
@@ -579,9 +557,7 @@ def test_apply_cross_filesystem_target_warns(
     assert r.exit_code == EXIT_OK
 
 
-def test_zero_writes_on_validation_failure(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Corrupt the cap-raise AND a Task E site; --check exits non-zero;
     target sha256 unchanged."""
     checkout = tmp_path / "double-drift"
@@ -613,9 +589,7 @@ def test_zero_writes_on_validation_failure(
     assert pre_pb == post_pb
 
 
-def test_audit_log_appended_on_force(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_audit_log_appended_on_force(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--force --i-accept-line-drift appends to the audit log."""
     r = run_patch(
         target=hermes_checkout,
@@ -637,9 +611,7 @@ def test_audit_log_appended_on_force(
 # --- bilingual format / site table hygiene -------------------------------
 
 
-def test_console_log_lines_match_bilingual_regex(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Every diagnostic in the run is bilingual (en/hu on a single line)."""
     r = run_patch(
         target=hermes_checkout,
@@ -657,7 +629,7 @@ def test_console_log_lines_match_bilingual_regex(
 
 
 def test_help_is_bilingual() -> None:
-    """--help output contains both 'Usage (English)' and 'Hasznalat (magyar)'."""
+    """--help output contains both 'Usage (English)' and 'Használat (magyar)'."""
     from click.testing import CliRunner
 
     from hermes_skill_creator_plugin.cli_patch import main as cli_main
@@ -666,15 +638,13 @@ def test_help_is_bilingual() -> None:
     result = runner.invoke(cli_main, ["--help"])
     assert result.exit_code == 0
     assert "Usage (English)" in result.output
-    assert "Hasznalat (magyar)" in result.output
+    assert "Használat (magyar)" in result.output
 
 
 # --- idempotency / coverage -----------------------------------------------
 
 
-def test_check_already_patched_exits_0(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_check_already_patched_exits_0(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """After a successful --apply, --check exits 0 with per-site
     'OK: already patched' messages."""
     run_patch(
@@ -699,9 +669,7 @@ def test_check_already_patched_exits_0(
     assert any("már javítva" in d for d in r.diagnostics)
 
 
-def test_state_sidecar_survives_re_run(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_state_sidecar_survives_re_run(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """A second --apply reads the sidecar and skips matched sites."""
     run_patch(
         target=hermes_checkout,
@@ -929,9 +897,7 @@ def test_emit_migration_note_writes_worktree_files(
     assert not (hermes_checkout / "MIGRATION.md").exists()
 
 
-def test_emit_migration_note_default_one_row(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_emit_migration_note_default_one_row(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """Default invocation writes a 1-row table (cap only)."""
     p = generate_migration_note(
         target=hermes_checkout,
@@ -988,15 +954,11 @@ def test_emit_migration_note_byte_identical_across_runs(
 # --- coverage: out-of-range anchor (anchor.line > file length) ---------
 
 
-def test_apply_anchor_text_missing_exits_drift(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_anchor_text_missing_exits_drift(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """When the primary anchor's text is not in the file, drift + exit."""
     checkout = tmp_path / "oob"
     (checkout / "agent").mkdir(parents=True)
-    (checkout / "agent" / "skill_utils.py").write_text(
-        "line1\nline2\nline3\nline4\nline5\n", encoding="utf-8"
-    )
+    (checkout / "agent" / "skill_utils.py").write_text("line1\nline2\nline3\nline4\nline5\n", encoding="utf-8")
     r = run_patch(
         target=checkout,
         check=False,
@@ -1200,9 +1162,7 @@ def test_atomic_write_bytes_chmod_raises(tmp_path: Path, monkeypatch: pytest.Mon
     assert p.read_bytes() == b"new"
 
 
-def test_atomic_write_bytes_unlink_file_not_found(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_atomic_write_bytes_unlink_file_not_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When os.unlink raises FileNotFoundError inside the except handler,
     the function still re-raises the original exception."""
     p = tmp_path / "out.txt"
@@ -1218,9 +1178,7 @@ def test_atomic_write_bytes_unlink_file_not_found(
     assert leftovers == []
 
 
-def test_atomic_write_bytes_unlink_raises_fnfe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_atomic_write_bytes_unlink_raises_fnfe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When os.unlink raises FileNotFoundError during cleanup, the
     function re-raises the ORIGINAL exception (not the FNFE)."""
     p = tmp_path / "out.txt"
@@ -1237,9 +1195,7 @@ def test_atomic_write_bytes_unlink_raises_fnfe(
         _atomic_write_bytes(p, b"hello")
 
 
-def test_atomic_write_bytes_chmod_post_replace_raises(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_atomic_write_bytes_chmod_post_replace_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When os.chmod raises after os.replace succeeds, the function
     still returns successfully (chmod is best-effort)."""
     p = tmp_path / "out.txt"
@@ -1321,9 +1277,7 @@ def test_assert_hermes_agent_untouched_actually_fires_on_tamper(
                 finally:
                     if pre is not None:
                         post = hashlib.sha256(target.read_bytes()).hexdigest()
-                        assert pre == post, (
-                            f"SENTINEL TAMPERED: {target} sha changed {pre} -> {post}"
-                        )
+                        assert pre == post, f"SENTINEL TAMPERED: {target} sha changed {pre} -> {post}"
 
             return wrapper
 
@@ -1375,9 +1329,7 @@ def test_apply_cap_raise_with_long_description(
     assert "MAX_DESCRIPTION_LENGTH - 3" in lines[688]
 
 
-def test_target_unwritable_exits_3(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """04 §Error paths — when _atomic_write_bytes raises PermissionError
     on the target file, --apply exits 3 (PermissionError)."""
     from hermes_skill_creator_plugin import _patcher
@@ -1450,7 +1402,7 @@ def test_force_still_drifts_exits_nonzero(
     # Put a valid cap-raise site at L10 (not L688) so it's pre-validated
     # and patched, then drift it on a subsequent run.
     (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 9) + "\n    if len(desc) > 60:\n        return desc[:57] + \"...\"\n",
+        "\n".join(["# pad"] * 9) + '\n    if len(desc) > 60:\n        return desc[:57] + "..."\n',
         encoding="utf-8",
     )
     # First --force --i-accept-line-drift run: anchor at L10 not L688.
@@ -1483,9 +1435,7 @@ def test_e1_appends_only(hermes_checkout: Path) -> None:
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     # Find the E1 anchor in the post-patch file.
-    anchor_idx = next(
-        i for i, ln in enumerate(lines) if "aren't maintained become liabilities" in ln
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if "aren't maintained become liabilities" in ln)
     assert lines[anchor_idx] == '    "Skills that aren\'t maintained become liabilities."'
     # The next line is the appended consult-rule line (constant name).
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
@@ -1508,13 +1458,8 @@ def test_e2_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    anchor_idx = next(
-        i for i, ln in enumerate(lines) if "necessary later, save it as a skill" in ln
-    )
-    assert (
-        lines[anchor_idx]
-        == '    "necessary later, save it as a skill with the skill tool.\\n"'
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if "necessary later, save it as a skill" in ln)
+    assert lines[anchor_idx] == '    "necessary later, save it as a skill with the skill tool.\\n"'
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
 
 
@@ -1533,13 +1478,8 @@ def test_e3_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    anchor_idx = next(
-        i for i, ln in enumerate(lines) if "After difficult/iterative tasks" in ln
-    )
-    assert (
-        lines[anchor_idx]
-        == '            "After difficult/iterative tasks, offer to save as a skill. "'
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if "After difficult/iterative tasks" in ln)
+    assert lines[anchor_idx] == '            "After difficult/iterative tasks, offer to save as a skill. "'
     appended = lines[anchor_idx + 1]
     assert "SKILL_CREATOR_CONSULT_RULE" in appended
     # 12-space indent preserved.
@@ -1561,13 +1501,8 @@ def test_e4_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    anchor_idx = next(
-        i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln
-    )
-    assert (
-        lines[anchor_idx]
-        == "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
+    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
 
 
@@ -1588,9 +1523,7 @@ def test_e5_appends_only(hermes_checkout: Path) -> None:
     lines = text.splitlines()
     # E5's anchor `(2), or (3).\n\n` is a substring of E4's anchor; find
     # the EXACT line (E5's anchor text).
-    anchor_idx = next(
-        i for i, ln in enumerate(lines) if ln == '    "(2), or (3).\\n\\n"'
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).\\n\\n"')
     assert lines[anchor_idx] == '    "(2), or (3).\\n\\n"'
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
 
@@ -1610,15 +1543,8 @@ def test_e6_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "tools" / "skill_manager_tool.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    anchor_idx = next(
-        i
-        for i, ln in enumerate(lines)
-        if "pitfalls come up; pin only guards" in ln
-    )
-    assert (
-        lines[anchor_idx]
-        == '        "pitfalls come up; pin only guards against irrecoverable loss."'
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if "pitfalls come up; pin only guards" in ln)
+    assert lines[anchor_idx] == '        "pitfalls come up; pin only guards against irrecoverable loss."'
     # The appended line follows.
     appended = lines[anchor_idx + 1]
     assert "skill-creator" in appended
@@ -1640,17 +1566,11 @@ def test_e7_appends_only(hermes_checkout: Path) -> None:
         no_schema_redirect=False,
     )
     assert r.exit_code == EXIT_OK
-    text = (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").read_text(
-        encoding="utf-8"
-    )
+    text = (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").read_text(encoding="utf-8")
     lines = text.splitlines()
-    anchor_idx = next(
-        i for i, ln in enumerate(lines) if ln.startswith("The agent can create, update")
-    )
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln.startswith("The agent can create, update"))
     # The clarifier blockquote sits on the next non-blank line.
-    clarifier_idx = next(
-        i for i in range(anchor_idx + 1, len(lines)) if lines[i].startswith("> Note:")
-    )
+    clarifier_idx = next(i for i in range(anchor_idx + 1, len(lines)) if lines[i].startswith("> Note:"))
     assert "skill-creator" in lines[clarifier_idx]
     assert "skill_manage" in lines[clarifier_idx]
 
@@ -1663,12 +1583,12 @@ def test_task_e_current_text_is_unique_in_source() -> None:
         # physical line — no implicit-concat joining, no
         # whitespace normalization.
         anchor = site.primary_anchor()
-        assert "\n" not in anchor.text, (
-            f"site {site.site_id} anchor must be a single physical line, got {anchor.text!r}"
-        )
-        assert len(anchor.text) >= 8, (
-            f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
-        )
+        assert (
+            "\n" not in anchor.text
+        ), f"site {site.site_id} anchor must be a single physical line, got {anchor.text!r}"
+        assert (
+            len(anchor.text) >= 8
+        ), f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
         # The insertion is a single NEW line (additive-only).
         assert site.insertion.endswith("\n")
 
@@ -1773,9 +1693,7 @@ def test_task_e_drift_exits_2(
     assert any(f["site_id"] == "E2.memory_guidance" for f in rejected["failures"])
 
 
-def test_emit_migration_note_lists_all_sites(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_emit_migration_note_lists_all_sites(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """05 §Migration note — --emit-migration-note produces a table with
     exactly 8 rows; with --no-schema-redirect exactly 7 rows."""
     p = generate_migration_note(
@@ -1804,9 +1722,7 @@ def test_emit_migration_note_lists_all_sites(
     assert len(task_e_rows2) == 6
 
 
-def test_migration_note_index_links_resolve(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_migration_note_index_links_resolve(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """08 §TDD — MIGRATION.md mentions MIGRATION.hermes-patch.md and
     MIGRATION.skill-port.md."""
     generate_migration_note(
@@ -1820,9 +1736,7 @@ def test_migration_note_index_links_resolve(
     assert "MIGRATION.skill-port.md" in index
 
 
-def test_migration_note_anchors_match_inventory(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_migration_note_anchors_match_inventory(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """08 §TDD — every anchor cell in the patch table matches the
     corresponding 8+ char anchor in 05's site table; the new-skill
     rule inserted at E1-E5 is the SAME shared constant."""
@@ -1846,14 +1760,12 @@ def test_migration_note_anchors_match_inventory(
         for line in text.splitlines():
             if line.startswith(f"| {site_id} "):
                 # The replacement cell must reference the consult rule.
-                assert "SKILL_CREATOR_CONSULT_RULE" in line, (
-                    f"site {site_id} row missing SKILL_CREATOR_CONSULT_RULE: {line!r}"
-                )
+                assert (
+                    "SKILL_CREATOR_CONSULT_RULE" in line
+                ), f"site {site_id} row missing SKILL_CREATOR_CONSULT_RULE: {line!r}"
 
 
-def test_emit_migration_note_idempotent_no_clobber(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_emit_migration_note_idempotent_no_clobber(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """08 §TDD — second --emit-migration-note run on the same target
     produces byte-identical files; no sidecar or backup is left
     behind."""
@@ -1883,9 +1795,7 @@ def test_emit_migration_note_idempotent_no_clobber(
 # =====================================================================
 
 
-def test_migration_index_cap_row_has_anchor_column(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_migration_index_cap_row_has_anchor_column(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """F4 — the cap row in MIGRATION.hermes-patch.md has a non-empty
     anchor cell containing the byte-exact primary anchor for S1.cap.
     """
@@ -1906,9 +1816,7 @@ def test_migration_index_cap_row_has_anchor_column(
     assert len(cells) == 5, f"expected 5 cells, got {len(cells)}: {row}"
     # The 5th cell is the anchor cell.
     anchor_cell = cells[4]
-    assert "if len(desc) > 60:" in anchor_cell, (
-        f"cap row anchor cell missing primary anchor: {anchor_cell!r}"
-    )
+    assert "if len(desc) > 60:" in anchor_cell, f"cap row anchor cell missing primary anchor: {anchor_cell!r}"
 
 
 def test_migration_task_e_rows_have_site_specific_anchor(
@@ -1944,20 +1852,16 @@ def test_migration_task_e_rows_have_site_specific_anchor(
         # At least the first 10 chars of the primary anchor are present.
         # For sites whose anchor is short we just check exact containment.
         if len(primary) <= 60:
-            assert primary in anchor_cell, (
-                f"anchor cell for {site_id} missing primary anchor: {primary!r} not in {anchor_cell!r}"
-            )
+            assert (
+                primary in anchor_cell
+            ), f"anchor cell for {site_id} missing primary anchor: {primary!r} not in {anchor_cell!r}"
         else:
             # Truncated: first 59 chars + ellipsis.
             truncated = primary[:59] + "…"
-            assert truncated in anchor_cell, (
-                f"anchor cell for {site_id} missing truncated anchor: {truncated!r}"
-            )
+            assert truncated in anchor_cell, f"anchor cell for {site_id} missing truncated anchor: {truncated!r}"
 
 
-def test_migration_deterministic_under_frozen_time(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_migration_deterministic_under_frozen_time(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """08 D6 — under HERMES_SKILL_CREATOR_FROZEN_TIME, the migration
     note is byte-identical across runs."""
     p1 = generate_migration_note(
@@ -1996,9 +1900,7 @@ def test_now_iso_returns_current_when_unset(monkeypatch: pytest.MonkeyPatch) -> 
     assert len(s) == 20  # YYYY-MM-DDTHH:MM:SSZ
 
 
-def test_force_audit_log_uses_frozen_time(
-    hermes_checkout: Path, frozen_time: str
-) -> None:
+def test_force_audit_log_uses_frozen_time(hermes_checkout: Path, frozen_time: str) -> None:
     """The audit log line uses the frozen timestamp."""
     r = run_patch(
         target=hermes_checkout,
@@ -2036,9 +1938,7 @@ def test_run_patch_required_params() -> None:
         "no_schema_redirect",
     }
     sig_names = set(sig.parameters.keys())
-    assert required.issubset(sig_names), (
-        f"missing required params: {required - sig_names}"
-    )
+    assert required.issubset(sig_names), f"missing required params: {required - sig_names}"
     # Optional side-effects have safe defaults.
     assert sig.parameters["yes"].default is False
     assert sig.parameters["verbose"].default is False

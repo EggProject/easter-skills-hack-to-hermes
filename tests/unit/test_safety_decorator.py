@@ -41,9 +41,7 @@ def test_decorator_passes_through_when_hermes_home_in_tmp(
     assert inner() == 42
 
 
-def test_decorator_skips_when_hermes_home_resolves_to_live(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_decorator_skips_when_hermes_home_resolves_to_live(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """When HERMES_HOME is unset and the live install path exists, the
     decorator skips the test."""
     monkeypatch.delenv("HERMES_HOME", raising=False)

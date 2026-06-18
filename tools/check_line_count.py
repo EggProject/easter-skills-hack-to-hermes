@@ -152,9 +152,7 @@ def check_footer_drift(root: Path) -> list[str]:
             continue
         m = FOOTER_RE.search(text)
         if m is None:
-            failures.append(
-                f"footer drift: {rel} missing `<!-- end of file: NN lines (budget BB) -->` footer"
-            )
+            failures.append(f"footer drift: {rel} missing `<!-- end of file: NN lines (budget BB) -->` footer")
             continue
         declared = int(m.group(1))
         if declared != loc:
@@ -221,14 +219,10 @@ def check_budget_table_total(root: Path) -> list[str]:
     if total_cell is None:
         failures.append("budget table: could not find Total cell in 00-index.md")
     elif total_cell != live_total:
-        failures.append(
-            f"budget table: 00-index Total cell is {total_cell} but live sum is {live_total}"
-        )
+        failures.append(f"budget table: 00-index Total cell is {total_cell} but live sum is {live_total}")
     sum_prose = _sum_prose_value(index_text)
     if sum_prose is not None and sum_prose != live_total:
-        failures.append(
-            f"budget table: `Sum NNNN` prose is {sum_prose} but live sum is {live_total}"
-        )
+        failures.append(f"budget table: `Sum NNNN` prose is {sum_prose} but live sum is {live_total}")
     return failures
 
 
@@ -256,19 +250,14 @@ def check_per_cell_guard(root: Path) -> list[str]:
             continue
         loc = _wc_l(target)
         if row.actual != loc:
-            failures.append(
-                f"per-cell guard: row {row.num} ({rel}) Actual cell is "
-                f"{row.actual} but wc -l is {loc}"
-            )
+            failures.append(f"per-cell guard: row {row.num} ({rel}) Actual cell is " f"{row.actual} but wc -l is {loc}")
         # Budget cell — the per-file budget cap. We assert the row's Budget cell
         # is at least as large as the live Actual (otherwise the cap is violated).
         # The brief also says "per-file Budget == budget" — we interpret this as
         # the table cell being a coherent integer that the hook can re-validate
         # against the operator's hand. Compare against the row's own claim.
         if row.budget < loc:
-            failures.append(
-                f"per-cell guard: row {row.num} ({rel}) Budget {row.budget} < Actual {loc}"
-            )
+            failures.append(f"per-cell guard: row {row.num} ({rel}) Budget {row.budget} < Actual {loc}")
     return failures
 
 

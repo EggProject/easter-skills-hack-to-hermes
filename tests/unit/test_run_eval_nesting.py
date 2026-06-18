@@ -60,9 +60,7 @@ def test_run_eval_unnests_hermes_guard(hermes_home: Path, monkeypatch: pytest.Mo
 
 
 @assert_hermes_agent_untouched
-def test_run_eval_restores_hermes_guard_on_exit(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_eval_restores_hermes_guard_on_exit(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HERMES_SESSION", "session-id")
     monkeypatch.setenv("HERMES_HOME", str(hermes_home))
 
@@ -81,9 +79,7 @@ def test_run_eval_restores_hermes_guard_on_exit(
 
 
 @assert_hermes_agent_untouched
-def test_run_eval_no_op_when_guard_unset(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_eval_no_op_when_guard_unset(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("HERMES_SESSION", raising=False)
     monkeypatch.delenv("CLAUDECODE", raising=False)
     monkeypatch.setenv("HERMES_HOME", str(hermes_home))
@@ -117,9 +113,7 @@ def test_run_eval_event_shape_adapter_normalizes_hermes_shape(
 
 
 @assert_hermes_agent_untouched
-def test_run_eval_uses_hermes_subprocess_env(
-    skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_eval_uses_hermes_subprocess_env(skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """run_eval.py imports hermes_subprocess_env from `_subprocess`."""
     run_eval_mod = _load_module(SCRIPTS / "run_eval.py", "run_eval_helper_test")
     assert hasattr(run_eval_mod, "hermes_subprocess_env")
@@ -131,9 +125,7 @@ def test_run_eval_uses_hermes_subprocess_env(
 
 
 @assert_hermes_agent_untouched
-def test_improve_description_unnests_hermes_guard(
-    skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_improve_description_unnests_hermes_guard(skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HERMES_SESSION", "s")
     captured: dict = {}
 
@@ -171,9 +163,7 @@ def test_improve_description_restores_hermes_guard_on_exit(
 
 
 @assert_hermes_agent_untouched
-def test_improve_description_no_op_when_guard_unset(
-    skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_improve_description_no_op_when_guard_unset(skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("HERMES_SESSION", raising=False)
 
     class _FakeProc:
@@ -199,9 +189,7 @@ def test_improve_description_no_op_when_guard_unset(
 
 
 @assert_hermes_agent_untouched
-def test_emit_bilingual_console_emits_en_then_hu(
-    skill_creator_home: Path, capsys: pytest.CaptureFixture
-) -> None:
+def test_emit_bilingual_console_emits_en_then_hu(skill_creator_home: Path, capsys: pytest.CaptureFixture) -> None:
     utils = _load_module(SCRIPTS / "utils.py", "utils_bi_test")
     utils.emit("hello", "szia")
     out = capsys.readouterr().out

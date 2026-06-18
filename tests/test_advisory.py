@@ -43,13 +43,15 @@ def test_detect_cap_state_patched(tmp_path: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
             def extract_skill_description(desc):
                 MAX_DESCRIPTION_LENGTH = 1024
                 if len(desc) > MAX_DESCRIPTION_LENGTH:
                     return desc[:MAX_DESCRIPTION_LENGTH]
                 return desc
-            """),
+            """
+        ),
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "patched"
@@ -61,12 +63,14 @@ def test_detect_cap_state_unpatched(tmp_path: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
             def extract_skill_description(desc):
                 if len(desc) > 60:
                     return desc[:60]
                 return desc
-            """),
+            """
+        ),
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unpatched"
@@ -104,12 +108,14 @@ def test_detect_cap_state_other_function_with_60_is_unpatched(tmp_path: Path) ->
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
             def helper(x):
                 if x > 60:
                     return x
                 return None
-            """),
+            """
+        ),
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -123,12 +129,14 @@ def test_detect_cap_state_extract_fn_no_compare_with_cap(tmp_path: Path) -> None
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
             def extract_skill_description(desc):
                 if len(desc) > 100:
                     return desc[:100]
                 return desc
-            """),
+            """
+        ),
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -142,13 +150,15 @@ def test_detect_cap_state_extract_fn_with_unrelated_name(tmp_path: Path) -> None
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
             def extract_skill_description(desc):
                 OTHER_CAP = 100
                 if len(desc) > OTHER_CAP:
                     return desc[:OTHER_CAP]
                 return desc
-            """),
+            """
+        ),
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -165,13 +175,15 @@ def test_detect_cap_state_extract_fn_with_unrelated_constant(tmp_path: Path) -> 
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
             def extract_skill_description(desc):
                 OTHER_CAP = 100
                 if len(desc) > OTHER_CAP:
                     return desc[:OTHER_CAP]
                 return desc
-            """),
+            """
+        ),
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -182,9 +194,7 @@ def test_detect_cap_state_extract_fn_with_unrelated_constant(tmp_path: Path) -> 
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_target_dir_prefers_env_var(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_resolve_target_dir_prefers_env_var(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """HERMES_HERMES_AGENT_TARGET=/tmp/x -> resolver returns /tmp/x."""
     target = tmp_path / "checkout"
     target.mkdir()
@@ -275,11 +285,7 @@ def test_advisory_no_setattr_on_skill_utils() -> None:
     mod = _ast.parse(Path(_advisory.__file__).read_text(encoding="utf-8"))
     for node in _ast.walk(mod):
         # Skip docstring nodes (Expr/Constant at the start of a body).
-        if (
-            isinstance(node, _ast.Expr)
-            and isinstance(node.value, _ast.Constant)
-            and isinstance(node.value.value, str)
-        ):
+        if isinstance(node, _ast.Expr) and isinstance(node.value, _ast.Constant) and isinstance(node.value.value, str):
             continue
         if isinstance(node, _ast.Call):
             func = node.func

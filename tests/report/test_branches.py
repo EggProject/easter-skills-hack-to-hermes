@@ -125,9 +125,7 @@ def test_load_skill_description_full_text_no_frontmatter(tmp_path: Path) -> None
 def test_load_skill_description_no_description_line(tmp_path: Path) -> None:
     skill_dir = tmp_path / "a"
     skill_dir.mkdir()
-    (skill_dir / "SKILL.md").write_text(
-        "---\nname: a\n---\n\nFirst paragraph.\n\n# Heading\n", encoding="utf-8"
-    )
+    (skill_dir / "SKILL.md").write_text("---\nname: a\n---\n\nFirst paragraph.\n\n# Heading\n", encoding="utf-8")
     s = cli_report._load_skill_description(tmp_path, "a")
     assert "First paragraph" in s
 
@@ -161,9 +159,7 @@ def test_build_usage_rows_with_persisted_true() -> None:
 
 
 def test_build_usage_rows_with_persisted_false() -> None:
-    curator = SimpleNamespace(
-        usage_report=lambda **kw: [_Entry(name="a", use_count=99, _persisted=False)]
-    )
+    curator = SimpleNamespace(usage_report=lambda **kw: [_Entry(name="a", use_count=99, _persisted=False)])
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))
     assert out["a"]["use_count"] is None
     assert out["a"]["_persisted"] is False
@@ -187,9 +183,7 @@ def test_build_usage_rows_entry_without_name() -> None:
 
 
 def test_build_usage_rows_entry_not_in_enabled_set() -> None:
-    curator = SimpleNamespace(
-        usage_report=lambda **kw: [_Entry(name="other", use_count=1, _persisted=True)]
-    )
+    curator = SimpleNamespace(usage_report=lambda **kw: [_Entry(name="other", use_count=1, _persisted=True)])
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))
     # 'other' is not in enabled set; the only enabled skill 'a' is backfilled.
     assert "other" not in out

@@ -19,9 +19,7 @@ def _import_helper():
     """Import hermes_subprocess_env from the skill dir (NOT the plugin)."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location(
-        "skill_creator_subprocess", SKILL_DIR / "_subprocess.py"
-    )
+    spec = importlib.util.spec_from_file_location("skill_creator_subprocess", SKILL_DIR / "_subprocess.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -29,9 +27,7 @@ def _import_helper():
 
 
 @assert_hermes_agent_untouched
-def test_hermes_subprocess_env_strips_hermes_session(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hermes_subprocess_env_strips_hermes_session(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HERMES_SESSION", "active-session-id")
     monkeypatch.setenv("PATH", "/usr/bin")
     helper = _import_helper()
@@ -41,9 +37,7 @@ def test_hermes_subprocess_env_strips_hermes_session(
 
 
 @assert_hermes_agent_untouched
-def test_hermes_subprocess_env_strips_claudecode(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hermes_subprocess_env_strips_claudecode(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setenv("HOME", "/home/test")
     helper = _import_helper()
@@ -53,9 +47,7 @@ def test_hermes_subprocess_env_strips_claudecode(
 
 
 @assert_hermes_agent_untouched
-def test_hermes_subprocess_env_preserves_other_vars(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hermes_subprocess_env_preserves_other_vars(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HERMES_SESSION", "x")
     monkeypatch.setenv("CLAUDECODE", "y")
     monkeypatch.setenv("PATH", "/bin")
@@ -69,9 +61,7 @@ def test_hermes_subprocess_env_preserves_other_vars(
 
 
 @assert_hermes_agent_untouched
-def test_hermes_subprocess_env_does_not_mutate_parent(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hermes_subprocess_env_does_not_mutate_parent(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HERMES_SESSION", "kept")
     monkeypatch.setenv("CLAUDECODE", "kept")
     helper = _import_helper()
@@ -89,9 +79,7 @@ def test_nesting_guard_var_constant_is_hermes_session(hermes_home: Path) -> None
 
 
 @assert_hermes_agent_untouched
-def test_hermes_subprocess_env_when_guard_unset(
-    hermes_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hermes_subprocess_env_when_guard_unset(hermes_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("HERMES_SESSION", raising=False)
     monkeypatch.delenv("CLAUDECODE", raising=False)
     monkeypatch.setenv("PATH", "/bin")

@@ -164,9 +164,7 @@ def _install_fake_hermes_apis(
 
     # 4) hermes_cli.skills_config — save_disabled_skills (the mutator)
     def save_disabled_skills(config, disabled, platform=None):
-        log.save_disabled_calls.append(
-            {"config": dict(config), "disabled": set(disabled), "platform": platform}
-        )
+        log.save_disabled_calls.append({"config": dict(config), "disabled": set(disabled), "platform": platform})
         # Mirror the real mutator: write back into config["skills"]["disabled"].
         if "skills" not in config:
             config["skills"] = {}
@@ -278,9 +276,7 @@ def fake_agent_module(monkeypatch: pytest.MonkeyPatch):
             key, _, value = line.partition(":")
             value = value.strip()
             if value.startswith("[") and value.endswith("]"):
-                fm[key.strip()] = [
-                    v.strip().strip('"').strip("'") for v in value[1:-1].split(",") if v.strip()
-                ]
+                fm[key.strip()] = [v.strip().strip('"').strip("'") for v in value[1:-1].split(",") if v.strip()]
             elif value.startswith("{") and value.endswith("}"):
                 fm[key.strip()] = {}
             else:
@@ -432,9 +428,7 @@ def test_audit_json_deterministic(installed, tmp_path: Path) -> None:
             profile_names=["hermes"],
             config_data={"skills": {"disabled": []}},
         )
-        return cli.run_audit(
-            apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z"
-        ).to_json_bytes()
+        return cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z").to_json_bytes()
 
     a = _run_once()
     b = _run_once()
@@ -471,9 +465,7 @@ def test_apply_replaces_factory_skill_creator(installed, tmp_path: Path) -> None
     skills.mkdir(parents=True)
     # Factory skill-creator already present.
     (skills / "skill-creator").mkdir()
-    (skills / "skill-creator" / "SKILL.md").write_text(
-        "---\nname: skill-creator\ndescription: factory\n---\n"
-    )
+    (skills / "skill-creator" / "SKILL.md").write_text("---\nname: skill-creator\ndescription: factory\n---\n")
     log, cli = installed(
         profile_paths=[profile],
         profile_names=["hermes"],
@@ -619,9 +611,7 @@ def test_apply_force_reinstall_on_version_drift(installed, tmp_path: Path) -> No
     skills = profile / "skills"
     skills.mkdir(parents=True)
     (skills / "skill-creator").mkdir()
-    (skills / "skill-creator" / "SKILL.md").write_text(
-        "---\nname: skill-creator\ndescription: old-factory\n---\n"
-    )
+    (skills / "skill-creator" / "SKILL.md").write_text("---\nname: skill-creator\ndescription: old-factory\n---\n")
     log, cli = installed(
         profile_paths=[profile],
         profile_names=["hermes"],
@@ -892,9 +882,7 @@ def test_dry_run_default_no_writes(installed, tmp_path: Path) -> None:
     assert log.save_config_calls == []
 
 
-def test_json_output_path_resolved_under_workdir(
-    installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_json_output_path_resolved_under_workdir(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``--json PATH`` writes the report to PATH (under cwd by default)."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
@@ -931,9 +919,7 @@ def test_json_output_path_absolute(installed, tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_apply_refuses_real_hermes_home_without_yes(
-    installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_apply_refuses_real_hermes_home_without_yes(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When HERMES_HOME resolves to the LIVE ``~/.hermes`` AND ``--yes`` is
     absent AND stdout is not a TTY → the script aborts with exit 5.
 
@@ -957,9 +943,7 @@ def test_apply_refuses_real_hermes_home_without_yes(
     assert exc_info.value.code == 5
 
 
-def test_apply_does_not_touch_hermes_agent(
-    installed, tmp_path: Path, real_hermes_agent_sentinel: str
-) -> None:
+def test_apply_does_not_touch_hermes_agent(installed, tmp_path: Path, real_hermes_agent_sentinel: str) -> None:
     """The live ``~/.hermes/hermes-agent/agent/skill_utils.py`` sha256 is
     unchanged after a full run. The sentinel fixture hashes the file
     before/after; if any bytes changed the assertion would fail."""
@@ -1181,9 +1165,7 @@ def test_walk_skills_skips_subdir_without_skill_md(fake_agent_module, tmp_path: 
     assert _walk_skills(skills) == {"real"}
 
 
-def test_walk_skills_skips_on_parse_exception(
-    fake_agent_module, tmp_path: Path, monkeypatch
-) -> None:
+def test_walk_skills_skips_on_parse_exception(fake_agent_module, tmp_path: Path, monkeypatch) -> None:
     """When ``parse_frontmatter`` raises, the walker drops the skill (defensive)."""
     from hermes_skill_creator_plugin.cli_profiles import _walk_skills
 
@@ -1193,9 +1175,7 @@ def test_walk_skills_skips_on_parse_exception(
     _write_skill_simple(skills, "ok", "name: ok\ndescription: x")
     import agent.skill_utils as asu
 
-    monkeypatch.setattr(
-        asu, "parse_frontmatter", lambda c: (_ for _ in ()).throw(ValueError("boom"))
-    )
+    monkeypatch.setattr(asu, "parse_frontmatter", lambda c: (_ for _ in ()).throw(ValueError("boom")))
     # The walker drops the skill on parse failure (does NOT fall back to the dir name).
     assert _walk_skills(skills) == set()
 
@@ -1233,9 +1213,7 @@ def test_audit_save_disabled_skills_succeeds(installed, tmp_path: Path) -> None:
     assert "openai" not in report["profiles"][0]["desired_disabled"]
 
 
-def test_run_audit_refuses_live_home(
-    installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_audit_refuses_live_home(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """run_audit() with apply=True, yes=False, and HERMES_HOME=live exits 5."""
     real = Path.home() / ".hermes"
     if not real.exists():
@@ -1253,9 +1231,7 @@ def test_run_audit_refuses_live_home(
     assert exc_info.value.code == 5
 
 
-def test_run_audit_continues_when_not_live(
-    installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_audit_continues_when_not_live(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When HERMES_HOME is NOT the live install, run_audit() proceeds."""
     scoped = tmp_path / "scoped-home"
     scoped.mkdir()
@@ -1301,9 +1277,7 @@ def test_walk_skills_handles_missing_dir(fake_agent_module, tmp_path: Path) -> N
     assert _walk_skills(tmp_path / "no-such-dir") == set()
 
 
-def test_walk_skills_handles_oserror(
-    fake_agent_module, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_walk_skills_handles_oserror(fake_agent_module, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``_walk_skills`` swallows OSError on a SKILL.md read (defensive)."""
     from hermes_skill_creator_plugin.cli_profiles import _walk_skills
 

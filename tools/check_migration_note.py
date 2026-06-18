@@ -108,8 +108,7 @@ def check_migration_files(root: Path) -> list[Finding]:
                     Finding(
                         path=p,
                         message=(
-                            f"{rel} is git-tracked but missing from "
-                            f"{MANIFEST_PATH.name}; re-run the generator"
+                            f"{rel} is git-tracked but missing from " f"{MANIFEST_PATH.name}; re-run the generator"
                         ),
                     )
                 )

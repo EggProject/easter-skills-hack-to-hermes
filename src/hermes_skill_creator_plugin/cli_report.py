@@ -59,7 +59,7 @@ REJECTED_FLAGS = {
 }
 
 HELP_EN_HEADER = "Usage (English):"
-HELP_HU_HEADER = "Hasznalat (magyar):"
+HELP_HU_HEADER = "Használat (magyar):"
 
 
 def _emit_tokenizer_warning(_msg: str) -> None:
@@ -303,8 +303,7 @@ def _emit_bilingual_help() -> None:
     en_lines = [
         HELP_EN_HEADER,
         "",
-        "  uv run hermes-skill-creator-report [--profile <name>] "
-        "[--sort tokens|use_count|last_used_at]",
+        "  uv run hermes-skill-creator-report [--profile <name>] " "[--sort tokens|use_count|last_used_at]",
         "                                     [--format text|json] [--json PATH] [--help]",
         "",
         "Options:",
@@ -319,8 +318,7 @@ def _emit_bilingual_help() -> None:
     hu_lines = [
         HELP_HU_HEADER,
         "",
-        "  uv run hermes-skill-creator-report [--profile <name>] "
-        "[--sort tokens|use_count|last_used_at]",
+        "  uv run hermes-skill-creator-report [--profile <name>] " "[--sort tokens|use_count|last_used_at]",
         "                                     [--format text|json] [--json PATH] [--help]",
         "",
         "Opciok:",
@@ -410,9 +408,7 @@ def run(
         if fmt == "text":
             text_sections.append(format_text(p.name, rows, total_tokens=total))
         else:
-            json_sections.append(
-                ProfileSection(profile_name=p.name, rows=rows, total_tokens=total)
-            )
+            json_sections.append(ProfileSection(profile_name=p.name, rows=rows, total_tokens=total))
     if fmt == "text":
         output = "\n\n".join(text_sections)
     else:

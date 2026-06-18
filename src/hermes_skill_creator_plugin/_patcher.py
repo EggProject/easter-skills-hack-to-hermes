@@ -47,7 +47,6 @@ plans/09-test-strategy.md.
 from __future__ import annotations
 
 import dataclasses
-import os
 from pathlib import Path
 from typing import Any
 
@@ -64,13 +63,17 @@ from ._patcher_apply import (
 )
 from ._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
+)
+from ._patcher_helpers import (
     file_has_circular_import,
     hermes_agent_path,
     is_hermes_agent,
     locate_anchor,
-    now_iso as _now_iso,
     site_already_patched,
     site_in_state,
+)
+from ._patcher_helpers import (
+    now_iso as _now_iso,
 )
 from ._patcher_migration import (
     _render_cap_row,
@@ -159,6 +162,14 @@ __all__ = [
     "write_rejected",
     "generate_migration_note",
     "migration_rows_for_mode",
+    # re-exported private helpers (for unit tests + cross-module use)
+    "_atomic_write_bytes",
+    "_cross_filesystem",
+    "_now_iso",
+    "_diff_sha",
+    "_append_audit_log",
+    "_render_cap_row",
+    "_render_task_e_row",
 ]
 
 
@@ -309,9 +320,7 @@ def run_patch(
                         "reason": "LINE_DRIFT",
                         "expected": anchor.text,
                         "actual_at_line_<n>": (
-                            text.splitlines()[line_no - 1]
-                            if line_no <= len(text.splitlines())
-                            else "<out of range>"
+                            text.splitlines()[line_no - 1] if line_no <= len(text.splitlines()) else "<out of range>"
                         ),
                     }
                 )
@@ -324,10 +333,7 @@ def run_patch(
             target_path,
             failures=failures,
             remediation_en=("Re-run with --force --i-accept-line-drift after reviewing the diff."),
-            remediation_hu=(
-                "Futtassa újra --force --i-accept-line-drift kapcsolóval a diff "
-                "átnézése után."
-            ),
+            remediation_hu=("Futtassa újra --force --i-accept-line-drift kapcsolóval a diff " "átnézése után."),
             git_head=git_head,
         )
         for f in failures:

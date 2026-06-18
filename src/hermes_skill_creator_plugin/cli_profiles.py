@@ -388,11 +388,7 @@ def run_audit(
 
     click.echo(_bilingual("profiles_msg_scanning"))
     all_profiles = list_profiles()
-    selected = (
-        [p for p in all_profiles if p.name == profile]
-        if profile is not None
-        else list(all_profiles)
-    )
+    selected = [p for p in all_profiles if p.name == profile] if profile is not None else list(all_profiles)
     click.echo(_bilingual("profiles_msg_profile_count", n=len(selected)))
     if not selected:
         click.echo(_bilingual("profiles_msg_no_profiles"))

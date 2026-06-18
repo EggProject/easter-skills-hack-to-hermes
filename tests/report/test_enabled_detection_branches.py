@@ -66,23 +66,17 @@ def test_disabled_set_non_dict_skills_section(tmp_path: Path) -> None:
 
 
 def test_disabled_set_platform_filter_when_platform_is_none(tmp_path: Path) -> None:
-    s = _enabled_detection._disabled_set(
-        {"skills": {"disabled_if_platform": {"darwin": ["x"]}}}, platform=None
-    )
+    s = _enabled_detection._disabled_set({"skills": {"disabled_if_platform": {"darwin": ["x"]}}}, platform=None)
     assert "x" not in s
 
 
 def test_disabled_set_platform_filter_dict_not_dict(tmp_path: Path) -> None:
-    s = _enabled_detection._disabled_set(
-        {"skills": {"disabled_if_platform": "not-dict"}}, platform="darwin"
-    )
+    s = _enabled_detection._disabled_set({"skills": {"disabled_if_platform": "not-dict"}}, platform="darwin")
     assert s == set()
 
 
 def test_disabled_set_platform_filter_empty_platform_list(tmp_path: Path) -> None:
-    s = _enabled_detection._disabled_set(
-        {"skills": {"disabled_if_platform": {"darwin": []}}}, platform="darwin"
-    )
+    s = _enabled_detection._disabled_set({"skills": {"disabled_if_platform": {"darwin": []}}}, platform="darwin")
     assert s == set()
 
 
@@ -99,10 +93,7 @@ def test_platform_blocked_platforms_not_list() -> None:
 
 
 def test_platform_blocked_entry_not_dict() -> None:
-    assert (
-        _enabled_detection._platform_blocked({"platforms": ["string-entry"]}, platform="darwin")
-        is False
-    )
+    assert _enabled_detection._platform_blocked({"platforms": ["string-entry"]}, platform="darwin") is False
 
 
 def test_platform_blocked_blocked_field_not_list() -> None:
@@ -116,46 +107,23 @@ def test_platform_blocked_blocked_field_not_list() -> None:
 
 
 def test_conditional_excluded_rule_not_dict() -> None:
-    assert (
-        _enabled_detection._conditional_excluded({"disable_if": "string"}, platform="darwin")
-        is False
-    )
+    assert _enabled_detection._conditional_excluded({"disable_if": "string"}, platform="darwin") is False
 
 
 def test_conditional_excluded_platform_none() -> None:
-    assert (
-        _enabled_detection._conditional_excluded(
-            {"disable_if": {"platform": ["darwin"]}}, platform=None
-        )
-        is False
-    )
+    assert _enabled_detection._conditional_excluded({"disable_if": {"platform": ["darwin"]}}, platform=None) is False
 
 
 def test_conditional_excluded_platforms_not_list() -> None:
-    assert (
-        _enabled_detection._conditional_excluded(
-            {"disable_if": {"platform": "darwin"}}, platform="darwin"
-        )
-        is False
-    )
+    assert _enabled_detection._conditional_excluded({"disable_if": {"platform": "darwin"}}, platform="darwin") is False
 
 
 def test_conditional_excluded_no_match() -> None:
-    assert (
-        _enabled_detection._conditional_excluded(
-            {"disable_if": {"platform": ["linux"]}}, platform="darwin"
-        )
-        is False
-    )
+    assert _enabled_detection._conditional_excluded({"disable_if": {"platform": ["linux"]}}, platform="darwin") is False
 
 
 def test_conditional_excluded_match() -> None:
-    assert (
-        _enabled_detection._conditional_excluded(
-            {"disable_if": {"platform": ["darwin"]}}, platform="darwin"
-        )
-        is True
-    )
+    assert _enabled_detection._conditional_excluded({"disable_if": {"platform": ["darwin"]}}, platform="darwin") is True
 
 
 def test_get_enabled_skills_skills_dir_missing(tmp_path: Path) -> None:

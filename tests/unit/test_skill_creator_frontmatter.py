@@ -101,9 +101,7 @@ def _minimal_yaml_parse(block: str) -> dict:
             else:
                 lines.append((indent, key.strip(), value.strip('"').strip("'"), "scalar"))
     if current_pipe_key is not None:
-        lines.append(
-            (current_pipe_indent - 2, current_pipe_key, "\n".join(pipe_lines).strip(), "scalar")
-        )
+        lines.append((current_pipe_indent - 2, current_pipe_key, "\n".join(pipe_lines).strip(), "scalar"))
 
     root: dict = {}
     stack: list[tuple[int, dict | list]] = [(0, root)]
@@ -170,18 +168,14 @@ def test_full_description_starts_with_use_when(skill_creator_home: Path) -> None
     desc = fm["description"]
     if isinstance(desc, list):
         desc = " ".join(desc)
-    assert desc.lower().startswith(
-        "use when"
-    ), f"description must start with 'Use when', got: {desc[:60]!r}"
+    assert desc.lower().startswith("use when"), f"description must start with 'Use when', got: {desc[:60]!r}"
 
 
 @assert_hermes_agent_untouched
 def test_short_description_starts_with_use_when(skill_creator_home: Path) -> None:
     fm = _parse_frontmatter(_read(SKILL_DIR / "SKILL.md.short"))
     desc = fm["description"]
-    assert desc.lower().startswith(
-        "use when"
-    ), f"short desc must start with 'Use when', got: {desc!r}"
+    assert desc.lower().startswith("use when"), f"short desc must start with 'Use when', got: {desc!r}"
 
 
 @assert_hermes_agent_untouched
@@ -293,6 +287,4 @@ def test_no_claude_invocations_in_skill_md(skill_creator_home: Path) -> None:
     body = text.split("---\n", 2)[2] if "\n---\n" in text else text
     body = _strip_fences(body)
     # `claude -p`, `claude --model`, `claude -c`, etc.
-    assert not re.search(
-        r"\bclaude\s+-[a-zA-Z-]", body
-    ), "found 'claude -<flag>' invocation in SKILL.md body"
+    assert not re.search(r"\bclaude\s+-[a-zA-Z-]", body), "found 'claude -<flag>' invocation in SKILL.md body"

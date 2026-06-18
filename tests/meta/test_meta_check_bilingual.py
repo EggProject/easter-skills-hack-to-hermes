@@ -364,9 +364,7 @@ def test_scripts_dir_is_walked(tmp_path: Path) -> None:
     """A file under scripts/ MUST be walked by the detector."""
     scripts = tmp_path / "scripts"
     scripts.mkdir()
-    (scripts / "bad.py").write_text(
-        'def run() -> None:\n    print("[en] only")\n', encoding="utf-8"
-    )
+    (scripts / "bad.py").write_text('def run() -> None:\n    print("[en] only")\n', encoding="utf-8")
     findings = run_all_checks(tmp_path)
     assert any("bilingual" in f.message for f in findings)
 
@@ -535,9 +533,7 @@ def test_func_name_on_call_with_subscript() -> None:
     assert check_bilingual._func_name(call) == ""
 
 
-def test_main_default_argv_uses_sys_argv(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
-) -> None:
+def test_main_default_argv_uses_sys_argv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     """main() with argv=None MUST use sys.argv[1:] (covered branch)."""
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
     monkeypatch.setattr("sys.argv", ["check_bilingual.py"])

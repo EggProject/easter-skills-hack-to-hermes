@@ -28,7 +28,7 @@ def test_help_sections_present() -> None:
     r = runner.invoke(main, ["--help"])
     assert r.exit_code == 0
     assert "Usage (English)" in r.output
-    assert "Hasznalat (magyar)" in r.output
+    assert "Használat (magyar)" in r.output
 
 
 def test_help_options_mirrored() -> None:
@@ -94,9 +94,7 @@ def test_cli_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: 
     assert pre == post
 
 
-def test_cli_force_without_i_accept_exits_5(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_force_without_i_accept_exits_5(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
@@ -105,9 +103,7 @@ def test_cli_force_without_i_accept_exits_5(
     assert r.exit_code == EXIT_USER_ABORT
 
 
-def test_cli_force_with_i_accept_succeeds(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_force_with_i_accept_succeeds(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
@@ -139,9 +135,7 @@ def test_cli_task_e_redirect(hermes_checkout: Path, real_hermes_agent_sentinel: 
     assert "E7.skills_doc_section" in state
 
 
-def test_cli_no_schema_redirect(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_no_schema_redirect(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
@@ -161,9 +155,7 @@ def test_cli_no_schema_redirect(
 # --- --emit-migration-note ----------------------------------------------
 
 
-def test_cli_emit_migration_note_default(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
+def test_cli_emit_migration_note_default(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem() as td:
         # runner.isolated_filesystem sets cwd to a tmp dir
@@ -206,9 +198,7 @@ def test_cli_emit_migration_note_hermes_agent_refused() -> None:
 # --- --verbose (already emits diagnostics) -------------------------------
 
 
-def test_cli_verbose_emits_diagnostics(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_verbose_emits_diagnostics(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
@@ -219,9 +209,7 @@ def test_cli_verbose_emits_diagnostics(
     assert "OK" in r.output
 
 
-def test_cli_default_check_mode(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_cli_default_check_mode(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """When neither --check nor --apply is given, the CLI defaults to --check."""
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     pre = hashlib.sha256(target_file.read_bytes()).hexdigest()
@@ -232,9 +220,7 @@ def test_cli_default_check_mode(
     assert pre == post
 
 
-def test_cli_emit_migration_note_with_git_failure(
-    hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cli_emit_migration_note_with_git_failure(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When _git_head raises, the emit-migration-note path catches it
     and continues with an empty git_head."""
     from hermes_skill_creator_plugin import cli_patch

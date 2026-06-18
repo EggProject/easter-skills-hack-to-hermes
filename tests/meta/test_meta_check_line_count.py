@@ -174,9 +174,7 @@ def test_per_cell_guard_fails_when_a_row_cap_lt_actual_loc(tmp_path: Path) -> No
     assert any("per-cell guard" in f for f in failures)
 
 
-def test_check_runs_clean_on_this_worktree_skeleton(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_check_runs_clean_on_this_worktree_skeleton(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The hook MUST exit 0 against a perfectly-clean synthetic fixture."""
     _build_synthetic_plans(
         tmp_path,
@@ -361,9 +359,7 @@ def test_parse_args_enables_each_invariant(tmp_path: Path) -> None:
     assert args.per_cell is True
 
 
-def test_main_returns_1_when_failures(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
-) -> None:
+def test_main_returns_1_when_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     """main() MUST exit 1 when ANY invariant fails."""
     _build_synthetic_plans(
         tmp_path,
@@ -391,9 +387,7 @@ def test_main_returns_0_when_clean(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert "OK" in out
 
 
-def test_iter_plan_files_falls_back_when_no_file_map(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_iter_plan_files_falls_back_when_no_file_map(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When 00-index has NO file map rows, _iter_plan_files MUST fall back to on-disk glob."""
     # 00-index with bare marker but no table rows.
     plans = tmp_path / "docs" / "plans"
@@ -406,9 +400,7 @@ def test_iter_plan_files_falls_back_when_no_file_map(
     assert all(p.name != "00-index.md" for p in paths)
 
 
-def test_iter_plan_files_success_path_with_file_map(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_iter_plan_files_success_path_with_file_map(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When the file map IS parsed, _iter_plan_files MUST walk it (lines 81-86)."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
@@ -422,12 +414,8 @@ def test_iter_plan_files_success_path_with_file_map(
         "<!-- end of file -->\n",
         encoding="utf-8",
     )
-    (plans / "01-a.md").write_text(
-        "x\n<!-- end of file: 2 lines (budget 30) -->\n", encoding="utf-8"
-    )
-    (plans / "02-b.md").write_text(
-        "x\n<!-- end of file: 2 lines (budget 30) -->\n", encoding="utf-8"
-    )
+    (plans / "01-a.md").write_text("x\n<!-- end of file: 2 lines (budget 30) -->\n", encoding="utf-8")
+    (plans / "02-b.md").write_text("x\n<!-- end of file: 2 lines (budget 30) -->\n", encoding="utf-8")
     paths = check_line_count._iter_plan_files(tmp_path)
     # Success path: walk the file map (skip 00-index from the result).
     names = {p.name for p in paths}
@@ -453,9 +441,7 @@ def test_iter_plan_files_including_index_no_plans_dir(tmp_path: Path) -> None:
     assert paths == []
 
 
-def test_file_map_paths_handles_unreadable_index(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_file_map_paths_handles_unreadable_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """_file_map_paths MUST return None when the index is unreadable (lines 119-120)."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
@@ -519,9 +505,7 @@ def test_per_cell_guard_dedupes_duplicate_num(tmp_path: Path) -> None:
     """Duplicate row numbers MUST be silently skipped after the first."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
-    (plans / "01-x.md").write_text(
-        "line 1\n<!-- end of file: 2 lines (budget 100) -->\n", encoding="utf-8"
-    )
+    (plans / "01-x.md").write_text("line 1\n<!-- end of file: 2 lines (budget 100) -->\n", encoding="utf-8")
     (plans / "00-index.md").write_text(
         "# Index\n\n"
         "| # | File | Covers | Status | Budget | Actual |\n"
@@ -536,9 +520,7 @@ def test_per_cell_guard_dedupes_duplicate_num(tmp_path: Path) -> None:
     assert failures == []
 
 
-def test_main_with_no_invariant_flags_disables_all(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
-) -> None:
+def test_main_with_no_invariant_flags_disables_all(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     """main() with all three --no-* flags MUST still return 0 (no invariants to check)."""
     _build_synthetic_plans(
         tmp_path,
@@ -550,9 +532,7 @@ def test_main_with_no_invariant_flags_disables_all(
     assert rc == 0
 
 
-def test_main_uses_sys_argv_when_none(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
-) -> None:
+def test_main_uses_sys_argv_when_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     """main(argv=None) MUST read sys.argv[1:] (covers the `if argv is None` branch)."""
     _build_synthetic_plans(
         tmp_path,
@@ -576,9 +556,7 @@ def test_run_all_checks_with_each_disabled(tmp_path: Path, monkeypatch: pytest.M
     assert all("footer drift" not in f for f in failures)
 
 
-def test_iter_plan_files_including_index_dedupes_00_index(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_iter_plan_files_including_index_dedupes_00_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When 00-index row IS in the file map, it MUST NOT be added twice (line 107)."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
@@ -595,9 +573,7 @@ def test_iter_plan_files_including_index_dedupes_00_index(
     assert sum(1 for p in paths if p.name == "00-index.md") == 1
 
 
-def test_iter_plan_files_skips_00_index_in_file_map(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_iter_plan_files_skips_00_index_in_file_map(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When 00-index IS in the file map, _iter_plan_files MUST skip it (line 84)."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
@@ -611,18 +587,14 @@ def test_iter_plan_files_skips_00_index_in_file_map(
         "<!-- end of file -->\n",
         encoding="utf-8",
     )
-    (plans / "01-x.md").write_text(
-        "x\n<!-- end of file: 2 lines (budget 30) -->\n", encoding="utf-8"
-    )
+    (plans / "01-x.md").write_text("x\n<!-- end of file: 2 lines (budget 30) -->\n", encoding="utf-8")
     paths = check_line_count._iter_plan_files(tmp_path)
     # _iter_plan_files MUST NOT include 00-index even when it's in the file map.
     assert all(p.name != "00-index.md" for p in paths)
     assert any(p.name == "01-x.md" for p in paths)
 
 
-def test_footer_drift_handles_unreadable_index(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_footer_drift_handles_unreadable_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When the file map returns None, _iter_plan_files falls back to on-disk glob (line 119)."""
     # _file_map_paths catches OSError on read of 00-index and returns None,
     # which causes _iter_plan_files to fall back to the on-disk glob.
@@ -648,9 +620,7 @@ def test_per_cell_guard_bare_filename_path_is_normalized(
     """Rows with a bare filename (no 'docs/plans/' prefix) MUST be normalized (line 128)."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
-    (plans / "01-y.md").write_text(
-        "x\n<!-- end of file: 2 lines (budget 100) -->\n", encoding="utf-8"
-    )
+    (plans / "01-y.md").write_text("x\n<!-- end of file: 2 lines (budget 100) -->\n", encoding="utf-8")
     (plans / "00-index.md").write_text(
         "# Index\n\n"
         "| # | File | Covers | Status | Budget | Actual |\n"
@@ -686,9 +656,7 @@ def test_total_cell_value_fallback_unbold(tmp_path: Path) -> None:
     assert check_line_count._total_cell_value(index_text) == 5
 
 
-def test_budget_table_total_handles_unreadable_index(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_budget_table_total_handles_unreadable_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """check_budget_table_total MUST return early if 00-index is unreadable."""
     plans = tmp_path / "docs" / "plans"
     plans.mkdir(parents=True)
@@ -737,9 +705,7 @@ def test_main_block_executes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         assert e.code in (0, 1)
 
 
-def test_per_cell_guard_raises_when_00_index_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_per_cell_guard_raises_when_00_index_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """check_per_cell_guard MUST emit a clear failure when 00-index is missing (line 245)."""
     # No docs/plans dir at all.
     failures = check_line_count.check_per_cell_guard(tmp_path)

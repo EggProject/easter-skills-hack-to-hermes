@@ -102,13 +102,11 @@ S1_CAP_SITE = Site(
         Anchor(line=689, text='        return desc[:57] + "..."'),
     ),
     insertion=(
-        "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n"
-        '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+        "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n" '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
     # The idempotency check looks for the replacement text:
     expected_replacement=(
-        "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n"
-        '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+        "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n" '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
     kind="cap",
     line_for_state=688,

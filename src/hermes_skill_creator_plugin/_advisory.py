@@ -74,15 +74,9 @@ def detect_cap_state(target_dir: Path) -> str:
             for sub in ast.walk(node):
                 if isinstance(sub, ast.Compare):
                     for comparator in sub.comparators:
-                        if (
-                            isinstance(comparator, ast.Constant)
-                            and comparator.value == UNPATCHED_CAP
-                        ):
+                        if isinstance(comparator, ast.Constant) and comparator.value == UNPATCHED_CAP:
                             return UNPATCHED_STATE
-                        if (
-                            isinstance(comparator, ast.Name)
-                            and comparator.id == PATCHED_CAP_REFERENCE
-                        ):
+                        if isinstance(comparator, ast.Name) and comparator.id == PATCHED_CAP_REFERENCE:
                             return PATCHED_STATE
     return UNKNOWN_STATE
 

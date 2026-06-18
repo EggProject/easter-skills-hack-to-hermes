@@ -113,9 +113,7 @@ def test_aggregate_benchmark_handles_empty_results(skill_creator_home: Path) -> 
 
 
 @assert_hermes_agent_untouched
-def test_eval_pipeline_end_to_end(
-    skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_eval_pipeline_end_to_end(skill_creator_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """2-case eval; assert report.md + feedback.json are produced with the
     expected schema.
     """
@@ -241,9 +239,7 @@ def test_run_eval_writes_skill_md_to_hermes_home_not_dot_claude(
 
     monkeypatch.setattr(sp, "run", lambda *a, **kw: _FakeProc())
     run_eval = _load(SCRIPTS / "run_eval.py", "write_path_test")
-    run_eval.run_eval(
-        [{"id": "a"}], hermes_home=skill_creator_home, category="mycat", target="mytarget"
-    )
+    run_eval.run_eval([{"id": "a"}], hermes_home=skill_creator_home, category="mycat", target="mytarget")
     expected = skill_creator_home / "skills" / "mycat" / "mytarget" / "SKILL.md"
     assert expected.exists(), f"expected {expected} to be written"
     # NOT in .claude/commands

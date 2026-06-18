@@ -28,9 +28,7 @@ from tools.check_migration_note import (
 )
 
 
-def _write_migration(
-    tmp_path: Path, name: str, body: str, *, register_in_manifest: bool = True
-) -> Path:
+def _write_migration(tmp_path: Path, name: str, body: str, *, register_in_manifest: bool = True) -> Path:
     """Drop a MIGRATION*.md and (optionally) register its sha in the manifest."""
     target = tmp_path / name
     target.write_text(f"{GENERATED_MARKER}\n{body}\n", encoding="utf-8")
@@ -187,9 +185,7 @@ def test_main_returns_0_when_clean(tmp_path: Path, monkeypatch, capsys) -> None:
     assert "OK" in out
 
 
-def test_is_git_tracked_returns_false_when_git_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_is_git_tracked_returns_false_when_git_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """_is_git_tracked MUST return False when git binary is not found."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
 
@@ -200,9 +196,7 @@ def test_is_git_tracked_returns_false_when_git_missing(
     assert check_migration_note._is_git_tracked(tmp_path / "MIGRATION.md") is False
 
 
-def test_main_with_argv_none_uses_sys_argv(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
-) -> None:
+def test_main_with_argv_none_uses_sys_argv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     """main(argv=None) MUST read sys.argv[1:] (covers the `if argv is None` branch)."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
@@ -219,9 +213,7 @@ def test_main_module_invocation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert hasattr(check_migration_note, "main")
 
 
-def test_is_git_tracked_returns_false_on_called_process_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_is_git_tracked_returns_false_on_called_process_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """_is_git_tracked MUST return False on CalledProcessError (line 60)."""
     import subprocess as sp
 
@@ -235,20 +227,14 @@ def test_is_git_tracked_returns_false_on_called_process_error(
     assert check_migration_note._is_git_tracked(tmp_path / "MIGRATION.md") is False
 
 
-def test_is_git_tracked_returns_true_on_success(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_is_git_tracked_returns_true_on_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """_is_git_tracked MUST return True when git outputs a non-empty string (line 60)."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        check_migration_note.subprocess, "check_output", lambda *a, **k: "MIGRATION.md\n"
-    )
+    monkeypatch.setattr(check_migration_note.subprocess, "check_output", lambda *a, **k: "MIGRATION.md\n")
     assert check_migration_note._is_git_tracked(tmp_path / "MIGRATION.md") is True
 
 
-def test_is_git_tracked_returns_false_on_empty_output(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_is_git_tracked_returns_false_on_empty_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """_is_git_tracked MUST return False when git outputs an empty string."""
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note.subprocess, "check_output", lambda *a, **k: "")

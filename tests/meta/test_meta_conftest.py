@@ -28,9 +28,7 @@ from tests.conftest import (
 )
 
 
-def test_assert_hermes_agent_untouched_skips_when_path_live(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_assert_hermes_agent_untouched_skips_when_path_live(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Decorator MUST pytest.skip when HERMES_HOME resolves to a live install path."""
     # Force HERMES_HOME back to its default (no monkeypatched override).
     monkeypatch.delenv("HERMES_HOME", raising=False)
@@ -107,11 +105,7 @@ def test_seed_minimal_creates_known_layout(tmp_path: Path) -> None:
         "src/hermes_agent/skills.py",
         "skills/.gitkeep",
     }
-    actual = {
-        str(p.relative_to(tmp_path))
-        for p in tmp_path.rglob("*")
-        if p.is_file() and ".venv" not in p.parts
-    }
+    actual = {str(p.relative_to(tmp_path)) for p in tmp_path.rglob("*") if p.is_file() and ".venv" not in p.parts}
     assert actual == expected
 
 
@@ -128,9 +122,7 @@ def test_hermes_subprocess_env_never_pops_hermes_session(
     assert "HERMES_SESSION" not in child_env  # child copy stripped
 
 
-def test_decorator_preserves_test_return_value(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_decorator_preserves_test_return_value(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Decorator MUST forward the wrapped function's return value verbatim."""
     fake = tmp_path / "fake-hermes-agent"
     fake.mkdir(parents=True)
@@ -144,9 +136,7 @@ def test_decorator_preserves_test_return_value(
     assert returns_a_dict() == {"key": 42}
 
 
-def test_decorator_propagates_assertion_errors(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_decorator_propagates_assertion_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Decorator MUST NOT swallow AssertionError raised inside the wrapped test."""
     fake = tmp_path / "fake-hermes-agent"
     fake.mkdir(parents=True)

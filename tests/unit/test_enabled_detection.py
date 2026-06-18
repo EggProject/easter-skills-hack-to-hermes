@@ -127,9 +127,7 @@ def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
                     inner_value = inner_value.strip()
                     if inner_value.startswith("[") and inner_value.endswith("]"):
                         nested[inner_key.strip()] = [
-                            v.strip().strip('"').strip("'")
-                            for v in inner_value[1:-1].split(",")
-                            if v.strip()
+                            v.strip().strip('"').strip("'") for v in inner_value[1:-1].split(",") if v.strip()
                         ]
                     elif inner_value.startswith("{") and inner_value.endswith("}"):
                         nested[inner_key.strip()] = _parse_inline_map(inner_value)
@@ -139,9 +137,7 @@ def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
                 fm[key] = nested
                 i = j
             elif value.startswith("[") and value.endswith("]"):
-                fm[key] = [
-                    v.strip().strip('"').strip("'") for v in value[1:-1].split(",") if v.strip()
-                ]
+                fm[key] = [v.strip().strip('"').strip("'") for v in value[1:-1].split(",") if v.strip()]
                 i += 1
             elif value.startswith("{") and value.endswith("}"):
                 fm[key] = _parse_inline_map(value)
@@ -181,9 +177,7 @@ def fake_agent_skill_utils(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
             k, _, v = part.partition(":")
             v = v.strip()
             if v.startswith("[") and v.endswith("]"):
-                out[k.strip()] = [
-                    x.strip().strip('"').strip("'") for x in v[1:-1].split(",") if x.strip()
-                ]
+                out[k.strip()] = [x.strip().strip('"').strip("'") for x in v[1:-1].split(",") if x.strip()]
             elif v.startswith("{") and v.endswith("}"):
                 out[k.strip()] = _parse_inline_map(v)
             else:
@@ -259,9 +253,7 @@ def test_get_enabled_skills_honors_platform_filter(enabled_detection, tmp_path: 
     assert "baz" in enabled_linux
 
 
-def test_get_enabled_skills_honors_conditional_exclusions(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_honors_conditional_exclusions(enabled_detection, tmp_path: Path) -> None:
     """A per-skill ``disable_if`` rule wins over the toggle list.
 
     Even if the skill is NOT in the toggle list, a ``disable_if`` rule
@@ -350,9 +342,7 @@ def test_get_enabled_skills_skips_dirs_without_skill_md(enabled_detection, tmp_p
     assert enabled == frozenset({"valid"})
 
 
-def test_get_enabled_skills_uses_dirname_when_frontmatter_lacks_name(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_uses_dirname_when_frontmatter_lacks_name(enabled_detection, tmp_path: Path) -> None:
     """If the frontmatter omits ``name``, the directory name is used."""
     profile = tmp_path / "default"
     skills = profile / "skills"
@@ -412,9 +402,7 @@ def test_get_enabled_skills_handles_empty_disabled_list(enabled_detection, tmp_p
     assert enabled == frozenset({"foo"})
 
 
-def test_get_enabled_skills_handles_other_keys_under_skills(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_handles_other_keys_under_skills(enabled_detection, tmp_path: Path) -> None:
     """Other keys under ``skills:`` end the disabled scan (no false positives)."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
@@ -430,9 +418,7 @@ def test_get_enabled_skills_handles_skills_key_not_first(enabled_detection, tmp_
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
-    (profile / "config.yaml").write_text(
-        "other:\n  nested: value\n" "skills:\n" "  disabled: [foo]\n"
-    )
+    (profile / "config.yaml").write_text("other:\n  nested: value\n" "skills:\n" "  disabled: [foo]\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert "foo" not in enabled
@@ -475,9 +461,7 @@ def test_get_enabled_skills_platform_filter_dict_value(enabled_detection, tmp_pa
     assert "ok" in enabled
 
 
-def test_get_enabled_skills_platform_filter_unrelated_platform(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_platform_filter_unrelated_platform(enabled_detection, tmp_path: Path) -> None:
     """A skill disabled on ``darwin`` is enabled on ``linux``."""
     profile = tmp_path / "default"
     skills = profile / "skills"
@@ -493,9 +477,7 @@ def test_get_enabled_skills_platform_filter_unrelated_platform(
     assert "mac-only" in enabled
 
 
-def test_get_enabled_skills_conditional_exclusion_empty_value(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_conditional_exclusion_empty_value(enabled_detection, tmp_path: Path) -> None:
     """``disable_if:`` with an empty / falsy value does NOT exclude."""
     profile = tmp_path / "default"
     skills = profile / "skills"
@@ -600,9 +582,7 @@ def test_get_enabled_skills_walk_read_oserror_in_conditional_pass(
     assert "ok" in enabled
 
 
-def test_get_enabled_skills_dirname_used_when_no_skill_md_in_filter(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_dirname_used_when_no_skill_md_in_filter(enabled_detection, tmp_path: Path) -> None:
     """A skill directory that has SKILL.md during the first walk but is
     later looked up by NAME that differs from its directory name —
     platform/conditional filters must locate it via the frontmatter
@@ -623,9 +603,7 @@ def test_get_enabled_skills_dirname_used_when_no_skill_md_in_filter(
     assert "renamed-skill" not in enabled
 
 
-def test_get_enabled_skills_dirname_used_when_no_skill_md_in_conditional(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_dirname_used_when_no_skill_md_in_conditional(enabled_detection, tmp_path: Path) -> None:
     """Same as above, but for the conditional-exclusion pass."""
     profile = tmp_path / "default"
     skills = profile / "skills"
@@ -641,9 +619,7 @@ def test_get_enabled_skills_dirname_used_when_no_skill_md_in_conditional(
     assert "renamed-cond" not in enabled
 
 
-def test_get_enabled_skills_dirname_fallback_when_skill_md_missing(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_dirname_fallback_when_skill_md_missing(enabled_detection, tmp_path: Path) -> None:
     """If a skill in installed_names has no SKILL.md during the
     platform/conditional filter pass, the defensive fallback keeps it
     in the result."""
@@ -682,9 +658,7 @@ def test_get_enabled_skills_disabled_scalar_value(enabled_detection, tmp_path: P
     assert "bar" in enabled
 
 
-def test_get_enabled_skills_block_form_with_other_key_after_disabled(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_block_form_with_other_key_after_disabled(enabled_detection, tmp_path: Path) -> None:
     """The disabled scan stops at any other key under ``skills:``."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
@@ -711,9 +685,7 @@ def test_get_enabled_skills_platform_filter_falsy_value(enabled_detection, tmp_p
     assert "maybe" in enabled
 
 
-def test_get_enabled_skills_platform_filter_unknown_value_type(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_platform_filter_unknown_value_type(enabled_detection, tmp_path: Path) -> None:
     """A non-str/dict/list value (e.g. an int) falls back to ``bool(value)``."""
     profile = tmp_path / "default"
     skills = profile / "skills"
@@ -730,9 +702,7 @@ def test_get_enabled_skills_platform_filter_unknown_value_type(
     assert "weird" not in enabled
 
 
-def test_get_enabled_skills_platform_filter_skills_dir_missing(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_platform_filter_skills_dir_missing(enabled_detection, tmp_path: Path) -> None:
     """When ``skills/`` does not exist, the platform filter is a no-op."""
     profile = tmp_path / "default"
     profile.mkdir()
@@ -743,9 +713,7 @@ def test_get_enabled_skills_platform_filter_skills_dir_missing(
     assert enabled == frozenset()
 
 
-def test_get_enabled_skills_platform_filter_skill_md_missing(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_platform_filter_skill_md_missing(enabled_detection, tmp_path: Path) -> None:
     """A skill in installed_names whose SKILL.md was removed before the
     platform filter is conservatively kept (the filter's
     ``_find_skill_md`` returns None)."""
@@ -802,9 +770,7 @@ def test_get_enabled_skills_conditional_skill_md_missing(enabled_detection, tmp_
         ed._walk_installed_skill_names = real_walk  # type: ignore[assignment]
 
 
-def test_get_enabled_skills_find_skill_md_cross_reference(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_find_skill_md_cross_reference(enabled_detection, tmp_path: Path) -> None:
     """The cross-reference in ``_find_skill_md`` resolves a skill whose
     directory name differs from its frontmatter name, by iterating all
     skill dirs."""
@@ -961,9 +927,7 @@ def test_parse_disabled_yaml_block_ends_unexpectedly(enabled_detection, tmp_path
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
-    (profile / "config.yaml").write_text(
-        "skills:\n" "not_indented: ends_block\n" "other_key: value\n"
-    )
+    (profile / "config.yaml").write_text("skills:\n" "not_indented: ends_block\n" "other_key: value\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert "foo" in enabled
@@ -1182,9 +1146,7 @@ def test_find_skill_md_cross_ref_non_dir_first(enabled_detection, tmp_path: Path
     assert result.parent.name == "renamed"
 
 
-def test_get_enabled_skills_find_skill_md_via_frontmatter(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_find_skill_md_via_frontmatter(enabled_detection, tmp_path: Path) -> None:
     """The directory-name → frontmatter-name lookup resolves a skill whose
     directory name differs from its frontmatter ``name``."""
     profile = tmp_path / "default"
@@ -1203,9 +1165,7 @@ def test_get_enabled_skills_find_skill_md_via_frontmatter(
     assert "bar" in enabled
 
 
-def test_get_enabled_skills_skill_dir_with_missing_skill_md(
-    enabled_detection, tmp_path: Path
-) -> None:
+def test_get_enabled_skills_skill_dir_with_missing_skill_md(enabled_detection, tmp_path: Path) -> None:
     """A skill directory that lacks SKILL.md after the first walk is still
     handled in the platform/conditional filters (defensive: kept)."""
     profile = tmp_path / "default"

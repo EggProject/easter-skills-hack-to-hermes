@@ -36,7 +36,6 @@ from typing import Any
 import frontmatter  # type: ignore[import-not-found]
 import yaml
 
-
 # ---------------------------------------------------------------------------
 # Frontmatter parser (shared by all code paths).
 # ---------------------------------------------------------------------------
@@ -343,9 +342,7 @@ def _find_skill_md(skills_dir: Path, name: str) -> Path | None:
     return None
 
 
-def _apply_platform_filter(
-    installed_names: set[str], profile_path: Path, platform: str | None
-) -> set[str]:
+def _apply_platform_filter(installed_names: set[str], profile_path: Path, platform: str | None) -> set[str]:
     """Return the subset of ``installed_names`` NOT disabled by the platform.
 
     Delegates to ``_platform_blocked`` which handles BOTH the Script #2
@@ -372,9 +369,7 @@ def _apply_platform_filter(
     return out
 
 
-def _apply_conditional_exclusions(
-    installed_names: set[str], profile_path: Path, platform: str | None
-) -> set[str]:
+def _apply_conditional_exclusions(installed_names: set[str], profile_path: Path, platform: str | None) -> set[str]:
     """Return the subset of ``installed_names`` not excluded by a per-skill
     ``disable_if`` rule.
 
@@ -452,7 +447,6 @@ def get_enabled_skills(
     installed = _apply_platform_filter(installed, profile_path, platform)
     installed = _apply_conditional_exclusions(installed, profile_path, platform)
     return frozenset(installed)
-
 
 
 __all__ = [

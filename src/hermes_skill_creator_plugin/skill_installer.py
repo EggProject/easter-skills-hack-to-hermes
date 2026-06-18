@@ -174,11 +174,7 @@ def detect_active_cap(checkout: Path | None = None) -> str:
     if not src.exists():
         raise FileNotFoundError(f"agent/skill_utils.py not found in {target}")
     text = src.read_text(encoding="utf-8")
-    return (
-        "patched"
-        if "MAX_DESCRIPTION_LENGTH" in text and "if len(desc) > 60:" not in text
-        else "unpatched"
-    )
+    return "patched" if "MAX_DESCRIPTION_LENGTH" in text and "if len(desc) > 60:" not in text else "unpatched"
 
 
 def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
@@ -186,9 +182,7 @@ def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
     if cap == "unpatched":
         short = skill_dir / "SKILL.md.short"
         if not short.exists():
-            raise FileNotFoundError(
-                f"SKILL.md.short not found in {skill_dir}; cannot install under 60-char cap"
-            )
+            raise FileNotFoundError(f"SKILL.md.short not found in {skill_dir}; cannot install under 60-char cap")
         return short
     return skill_dir / "SKILL.md"
 
@@ -213,9 +207,7 @@ def _render_migration_skill_port(*, generated_at: str, upstream_commit: str) -> 
         "| --- | --- | --- | --- | --- |",
     ]
     for i, row in enumerate(T3_INVENTORY, start=1):
-        lines.append(
-            f"| {i} | {row['location']} | `{row['claude']}` | `{row['hermes']}` | {row['id']} |"
-        )
+        lines.append(f"| {i} | {row['location']} | `{row['claude']}` | `{row['hermes']}` | {row['id']} |")
     lines.extend(
         [
             "",

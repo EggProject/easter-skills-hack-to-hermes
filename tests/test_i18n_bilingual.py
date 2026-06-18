@@ -23,9 +23,7 @@ def test_advisory_composed_line_matches_bilingual_pattern() -> None:
     from hermes_skill_creator_plugin.i18n.messages_hu import ADVISORY_CAP_HU
 
     composed = f"{ADVISORY_CAP_EN} / {ADVISORY_CAP_HU}"
-    assert BILINGUAL_LINE.match(
-        composed
-    ), f"composed bilingual line does not match pattern: {composed!r}"
+    assert BILINGUAL_LINE.match(composed), f"composed bilingual line does not match pattern: {composed!r}"
 
 
 def test_advisory_cap_en_has_en_marker() -> None:

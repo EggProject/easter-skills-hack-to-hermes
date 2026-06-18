@@ -212,9 +212,7 @@ def test_detect_active_cap_unpatched_hermes_checkout(hermes_checkout: Path) -> N
     utils = hermes_checkout / "agent" / "skill_utils.py"
     utils.parent.mkdir(parents=True, exist_ok=True)
     utils.write_text(
-        "def extract_skill_description(frontmatter):\n"
-        "    if len(desc) > 60:\n"
-        '        return desc[:57] + "..."\n',
+        "def extract_skill_description(frontmatter):\n" "    if len(desc) > 60:\n" '        return desc[:57] + "..."\n',
         encoding="utf-8",
     )
     assert detect_active_cap(hermes_checkout) == "unpatched"

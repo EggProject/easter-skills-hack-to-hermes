@@ -56,9 +56,7 @@ def is_hermes_agent(target: Path) -> bool:
     return target.resolve() == hermes_agent_path()
 
 
-def file_has_circular_import(
-    skill_utils_path: Path, *, cycle_marker: str = "from tools.skills_tool import"
-) -> bool:
+def file_has_circular_import(skill_utils_path: Path, *, cycle_marker: str = "from tools.skills_tool import") -> bool:
     """True iff the top of ``agent/skill_utils.py`` already imports from tools.
 
     The pre-flight rejects the import strategy for ``MAX_DESCRIPTION_LENGTH``

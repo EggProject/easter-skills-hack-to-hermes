@@ -213,24 +213,17 @@ def test_json_default_aborts_when_cwd_inside_hermes_home(hermes_home: Path, monk
     assert not (hermes_home / "skill-report.json").exists()
 
 
-def test_json_deterministic_with_frozen_time(
-    hermes_home: Path, tmp_path: Path, monkeypatch
-) -> None:
+def test_json_deterministic_with_frozen_time(hermes_home: Path, tmp_path: Path, monkeypatch) -> None:
     _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
     monkeypatch.setenv("HERMES_SKILL_CREATOR_FROZEN_TIME", "2026-06-17T00:00:00Z")
     out1 = tmp_path / "report1.json"
     out2 = tmp_path / "report2.json"
     cli_report.run(profile="hermes", sort="tokens", fmt="json", json_path=out1)
     cli_report.run(profile="hermes", sort="tokens", fmt="json", json_path=out2)
-    assert (
-        hashlib.sha256(out1.read_bytes()).hexdigest()
-        == hashlib.sha256(out2.read_bytes()).hexdigest()
-    )
+    assert hashlib.sha256(out1.read_bytes()).hexdigest() == hashlib.sha256(out2.read_bytes()).hexdigest()
 
 
-def test_json_multi_profile_is_single_valid_document(
-    hermes_home: Path, tmp_path: Path
-) -> None:
+def test_json_multi_profile_is_single_valid_document(hermes_home: Path, tmp_path: Path) -> None:
     """Regression: default profile iteration writes ONE JSON object with all profiles.
 
     Previously, format_json was called per-profile and concatenated with \\n\\n,
@@ -348,11 +341,7 @@ def test_report_usage_does_not_invent_fields() -> None:
             stripped = line.strip()
             if stripped.startswith("#"):
                 continue
-            if (
-                pat.search(stripped)
-                and "last_used" in stripped
-                and "_at" not in stripped.split("last_used")[1][:8]
-            ):
+            if pat.search(stripped) and "last_used" in stripped and "_at" not in stripped.split("last_used")[1][:8]:
                 # The legacy unsuffixed "last_used" form is forbidden.
                 if re.search(r"\blast_used\b(?!_at)", stripped):
                     bad.append(stripped)
@@ -375,6 +364,4 @@ def test_report_uses_at_suffixed_timestamps() -> None:
             # identifier chars.
             for m in re.finditer(rf"\b{legacy}\b", src):
                 tail = src[m.end() : m.end() + 4]
-                assert tail.startswith(
-                    "_at"
-                ), f"legacy field {legacy!r} in {mod.__name__} at offset {m.start()}"
+                assert tail.startswith("_at"), f"legacy field {legacy!r} in {mod.__name__} at offset {m.start()}"

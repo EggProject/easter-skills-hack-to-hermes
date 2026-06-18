@@ -111,19 +111,12 @@ def test_format_json_shape() -> None:
 def test_format_json_deterministic_with_frozen_time() -> None:
     rows = [make_row_factory(name="a", tokens=10)]
     sections = [ProfileSection(profile_name="hermes", rows=rows, total_tokens=10)]
-    out1 = format_json(
-        tool="x", version="0.1.0", generated_at="2026-06-17T00:00:00Z", sections=sections
-    )
-    out2 = format_json(
-        tool="x", version="0.1.0", generated_at="2026-06-17T00:00:00Z", sections=sections
-    )
+    out1 = format_json(tool="x", version="0.1.0", generated_at="2026-06-17T00:00:00Z", sections=sections)
+    out2 = format_json(tool="x", version="0.1.0", generated_at="2026-06-17T00:00:00Z", sections=sections)
     assert out1 == out2
     import hashlib
 
-    assert (
-        hashlib.sha256(out1.encode("utf-8")).hexdigest()
-        == hashlib.sha256(out2.encode("utf-8")).hexdigest()
-    )
+    assert hashlib.sha256(out1.encode("utf-8")).hexdigest() == hashlib.sha256(out2.encode("utf-8")).hexdigest()
 
 
 def test_format_json_includes_pct_of_cap() -> None:

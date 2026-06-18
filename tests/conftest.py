@@ -31,7 +31,6 @@ from typing import ParamSpec, TypeVar
 import pytest
 
 from hermes_skill_creator_plugin._safety import assert_hermes_agent_untouched
-
 from tests.fixtures.minimal_hermes.seed_minimal import (
     MINIMAL_HERMES_FILES,
     seed_minimal,
@@ -233,8 +232,7 @@ def real_hermes_agent_sentinel(request: pytest.FixtureRequest) -> str:
             return
         post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
         assert post_hash == pre_hash, (
-            f"{sentinel_path} was modified by the test "
-            f"(pre={pre_hash[:12]}, post={post_hash[:12]})"
+            f"{sentinel_path} was modified by the test " f"(pre={pre_hash[:12]}, post={post_hash[:12]})"
         )
 
     request.addfinalizer(_check)
@@ -263,19 +261,11 @@ def hermes_checkout(hermes_home: Path) -> Generator[Path, None, None]:
     (checkout / "agent").mkdir(parents=True, exist_ok=True)
     (checkout / "tools").mkdir(parents=True, exist_ok=True)
     (checkout / "hermes_cli").mkdir(parents=True, exist_ok=True)
-    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(
-        parents=True, exist_ok=True
-    )
+    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(parents=True, exist_ok=True)
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
-    (checkout / "agent" / "prompt_builder.py").write_text(
-        PROMPT_BUILDER_PATCHED, encoding="utf-8"
-    )
-    (checkout / "agent" / "background_review.py").write_text(
-        BACKGROUND_REVIEW_PATCHED, encoding="utf-8"
-    )
-    (checkout / "tools" / "skill_manager_tool.py").write_text(
-        SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8"
-    )
+    (checkout / "agent" / "prompt_builder.py").write_text(PROMPT_BUILDER_PATCHED, encoding="utf-8")
+    (checkout / "agent" / "background_review.py").write_text(BACKGROUND_REVIEW_PATCHED, encoding="utf-8")
+    (checkout / "tools" / "skill_manager_tool.py").write_text(SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8")
     (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
         SKILLS_DOC_PATCHED, encoding="utf-8"
     )

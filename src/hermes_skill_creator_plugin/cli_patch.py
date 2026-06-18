@@ -65,7 +65,7 @@ Exit codes: 0 OK / 1 validation / 2 drift / 3 permission / 4 I/O / 5 user-abort.
 """
 
 HELP_HU = """\
-Hasznalat (magyar):
+Használat (magyar):
   uv run hermes-skill-creator-patch --check      --target <mappa>
   uv run hermes-skill-creator-patch --apply      --target <mappa> \\
       [--task-e-redirect] [--no-schema-redirect] [--i-accept-line-drift]

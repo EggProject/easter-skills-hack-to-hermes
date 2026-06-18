@@ -146,9 +146,5 @@ def test_report_no_subprocess_for_writes() -> None:
     tree = ast.parse(src)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            if (
-                node.func.attr == "run"
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "subprocess"
-            ):
+            if node.func.attr == "run" and isinstance(node.func.value, ast.Name) and node.func.value.id == "subprocess":
                 pytest.fail("subprocess.run found in cli_report")

@@ -132,9 +132,7 @@ def scope_path(tmp_path: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def test_set_hermes_home_override_called(
-    scope_module, fake_hermes_constants, scope_path: Path
-) -> None:
+def test_set_hermes_home_override_called(scope_module, fake_hermes_constants, scope_path: Path) -> None:
     """Entering the scope calls ``set_hermes_home_override(str(path))``."""
     state = fake_hermes_constants._state  # type: ignore[attr-defined]
     with scope_module.hermes_home_scope(scope_path):
@@ -144,18 +142,14 @@ def test_set_hermes_home_override_called(
         assert str(state["set_calls"][0]) == str(scope_path)  # type: ignore[index]
 
 
-def test_env_var_mirrored_into_os_environ(
-    scope_module, scope_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_env_var_mirrored_into_os_environ(scope_module, scope_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``os.environ['HERMES_HOME']`` is set to ``str(path)`` inside the scope."""
     monkeypatch.delenv("HERMES_HOME", raising=False)
     with scope_module.hermes_home_scope(scope_path):
         assert os.environ["HERMES_HOME"] == str(scope_path)
 
 
-def test_hub_install_reads_mirrored_env(
-    scope_module, scope_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hub_install_reads_mirrored_env(scope_module, scope_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A fake hub call inside the scope sees the mirrored env var (D7)."""
     monkeypatch.delenv("HERMES_HOME", raising=False)
     seen: list[str | None] = []
