@@ -69,18 +69,20 @@ def detect_cap_state(target_dir: Path) -> str:
     skill_utils = target_dir / "agent" / "skill_utils.py"
     if not skill_utils.exists():
         return UNKNOWN_STATE
-    try:
-        source = skill_utils.read_text(encoding="utf-8")
-    except OSError:
-        return UNKNOWN_STATE
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return UNKNOWN_STATE
-    state = _walk_tree_for_marker(tree)
+    state = _read_and_parse(skill_utils)
     if state is None:
         return UNKNOWN_STATE
     return state
+
+
+def _read_and_parse(skill_utils: Path) -> str | None:
+    """Read and parse ``skill_utils``; return its cap state or ``None``."""
+    try:
+        source = skill_utils.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except (OSError, SyntaxError):
+        return None
+    return _walk_tree_for_marker(tree)
 
 
 def _walk_tree_for_marker(tree: ast.AST) -> str | None:
