@@ -25,7 +25,11 @@ from ._patcher import (
     is_hermes_agent,
     run_patch,
 )
-from .i18n.messages_en import MIGRATION_REGENERATED
+from .i18n.messages_en import (
+    MIGRATION_REGENERATED,
+    TARGET_IS_HERMES_AGENT,
+    TARGET_REQUIRED,
+)
 
 HELP_EN = """\
 Usage (English):
@@ -136,22 +140,18 @@ def main(
 
     if emit_migration_note:
         if target_path is None:
-            click.echo(
-                "[en] --target is required. Refusing to run. / "
-                "[hu] A --target kötelező. A szkript megtagadja a futtatást.",
-                err=True,
-            )
+            click.echo(TARGET_REQUIRED, err=True)
             raise SystemExit(4)
         if is_hermes_agent(target_path):
             click.echo(
-                f"[en] --target resolves to ~/.hermes/hermes-agent "
-                f"({target_path}); refusing to run. / "
-                f"[hu] A --target a ~/.hermes/hermes-agent útvonalra oldódik fel "
-                f"({target_path}); a szkript megtagadja a futtatást.",
+                TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
                 err=True,
             )
             raise SystemExit(4)
         worktree = Path.cwd()
+        # Outer try/except is a defensive double-wrap: _git_head catches
+        # its own exceptions, but a future change might let one slip
+        # through; the migration note must still be emitted.
         try:
             git_head = _git_head(target_path)
         except Exception:
@@ -184,7 +184,7 @@ def main(
         no_schema_redirect=no_schema_redirect,
         yes=yes,
         verbose=verbose,
-        git_head=_safe_git_head(target_path),
+        git_head=_git_head(target_path) if target_path is not None else "",
     )
 
     for d in result.diagnostics:
@@ -211,12 +211,6 @@ def _git_head(target: Path) -> str:
         return out.stdout.strip()
     except Exception:
         return ""
-
-
-def _safe_git_head(target: Path | None) -> str:
-    if target is None:
-        return ""
-    return _git_head(target)
 
 
 if __name__ == "__main__":  # pragma: no cover

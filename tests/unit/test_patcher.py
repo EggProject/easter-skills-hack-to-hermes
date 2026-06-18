@@ -750,7 +750,7 @@ def test_write_rejected_roundtrip(tmp_path: Path) -> None:
         git_head="abc123",
     )
     raw = json.loads(p.read_text(encoding="utf-8"))
-    assert raw["site_id" if False else "tool"] == "hermes-skill-creator-patch"
+    assert raw["tool"] == "hermes-skill-creator-patch"
     assert raw["git_head"] == "abc123"
     assert raw["failures"][0]["site_id"] == "S1.cap"
     assert raw["remediation_en"] == "Re-run"
