@@ -217,61 +217,96 @@ def _run_patch_with_inputs(inputs: PatchRunInputs) -> PatcherResult:
     return _run_patch_body(inputs)
 
 
+@dataclasses.dataclass
+class _PatchBodyState:
+    """Mutable per-run state passed between pipeline helpers."""
+
+    diagnostics: list[str] = dataclasses.field(default_factory=list)
+    sites_patched: list[str] = dataclasses.field(default_factory=list)
+    sites_already: list[str] = dataclasses.field(default_factory=list)
+
+
 def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     """Internal: actually run the patcher pipeline."""
-    diagnostics: list[str] = []
-    preflight = _run_preflight(inputs.target, inputs.force, inputs.i_accept_line_drift)
-    if preflight is not None:
-        return _empty_result([*diagnostics, preflight[1]], preflight[0])
+    state = _PatchBodyState()
+    early = _check_preflight(inputs, state)
+    if early is not None:
+        return early
     assert inputs.target is not None  # narrowed by preflight
     target_path = inputs.target.resolve()
-    skill_utils = target_path / TOOLS_SKILL_UTILS_REL
-    if file_has_circular_import(skill_utils):
-        diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
-        return _empty_result(diagnostics, EXIT_IO)
+    circular = _check_circular_import(target_path, state)
+    if circular is not None:
+        return circular
+    return _drive_pipeline(inputs, target_path, state)
+
+
+def _drive_pipeline(
+    inputs: PatchRunInputs,
+    target_path: Path,
+    state: _PatchBodyState,
+) -> PatcherResult:
     sites = list(
         sites_for_mode(
             task_e_redirect=inputs.task_e_redirect,
             no_schema_redirect=inputs.no_schema_redirect,
         )
     )
-    state = load_state(target_path)
-    sites_patched: list[str] = []
-    sites_already: list[str] = []
-    validation = _validate_sites(sites, target_path, state, sites_already)
+    persisted = load_state(target_path)
+    validation = _validate_sites(sites, target_path, persisted, state.sites_already)
     if validation.failures:
         return _fail_with_drift_pipeline(
             target_path,
             validation.failures,
-            state,
-            sites_already,
-            diagnostics,
+            persisted,
+            state.sites_already,
+            state.diagnostics,
             inputs.git_head,
             exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
         )
     if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(
             sites,
-            state,
-            sites_patched,
-            sites_already,
+            persisted,
+            state.sites_patched,
+            state.sites_already,
             target_path,
-            diagnostics,
+            state.diagnostics,
             exit_ok_code=EXIT_OK,
             write_state_fn=write_state,
         )
     return _apply_sites_pipeline(
         sites,
         target_path,
-        state,
-        sites_patched,
-        sites_already,
-        diagnostics,
+        persisted,
+        state.sites_patched,
+        state.sites_already,
+        state.diagnostics,
         inputs.force,
         inputs.audit_log_path,
         exit_ok_code=EXIT_OK,
         write_state_fn=write_state,
     )
+
+
+def _check_preflight(
+    inputs: PatchRunInputs,
+    state: _PatchBodyState,
+) -> PatcherResult | None:
+    preflight = _run_preflight(inputs.target, inputs.force, inputs.i_accept_line_drift)
+    if preflight is None:
+        return None
+    return _empty_result([*state.diagnostics, preflight[1]], preflight[0])
+
+
+def _check_circular_import(
+    target_path: Path,
+    state: _PatchBodyState,
+) -> PatcherResult | None:
+    skill_utils = target_path / TOOLS_SKILL_UTILS_REL
+    if not file_has_circular_import(skill_utils):
+        return None
+    state.diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
+    return _empty_result(state.diagnostics, EXIT_IO)
 
 
 __all__ = [

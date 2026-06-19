@@ -136,12 +136,31 @@ def install(
         FileNotFoundError: if the source skill is missing.
         ValueError: if hermes_home resolves to the live install.
     """
+    _guard_install_preconditions(skill_source, hermes_home)
+    target_dir = _prepare_target_dir(hermes_home)
+    _copy_skill_tree(skill_source, target_dir)
+    chosen_cap = _resolve_cap(cap)
+    src_md = _select_skill_md(skill_source, cap=chosen_cap)
+    target_md = _copy_skill_md(src_md, target_dir)
+    return _build_install_result(target_dir, target_md, worktree_root)
+
+
+def _resolve_cap(cap: str | None) -> str:
+    """Return ``cap`` if provided, else the autodetected cap."""
+    if cap is not None:
+        return cap
+    return detect_active_cap()
+
+
+def _guard_install_preconditions(skill_source: Path, hermes_home: Path) -> None:
     if hermes_home.resolve() == _LIVE_HERMES_AGENT.resolve():
         _refuse_live_install(hermes_home)
     if not skill_source.exists():
         message = f"skill source not found: {skill_source}"
         raise FileNotFoundError(message)
 
+
+def _prepare_target_dir(hermes_home: Path) -> Path:
     target_dir = hermes_home.joinpath(*SKILL_DEST_REL_PARTS)
     # Re-install: clear the prior copy so leftover files from a previous
     # install (e.g. a SKILL.md.short from a prior unpatched-cap install)
@@ -149,18 +168,24 @@ def install(
     if target_dir.exists():
         shutil.rmtree(target_dir)
     target_dir.mkdir(parents=True)
-    _copy_skill_tree(skill_source, target_dir)
+    return target_dir
 
-    if cap is None:
-        cap = detect_active_cap()
-    src_md = _select_skill_md(skill_source, cap=cap)
+
+def _copy_skill_md(src_md: Path, target_dir: Path) -> Path:
     from hermes_skill_creator_plugin._skill_installer_consts import (
         FULL_SKILL_MD_NAME,
     )
 
     target_md = target_dir / FULL_SKILL_MD_NAME
     shutil.copy2(src_md, target_md)
+    return target_md
 
+
+def _build_install_result(
+    target_dir: Path,
+    target_md: Path,
+    worktree_root: Path,
+) -> InstallResult:
     migration_note = _write_migration_note(worktree_root)
     return InstallResult(
         target_dir=target_dir,

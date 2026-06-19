@@ -36,6 +36,7 @@ See also: plans/06-script-2-profiles.md, plans/09-test-strategy.md.
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import sys
 from datetime import UTC, datetime
@@ -231,35 +232,58 @@ def _extract_audit_options(options: dict[str, object]) -> dict[str, object]:
 
 def _run_audit_phase(opts: dict[str, object]) -> AuditReport:
     """Drive the audit/flip after the live-install refusal gate."""
-    apply = bool(opts["apply"])
-    frozen_time: str | None = cast("str | None", opts["frozen_time"])
-    skip_install = bool(opts["skip_install"])
-    profile: str | None = cast("str | None", opts["profile"])
-
-    from hermes_cli.profiles import list_profiles
-
+    audit_params = _AuditPhaseParams.from_opts(opts)
     click.echo(_bilingual("profiles_msg_scanning"))
-    selected = _select_profiles(list_profiles(), profile)
+    selected = _select_profiles(_list_all_profiles(), audit_params.profile)
     click.echo(_bilingual("profiles_msg_profile_count", n=len(selected)))
     if not selected:
         click.echo(_bilingual("profiles_msg_no_profiles"))
-        return _empty_report(frozen_time)
+        return _empty_report(audit_params.frozen_time)
+    return _audit_each_profile(selected, audit_params)
 
-    mode_key = "profiles_msg_applying" if apply else "profiles_msg_audit_default"
+
+def _list_all_profiles() -> list[ProfileInfo]:
+    from hermes_cli.profiles import list_profiles
+
+    return list_profiles()
+
+
+def _audit_each_profile(
+    selected: list[ProfileInfo],
+    audit_params: _AuditPhaseParams,
+) -> AuditReport:
+    mode_key = "profiles_msg_applying" if audit_params.apply else "profiles_msg_audit_default"
     click.echo(_bilingual(mode_key))
-
-    report = _empty_report(frozen_time)
+    report = _empty_report(audit_params.frozen_time)
     for profile_info in selected:
         row = _audit_and_collect_row(
             profile_info,
-            apply=apply,
-            skip_install=skip_install,
-            frozen_time=frozen_time,
+            apply=audit_params.apply,
+            skip_install=audit_params.skip_install,
+            frozen_time=audit_params.frozen_time,
         )
         report.profiles.append(row)
-
     click.echo(_bilingual("profiles_msg_done", n=len(selected)))
     return report
+
+
+@dataclasses.dataclass(frozen=True)
+class _AuditPhaseParams:
+    """Validated, typed view of the audit-phase options dict."""
+
+    apply: bool
+    frozen_time: str | None
+    skip_install: bool
+    profile: str | None
+
+    @classmethod
+    def from_opts(cls, opts: dict[str, object]) -> _AuditPhaseParams:
+        return cls(
+            apply=bool(opts["apply"]),
+            frozen_time=cast("str | None", opts["frozen_time"]),
+            skip_install=bool(opts["skip_install"]),
+            profile=cast("str | None", opts["profile"]),
+        )
 
 
 def run_audit(**options: object) -> AuditReport:

@@ -74,14 +74,18 @@ def detect_cap_state(target_dir: Path) -> str:
     if not skill_utils.exists():
         return UNKNOWN_STATE
     try:
-        source = skill_utils.read_text(encoding="utf-8")
-        tree = ast.parse(source)
+        tree = _parse_skill_utils_tree(skill_utils)
     except (OSError, SyntaxError):
         return UNKNOWN_STATE
     state = _walk_tree_for_marker(tree)
     if state is None:
         return UNKNOWN_STATE
     return state
+
+
+def _parse_skill_utils_tree(skill_utils: Path) -> ast.AST:
+    source = skill_utils.read_text(encoding="utf-8")
+    return ast.parse(source)
 
 
 def _walk_tree_for_marker(tree: ast.AST) -> str | None:

@@ -11,6 +11,7 @@ helpers from ``hermes_skill_creator_plugin._patcher``;
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -120,23 +121,55 @@ def _apply_one_site(
 ) -> PatcherResult | None:
     """Apply one site. Return ``None`` on success, or a result on IO error."""
     path = target_path / site.file_path
-    before = path.read_bytes()
-    text = before.decode("utf-8", errors="replace")
-    new_lines = mutate_lines_for_site(site, text)
-    after_bytes = "".join(new_lines).encode("utf-8")
-    io_result = _try_atomic_write(path, after_bytes)
+    payload = _build_site_payload(path, site)
+    io_result = _try_atomic_write(path, payload.after_bytes)
     if io_result is not None:
         return io_result
     if force:
-        emit_audit_log(
-            audit_path,
-            timestamp,
-            site.site_id,
-            before,
-            after_bytes,
-            target_path,
+        _emit_site_audit(
+            site=site,
+            target_path=target_path,
+            audit_path=audit_path,
+            timestamp=timestamp,
+            before=payload.before,
+            after_bytes=payload.after_bytes,
         )
     return None
+
+
+@dataclasses.dataclass(frozen=True)
+class _SitePayload:
+    """Before/after byte pair for one site's atomic write."""
+
+    before: bytes
+    after_bytes: bytes
+
+
+def _build_site_payload(path: Path, site: Site) -> _SitePayload:
+    """Read ``path`` and return the (before, after) byte pair for ``site``."""
+    before = path.read_bytes()
+    text = before.decode("utf-8", errors="replace")
+    new_lines = mutate_lines_for_site(site, text)
+    return _SitePayload(before=before, after_bytes="".join(new_lines).encode("utf-8"))
+
+
+def _emit_site_audit(
+    *,
+    site: Site,
+    target_path: Path,
+    audit_path: Path,
+    timestamp: str,
+    before: bytes,
+    after_bytes: bytes,
+) -> None:
+    emit_audit_log(
+        audit_path,
+        timestamp,
+        site.site_id,
+        before,
+        after_bytes,
+        target_path,
+    )
 
 
 def _try_atomic_write(path: Path, after_bytes: bytes) -> PatcherResult | None:

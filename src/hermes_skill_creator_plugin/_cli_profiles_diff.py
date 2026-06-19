@@ -34,6 +34,9 @@ def _collect_skill_names(children: list[Path]) -> set[str]:
     return out
 
 
+_NAME_PARSE_FAILED: str = "__NAME_PARSE_FAILED__"
+
+
 def _skill_name_from(child: Path) -> str | None:
     if not child.is_dir():
         return None
@@ -44,16 +47,34 @@ def _skill_name_from(child: Path) -> str | None:
         text = skill_md.read_text(encoding="utf-8")
     except OSError:
         return None
-    try:
-        from agent.skill_utils import parse_frontmatter
+    name = _parse_name_or_marker(text)
+    return _resolve_name(name, child)
 
-        fm, _body = parse_frontmatter(text)
-    except Exception:
+
+def _resolve_name(name: str, child: Path) -> str | None:
+    if name == _NAME_PARSE_FAILED:
         return None
-    name = fm.get("name")
-    if isinstance(name, str) and name:
-        return name
-    return child.name
+    if name == "":
+        return child.name
+    return name
+
+
+def _parse_name_or_marker(text: str) -> str:
+    """Return the name, or ``_NAME_PARSE_FAILED`` sentinel on parse error / missing."""
+    try:
+        return _extract_name(text)
+    except Exception:
+        return _NAME_PARSE_FAILED
+
+
+def _extract_name(text: str) -> str:
+    from agent.skill_utils import parse_frontmatter
+
+    fm, _body = parse_frontmatter(text)
+    candidate = fm.get("name")
+    if isinstance(candidate, str) and candidate:
+        return candidate
+    return ""
 
 
 def diff_sets(current: set[str], desired: set[str]) -> dict[str, list[str]]:

@@ -27,17 +27,44 @@ def build_usage_rows(
     enabled_names: frozenset[str],
 ) -> dict[str, dict[str, Any]]:
     """Build a name -> usage-fields map. None values when not persisted."""
-    out: dict[str, dict[str, Any]] = {}
     if curator is None:
-        for name in enabled_names:
-            out[name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
-        return out
+        return _empty_usage_map(enabled_names)
+    return _filled_usage_map(curator, skills_dir, enabled_names)
+
+
+def _empty_usage_map(enabled_names: frozenset[str]) -> dict[str, dict[str, Any]]:
+    return {name: {**EMPTY_USAGE, PERSISTED_KEY: False} for name in enabled_names}
+
+
+def _filled_usage_map(
+    curator: Any,
+    skills_dir: Path,
+    enabled_names: frozenset[str],
+) -> dict[str, dict[str, Any]]:
+    out = _filled_usage_map_for_report(curator, skills_dir, enabled_names)
+    out = _backfill_missing_usage(out, enabled_names)
+    return out
+
+
+def _filled_usage_map_for_report(
+    curator: Any,
+    skills_dir: Path,
+    enabled_names: frozenset[str],
+) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
     report = _usage_report_safe(curator, skills_dir)
     for entry in report:
         entry_name = _entry_name(entry)
         if entry_name is None or entry_name not in enabled_names:
             continue
         out[entry_name] = _entry_fields(entry)
+    return out
+
+
+def _backfill_missing_usage(
+    out: dict[str, dict[str, Any]],
+    enabled_names: frozenset[str],
+) -> dict[str, dict[str, Any]]:
     for enabled_name in enabled_names:
         if enabled_name not in out:
             out[enabled_name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
@@ -103,10 +130,15 @@ def build_rows_for_profile(
 def _enabled_skills_safe(*, profile: Path, platform: str | None, fn: Any) -> frozenset[str]:
     """Call ``enabled_skills_fn`` and raise :class:`EnabledDetectionUnavailable`."""
     try:
-        detected: frozenset[str] = fn(profile, platform=platform)
-        return detected
+        return _call_enabled_skills(profile, platform, fn)
     except Exception as exc:
         raise EnabledDetectionUnavailable(str(exc)) from exc
+
+
+def _call_enabled_skills(profile: Path, platform: str | None, fn: Any) -> frozenset[str]:
+    """Call ``fn`` and return its detected skills as a frozenset."""
+    detected: frozenset[str] = fn(profile, platform=platform)
+    return detected
 
 
 def _build_skill_rows(
