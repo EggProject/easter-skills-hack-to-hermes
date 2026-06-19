@@ -7,15 +7,13 @@ them so existing imports continue to work.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 import click
 
 from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
 from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 # Header labels for the bilingual --help sections.
@@ -35,9 +33,9 @@ HU_USAGE_BAR = (
 )
 
 
-def build_help_text() -> str:
-    """Build the bilingual --help text (two mirrored sections)."""
-    en = (
+def _build_en_help() -> str:
+    """Build the English --help text body."""
+    return (
         f"{EN['profiles_help_short']}\n\n"
         f"{HELP_EN_HEADER}\n"
         f"{EN_USAGE_BAR}\n\n"
@@ -52,14 +50,17 @@ def build_help_text() -> str:
         f"  --frozen-time ISO  {EN['profiles_opt_frozen_time']}\n"
         f"  --help             {EN['profiles_opt_help']}\n"
     )
-    hu = (
+
+
+def _build_hu_help() -> str:
+    """Build the Hungarian --help text body."""
+    return (
         f"{HU['profiles_help_short']}\n\n"
         f"{HELP_HU_HEADER}\n"
         f"{HU_USAGE_BAR}\n\n"
         f"{HU['profiles_help_long']}\n\n"
         f"{HU_SECTION}\n"
         f"  --apply            {HU['profiles_opt_apply']}\n"
-        f"  --audit            {HU['profiles_opt_audit']}\n"
         f"  --profile NÉV      {HU['profiles_opt_profile']}\n"
         f"  --json ÚTVONAL     {HU['profiles_opt_json']}\n"
         f"  --yes              {HU['profiles_opt_yes']}\n"
@@ -67,7 +68,11 @@ def build_help_text() -> str:
         f"  --frozen-time ISO  {HU['profiles_opt_frozen_time']}\n"
         f"  --help             {HU['profiles_opt_help']}\n"
     )
-    return en + "\n" + hu
+
+
+def build_help_text() -> str:
+    """Build the bilingual --help text (two mirrored sections)."""
+    return _build_en_help() + "\n" + _build_hu_help()
 
 
 @click.command(
@@ -132,8 +137,6 @@ def main_cmd(
     frozen_time: str | None,
 ) -> None:
     """Per-profile audit/flip for the migrated skill-creator skill (Script #2)."""
-    from pathlib import Path
-
     from hermes_skill_creator_plugin.cli_profiles import run_audit
 
     effective_apply = apply and not audit_only
@@ -153,12 +156,3 @@ def make_cli() -> Any:
     from click.testing import CliRunner
 
     return CliRunner()
-
-
-__all__ = [
-    "HELP_EN_HEADER",
-    "HELP_HU_HEADER",
-    "build_help_text",
-    "main_cmd",
-    "make_cli",
-]
