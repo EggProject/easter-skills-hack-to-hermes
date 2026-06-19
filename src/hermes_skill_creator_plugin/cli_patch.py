@@ -8,13 +8,22 @@ The CLI is intentionally thin: every flag flows through to
 ``exit_code`` into a ``SystemExit`` and emit any bilingual diagnostics
 on the way out.
 
+Architecture: the click decorator + options live on a thin ``main``
+wrapper that only parses argv into :class:`PatchArgs` and delegates
+to :func:`_patch_impl`. All business logic (target resolution,
+migration-note flow, drift guards, diagnostics emission) lives in
+``_patch_impl`` so structural-floor violations are measured without
+the click option noise.
+
 See also: plans/04-script-1-patch.md, plans/08-migration-note-format.md,
 plans/10-toolchain-and-conventions.md.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+import sys
 
 import click
 
@@ -160,6 +169,75 @@ def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
             click.echo(diagnostic)
 
 
+@dataclass(frozen=True)
+class PatchArgs:
+    """Parsed CLI args for ``hermes-skill-creator-patch``.
+
+    One field per click option. The click wrapper translates argv into
+    an instance and hands it to :func:`_patch_impl`.
+    """
+
+    target: str | None
+    check: bool
+    do_apply: bool
+    task_e_redirect: bool
+    no_schema_redirect: bool
+    i_accept_line_drift: bool
+    force: bool
+    emit_migration_note: bool
+    yes: bool
+    verbose: bool
+
+
+def _patch_impl(args: PatchArgs) -> int:
+    """Idempotent Hermes patcher (cap raise + 7 Task E sites).
+
+    Returns the exit code; the click wrapper raises ``SystemExit`` so
+    that test code can call this directly without click's process-exit
+    side-effects.
+    """
+    target_path: Path | None = _resolve_target(args.target)
+
+    if args.emit_migration_note:
+        if target_path is None:
+            click.echo(TARGET_REQUIRED, err=True)
+            return 4
+        _emit_migration_note_flow(
+            target_path,
+            task_e_redirect=args.task_e_redirect,
+            no_schema_redirect=args.no_schema_redirect,
+        )
+        # _emit_migration_note_flow raises SystemExit(EXIT_OK); the
+        # line below is unreachable but keeps mypy happy.
+
+    check = args.check
+    apply_mode = args.do_apply
+    if not check and not apply_mode:
+        # default: --check when neither --check nor --apply is given.
+        check = True
+
+    # The --force / --i-accept-line-drift guard is enforced inside
+    # run_patch (which returns EXIT_USER_ABORT). No click-level guard
+    # is needed here.
+
+    git_head = _git_head(target_path) if target_path else ""
+    patcher_result = run_patch(
+        target=target_path,
+        check=check,
+        apply=args.do_apply,
+        force=args.force,
+        i_accept_line_drift=args.i_accept_line_drift,
+        task_e_redirect=args.task_e_redirect,
+        no_schema_redirect=args.no_schema_redirect,
+        yes=args.yes,
+        verbose=args.verbose,
+        git_head=git_head,
+    )
+
+    _emit_diagnostics(patcher_result, verbose=args.verbose)
+    return patcher_result.exit_code
+
+
 @click.command(
     help=f"{HELP_EN}\n{HELP_HU}",
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -210,42 +288,23 @@ def main(
     yes: bool,
     verbose: bool,
 ) -> None:
-    """Idempotent Hermes patcher (cap raise + 7 Task E sites)."""
-    target_path: Path | None = _resolve_target(target)
-
-    if emit_migration_note:
-        if target_path is None:
-            click.echo(TARGET_REQUIRED, err=True)
-            raise SystemExit(4)
-        _emit_migration_note_flow(
-            target_path,
-            task_e_redirect=task_e_redirect,
-            no_schema_redirect=no_schema_redirect,
-        )
-
-    if not check and not do_apply:
-        # default: --check
-        check = True
-
-    # The --force / --i-accept-line-drift guard is enforced inside
-    # run_patch (which returns EXIT_USER_ABORT). No click-level guard
-    # is needed here.
-
-    patcher_result = run_patch(
-        target=target_path,
-        check=check,
-        apply=do_apply,
-        force=force,
-        i_accept_line_drift=i_accept_line_drift,
-        task_e_redirect=task_e_redirect,
-        no_schema_redirect=no_schema_redirect,
-        yes=yes,
-        verbose=verbose,
-        git_head=_git_head(target_path) if target_path is not None else "",
+    """Thin click wrapper — see :func:`_patch_impl` for logic."""
+    sys.exit(
+        _patch_impl(
+            PatchArgs(
+                target=target,
+                check=check,
+                do_apply=do_apply,
+                task_e_redirect=task_e_redirect,
+                no_schema_redirect=no_schema_redirect,
+                i_accept_line_drift=i_accept_line_drift,
+                force=force,
+                emit_migration_note=emit_migration_note,
+                yes=yes,
+                verbose=verbose,
+            ),
+        ),
     )
-
-    _emit_diagnostics(patcher_result, verbose=verbose)
-    raise SystemExit(patcher_result.exit_code)
 
 
 def _git_head(target: Path) -> str:
