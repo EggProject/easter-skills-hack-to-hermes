@@ -34,8 +34,7 @@ _TOKENIZER_FAILURE_EXCEPTIONS: tuple[type[BaseException], ...] = (
     OSError,
 )
 _FALLBACK_WARNING_MESSAGE = (
-    "[en] tokenizer unavailable, falling back to chars/4 "
-    "/ [hu] a tokenizer nem elérhető, chars/4 becslés"
+    "[en] tokenizer unavailable, falling back to chars/4 / [hu] a tokenizer nem elérhető, chars/4 becslés"
 )
 
 
@@ -81,12 +80,13 @@ def _encode_via_protocol(
 # Module-level guard for the "warned once per run" contract. The reporter
 # iterates over many skills in a single run; we MUST emit the warning at
 # most once. Tests can call reset_warning_state() to clear this between cases.
-_warning_state: dict[str, bool] = {"emitted": False}
+_WARNING_EMITTED_KEY = "emitted"
+_warning_state: dict[str, bool] = {_WARNING_EMITTED_KEY: False}
 
 
 def reset_warning_state() -> None:
-    """Reset the module-level 'warned' flag. Test-only — not for runtime use."""
-    _warning_state["emitted"] = False
+    """Reset module 'warned' flag. Test-only, not for runtime use."""
+    _warning_state[_WARNING_EMITTED_KEY] = False
 
 
 def estimate_tokens(
@@ -122,8 +122,8 @@ def estimate_tokens(
     rendered = f"{name} {description}"
     token_count = _encode_via_protocol(tokenizer, rendered)
     if token_count is None:
-        if warning is not None and not _warning_state["emitted"]:
-            _warning_state["emitted"] = True
+        if warning is not None and not _warning_state[_WARNING_EMITTED_KEY]:
+            _warning_state[_WARNING_EMITTED_KEY] = True
             warning(_FALLBACK_WARNING_MESSAGE)
         return chars_div_four(rendered)
     return token_count

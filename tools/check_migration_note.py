@@ -56,8 +56,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 sys.stderr,
             )
         summary = (
-            f"[check_migration_note] {len(findings)} finding(s) — "
-            "MIGRATION*.md must be regenerated, not hand-edited."
+            f"[check_migration_note] {len(findings)} finding(s) — MIGRATION*.md must be regenerated, not hand-edited."
         )
         _emit(summary, sys.stderr)
         return 1

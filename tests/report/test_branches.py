@@ -107,7 +107,8 @@ def test_load_skill_description_read_error(tmp_path: Path, monkeypatch) -> None:
     skill_dir.mkdir()
     (skill_dir / "SKILL.md").write_text("---\ndescription: x\n---\n", encoding="utf-8")
 
-    def _boom(*a, **kw):raise OSError("nope")
+    def _boom(*a, **kw):
+        raise OSError("nope")
 
     monkeypatch.setattr(Path, "read_text", _boom)
     s = cli_report._load_skill_description(tmp_path, "a")
@@ -127,6 +128,16 @@ def test_load_skill_description_no_description_line(tmp_path: Path) -> None:
     (skill_dir / "SKILL.md").write_text("---\nname: a\n---\n\nFirst paragraph.\n\n# Heading\n", encoding="utf-8")
     s = cli_report._load_skill_description(tmp_path, "a")
     assert "First paragraph" in s
+
+
+def test_load_skill_description_frontmatter_no_body(tmp_path: Path) -> None:
+    """Frontmatter w/o description + empty body → placeholder."""
+    skill_dir = tmp_path / "a"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text("---\nname: a\n---\n", encoding="utf-8")
+    s = cli_report._load_skill_description(tmp_path, "a")
+    assert "unavailable" in s
+    assert "a" in s
 
 
 # --- _build_usage_rows with mock curator ---
@@ -165,7 +176,8 @@ def test_build_usage_rows_with_persisted_false() -> None:
 
 
 def test_build_usage_rows_curator_raises() -> None:
-    def _boom(**kw):raise RuntimeError("nope")
+    def _boom(**kw):
+        raise RuntimeError("nope")
 
     curator = SimpleNamespace(usage_report=_boom)
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))

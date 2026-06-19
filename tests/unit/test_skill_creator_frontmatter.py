@@ -261,9 +261,9 @@ def test_no_uppercase_tool_names_in_full_body_outside_fences(skill_creator_home:
     for name in UPPERCASE_TOOL_NAMES:
         # Tool invocation shape: `\bName\s*\(` (e.g. `Read(`, `Skill(`).
         pattern = r"\b" + re.escape(name) + r"\s*\("
-        assert not re.search(pattern, body), (
-            f"uppercase tool name {name!r} invoked in SKILL.md body " "(matched `<Name>(`)"
-        )
+        assert not re.search(
+            pattern, body
+        ), f"uppercase tool name {name!r} invoked in SKILL.md body (matched `<Name>(`)"
 
 
 @assert_hermes_agent_untouched

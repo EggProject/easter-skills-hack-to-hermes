@@ -99,9 +99,7 @@ def _fallback_plan_glob(root: Path) -> list[Path]:
     plans_dir = Path(root, *PLANS_DIR_PARTS)
     if not plans_dir.exists():
         return []
-    return sorted(
-        p for p in plans_dir.glob("*.md") if p.name != INDEX_BASENAME
-    )
+    return sorted(p for p in plans_dir.glob("*.md") if p.name != INDEX_BASENAME)
 
 
 def _iter_plan_files_including_index(root: Path) -> list[Path]:
@@ -188,9 +186,7 @@ def _check_footer_for_file(rel: Path, text: str, loc: int) -> list[str]:
     m = FOOTER_RE.search(text)
     if m is None:
         prefix = "footer drift: "
-        suffix = (
-            f"{rel} missing `<!-- end of file: NN lines` footer"
-        )
+        suffix = f"{rel} missing `<!-- end of file: NN lines` footer"
         return [prefix + suffix]
     declared = int(m.group(1))
     if declared == loc:
@@ -265,10 +261,7 @@ def _total_cell_failure(total_cell: int | None, live_total: int) -> list[str]:
         return ["budget table: could not find Total cell in 00-index.md"]
     if total_cell == live_total:
         return []
-    msg = (
-        f"budget table: 00-index Total cell is {total_cell} "
-        f"but live sum is {live_total}"
-    )
+    msg = f"budget table: 00-index Total cell is {total_cell} but live sum is {live_total}"
     return [msg]
 
 
@@ -276,10 +269,7 @@ def _sum_prose_failure(sum_prose: int | None, live_total: int) -> list[str]:
     """Build failures for the `Sum NNNN` prose mismatch case."""
     if sum_prose is None or sum_prose == live_total:
         return []
-    msg = (
-        f"budget table: `Sum NNNN` prose is {sum_prose} "
-        f"but live sum is {live_total}"
-    )
+    msg = f"budget table: `Sum NNNN` prose is {sum_prose} but live sum is {live_total}"
     return [msg]
 
 
@@ -314,10 +304,7 @@ def _check_row_actual(row: Row, rel: Path, loc: int) -> list[str]:
     """Per-row Actual cell MUST equal the live wc -l of the cited path."""
     if row.actual == loc:
         return []
-    msg = (
-        f"per-cell guard: row {row.num} ({rel}) "
-        f"Actual cell is {row.actual} but wc -l is {loc}"
-    )
+    msg = f"per-cell guard: row {row.num} ({rel}) Actual cell is {row.actual} but wc -l is {loc}"
     return [msg]
 
 
@@ -325,10 +312,7 @@ def _check_row_budget(row: Row, rel: Path, loc: int) -> list[str]:
     """Per-row Budget cell MUST be >= live wc -l (cap not violated)."""
     if row.budget >= loc:
         return []
-    msg = (
-        f"per-cell guard: row {row.num} ({rel}) "
-        f"Budget {row.budget} < Actual {loc}"
-    )
+    msg = f"per-cell guard: row {row.num} ({rel}) Budget {row.budget} < Actual {loc}"
     return [msg]
 
 

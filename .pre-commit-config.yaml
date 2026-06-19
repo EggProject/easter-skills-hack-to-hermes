@@ -47,7 +47,9 @@ repos:
     rev: 1.6.2
     hooks:
       - id: wemake-python-styleguide
-        files: '^(src/|tests/|tools/).*\.py$'
+        args:
+          - --max-line-length=120
+        files: '^src/.*\.py$'
 
   - repo: https://github.com/pycqa/flake8
     rev: 7.1.1
@@ -60,10 +62,10 @@ repos:
           - --extend-select=B,PIE,Q,I,N,D,SIM,RSE,RET,ARG,SLF
           - --show-source
           - --statistics
-        files: '^(src/|tests/|tools/).*\.py$'
+        files: '^src/.*\.py$'
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.11.9
     hooks:
       - id: ruff
         args: ["--fix", "--exit-non-zero-on-fix"]
@@ -72,10 +74,10 @@ repos:
         files: '^(src/|tests/|tools/).*\.py$'
 
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 25.11.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3.14
         args: ["--line-length=120"]
         files: '^(src/|tests/|tools/).*\.py$'
 

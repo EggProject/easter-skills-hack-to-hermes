@@ -371,7 +371,7 @@ def test_get_enabled_skills_handles_block_form_yaml(enabled_detection, tmp_path:
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
     _write_skill(profile / "skills", "bar", "name: bar\ndescription: x")
-    (profile / "config.yaml").write_text("skills:\n" "  disabled: [foo]\n" "  other_key: ignored\n")
+    (profile / "config.yaml").write_text("skills:\n  disabled: [foo]\n  other_key: ignored\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert "foo" not in enabled
@@ -407,7 +407,7 @@ def test_get_enabled_skills_handles_other_keys_under_skills(enabled_detection, t
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
-    (profile / "config.yaml").write_text("skills:\n" "  other_section:\n" "    nested: value\n")
+    (profile / "config.yaml").write_text("skills:\n  other_section:\n    nested: value\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert enabled == frozenset({"foo"})
@@ -418,7 +418,7 @@ def test_get_enabled_skills_handles_skills_key_not_first(enabled_detection, tmp_
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
-    (profile / "config.yaml").write_text("other:\n  nested: value\n" "skills:\n" "  disabled: [foo]\n")
+    (profile / "config.yaml").write_text("other:\n  nested: value\nskills:\n  disabled: [foo]\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert "foo" not in enabled
@@ -663,7 +663,7 @@ def test_get_enabled_skills_block_form_with_other_key_after_disabled(enabled_det
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
-    (profile / "config.yaml").write_text("skills:\n" "  disabled: [foo]\n" "  another_key: value\n")
+    (profile / "config.yaml").write_text("skills:\n  disabled: [foo]\n  another_key: value\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert "foo" not in enabled
@@ -927,7 +927,7 @@ def test_parse_disabled_yaml_block_ends_unexpectedly(enabled_detection, tmp_path
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     _write_skill(profile / "skills", "foo", "name: foo\ndescription: x")
-    (profile / "config.yaml").write_text("skills:\n" "not_indented: ends_block\n" "other_key: value\n")
+    (profile / "config.yaml").write_text("skills:\nnot_indented: ends_block\nother_key: value\n")
 
     enabled = enabled_detection.get_enabled_skills(profile)
     assert "foo" in enabled
@@ -1001,6 +1001,13 @@ def test_platform_disables_set_value(
     """``_platform_disables`` covers the set branch."""
     assert enabled_detection._platform_disables({"darwin": {"disabled"}}, "darwin") is True
     assert enabled_detection._platform_disables({"darwin": set()}, "darwin") is False
+
+
+def test_platform_disables_empty_dict_value(
+    enabled_detection,
+) -> None:
+    """``_platform_disables`` covers the empty-dict branch (no values to scan)."""
+    assert enabled_detection._platform_disables({"darwin": {}}, "darwin") is False
 
 
 def test_find_skill_md_skips_non_dir_child(enabled_detection, tmp_path: Path) -> None:

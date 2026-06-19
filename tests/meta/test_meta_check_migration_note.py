@@ -243,13 +243,13 @@ def test_is_git_tracked_returns_false_on_empty_output(tmp_path: Path, monkeypatc
 
 def test_main_module_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The `if __name__ == '__main__'` block MUST be runnable in-process (line 161)."""
-    import types
 
     monkeypatch.setattr(check_migration_note, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(check_migration_note, "MANIFEST_PATH", tmp_path / MANIFEST_PATH.name)
     monkeypatch.setattr("sys.argv", ["check_migration_note.py"])
     # Use runpy to execute the tool's source as __main__ (no exec() per S102).
     import runpy
+
     try:
         runpy.run_path(
             str(check_migration_note.__file__),

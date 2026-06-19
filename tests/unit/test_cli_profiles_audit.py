@@ -101,7 +101,8 @@ class _CallLog:
 # ---------------------------------------------------------------------------
 
 
-def _install_fake_hermes_apis(monkeypatch: pytest.MonkeyPatch,
+def _install_fake_hermes_apis(
+    monkeypatch: pytest.MonkeyPatch,
     *,
     profile_paths: list[Path],
     profile_names: list[str],
@@ -136,6 +137,9 @@ def _install_fake_hermes_apis(monkeypatch: pytest.MonkeyPatch,
         return list(infos)
 
     fake_profiles.list_profiles = list_profiles
+    # Expose ``ProfileInfo`` so the import in cli_profiles.py resolves; tests
+    # only ever construct ``_FakeProfileInfo`` (which is a duck-typed drop-in).
+    fake_profiles.ProfileInfo = _FakeProfileInfo
     monkeypatch.setitem(sys.modules, "hermes_cli.profiles", fake_profiles)
     fake_hermes_cli = types.ModuleType("hermes_cli")
     monkeypatch.setitem(sys.modules, "hermes_cli", fake_hermes_cli)
@@ -1034,9 +1038,7 @@ def test_audit_get_disabled_failure_recorded(installed, tmp_path: Path) -> None:
     import agent.skill_utils as asu
 
     original = asu.get_disabled_skill_names
-    asu.get_disabled_skill_names = lambda platform=None: (_ for _ in ()).throw(
-        RuntimeError("boom")
-    )
+    asu.get_disabled_skill_names = lambda platform=None: (_ for _ in ()).throw(RuntimeError("boom"))
     try:
         report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
     finally:

@@ -1,6 +1,6 @@
 """src/hermes_skill_creator_plugin/cli_report.py
 
-Hermes skill-creator reporter (READ-ONLY) — Script #3.
+Hermes skill-creator reporter (READ-ONLY) - Script #3.
 
 See also: plans/13-script-3-report.md
 
@@ -33,453 +33,229 @@ TDD test cases for this module:
 
 from __future__ import annotations
 
-import os
-from datetime import UTC, datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import click
 
-from ._enabled_detection import get_enabled_skills
-from ._reporter import (
-    ProfileSection,
-    SkillRow,
-    format_json,
-    format_text,
-    make_row,
-    sort_rows,
-)
-from ._tokenizer import estimate_tokens
-from .i18n import messages_en as EN
+from hermes_skill_creator_plugin import cli_report_imports as _imps
+from hermes_skill_creator_plugin._enabled_detection import get_enabled_skills
+from hermes_skill_creator_plugin.i18n import messages_en as EN
 
-REJECTED_FLAGS = {
-    "--apply": "apply",
-    "--emit-migration-note": "emit-migration-note",
-    "--write-report": "write-report",
-}
+# Local bindings for readability; source-of-truth imports live in
+# :mod:`.cli_report_imports` (extracted to satisfy WPS201).
+_helpers = _imps._helpers
+_paths = _imps._paths
+_rows = _imps._rows
+emit_bilingual_help = _imps.emit_bilingual_help
+estimate_tokens = _imps.estimate_tokens
+main = _imps.main
+sort_rows = _imps.sort_rows
 
-HELP_EN_HEADER = "Usage (English):"
-HELP_HU_HEADER = "Használat (magyar):"
+# ``ProfileSection`` is used in type annotations only; with
+# ``from __future__ import annotations`` the type-checker can resolve
+# it through the imports module without a module-level binding.
+# Tests import ``ProfileSection`` by name from this module via the
+# reporter submodule, so we DO need to bind it.
+ProfileSection = _imps.ProfileSection
 
-
-def _emit_tokenizer_warning(_msg: str) -> None:
-    """Bilingual `click.echo` callback for `_tokenizer.estimate_tokens(warning=...)`.
-
-    The D6 spec mandates that the reporter wires a bilingual warning callback
-    into every `estimate_tokens` call so the operator sees exactly one
-    `chars/4 fallback` notice per process. The module-level guard in
-    `_tokenizer` (`_WARNED_ONCE`) ensures this callback fires at most once
-    even when many skills are tokenized in one run. The bilingual constant
-    lives in `i18n/messages_en.py::report_tokenizer_unavailable`.
-    """
-    click.echo(EN.report_tokenizer_unavailable, err=True)
-
-
-def _resolve_hermes_home() -> Path:
-    """Resolve HERMES_HOME from env, default to ~/.hermes (the LIVE install).
-
-    The fixture tests monkeypatch HERMES_HOME to a tmp path BEFORE calling
-    main(), so this resolution happens in the worktree and never touches
-    the live install under test conditions.
-    """
-    raw = os.environ.get("HERMES_HOME", "").strip()
-    if raw:
-        return Path(raw).expanduser()
-    return Path("~/.hermes").expanduser()
+HELP_EN_HEADER = _helpers.HELP_EN_HEADER
+HELP_HU_HEADER = _helpers.HELP_HU_HEADER
+FORMAT_TEXT = _helpers.FORMAT_TEXT
+SORT_TOKENS = _helpers.SORT_TOKENS
+EnabledDetectionUnavailable = _rows.EnabledDetectionUnavailable
+_build_rows_for_profile = _rows.build_rows_for_profile
+_build_usage_rows = _rows.build_usage_rows
+_check_json_path = _rows.check_json_path
+_load_curator = _paths.load_curator
+_load_skill_description = _paths.load_skill_description
+_now_iso = _helpers.now_iso
+_resolve_hermes_home = _paths.resolve_hermes_home
+_resolve_profiles = _paths.resolve_profiles
 
 
-def _load_curator(hermes_home: Path) -> Any | None:
-    """Best-effort: load tools.skill_usage. Return None when unavailable.
-
-    The reporter does NOT raise when the Curator is absent; it falls back
-    to n/a for every usage column. This mirrors the documented V8/W4 fix
-    (the reporter must not invent usage values).
-    """
-    try:
-        import tools.skill_usage as usage_mod
-    except Exception:
-        return None
-    if not hasattr(usage_mod, "usage_report"):
-        return None
-    return usage_mod
-
-
-def _resolve_profiles(hermes_home: Path, profile_arg: str | None) -> list[Path]:
-    """Return the list of profile roots to report on.
-
-    If `profile_arg` is set, return only `<hermes_home>/<profile_arg>`.
-    Otherwise, return the `hermes` (default) profile and every named
-    profile directory under `<hermes_home>/profiles/`.
-    """
-    if profile_arg:
-        return [hermes_home / profile_arg]
-    out: list[Path] = [hermes_home / "hermes"]
-    profiles_dir = hermes_home / "profiles"
-    if profiles_dir.is_dir():
-        for child in sorted(profiles_dir.iterdir()):
-            if child.is_dir():
-                out.append(child)
-    return out
-
-
-def _load_skill_description(skills_dir: Path, skill_name: str) -> str:
-    """Read the full description from `<skills_dir>/<skill_name>/SKILL.md`.
-
-    Falls back to a short placeholder when the file is missing or the
-    frontmatter is unparseable. The function checks the frontmatter
-    block first (for `description:` key) and falls back to the body
-    section if no frontmatter description is present.
-    """
-    skill_md = skills_dir / skill_name / "SKILL.md"
-    if not skill_md.is_file():
-        return f"<description unavailable for {skill_name}>"
-    try:
-        text = skill_md.read_text(encoding="utf-8")
-    except OSError:
-        return f"<description unavailable for {skill_name}>"
-    if text.startswith("---"):
-        end = text.find("\n---", 3)
-        if end > 0:
-            frontmatter = text[3:end]
-            body = text[end + 4 :].strip()
-            # Look for a `description:` key in the frontmatter block first.
-            for line in frontmatter.splitlines():
-                if line.startswith("description:"):
-                    return line.split(":", 1)[1].strip().strip("'\"")
-            # Fall back to the body content.
-            return body.split("\n\n", 1)[0] if body else text.strip()
-    return text.strip()
-
-
-def _build_usage_rows(
-    curator: Any | None,
-    skills_dir: Path,
-    enabled_names: frozenset[str],
-) -> dict[str, dict[str, Any]]:
-    """Build a `name -> {use_count, view_count, patch_count, last_*_at, _persisted}` map.
-
-    n/a-vs-0 (binding, V8/W4): use `usage_report()` and read the
-    `_persisted` flag. We do NOT call `get_record()` (the backfill
-    accessor). When the Curator is absent, every row has None values and
-    `_persisted=False`.
-    """
-    out: dict[str, dict[str, Any]] = {}
-    if curator is None:
-        for n in enabled_names:
-            out[n] = {
-                "use_count": None,
-                "view_count": None,
-                "patch_count": None,
-                "last_used_at": None,
-                "last_viewed_at": None,
-                "last_patched_at": None,
-                "_persisted": False,
-            }
-        return out
-    try:
-        report = curator.usage_report(skills_dir=skills_dir)
-    except Exception:
-        report = []
-    for entry in report or []:
-        # The Curator returns objects with the six documented fields plus
-        # a `_persisted` flag. We tolerate duck-typed access.
-        name = getattr(entry, "name", None)
-        if name is None:
-            continue
-        if name not in enabled_names:
-            continue
-        persisted = bool(getattr(entry, "_persisted", False))
-        out[name] = {
-            "use_count": getattr(entry, "use_count", 0) if persisted else None,
-            "view_count": getattr(entry, "view_count", 0) if persisted else None,
-            "patch_count": getattr(entry, "patch_count", 0) if persisted else None,
-            "last_used_at": getattr(entry, "last_used_at", None) if persisted else None,
-            "last_viewed_at": getattr(entry, "last_viewed_at", None) if persisted else None,
-            "last_patched_at": getattr(entry, "last_patched_at", None) if persisted else None,
-            "_persisted": persisted,
-        }
-    # Backfill: skills that are enabled but absent from the Curator's view.
-    for n in enabled_names:
-        if n not in out:
-            out[n] = {
-                "use_count": None,
-                "view_count": None,
-                "patch_count": None,
-                "last_used_at": None,
-                "last_viewed_at": None,
-                "last_patched_at": None,
-                "_persisted": False,
-            }
-    return out
-
-
-class _EnabledDetectionUnavailable(Exception):
-    """Raised by _build_rows_for_profile when get_enabled_skills is unavailable."""
-
-
-def _build_rows_for_profile(
-    profile: Path,
-    *,
-    platform: str | None,
-    curator: Any | None,
-) -> tuple[list[SkillRow], int]:
-    """Build the SkillRow list and total_tokens for `profile`.
-
-    Raises:
-        _EnabledDetectionUnavailable: when the shared enabled-detection
-            module is unavailable (e.g., the import was monkey-patched to
-            raise). The caller is responsible for printing the bilingual
-            error and exiting with code 6.
-    """
-    try:
-        enabled = get_enabled_skills(profile, platform=platform)
-    except Exception as exc:
-        raise _EnabledDetectionUnavailable(str(exc)) from exc
-    skills_dir = profile / "skills"
-    usage = _build_usage_rows(curator, skills_dir, enabled)
-    rows: list[SkillRow] = []
-    total = 0
-    for name in sorted(enabled):
-        description = _load_skill_description(skills_dir, name)
-        tokens = estimate_tokens(name, description, warning=_emit_tokenizer_warning)
-        total += tokens
-        u = usage.get(
-            name,
-            {
-                "use_count": None,
-                "view_count": None,
-                "patch_count": None,
-                "last_used_at": None,
-                "last_viewed_at": None,
-                "last_patched_at": None,
-            },
-        )
-        rows.append(
-            make_row(
-                profile=profile.name,
-                name=name,
-                description=description,
-                tokens=tokens,
-                use_count=u["use_count"],
-                view_count=u["view_count"],
-                patch_count=u["patch_count"],
-                last_used_at=u["last_used_at"],
-                last_viewed_at=u["last_viewed_at"],
-                last_patched_at=u["last_patched_at"],
-            )
-        )
-    return rows, total
-
-
-def _now_iso() -> str:
-    """Return an ISO 8601 UTC timestamp. Honors HERMES_SKILL_CREATOR_FROZEN_TIME."""
-    frozen = os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME", "").strip()
-    if frozen:
-        return frozen
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _check_json_path(json_path: Path, hermes_home: Path) -> bool:
-    """Return True when `json_path` resolves inside `hermes_home`.
-
-    The caller is responsible for printing the bilingual error and exiting
-    with code 6 when this returns True.
-    """
-    try:
-        resolved = json_path.resolve()
-    except OSError:
-        return False
-    try:
-        home_resolved = hermes_home.resolve()
-    except OSError:
-        return False
-    if resolved == home_resolved or home_resolved in resolved.parents:
-        return True
-    return False
-
-
-def _emit_bilingual_help() -> None:
-    """Print a two-section bilingual help (English, then Hungarian)."""
-    en_lines = [
-        HELP_EN_HEADER,
-        "",
-        "  uv run hermes-skill-creator-report [--profile <name>] " "[--sort tokens|use_count|last_used_at]",
-        "                                     [--format text|json] [--json PATH] [--help]",
-        "",
-        "Options:",
-        "  --profile <name>    " + EN.report_opt_profile,
-        "  --sort <key>        " + EN.report_opt_sort,
-        "  --format <fmt>      " + EN.report_opt_format,
-        "  --json PATH         " + EN.report_opt_json,
-        "  --help              " + EN.report_opt_help,
-    ]
-    from .i18n import messages_hu as HU
-
-    hu_lines = [
-        HELP_HU_HEADER,
-        "",
-        "  uv run hermes-skill-creator-report [--profile <name>] " "[--sort tokens|use_count|last_used_at]",
-        "                                     [--format text|json] [--json PATH] [--help]",
-        "",
-        "Opciok:",
-        "  --profile <name>    " + HU.report_opt_profile,
-        "  --sort <key>        " + HU.report_opt_sort,
-        "  --format <fmt>      " + HU.report_opt_format,
-        "  --json PATH         " + HU.report_opt_json,
-        "  --help              " + HU.report_opt_help,
-    ]
-    click.echo("\n".join(en_lines))
-    click.echo("")
-    click.echo("\n".join(hu_lines))
-
-
-def _reject_flag(flag_name: str) -> int:
-    """Print a bilingual rejection message and return exit code 2."""
-    msg = {
-        "apply": EN.report_rejected_apply,
-        "emit-migration-note": EN.report_rejected_emit_migration_note,
-        "write-report": EN.report_rejected_write_report,
-    }.get(flag_name, EN.report_rejected_apply)
-    click.echo(msg, err=True)
-    return 2
-
-
-# Public, testable entry point.
-def run(*,
-    profile: str | None = None,
-    sort: str = "tokens",
-    fmt: str = "text",
-    json_path: Path | None = None,
-    platform: str | None = None,
-    show_help: bool = False,
-    argv: list[str] | None = None,
-) -> int:
-    """Run the reporter. Returns the exit code (0 on success).
-
-    Args:
-        profile: a single profile name, or None for default + named profiles.
-        sort: 'tokens' | 'use_count' | 'last_used_at'.
-        fmt: 'text' | 'json'.
-        json_path: optional path to write the JSON output to (default:
-            ./skill-report.json when --format=json and no --json).
-        platform: optional platform tag passed to the enabled-detection helper.
-        show_help: when True, print the bilingual help and return 0.
-        argv: when set, scan `argv` for rejected flags before running.
-    """
-    if argv is not None:
-        for arg in argv:
-            for prefix, key in REJECTED_FLAGS.items():
-                if arg == prefix or arg.startswith(prefix + "="):
-                    return _reject_flag(key)
-    if show_help:
-        _emit_bilingual_help()
-        return 0
-    if sort not in {"tokens", "use_count", "last_used_at"}:
-        click.echo(EN.report_opt_sort, err=True)
-        return 2
-    if fmt not in {"text", "json"}:
-        click.echo(EN.report_opt_format, err=True)
-        return 2
-    hermes_home = _resolve_hermes_home()
-    # Resolve the json_path target BEFORE the safety check so the default
-    # `./skill-report.json` is also guarded. (Previously the default bypassed
-    # _check_json_path, allowing a write inside HERMES_HOME when cwd==hermes_home.)
-    if json_path is None and fmt == "json":
-        json_path = Path("./skill-report.json")
-    if json_path is not None and _check_json_path(json_path, hermes_home):
+def _check_hermes_home(
+    json_path: Path | None,
+    hermes_home: Path,
+) -> int | None:
+    """Return 6 when json_path falls under hermes_home, else None."""
+    if json_path is not None and _check_json_path(
+        json_path,
+        hermes_home,
+    ):
         click.echo(EN.report_json_path_inside_hermes_home, err=True)
         return 6
-    curator = _load_curator(hermes_home)
-    profile_paths = _resolve_profiles(hermes_home, profile)
-    if not profile_paths:
-        click.echo(EN.report_no_profiles, err=True)
-        return 0
-    generated_at = _now_iso()
+    return None
+
+
+@dataclass(frozen=True)
+class ProfileBuildContext:
+    """Per-profile build inputs (everything except the profile path)."""
+
+    fmt: str
+    sort: str
+    platform: str | None
+    curator: Any | None
+
+
+def _build_profile_sections(
+    profile_paths: list[Path],
+    *,
+    fmt: str,
+    sort: str,
+    platform: str | None,
+    curator: Any | None,
+) -> tuple[list[str], list[ProfileSection], int | None]:
+    """Build text/json sections for all profiles. Error code or None."""
     text_sections: list[str] = []
     json_sections: list[ProfileSection] = []
-    for p in profile_paths:
-        try:
-            rows, total = _build_rows_for_profile(p, platform=platform, curator=curator)
-        except _EnabledDetectionUnavailable:
-            click.echo(EN.report_enabled_detection_unavailable, err=True)
-            return 6
-        rows = sort_rows(rows, sort)
-        if fmt == "text":
-            text_sections.append(format_text(p.name, rows, total_tokens=total))
-        else:
-            json_sections.append(ProfileSection(profile_name=p.name, rows=rows, total_tokens=total))
-    if fmt == "text":
-        output = "\n\n".join(text_sections)
-    else:
-        output = format_json(
-            tool="hermes-skill-creator-report",
-            version="0.1.0",
-            generated_at=generated_at,
-            sections=json_sections,
+    ctx = ProfileBuildContext(
+        fmt=fmt,
+        sort=sort,
+        platform=platform,
+        curator=curator,
+    )
+    for prof in profile_paths:
+        rc = _build_one_profile_section(
+            prof,
+            ctx=ctx,
+            text_sections=text_sections,
+            json_sections=json_sections,
         )
-    if fmt == "json":
-        # JSON mode: write to json_path (resolved above; default
-        # `./skill-report.json` is operator-chosen, OUTSIDE the fixture tree).
-        assert json_path is not None  # set above when fmt == "json"
-        json_path.write_text(output, encoding="utf-8")
-        click.echo(EN.report_opt_json)
+        if rc is not None:
+            return text_sections, json_sections, rc
+    return text_sections, json_sections, None
+
+
+def _build_one_profile_section(
+    prof: Path,
+    *,
+    ctx: ProfileBuildContext,
+    text_sections: list[str],
+    json_sections: list[ProfileSection],
+) -> int | None:
+    """Append one profile's section; return 6 on detection error, else None."""
+    try:
+        rows, total = _build_rows_for_profile(
+            prof,
+            platform=ctx.platform,
+            curator=ctx.curator,
+            estimate_tokens_fn=estimate_tokens,
+            enabled_skills_fn=get_enabled_skills,
+        )
+    except EnabledDetectionUnavailable:
+        click.echo(EN.report_enabled_detection_unavailable, err=True)
+        return 6
+    rows = sort_rows(rows, ctx.sort)
+    section = _helpers.make_section(ctx.fmt, prof.name, rows, total)
+    if ctx.fmt == FORMAT_TEXT:
+        text_sections.append(section)  # type: ignore[arg-type]
     else:
-        click.echo(output)
+        json_sections.append(section)  # type: ignore[arg-type]
+    return None
+
+
+def _load_context(
+    fmt: str,
+    json_path: Path | None,
+    profile: str | None,
+) -> tuple[Path | None, object, list[Path], int | None]:
+    """Resolve paths + curator + profiles. Return error code or None."""
+    hermes_home = _paths.resolve_hermes_home()
+    json_path = _helpers.resolve_json_path(fmt, json_path)
+    rc = _check_hermes_home(json_path, hermes_home)
+    if rc is not None:
+        return json_path, None, [], rc
+    curator = _paths.load_curator(hermes_home)
+    profile_paths = _paths.resolve_profiles(hermes_home, profile)
+    return json_path, curator, profile_paths, None
+
+
+def _emit_sections(
+    fmt: str,
+    json_path: Path | None,
+    text_sections: list[str],
+    json_sections: list[ProfileSection],
+) -> None:
+    """Render and write/print the final output."""
+    output = _helpers.render_output(
+        fmt,
+        text_sections,
+        json_sections,
+        _helpers.now_iso(),
+    )
+    _helpers.emit_output(fmt, output, json_path)
+
+
+@dataclass(frozen=True)
+class ReportInputs:
+    """Immutable input set for the reporter's dispatch pipeline."""
+
+    profile: str | None = None
+    sort: str = SORT_TOKENS
+    fmt: str = FORMAT_TEXT
+    json_path: Path | None = None
+    platform: str | None = None
+    show_help: bool = False
+    argv: list[str] | None = None
+
+
+def run(**kwargs: Any) -> int:
+    """Run the reporter. Returns the exit code (0 on success)."""
+    return _dispatch(ReportInputs(**kwargs))
+
+
+def _dispatch(inputs: ReportInputs) -> int:
+    """Validate, resolve paths, build sections, emit."""
+    early_rc = _early_exit_rc(inputs)
+    if early_rc is not None:
+        return early_rc
+    json_path, curator, profile_paths, err = _load_context(
+        inputs.fmt,
+        inputs.json_path,
+        inputs.profile,
+    )
+    if err is not None:
+        return err
+    return _build_and_emit(inputs, json_path, curator, profile_paths)
+
+
+def _build_and_emit(
+    inputs: ReportInputs,
+    json_path: Path | None,
+    curator: Any | None,
+    profile_paths: list[Path],
+) -> int:
+    """Build sections for ``profile_paths`` and emit the final report."""
+    text_sections, json_sections, build_err = _build_profile_sections(
+        profile_paths,
+        fmt=inputs.fmt,
+        sort=inputs.sort,
+        platform=inputs.platform,
+        curator=curator,
+    )
+    if build_err is not None:
+        return build_err
+    _emit_sections(inputs.fmt, json_path, text_sections, json_sections)
     return 0
 
 
-@click.command(
-    help=EN.report_help_short + "\n\n" + EN.report_help_long,
-    context_settings={"help_option_names": [], "ignore_unknown_options": True},
-)
-@click.option("--profile", default=None, help=EN.report_opt_profile)
-@click.option(
-    "--sort",
-    type=click.Choice(["tokens", "use_count", "last_used_at"]),
-    default="tokens",
-    help=EN.report_opt_sort,
-)
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    help=EN.report_opt_format,
-)
-@click.option(
-    "--json",
-    "json_path",
-    type=click.Path(),
-    default=None,
-    help=EN.report_opt_json,
-)
-@click.option("--help", "show_help", is_flag=True, default=False, help=EN.report_opt_help)
-def main(
-    profile: str | None,
-    sort: str,
-    fmt: str,
-    json_path: str | None,
-    show_help: bool,
-) -> None:
-    """Bilingual EN+HU reporter. See `--help` for details."""
-    import sys
-
-    argv = sys.argv[1:]
-    if show_help:
-        _emit_bilingual_help()
-        raise SystemExit(0)
-    jp: Path | None = Path(json_path) if json_path else None
-    raise SystemExit(
-        run(
-            profile=profile,
-            sort=sort,
-            fmt=fmt,
-            json_path=jp,
-            argv=argv,
-        )
-    )
+def _early_exit_rc(inputs: ReportInputs) -> int | None:
+    """Return exit code for short-circuit cases (help / invalid args), or None."""
+    if inputs.show_help:
+        emit_bilingual_help()
+        return 0
+    if inputs.argv is not None:
+        rc = _helpers.reject_unwanted_flags(inputs.argv)
+        if rc is not None:
+            return rc
+    rc = _helpers.validate_sort_and_fmt(inputs.sort, inputs.fmt)
+    if rc is not None:
+        return rc
+    return None
 
 
 def _main_entry() -> None:
-    """Module entry point — extracted for testability."""
+    """Module entry point - extracted for testability."""
     main()

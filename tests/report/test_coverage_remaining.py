@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from hermes_skill_creator_plugin import _enabled_detection, _reporter, _tokenizer, cli_report
+from hermes_skill_creator_plugin import _enabled_detection_parse as _ed_parse
 from tests.report._fixtures import make_row_factory
 
 # --- _enabled_detection: frontmatter fallback (lines 50-51, 53, 56) ---
@@ -16,40 +17,45 @@ def test_parse_frontmatter_fallback_handles_oserror(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\nname: x\n---\n", encoding="utf-8")
 
-    def _boom(*a, **kw):raise ImportError("nope")
+    def _boom(*a, **kw):
+        raise ImportError("nope")
 
-    def _oserror(*a, **kw):raise OSError("disk gone")
+    def _oserror(*a, **kw):
+        raise OSError("disk gone")
 
-    with patch.object(_enabled_detection.frontmatter, "load", _boom):
+    with patch.object(_ed_parse.frontmatter, "load", _boom):
         with patch.object(Path, "read_text", _oserror):
-            assert _enabled_detection._parse_frontmatter(p) == {}
+            assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_parse_frontmatter_no_frontmatter_marker(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("no frontmatter\n", encoding="utf-8")
 
-    def _boom(*a, **kw):raise ImportError("no frontmatter lib")
+    def _boom(*a, **kw):
+        raise ImportError("no frontmatter lib")
 
-    with patch.object(_enabled_detection.frontmatter, "load", _boom):
-        assert _enabled_detection._parse_frontmatter(p) == {}
+    with patch.object(_ed_parse.frontmatter, "load", _boom):
+        assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_parse_frontmatter_unterminated_block(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\nname: x\n", encoding="utf-8")  # no terminator
 
-    def _boom(*a, **kw):raise ImportError("no frontmatter lib")
+    def _boom(*a, **kw):
+        raise ImportError("no frontmatter lib")
 
-    with patch.object(_enabled_detection.frontmatter, "load", _boom):
-        assert _enabled_detection._parse_frontmatter(p) == {}
+    with patch.object(_ed_parse.frontmatter, "load", _boom):
+        assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_load_config_handles_oserror(tmp_path: Path) -> None:
     p = tmp_path / "config.yaml"
     p.write_text("a: 1\n", encoding="utf-8")
 
-    def _boom(*a, **kw):raise OSError("disk gone")
+    def _boom(*a, **kw):
+        raise OSError("disk gone")
 
     with patch.object(Path, "read_text", _boom):
         assert _enabled_detection._load_config(tmp_path) == {}
@@ -105,7 +111,8 @@ def test_estimate_tokens_negative_len_uses_fallback() -> None:
             return -3
 
     class _Bad:
-        def encode(self, text: str):return _NegLen()
+        def encode(self, text: str):
+            return _NegLen()
 
     n = _tokenizer.estimate_tokens("a", "bb", tokenizer=_Bad())
     # _try_tokenize returns None on negative n, falling back to chars/4.
@@ -149,7 +156,8 @@ def test_run_with_no_profiles_returns_zero(monkeypatch, hermes_home: Path) -> No
 
 
 def test_check_json_path_oserror_on_resolve(monkeypatch, tmp_path: Path) -> None:
-    def _boom(self):raise OSError("nope")
+    def _boom(self):
+        raise OSError("nope")
 
     with patch.object(Path, "resolve", _boom):
         # When both resolves fail, returns False.

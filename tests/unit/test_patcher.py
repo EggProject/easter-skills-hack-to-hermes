@@ -44,6 +44,7 @@ from hermes_skill_creator_plugin._patcher import (
     SKILL_CREATOR_CONSULT_RULE,
     STATE_SIDECAR,
     Anchor,
+    PatchRunInputs,
     _atomic_write_bytes,
     _cross_filesystem,
     _render_cap_row,
@@ -141,24 +142,28 @@ def test_apply_cap_only_default_idempotent(hermes_checkout: Path, real_hermes_ag
     """First --apply patches S1.cap; second --apply exits 0 with
     'OK: already patched' diagnostics."""
     r1 = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r1.exit_code == EXIT_OK
     assert "S1.cap" in r1.sites_patched
     r2 = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r2.exit_code == EXIT_OK
     assert "S1.cap" in r2.sites_already
@@ -171,13 +176,15 @@ def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str 
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     pre = hashlib.sha256(target_file.read_bytes()).hexdigest()
     r = run_patch(
-        target=hermes_checkout,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     post = hashlib.sha256(target_file.read_bytes()).hexdigest()
@@ -187,13 +194,15 @@ def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str 
 def test_apply_creates_state_sidecar(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--apply writes .patch.state.json with S1.cap=patched."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     sidecar = hermes_checkout / STATE_SIDECAR
@@ -206,23 +215,27 @@ def test_force_retries_only_drifted_sites(hermes_checkout: Path, real_hermes_age
     """After a successful run, a subsequent --force exits 0 with the
     state sidecar preserving the patched status."""
     run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     pre = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=True,
-        i_accept_line_drift=True,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     post = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
@@ -245,13 +258,15 @@ def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sent
     )
     pre = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code != EXIT_OK
     post = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
@@ -266,13 +281,15 @@ def test_apply_cap_raise_max_description_length_defined(
 ) -> None:
     """After --apply, the cap-raise site uses MAX_DESCRIPTION_LENGTH."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
@@ -299,13 +316,15 @@ def test_task_e_default_off(hermes_checkout: Path, real_hermes_agent_sentinel: s
     ]
     pre_hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in targets}
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     for p in targets:
@@ -316,13 +335,15 @@ def test_task_e_default_off(hermes_checkout: Path, real_hermes_agent_sentinel: s
 def test_task_e_redirect_on(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--apply --task-e-redirect patches all 7 Task E sites + S1.cap (8 sites)."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     expected = {"S1.cap"} | {s.site_id for s in ALL_TASK_E_SITES}
@@ -332,13 +353,15 @@ def test_task_e_redirect_on(hermes_checkout: Path, real_hermes_agent_sentinel: s
 def test_no_schema_redirect_skips_e6(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--task-e-redirect --no-schema-redirect patches 7 sites (skips E6)."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=True,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=True,
+        ),
     )
     assert r.exit_code == EXIT_OK
     # E6 is NOT in the state (it was skipped)
@@ -352,13 +375,15 @@ def test_no_schema_redirect_skips_e6(hermes_checkout: Path, real_hermes_agent_se
 def test_target_required_exits_4(real_hermes_agent_sentinel: str | None) -> None:
     """--target unset -> exit 4 with bilingual message."""
     r = run_patch(
-        target=None,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=None,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_IO
     assert any("[en]" in d and "[hu]" in d for d in r.diagnostics)
@@ -369,13 +394,15 @@ def test_target_resolves_to_hermes_agent_refused(
 ) -> None:
     """--target=~/.hermes/hermes-agent -> exit 4 with the resolved paths."""
     r = run_patch(
-        target=hermes_agent_path(),
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_agent_path(),
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_IO
     assert any(str(hermes_agent_path()) in d for d in r.diagnostics)
@@ -386,13 +413,15 @@ def test_target_missing_agent_skill_utils_exits_4(tmp_path: Path, real_hermes_ag
     checkout = tmp_path / "empty"
     checkout.mkdir()
     r = run_patch(
-        target=checkout,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_IO
 
@@ -407,13 +436,15 @@ def test_circular_import_preflight_exits_4(tmp_path: Path, real_hermes_agent_sen
         encoding="utf-8",
     )
     r = run_patch(
-        target=checkout,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_IO
     assert any("circular import" in d for d in r.diagnostics)
@@ -424,13 +455,15 @@ def test_force_without_i_accept_line_drift_exits_5(
 ) -> None:
     """--force alone -> exit 5."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=True,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_USER_ABORT
 
@@ -445,13 +478,15 @@ def test_line_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
         encoding="utf-8",
     )
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
 
@@ -465,13 +500,15 @@ def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
         encoding="utf-8",
     )
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
     assert r.rejected_path is not None
@@ -505,13 +542,15 @@ def test_apply_atomic_on_rename_failure(
 
     monkeypatch.setattr(os, "replace", selective_boom)
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     # We expect non-zero exit (permission-like) on the OSError path.
     assert r.exit_code != EXIT_OK
@@ -527,13 +566,15 @@ def test_apply_preserves_mode_bits(hermes_checkout: Path, real_hermes_agent_sent
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     os.chmod(target_file, 0o600)
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     post_mode = stat.S_IMODE(target_file.stat().st_mode)
@@ -546,13 +587,15 @@ def test_apply_cross_filesystem_target_warns(hermes_checkout: Path, real_hermes_
     we just check the warning path is reachable (no error when statvfs
     is unavailable on some platforms)."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
 
@@ -574,13 +617,15 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
     pre_skill = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     pre_pb = hashlib.sha256((checkout / "agent" / "prompt_builder.py").read_bytes()).hexdigest()
     r = run_patch(
-        target=checkout,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code != EXIT_OK
     post_skill = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
@@ -592,13 +637,15 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
 def test_audit_log_appended_on_force(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """--force --i-accept-line-drift appends to the audit log."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=True,
-        i_accept_line_drift=True,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     audit = hermes_checkout / ".patch.audit.log"
@@ -614,13 +661,15 @@ def test_audit_log_appended_on_force(hermes_checkout: Path, real_hermes_agent_se
 def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Every diagnostic in the run is bilingual (en/hu on a single line)."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     pattern = __import__("re").compile(r"^\[en\] .+ / \[hu\] .+$")
@@ -648,22 +697,26 @@ def test_check_already_patched_exits_0(hermes_checkout: Path, real_hermes_agent_
     """After a successful --apply, --check exits 0 with per-site
     'OK: already patched' messages."""
     run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     r = run_patch(
-        target=hermes_checkout,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     assert any("már javítva" in d for d in r.diagnostics)
@@ -672,22 +725,26 @@ def test_check_already_patched_exits_0(hermes_checkout: Path, real_hermes_agent_
 def test_state_sidecar_survives_re_run(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """A second --apply reads the sidecar and skips matched sites."""
     run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     # The file is rewritten on every run; the second run produces
@@ -840,6 +897,29 @@ def test_atomic_write_bytes_new_file_no_chmod(tmp_path: Path) -> None:
     assert p.read_bytes() == b"hello"
 
 
+def test_atomic_write_bytes_explicit_mode_new_file(tmp_path: Path) -> None:
+    """When the path does not exist and an explicit mode is passed,
+    that mode is applied to the freshly-written file."""
+    p = tmp_path / "explicit-mode.txt"
+    assert not p.exists()
+    _atomic_write_bytes(p, b"hello", mode=0o640)
+    assert stat.S_IMODE(p.stat().st_mode) == 0o640
+
+
+def test_with_newline_already_terminated() -> None:
+    """Text that already ends with NEWLINE is returned unchanged."""
+    from hermes_skill_creator_plugin._patcher_apply_atomic import _with_newline
+
+    assert _with_newline("hello\n") == "hello\n"
+
+
+def test_with_newline_appends_when_missing() -> None:
+    """Text without a trailing newline gets exactly one newline appended."""
+    from hermes_skill_creator_plugin._patcher_apply_atomic import _with_newline
+
+    assert _with_newline("hello") == "hello\n"
+
+
 def test_migration_rows_default_one() -> None:
     assert migration_rows_for_mode(task_e_redirect=False, no_schema_redirect=False) == 1
 
@@ -960,13 +1040,15 @@ def test_apply_anchor_text_missing_exits_drift(tmp_path: Path, real_hermes_agent
     (checkout / "agent").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text("line1\nline2\nline3\nline4\nline5\n", encoding="utf-8")
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
 
@@ -989,13 +1071,15 @@ def test_apply_cap_secondary_anchor_mismatch_caught_by_validation(
     lines.append("    return desc[:57] + 'XXX'\n")  # WRONG slice
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
 
@@ -1021,13 +1105,15 @@ def test_apply_permission_error_branch(
 
     monkeypatch.setattr("hermes_skill_creator_plugin._patcher._atomic_write_bytes", selective_boom)
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_PERMISSION
     post = hashlib.sha256(target_file.read_bytes()).hexdigest()
@@ -1120,13 +1206,15 @@ def test_apply_emits_cross_fs_warning(
 
     monkeypatch.setattr("os.statvfs", fake_statvfs)
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     # The CROSS_FS_WARN diagnostic is emitted (bilingual).
@@ -1237,13 +1325,15 @@ def test_patcher_never_touches_live_hermes(
     AC: plans/04 §Safety gates — refuse to mutate the live install.
     """
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     # The decorator's teardown assertion will fire here if the live
@@ -1313,13 +1403,15 @@ def test_apply_cap_raise_with_long_description(
     # Use the standard fixture: the cap-raise site is at L688/L689.
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     # Post-patch: BOTH S1.cap.a and S1.cap.b are applied.
@@ -1348,13 +1440,15 @@ def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
     monkeypatch.setattr(_patcher, "_atomic_write_bytes", selective_boom)
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_PERMISSION
 
@@ -1376,13 +1470,15 @@ def test_partial_failure_zero_writes(
     target.write_text("".join(lines), encoding="utf-8")
     pre = hashlib.sha256(target.read_bytes()).hexdigest()
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
     post = hashlib.sha256(target.read_bytes()).hexdigest()
@@ -1408,13 +1504,15 @@ def test_force_still_drifts_exits_nonzero(
     # First --force --i-accept-line-drift run: anchor at L10 not L688.
     # Pre-validation will catch the line drift immediately.
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=True,
-        i_accept_line_drift=True,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
 
@@ -1423,13 +1521,15 @@ def test_e1_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E1 anchor is preserved verbatim
     and the consult-rule line sits immediately after it (NOT split)."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
@@ -1447,13 +1547,15 @@ def test_e2_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E2 anchor preserved verbatim and
     the consult-rule line follows it."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
@@ -1467,13 +1569,15 @@ def test_e3_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E3 anchor preserved verbatim and
     the consult-rule line follows it (12-space indent)."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
@@ -1490,13 +1594,15 @@ def test_e4_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E4 anchor preserved verbatim and
     the consult-rule line follows it."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
@@ -1510,13 +1616,15 @@ def test_e5_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E5 anchor preserved verbatim and
     the consult-rule line follows it."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
@@ -1532,13 +1640,15 @@ def test_e6_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E6 anchor preserved verbatim;
     the appended sentence sits between the anchor and the closing ),"""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "tools" / "skill_manager_tool.py").read_text(encoding="utf-8")
@@ -1557,13 +1667,15 @@ def test_e7_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E7 anchor preserved verbatim;
     the clarifier blockquote follows it."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").read_text(encoding="utf-8")
@@ -1617,13 +1729,15 @@ def test_default_no_task_e_touch(hermes_checkout: Path) -> None:
     ]
     pre_hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in targets}
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     for p in targets:
@@ -1639,23 +1753,27 @@ def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
     """05 §Idempotency / drift — second --apply --task-e-redirect exits
     0 with all 8 sites reporting 'already patched' / 'már javítva'."""
     r1 = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r1.exit_code == EXIT_OK
     r2 = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r2.exit_code == EXIT_OK
     assert set(r2.sites_already) == {"S1.cap"} | {s.site_id for s in ALL_TASK_E_SITES}
@@ -1679,13 +1797,15 @@ def test_task_e_drift_exits_2(
         encoding="utf-8",
     )
     r = run_patch(
-        target=checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=True,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_DRIFT
     assert r.rejected_path is not None
@@ -1903,13 +2023,15 @@ def test_now_iso_returns_current_when_unset(monkeypatch: pytest.MonkeyPatch) -> 
 def test_force_audit_log_uses_frozen_time(hermes_checkout: Path, frozen_time: str) -> None:
     """The audit log line uses the frozen timestamp."""
     r = run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=True,
-        i_accept_line_drift=True,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     audit = hermes_checkout / ".patch.audit.log"
@@ -1919,15 +2041,21 @@ def test_force_audit_log_uses_frozen_time(hermes_checkout: Path, frozen_time: st
 
 
 def test_run_patch_required_params() -> None:
-    """The run_patch signature has the required operational parameters
-    and the optional side-effects (yes/verbose/audit_log_path/git_head)
-    carry safe defaults (False/False/None/'').
+    """The run_patch signature accepts a single :class:`PatchRunInputs` struct
+    whose fields are the required operational parameters plus optional
+    side-effects (yes/verbose/audit_log_path/git_head) that carry safe
+    defaults (False/False/None/'').
     """
     import inspect
 
     from hermes_skill_creator_plugin._patcher import run_patch
 
     sig = inspect.signature(run_patch)
+    # Single positional ``inputs: PatchRunInputs`` param keeps WPS211 in check.
+    sig_names = set(sig.parameters.keys())
+    assert sig_names == {"inputs"}, f"unexpected params: {sig_names - {'inputs'} or 'inputs' - sig_names}"
+
+    fields = {field.name for field in PatchRunInputs.__dataclass_fields__.values()}
     required = {
         "target",
         "check",
@@ -1937,13 +2065,12 @@ def test_run_patch_required_params() -> None:
         "task_e_redirect",
         "no_schema_redirect",
     }
-    sig_names = set(sig.parameters.keys())
-    assert required.issubset(sig_names), f"missing required params: {required - sig_names}"
+    assert required.issubset(fields), f"missing required fields: {required - fields}"
     # Optional side-effects have safe defaults.
-    assert sig.parameters["yes"].default is False
-    assert sig.parameters["verbose"].default is False
-    assert sig.parameters["audit_log_path"].default is None
-    assert sig.parameters["git_head"].default == ""
+    assert PatchRunInputs.__dataclass_fields__["yes"].default is False
+    assert PatchRunInputs.__dataclass_fields__["verbose"].default is False
+    assert PatchRunInputs.__dataclass_fields__["audit_log_path"].default is None
+    assert PatchRunInputs.__dataclass_fields__["git_head"].default == ""
 
 
 def test_emit_migration_note_writes_to_worktree_not_target(
@@ -1971,22 +2098,26 @@ def test_apply_then_check_exits_0_with_already_patched(
     """After --apply, --check exits 0 with 'már javítva' diagnostic for
     S1.cap (per the spec bilingual requirement)."""
     run_patch(
-        target=hermes_checkout,
-        check=False,
-        apply=True,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     r = run_patch(
-        target=hermes_checkout,
-        check=True,
-        apply=False,
-        force=False,
-        i_accept_line_drift=False,
-        task_e_redirect=False,
-        no_schema_redirect=False,
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
     )
     assert r.exit_code == EXIT_OK
     assert any("már javítva" in d for d in r.diagnostics)

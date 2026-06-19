@@ -74,14 +74,18 @@ def detect_cap_state(target_dir: Path) -> str:
     if not skill_utils.exists():
         return UNKNOWN_STATE
     try:
-        source = skill_utils.read_text(encoding="utf-8")
-        tree = ast.parse(source)
+        tree = _parse_skill_utils_tree(skill_utils)
     except (OSError, SyntaxError):
         return UNKNOWN_STATE
     state = _walk_tree_for_marker(tree)
     if state is None:
         return UNKNOWN_STATE
     return state
+
+
+def _parse_skill_utils_tree(skill_utils: Path) -> ast.AST:
+    source = skill_utils.read_text(encoding="utf-8")
+    return ast.parse(source)
 
 
 def _walk_tree_for_marker(tree: ast.AST) -> str | None:
@@ -119,16 +123,10 @@ def _scan_comparators(comparators: list[ast.expr]) -> str | None:
 
 def _match_comparator(comparator: ast.expr) -> str | None:
     """Return the cap state for one Compare comparator, or ``None``."""
-    is_unpatched = (
-        isinstance(comparator, ast.Constant)
-        and comparator.value == UNPATCHED_CAP
-    )
+    is_unpatched = isinstance(comparator, ast.Constant) and comparator.value == UNPATCHED_CAP
     if is_unpatched:
         return UNPATCHED_STATE
-    is_patched = (
-        isinstance(comparator, ast.Name)
-        and comparator.id == PATCHED_CAP_REFERENCE
-    )
+    is_patched = isinstance(comparator, ast.Name) and comparator.id == PATCHED_CAP_REFERENCE
     if is_patched:
         return PATCHED_STATE
     return None

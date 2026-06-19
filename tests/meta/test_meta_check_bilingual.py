@@ -436,7 +436,6 @@ def test_string_value_fstring_with_non_constant_placeholder_returns_none() -> No
 
 def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The `if __name__ == '__main__'` block MUST be runnable in-process (line 201)."""
-    import types
 
     _write_src(
         tmp_path,
@@ -450,6 +449,7 @@ def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setattr("sys.argv", ["check_bilingual.py"])
     # Use runpy to execute the tool's source as __main__ (no exec() per S102).
     import runpy
+
     try:
         runpy.run_path(
             str(check_bilingual.__file__),
