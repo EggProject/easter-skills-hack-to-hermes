@@ -840,6 +840,29 @@ def test_atomic_write_bytes_new_file_no_chmod(tmp_path: Path) -> None:
     assert p.read_bytes() == b"hello"
 
 
+def test_atomic_write_bytes_explicit_mode_new_file(tmp_path: Path) -> None:
+    """When the path does not exist and an explicit mode is passed,
+    that mode is applied to the freshly-written file."""
+    p = tmp_path / "explicit-mode.txt"
+    assert not p.exists()
+    _atomic_write_bytes(p, b"hello", mode=0o640)
+    assert stat.S_IMODE(p.stat().st_mode) == 0o640
+
+
+def test_with_newline_already_terminated() -> None:
+    """Text that already ends with NEWLINE is returned unchanged."""
+    from hermes_skill_creator_plugin._patcher_apply_atomic import _with_newline
+
+    assert _with_newline("hello\n") == "hello\n"
+
+
+def test_with_newline_appends_when_missing() -> None:
+    """Text without a trailing newline gets exactly one newline appended."""
+    from hermes_skill_creator_plugin._patcher_apply_atomic import _with_newline
+
+    assert _with_newline("hello") == "hello\n"
+
+
 def test_migration_rows_default_one() -> None:
     assert migration_rows_for_mode(task_e_redirect=False, no_schema_redirect=False) == 1
 

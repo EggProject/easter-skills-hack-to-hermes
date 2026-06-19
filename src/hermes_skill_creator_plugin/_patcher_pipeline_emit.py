@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Any
 from hermes_skill_creator_plugin import i18n as _i18n
 from hermes_skill_creator_plugin._patcher_apply import (
     _append_audit_log,
-    _diff_sha,
     write_rejected,
 )
+from hermes_skill_creator_plugin._patcher_apply_atomic import _diff_sha
 from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     REASON_LINE_DRIFT,
     REMEDIATION_EN,
