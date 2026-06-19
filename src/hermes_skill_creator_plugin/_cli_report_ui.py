@@ -12,8 +12,8 @@ from hermes_skill_creator_plugin._cli_report_helpers import (
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 from hermes_skill_creator_plugin.i18n import messages_hu as HU
 
-_USAGE_LINE = "  uv run hermes-skill-creator-report [--profile <name>] " "[--sort tokens|use_count|last_used_at]"
-_USAGE_CONT = "                                     [--format text|json] " "[--json PATH] [--help]"
+_USAGE_LINE = "  uv run hermes-skill-creator-report [--profile <name>] [--sort tokens|use_count|last_used_at]"
+_USAGE_CONT = "                                     [--format text|json] [--json PATH] [--help]"
 OPTIONS_HEADER_EN = "Options:"
 OPTIONS_HEADER_HU = "Opciok:"
 

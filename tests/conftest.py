@@ -258,9 +258,9 @@ def _install_sentinel_finalizer(
         if not sentinel_path.is_file():
             return
         post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
-        assert post_hash == pre_hash, (
-            f"{sentinel_path} was modified by the test " f"(pre={pre_hash[:12]}, post={post_hash[:12]})"
-        )
+        assert (
+            post_hash == pre_hash
+        ), f"{sentinel_path} was modified by the test (pre={pre_hash[:12]}, post={post_hash[:12]})"
 
     request.addfinalizer(_check)
     return "sentinel-ok"
@@ -276,7 +276,7 @@ def hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def hermes_checkout(hermes_home: Path) -> Generator[Path, None, None]:
+def hermes_checkout(hermes_home: Path) -> Generator[Path]:
     """Synthetic Hermes checkout for tests.
 
     Returns `hermes_home` itself (per F-meta design: hermes_checkout == hermes_home)
@@ -322,7 +322,7 @@ def frozen_time(monkeypatch: pytest.MonkeyPatch) -> str:
 
 
 @pytest.fixture
-def worktree(tmp_path: Path) -> Generator[Path, None, None]:
+def worktree(tmp_path: Path) -> Generator[Path]:
     """A bare tmp worktree root for --emit-migration-note output."""
     wt = tmp_path / "worktree"
     wt.mkdir()

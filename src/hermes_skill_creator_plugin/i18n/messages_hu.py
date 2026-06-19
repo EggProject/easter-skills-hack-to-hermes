@@ -17,7 +17,7 @@ ADVISORY_CAP_HU = (
 )
 
 # Reporter messages (mirrored with messages_en.py).
-REPORT_HELP_SHORT = "[hu] Profil skill token + használati riport / " "[en] Profile skill token + usage reporter"
+REPORT_HELP_SHORT = "[hu] Profil skill token + használati riport / [en] Profile skill token + usage reporter"
 REPORT_HELP_LONG = (
     "[hu] Kilistázza egy profil ENGEDÉLYEZETT skilljeit, tokenizálja a "
     "renderelt name+description szöveget, és a Curator-ból kéri a "
@@ -38,7 +38,7 @@ REPORT_OPT_SORT = (
     "[en] Reorder rows: tokens | use_count | last_used_at. Default: tokens."
 )
 REPORT_OPT_FORMAT = (
-    "[hu] Kimeneti formátum: text (alapértelmezett) | json. / " "[en] Output format: text (default) | json."
+    "[hu] Kimeneti formátum: text (alapértelmezett) | json. / [en] Output format: text (default) | json."
 )
 REPORT_OPT_JSON = (
     "[hu] A riport kiírása PATH-ba (alapértelmezett: "
@@ -46,27 +46,26 @@ REPORT_OPT_JSON = (
     "hagyva). / [en] Write the report to PATH "
     "(default: ./skill-report.json when --format=json; otherwise ignored)."
 )
-REPORT_OPT_HELP = "[hu] Kétnyelvű EN+HU help megjelenítése. / " "[en] Show bilingual EN+HU help."
+REPORT_OPT_HELP = "[hu] Kétnyelvű EN+HU help megjelenítése. / [en] Show bilingual EN+HU help."
 
 REPORT_USAGE_HEADER = (
-    "[hu] Használat: hermes-skill-creator-report [OPTIONS] / " "[en] Usage: hermes-skill-creator-report [OPTIONS]"
+    "[hu] Használat: hermes-skill-creator-report [OPTIONS] / [en] Usage: hermes-skill-creator-report [OPTIONS]"
 )
 REPORT_TOKENIZER_UNAVAILABLE = (
-    "[hu] a tokenizer nem elérhető, chars/4 becslés / " "[en] tokenizer unavailable, falling back to chars/4"
+    "[hu] a tokenizer nem elérhető, chars/4 becslés / [en] tokenizer unavailable, falling back to chars/4"
 )
 REPORT_ENABLED_DETECTION_UNAVAILABLE = (
     "[hu] az enabled-detection modul nem elérhető, a skillek nem "
     "listázhatók / [en] enabled-detection module unavailable, "
     "cannot enumerate skills"
 )
-REPORT_REJECTED_APPLY = "[hu] az apply nem támogatott a riporton / " "[en] apply not supported on the reporter"
+REPORT_REJECTED_APPLY = "[hu] az apply nem támogatott a riporton / [en] apply not supported on the reporter"
 REPORT_REJECTED_EMIT_MIGRATION_NOTE = (
-    "[hu] az emit-migration-note nem riport-flag / " "[en] emit-migration-note is not a reporter flag"
+    "[hu] az emit-migration-note nem riport-flag / [en] emit-migration-note is not a reporter flag"
 )
-REPORT_REJECTED_WRITE_REPORT = "[hu] a write-report nem riport-flag / " "[en] write-report is not a reporter flag"
+REPORT_REJECTED_WRITE_REPORT = "[hu] a write-report nem riport-flag / [en] write-report is not a reporter flag"
 REPORT_JSON_PATH_INSIDE_HERMES_HOME = (
-    "[hu] a --json útvonala a HERMES_HOME alá esik, megtagadva / "
-    "[en] --json path resolves under HERMES_HOME, refusing"
+    "[hu] a --json útvonala a HERMES_HOME alá esik, megtagadva / [en] --json path resolves under HERMES_HOME, refusing"
 )
 REPORT_NO_PROFILES = "[hu] nem találhatók profilok / [en] no profiles found"
 
@@ -84,19 +83,19 @@ TARGET_IS_HERMES_AGENT = (
     "[en] refusing to patch the live hermes-agent checkout: {resolved}"
 )
 TARGET_MISSING_SKILL_UTILS = (
-    "[hu] a célpontból hiányzik az agent/skill_utils.py: {path} / " "[en] target missing agent/skill_utils.py: {path}"
+    "[hu] a célpontból hiányzik az agent/skill_utils.py: {path} / [en] target missing agent/skill_utils.py: {path}"
 )
 FORCE_REQUIRES_I_ACCEPT = (
-    "[hu] a --force használatához --i-accept-line-drift szükséges / " "[en] --force requires --i-accept-line-drift"
+    "[hu] a --force használatához --i-accept-line-drift szükséges / [en] --force requires --i-accept-line-drift"
 )
 LINE_DRIFT = (
-    "[hu] sor-eltérés a {site_id} helyen (sor {line}) / " "[en] line drift detected at site {site_id} (line {line})"
+    "[hu] sor-eltérés a {site_id} helyen (sor {line}) / [en] line drift detected at site {site_id} (line {line})"
 )
-VALIDATION_FAILED = "[hu] az érvényesítés sikertelen a {site_id} helyen / " "[en] validation failed at site {site_id}"
-OK_ALREADY_PATCHED = "[hu] OK: a {site_id} hely már javítva / " "[en] OK: site {site_id} already patched"
-OK_PATCHED = "[hu] OK: a {site_id} hely sikeresen javítva / " "[en] OK: site {site_id} patched successfully"
-PERMISSION_DENIED = "[hu] írási engedély megtagadva: {path} / " "[en] permission denied writing {path}"
-IO_ERROR = "[hu] I/O hiba a {path} írásakor: {error} / " "[en] I/O error writing {path}: {error}"
+VALIDATION_FAILED = "[hu] az érvényesítés sikertelen a {site_id} helyen / [en] validation failed at site {site_id}"
+OK_ALREADY_PATCHED = "[hu] OK: a {site_id} hely már javítva / [en] OK: site {site_id} already patched"
+OK_PATCHED = "[hu] OK: a {site_id} hely sikeresen javítva / [en] OK: site {site_id} patched successfully"
+PERMISSION_DENIED = "[hu] írási engedély megtagadva: {path} / [en] permission denied writing {path}"
+IO_ERROR = "[hu] I/O hiba a {path} írásakor: {error} / [en] I/O error writing {path}: {error}"
 CROSS_FS_WARN = (
     "[hu] figyelmeztetés: a cél és az ideiglenes könyvtár különböző "
     "fájlrendszeren van / [en] warning: target and tmp live on different "
@@ -108,10 +107,8 @@ FORCE_AUDIT_LOG = (
     "[en] --force audit log entry appended: timestamp={timestamp} "
     "site={site_id} diff_sha256={diff_sha} target={target}"
 )
-TEXT_DRIFT = "[hu] szöveg-eltérés a {site_id} helyen / " "[en] text drift detected at site {site_id}"
-MIGRATION_REGENERATED = (
-    "[hu] migrációs jegyzet újragenerálva itt: {path} / " "[en] migration note regenerated at {path}"
-)
+TEXT_DRIFT = "[hu] szöveg-eltérés a {site_id} helyen / [en] text drift detected at site {site_id}"
+MIGRATION_REGENERATED = "[hu] migrációs jegyzet újragenerálva itt: {path} / [en] migration note regenerated at {path}"
 
 # Column headers (Hungarian half).
 COL_PROFILE = "profil"
@@ -189,25 +186,25 @@ HU_MESSAGES = MappingProxyType(
         "profiles_opt_apply": ("Végrehajtja az írásokat (alap: száraz futás)."),
         "profiles_opt_audit": ("Csak audit; nem hajt végre írást (alias az alap módhoz)."),
         "profiles_opt_profile": ("A futást egyetlen profilra korlátozza (alap: minden profil)."),
-        "profiles_opt_json": ("A determinisztikus JSON jelentést a PATH helyre írja " "(alap: ./profile-audit.json)."),
+        "profiles_opt_json": ("A determinisztikus JSON jelentést a PATH helyre írja (alap: ./profile-audit.json)."),
         "profiles_opt_yes": ("Elnyomja az interaktív TTY megerősítést (CI / nem-TTY futás)."),
         "profiles_opt_skip_install": ("Csak audit; nem hívja meg a hub telepítőt."),
-        "profiles_opt_frozen_time": ("A jelentés generated_at mezőjét stabil ISO 8601 UTC " "értékre rögzíti."),
+        "profiles_opt_frozen_time": ("A jelentés generated_at mezőjét stabil ISO 8601 UTC értékre rögzíti."),
         "profiles_opt_help": ("Megjeleníti ezt a kétnyelvű súgót és kilép."),
         "profiles_section_usage_en": "Usage (English)",
         "profiles_section_usage_hu": "Használat (magyar)",
         # Bilingual runtime messages (Hungarian half)
         "profiles_msg_scanning": "Profilok vizsgálata...",
         "profiles_msg_profile_count": "{n} profil vizsgálandó.",
-        "profiles_msg_audit_default": ("Alap mód: száraz futás (használja --apply kapcsolót " "a végrehajtáshoz)."),
+        "profiles_msg_audit_default": ("Alap mód: száraz futás (használja --apply kapcsolót a végrehajtáshoz)."),
         "profiles_msg_applying": "Profilonkénti alkalmazás...",
-        "profiles_msg_profile_audit": ("profil={name} jelenleg_letiltva={disabled} " "jelenleg_telepítve={installed}"),
+        "profiles_msg_profile_audit": ("profil={name} jelenleg_letiltva={disabled} jelenleg_telepítve={installed}"),
         "profiles_msg_diff": (
             "diff hozzáadott_letiltva={ad} eltávolított_letiltva={rd} "
             "hozzáadott_telepítve={ai} eltávolított_telepítve={ri}"
         ),
         "profiles_msg_cache_warn": (
-            "profil={name} clear_skills_system_prompt_cache kivételt " "dobott: {err} (folytatás)"
+            "profil={name} clear_skills_system_prompt_cache kivételt dobott: {err} (folytatás)"
         ),
         "profiles_msg_hub_error": ("profil={name} hub telepítés sikertelen: {err} (folytatás)."),
         "profiles_msg_json_written": "Jelentés írva ide: {path}.",

@@ -73,7 +73,7 @@ def test_get_enabled_skills_honors_platforms_frontmatter(tmp_path: Path) -> None
     profile_dir = _write_profile(tmp_path, name="hermes", config=None, skills={"qux": "q"})
     skill_dir = profile_dir / "skills" / "qux"
     (skill_dir / "SKILL.md").write_text(
-        "---\nname: qux\ndescription: 'q'\nplatforms:\n" "  - disable_if_platform_present: [darwin]\n---\n\n# qux\n",
+        "---\nname: qux\ndescription: 'q'\nplatforms:\n  - disable_if_platform_present: [darwin]\n---\n\n# qux\n",
         encoding="utf-8",
     )
     out = _enabled_detection.get_enabled_skills(profile_dir, platform="darwin")

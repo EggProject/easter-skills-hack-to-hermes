@@ -220,14 +220,14 @@ def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
     if cap == _STATE_UNPATCHED:
         short = skill_dir / _SHORT_SKILL_MD_NAME
         if not short.exists():
-            message = f"SKILL.md.short not found in {skill_dir}; " "cannot install under 60-char cap"
+            message = f"SKILL.md.short not found in {skill_dir}; cannot install under 60-char cap"
             raise FileNotFoundError(message)
         return short
     return skill_dir / _FULL_SKILL_MD_NAME
 
 
 def _format_t3_row(index: int, row: dict[str, str]) -> str:
-    return f"| {index} | {row[_KEY_LOCATION]} | " f"`{row[_KEY_CLAUDE]}` | `{row[_KEY_HERMES]}` | {row[_KEY_ID]} |"
+    return f"| {index} | {row[_KEY_LOCATION]} | `{row[_KEY_CLAUDE]}` | `{row[_KEY_HERMES]}` | {row[_KEY_ID]} |"
 
 
 def _render_strength_rows() -> list[str]:
@@ -237,11 +237,7 @@ def _render_strength_rows() -> list[str]:
         "",
         "| Strength | Artifact | Hermes equivalent | AC |",
         "| --- | --- | --- | --- |",
-        (
-            "| Subagent split | "
-            "agents/{grader,analyzer,comparator}.md |"
-            " delegate_task + agent_name | T3.012-T3.014 |"
-        ),
+        ("| Subagent split | agents/{grader,analyzer,comparator}.md | delegate_task + agent_name | T3.012-T3.014 |"),
         (
             "| Eval pipeline | "
             "scripts/{run_eval, aggregate_benchmark, "

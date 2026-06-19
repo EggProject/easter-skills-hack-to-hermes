@@ -71,7 +71,7 @@ def _build_synthetic_plans(
     for fname, loc in rows.items():
         if fname == "00-index.md":
             continue
-        lines.append(f"| 99 | `docs/plans/{fname}` | synthetic | [emitted] | " f"{loc} | {loc} |")
+        lines.append(f"| 99 | `docs/plans/{fname}` | synthetic | [emitted] | {loc} | {loc} |")
     lines.append(f"| | **Total** | | | **{total_cell}** | **{total_cell}** |")
     # Pad until we have exactly rows["00-index.md"] lines, then add the bare
     # marker as the last line. We pad BEFORE the marker so the final line is
@@ -652,7 +652,7 @@ def test_parse_file_map_total_row_skipped() -> None:
 
 def test_total_cell_value_fallback_unbold(tmp_path: Path) -> None:
     """_total_cell_value MUST also accept a non-bolded integer in the Total row (line 207-209)."""
-    index_text = "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n" "| | Total | | | 5 | 5 |\n"
+    index_text = "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n| | Total | | | 5 | 5 |\n"
     assert check_line_count._total_cell_value(index_text) == 5
 
 
@@ -718,5 +718,5 @@ def test_per_cell_guard_raises_when_00_index_missing(tmp_path: Path, monkeypatch
 def test_total_cell_value_no_integer_continues_loop() -> None:
     """When neither regex matches, the loop MUST continue to the next line (line 205->197)."""
     # A line with **Total** but no integer (e.g. truncated table).
-    text = "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n" "| | **Total** | | | broken |\n"
+    text = "| 00 | `00-index.md` | this | [emitted] | 30 | 5 |\n| | **Total** | | | broken |\n"
     assert check_line_count._total_cell_value(text) is None
