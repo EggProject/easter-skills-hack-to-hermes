@@ -92,9 +92,12 @@ def _build_hu_help() -> str:
     )
 
 
+_HELP_SECTION_SEP = "\n"
+
+
 def build_help_text() -> str:
     """Build the bilingual --help text (two mirrored sections)."""
-    return _build_en_help() + "\n" + _build_hu_help()
+    return f"{_build_en_help()}{_HELP_SECTION_SEP}{_build_hu_help()}"
 
 
 @click.command(

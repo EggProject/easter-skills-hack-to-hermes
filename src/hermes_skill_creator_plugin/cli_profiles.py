@@ -112,6 +112,22 @@ def _now_iso(frozen_time: str | None) -> str:
 
 # Sentinels for the per-row "value list or dash" presentation.
 _DASH = "-"
+# Audit-options dict keys (WPS226 — reused > 3 times).
+_KEY_APPLY = "apply"
+_KEY_JSON_PATH = "json_path"
+_KEY_FROZEN_TIME = "frozen_time"
+_KEY_SKIP_INSTALL = "skip_install"
+_KEY_YES = "yes"
+_KEY_PROFILE = "profile"
+
+
+def _as_str_list(row_value: object) -> list[str]:
+    """Cast a ``row[...]`` lookup to ``list[str]`` (WPS226 helper).
+
+    Centralises the ``cast("list[str]", ...)`` call so the literal
+    ``"list[str]"`` forward-reference appears only ONCE in the module.
+    """
+    return cast("list[str]", row_value)
 
 
 def _join_or_dash(names: list[str]) -> str:
@@ -157,18 +173,18 @@ def _echo_row_summary(row: dict[str, object]) -> None:
         _bilingual(
             "profiles_msg_profile_audit",
             name=row["profile_name"],
-            disabled=_join_or_dash(cast("list[str]", row["current_disabled"])),
-            installed=_join_or_dash(cast("list[str]", row["current_installed"])),
+            disabled=_join_or_dash(_as_str_list(row["current_disabled"])),
+            installed=_join_or_dash(_as_str_list(row["current_installed"])),
         )
     )
     diff_row = cast("dict[str, object]", row["diff"])
     click.echo(
         _bilingual(
             "profiles_msg_diff",
-            ad=_join_or_dash(cast("list[str]", diff_row["added_disabled"])),
-            rd=_join_or_dash(cast("list[str]", diff_row["removed_disabled"])),
-            ai=_join_or_dash(cast("list[str]", diff_row["added_installed"])),
-            ri=_join_or_dash(cast("list[str]", diff_row["removed_installed"])),
+            ad=_join_or_dash(_as_str_list(diff_row["added_disabled"])),
+            rd=_join_or_dash(_as_str_list(diff_row["removed_disabled"])),
+            ai=_join_or_dash(_as_str_list(diff_row["added_installed"])),
+            ri=_join_or_dash(_as_str_list(diff_row["removed_installed"])),
         )
     )
 
@@ -210,21 +226,21 @@ def _audit_and_collect_row(
 def _extract_audit_options(options: dict[str, object]) -> dict[str, object]:
     """Pull the recognized keyword options out of the raw options dict."""
     return {
-        "apply": bool(options.get("apply", False)),
-        "json_path": options.get("json_path"),
-        "frozen_time": options.get("frozen_time"),
-        "skip_install": bool(options.get("skip_install", False)),
-        "yes": bool(options.get("yes", False)),
-        "profile": options.get("profile"),
+        _KEY_APPLY: bool(options.get(_KEY_APPLY, False)),
+        _KEY_JSON_PATH: options.get(_KEY_JSON_PATH),
+        _KEY_FROZEN_TIME: options.get(_KEY_FROZEN_TIME),
+        _KEY_SKIP_INSTALL: bool(options.get(_KEY_SKIP_INSTALL, False)),
+        _KEY_YES: bool(options.get(_KEY_YES, False)),
+        _KEY_PROFILE: options.get(_KEY_PROFILE),
     }
 
 
 def _run_audit_phase(opts: dict[str, object]) -> AuditReport:
     """Drive the audit/flip after the live-install refusal gate."""
-    apply = bool(opts["apply"])
-    frozen_time: str | None = cast("str | None", opts["frozen_time"])
-    skip_install = bool(opts["skip_install"])
-    profile: str | None = cast("str | None", opts["profile"])
+    apply = bool(opts[_KEY_APPLY])
+    frozen_time: str | None = cast("str | None", opts[_KEY_FROZEN_TIME])
+    skip_install = bool(opts[_KEY_SKIP_INSTALL])
+    profile: str | None = cast("str | None", opts[_KEY_PROFILE])
 
     click.echo(_bilingual("profiles_msg_scanning"))
     selected = _select_profiles(list_profiles(), profile)
@@ -271,13 +287,13 @@ def run_audit(**options: object) -> AuditReport:
     #    whenever HERMES_HOME resolves to the LIVE install AND --yes is
     #    absent — TTY or not, CI or interactive. Operators who really
     #    want to write to the live install must pass --yes.
-    if _live_install_refused(bool(opts["apply"]), bool(opts["yes"])):
+    if _live_install_refused(bool(opts[_KEY_APPLY]), bool(opts[_KEY_YES])):
         click.echo(_bilingual("profiles_msg_refuse_no_yes"))
         sys.exit(5)
 
     report = _run_audit_phase(opts)
 
-    json_path = opts["json_path"]
+    json_path = opts[_KEY_JSON_PATH]
     if json_path is not None:
         _write_json_report(report, cast("Path", json_path))
 

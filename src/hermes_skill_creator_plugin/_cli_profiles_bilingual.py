@@ -7,6 +7,10 @@ from __future__ import annotations
 
 from typing import Any
 
+_EN_PREFIX = "[en] "
+_HU_PREFIX = "[hu] "
+_BILINGUAL_SEP = " / "
+
 
 def build_bilingual(
     en_table: Any,
@@ -20,6 +24,6 @@ def build_bilingual(
     ``hu_table``. ``format_values`` are substituted via ``str.format``
     into both halves.
     """
-    en_part = "[en] " + en_table[key].format(**format_values)
-    hu_part = "[hu] " + hu_table[key].format(**format_values)
-    return f"{en_part} / {hu_part}"
+    en_text = en_table[key].format(**format_values)
+    hu_text = hu_table[key].format(**format_values)
+    return "".join([_EN_PREFIX, en_text, _BILINGUAL_SEP, _HU_PREFIX, hu_text])

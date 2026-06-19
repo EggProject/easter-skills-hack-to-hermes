@@ -13,9 +13,11 @@ import click
 from hermes_skill_creator_plugin._cli_report_ui import emit_bilingual_help
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 
+_HELP_PARAGRAPH_SEP = "\n\n"
+
 
 @click.command(
-    help=EN.report_help_short + "\n\n" + EN.report_help_long,
+    help=f"{EN.report_help_short}{_HELP_PARAGRAPH_SEP}{EN.report_help_long}",
     context_settings={
         "help_option_names": [],
         "ignore_unknown_options": True,
