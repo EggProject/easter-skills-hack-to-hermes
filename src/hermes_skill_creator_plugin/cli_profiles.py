@@ -47,8 +47,8 @@ from typing import Any, Iterator
 import click
 
 from hermes_skill_creator_plugin._scope import hermes_home_scope
-from hermes_skill_creator_plugin.i18n.messages_en import M as EN
-from hermes_skill_creator_plugin.i18n.messages_hu import M as HU
+from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
+from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
 
 # ---------------------------------------------------------------------------
 # Constants.
