@@ -227,19 +227,57 @@ def run_patch(*, target: Path | None, check: bool, apply: bool,
     for translating ``exit_code`` into a ``SystemExit``. This function
     never raises SystemExit; it returns a result.
     """
+    return _run_patch_with_inputs(PatchRunInputs(
+        target=target, check=check, apply=apply, force=force,
+        i_accept_line_drift=i_accept_line_drift,
+        task_e_redirect=task_e_redirect,
+        no_schema_redirect=no_schema_redirect, yes=yes, verbose=verbose,
+        audit_log_path=audit_log_path, git_head=git_head,
+    ))
+
+
+@dataclasses.dataclass(frozen=True)
+class PatchRunInputs:
+    """All keyword inputs for :func:`run_patch`.
+
+    Bundles the 11 CLI kwargs into a single struct so the public
+    function signature stays keyword-only and wemake WPS211 / WPS210
+    stay below threshold.
+    """
+
+    target: Path | None = None
+    check: bool = False
+    apply: bool = False
+    force: bool = False
+    i_accept_line_drift: bool = False
+    task_e_redirect: bool = False
+    no_schema_redirect: bool = False
+    yes: bool = False
+    verbose: bool = False
+    audit_log_path: Path | None = None
+    git_head: str = ""
+
+
+def _run_patch_with_inputs(inputs: PatchRunInputs) -> PatcherResult:
+    """Run the patcher using a prebuilt ``PatchRunInputs`` struct."""
+    return _run_patch_body(inputs)
+
+
+def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
+    """Internal: actually run the patcher pipeline."""
     diagnostics: list[str] = []
-    preflight = _run_preflight(target, force, i_accept_line_drift)
+    preflight = _run_preflight(inputs.target, inputs.force, inputs.i_accept_line_drift)
     if preflight is not None:
         return _empty_result([*diagnostics, preflight[1]], preflight[0])
-    assert target is not None  # narrowed by preflight
-    target_path = target.resolve()
+    assert inputs.target is not None  # narrowed by preflight
+    target_path = inputs.target.resolve()
     skill_utils = target_path / TOOLS_SKILL_UTILS_REL
     if file_has_circular_import(skill_utils):
         diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
         return _empty_result(diagnostics, EXIT_IO)
     sites = list(sites_for_mode(
-        task_e_redirect=task_e_redirect,
-        no_schema_redirect=no_schema_redirect,
+        task_e_redirect=inputs.task_e_redirect,
+        no_schema_redirect=inputs.no_schema_redirect,
     ))
     state = load_state(target_path)
     sites_patched: list[str] = []
@@ -252,10 +290,10 @@ def run_patch(*, target: Path | None, check: bool, apply: bool,
             state,
             sites_already,
             diagnostics,
-            git_head,
+            inputs.git_head,
             exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
         )
-    if check or not apply:
+    if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(
             sites,
             state,
@@ -273,8 +311,8 @@ def run_patch(*, target: Path | None, check: bool, apply: bool,
         sites_patched,
         sites_already,
         diagnostics,
-        force,
-        audit_log_path,
+        inputs.force,
+        inputs.audit_log_path,
         exit_ok_code=EXIT_OK,
         write_state_fn=write_state,
     )
