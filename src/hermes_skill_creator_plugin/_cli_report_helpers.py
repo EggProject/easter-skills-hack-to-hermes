@@ -33,16 +33,16 @@ REJECTED_FLAGS: MappingProxyType[str, str] = MappingProxyType(
 HELP_EN_HEADER = "Usage (English):"
 HELP_HU_HEADER = "Használat (magyar):"
 
-_EMPTY_USAGE_MUTABLE: dict[str, Any | None] = {
-    "use_count": None,
-    "view_count": None,
-    "patch_count": None,
-    "last_used_at": None,
-    "last_viewed_at": None,
-    "last_patched_at": None,
-}
-
-EMPTY_USAGE: MappingProxyType[str, Any | None] = MappingProxyType(_EMPTY_USAGE_MUTABLE)
+EMPTY_USAGE: MappingProxyType[str, Any | None] = MappingProxyType(
+    {
+        "use_count": None,
+        "view_count": None,
+        "patch_count": None,
+        "last_used_at": None,
+        "last_viewed_at": None,
+        "last_patched_at": None,
+    },
+)
 PERSISTED_KEY = "_persisted"
 
 FORMAT_TEXT = "text"
