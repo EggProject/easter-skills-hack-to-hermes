@@ -7,4 +7,6 @@ suppresses the WPS411 'empty module' finding without re-importing the
 vendored helpers into the plugin package surface.
 """
 
-__all__: list[str] = []
+# Marker constant to suppress WPS411 (empty module).
+# Not exported as ``__all__`` (wemake WPS410 rejects annotated __all__).
+_VENDORED_HELPERS_MODULE = "tools.subprocess_env"
