@@ -12,6 +12,7 @@ from typing import Any
 import click
 
 from hermes_skill_creator_plugin._reporter import ProfileSection, format_json, format_text
+from hermes_skill_creator_plugin._reporter_models import SkillRow
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 
 
@@ -145,7 +146,7 @@ def resolve_json_path(fmt: str, json_path: Path | None) -> Path | None:
 
 
 def make_section(
-    fmt: str, name: str, rows, total: int,
+    fmt: str, name: str, rows: list[SkillRow], total: int,
 ) -> str | ProfileSection:
     """Build a single text section string or json ProfileSection."""
     if fmt == FORMAT_TEXT:

@@ -33,6 +33,7 @@ TDD test cases for this module:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -80,7 +81,7 @@ def _build_profile_sections(
     fmt: str,
     sort: str,
     platform: str | None,
-    curator,
+    curator: Any | None,
 ) -> tuple[list[str], list[ProfileSection], int | None]:
     """Build text/json sections for all profiles. Error code or None."""
     from hermes_skill_creator_plugin.i18n import messages_en as EN
@@ -135,24 +136,6 @@ def _emit_sections(
     _helpers.emit_output(fmt, output, json_path)
 
 
-def _make_run_kwargs(
-    *,
-    profile: str | None,
-    sort: str,
-    fmt: str,
-    json_path: Path | None,
-    platform: str | None,
-    show_help: bool,
-    argv: list[str] | None,
-) -> dict[str, object]:
-    """Bundle the run kwargs into a dict for _dispatch."""
-    return {
-        "profile": profile, "sort": sort, "fmt": fmt,
-        "json_path": json_path, "platform": platform,
-        "show_help": show_help, "argv": argv,
-    }
-
-
 def run(
     *,
     profile: str | None = None,
@@ -164,11 +147,11 @@ def run(
     argv: list[str] | None = None,
 ) -> int:
     """Run the reporter. Returns the exit code (0 on success)."""
-    return _dispatch(**_make_run_kwargs(
+    return _dispatch(
         profile=profile, sort=sort, fmt=fmt,
         json_path=json_path, platform=platform,
         show_help=show_help, argv=argv,
-    ))
+    )
 
 
 def _dispatch(
