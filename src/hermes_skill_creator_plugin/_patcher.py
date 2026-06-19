@@ -77,10 +77,10 @@ from hermes_skill_creator_plugin._patcher_pipeline import (
     apply_sites as _apply_sites_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_pipeline import (
-    fail_with_drift as _fail_with_drift_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline import (
     ok_check_result as _ok_check_result_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    fail_with_drift as _fail_with_drift_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_sites import (
     ALL_TASK_E_SITES,

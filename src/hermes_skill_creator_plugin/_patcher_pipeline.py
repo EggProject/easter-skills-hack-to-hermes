@@ -1,9 +1,11 @@
-"""Apply + drift-emission pipeline helpers for the patcher orchestrator.
+"""Apply pipeline helpers for the patcher orchestrator.
 
-The orchestrator (``_patcher.run_patch``) is the entry point; this
-module holds the per-site apply loop, the drift-failure diagnostic
-emitter, and the ``--force`` audit log writer. TDD tests reference
-several private helpers from ``hermes_skill_creator_plugin._patcher``;
+The drift-emission helpers (and ``mutate_lines_for_site``) live in
+``_patcher_pipeline_emit`` (split to keep this module surface small
+under WPS202). The orchestrator (``_patcher.run_patch``) is the
+entry point; this module holds the per-site apply loop and the
+``--check`` / IO-error helpers. TDD tests reference several private
+helpers from ``hermes_skill_creator_plugin._patcher``;
 ``_patcher.py`` re-exports them so existing imports continue to work.
 """
 
@@ -14,12 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from hermes_skill_creator_plugin import _patcher as _patcher_mod
 from hermes_skill_creator_plugin import i18n as _i18n
-from hermes_skill_creator_plugin._patcher_apply import (
-    AUDIT_LOG,
-    _append_audit_log,
-    _diff_sha,
-    write_rejected,
-)
+from hermes_skill_creator_plugin._patcher_apply import AUDIT_LOG
 from hermes_skill_creator_plugin._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
 )
@@ -27,87 +24,19 @@ from hermes_skill_creator_plugin._patcher_helpers import now_iso as _now_iso
 from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     EXIT_IO,
     EXIT_PERMISSION,
-    REASON_LINE_DRIFT,
-    REMEDIATION_EN,
-    REMEDIATION_HU,
     STATE_DRIFTED,
     STATE_PATCHED,
 )
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    emit_audit_log,
+    mutate_lines_for_site,
+)
 from hermes_skill_creator_plugin._patcher_sites import Site
-
-__all__ = [
-    "apply_sites",
-    "emit_audit_log",
-    "fail_with_drift",
-    "mutate_lines_for_site",
-    "ok_check_result",
-]
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
 
     WriteStateFn = Any  # Callable[[Path, dict[str, str]], None]
-
-
-def fail_with_drift(
-    target_path: Path,
-    failures: list[dict[str, Any]],
-    state: dict[str, str],
-    sites_already: list[str],
-    diagnostics: list[str],
-    git_head: str,
-    exit_codes: tuple[int, int],
-) -> "PatcherResult":
-    """Build the EXIT_DRIFT result, write rejected sidecar, append diagnostics.
-
-    The two exit-code constants are passed in (not imported) so this
-    helper has no compile-time cycle with ``_patcher``. The caller
-    (``_patcher.run_patch``) supplies the canonical values from
-    ``EXIT_DRIFT`` and ``EXIT_PERMISSION``.
-    """
-    exit_drift_code, _ = exit_codes
-    rejected_path = write_rejected(
-        target_path,
-        failures=failures,
-        remediation_en=REMEDIATION_EN,
-        remediation_hu=REMEDIATION_HU,
-        git_head=git_head,
-    )
-    for failure in failures:
-        _append_drift_diagnostic(failure, diagnostics)
-    return _build_result(
-        exit_code=exit_drift_code,
-        sites_patched=(),
-        sites_already=tuple(sites_already),
-        state=state,
-        diagnostics=tuple(diagnostics),
-        rejected_path=rejected_path,
-    )
-
-
-def _append_drift_diagnostic(
-    failure: dict[str, Any],
-    diagnostics: list[str],
-) -> None:
-    """Append the right i18n diagnostic for one failure entry."""
-    if failure.get("reason") == REASON_LINE_DRIFT:
-        diagnostics.append(
-            _i18n.LINE_DRIFT.format(
-                site_id=failure["site_id"],
-                line=failure["anchor_line"],
-            )
-        )
-    else:
-        diagnostics.append(
-            _i18n.TEXT_DRIFT.format(
-                site_id=failure["site_id"],
-                expected=failure.get("expected", ""),
-                actual=failure.get("actual_at_line_<missing>", ""),
-            )
-        )
-    diagnostics.append(
-        _i18n.VALIDATION_FAILED.format(site_id=failure["site_id"])
-    )
 
 
 def ok_check_result(
@@ -155,10 +84,9 @@ def apply_sites(
     """Apply sites in DESCENDING line order (insertions don't shift later sites)."""
     audit_path = audit_log_path or (target_path / AUDIT_LOG)
     timestamp = _now_iso()
-    apply_sites_sorted = sorted(
+    for site in sorted(
         sites, key=lambda site: site.line_for_state, reverse=True
-    )
-    for site in apply_sites_sorted:
+    ):
         if site.site_id in sites_already:
             diagnostics.append(
                 _i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id)
@@ -249,36 +177,6 @@ def _io_error_result(
         state={},
         diagnostics=(diag,),
     )
-
-
-def mutate_lines_for_site(site: Site, text: str) -> list[str]:
-    """Return the post-mutation line list for ``site`` (cap replace or append)."""
-    lines = text.splitlines(keepends=True)
-    idx = site.primary_anchor().line - 1
-    if site.kind == "cap":
-        new_pair_lines = site.insertion.splitlines(keepends=True)
-        return lines[:idx] + new_pair_lines + lines[idx + 2:]
-    lines.insert(idx + 1, site.insertion)
-    return lines
-
-
-def emit_audit_log(
-    audit_path: Path,
-    timestamp: str,
-    site_id: str,
-    before: bytes,
-    after_bytes: bytes,
-    target_path: Path,
-) -> None:
-    """Append one FORCE_AUDIT_LOG line for a successful ``--force`` site."""
-    diff_sha = _diff_sha(before, after_bytes)
-    audit_line = _i18n.FORCE_AUDIT_LOG.format(
-        timestamp=timestamp,
-        site_id=site_id,
-        diff_sha=diff_sha,
-        target=str(target_path),
-    )
-    _append_audit_log(audit_path, audit_line)
 
 
 def _build_result(
