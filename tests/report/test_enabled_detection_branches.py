@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from hermes_skill_creator_plugin import _enabled_detection
+from hermes_skill_creator_plugin import _enabled_detection_parse as _ed_parse
 from tests.report._fixtures import _write_profile
 
 
@@ -17,33 +18,33 @@ def test_parse_frontmatter_fallback_when_module_missing(tmp_path: Path) -> None:
     def _boom(*a, **kw):
         raise ImportError("simulated")
 
-    with patch.object(_enabled_detection.frontmatter, "load", _boom):
-        meta = _enabled_detection._parse_frontmatter(p)
+    with patch.object(_ed_parse.frontmatter, "load", _boom):
+        meta = _ed_parse.parse_frontmatter(p)
     assert meta.get("name") == "foo"
 
 
 def test_parse_frontmatter_no_frontmatter_block(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("# body\n", encoding="utf-8")
-    assert _enabled_detection._parse_frontmatter(p) == {}
+    assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_parse_frontmatter_unterminated_block(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\nname: foo\nno terminator", encoding="utf-8")
-    assert _enabled_detection._parse_frontmatter(p) == {}
+    assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_parse_frontmatter_invalid_yaml(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\n: : : bad\n---\n", encoding="utf-8")
-    assert _enabled_detection._parse_frontmatter(p) == {}
+    assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_parse_frontmatter_yaml_returns_non_dict(tmp_path: Path) -> None:
     p = tmp_path / "SKILL.md"
     p.write_text("---\n[1, 2, 3]\n---\n", encoding="utf-8")
-    assert _enabled_detection._parse_frontmatter(p) == {}
+    assert _ed_parse.parse_frontmatter(p) == {}
 
 
 def test_load_config_no_file(tmp_path: Path) -> None:

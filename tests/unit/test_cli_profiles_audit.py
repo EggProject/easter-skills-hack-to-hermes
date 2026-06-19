@@ -137,6 +137,9 @@ def _install_fake_hermes_apis(
         return list(infos)
 
     fake_profiles.list_profiles = list_profiles
+    # Expose ``ProfileInfo`` so the import in cli_profiles.py resolves; tests
+    # only ever construct ``_FakeProfileInfo`` (which is a duck-typed drop-in).
+    fake_profiles.ProfileInfo = _FakeProfileInfo
     monkeypatch.setitem(sys.modules, "hermes_cli.profiles", fake_profiles)
     fake_hermes_cli = types.ModuleType("hermes_cli")
     monkeypatch.setitem(sys.modules, "hermes_cli", fake_hermes_cli)

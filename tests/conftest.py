@@ -47,6 +47,57 @@ sys.path = [p for p in sys.path if p != str(_SRC)]
 sys.path.insert(0, str(_SRC))
 
 
+# ---------------------------------------------------------------------------
+# Pre-register ``hermes_cli.profiles`` stub so ``from hermes_cli.profiles
+# import ProfileInfo`` (used by ``cli_profiles.py`` at module load time)
+# succeeds during test collection, BEFORE any per-test ``installed`` fixture
+# monkey-patches a richer substitute. The test fixture will overwrite this
+# with a fake that also includes ``list_profiles``.
+# ---------------------------------------------------------------------------
+
+
+def _ensure_hermes_cli_profiles_stub() -> None:
+    """Register a minimal ``hermes_cli.profiles`` module if absent.
+
+    The hermes_cli package is not installed in the test environment; tests
+    that need it install fakes via the ``installed`` fixture. However,
+    ``cli_profiles.py`` performs ``from hermes_cli.profiles import
+    ProfileInfo`` at module load (so the type is bound for ``TYPE_CHECKING``
+    and runtime annotations), which happens at test collection — before any
+    fixture can run. We pre-register a stub here that exposes ``ProfileInfo``
+    as a permissive ``object`` subclass with the three fields the source
+    code references (name, path, is_default).
+    """
+    import types
+
+    if "hermes_cli.profiles" in sys.modules:
+        return
+    hermes_cli_mod = sys.modules.get("hermes_cli")
+    if hermes_cli_mod is None:
+        hermes_cli_mod = types.ModuleType("hermes_cli")
+        sys.modules["hermes_cli"] = hermes_cli_mod
+
+    class _StubProfileInfo:
+        """Minimal stand-in for ``hermes_cli.profiles.ProfileInfo``.
+
+        Real ``ProfileInfo`` is a NamedTuple; tests may substitute either a
+        NamedTuple or a dataclass instance. We accept any kwargs and expose
+        the three attributes ``cli_profiles.py`` reads (``name``, ``path``,
+        ``is_default``).
+        """
+
+        __slots__ = ("name", "path", "is_default")
+
+    stub = types.ModuleType("hermes_cli.profiles")
+    stub.ProfileInfo = _StubProfileInfo
+    stub.list_profiles = lambda: []
+    sys.modules["hermes_cli.profiles"] = stub
+    hermes_cli_mod.profiles = stub
+
+
+_ensure_hermes_cli_profiles_stub()
+
+
 # --- branch (workstream-C) padded anchor constants ------------------------
 
 SKILL_UTILS_BODY = '''\
