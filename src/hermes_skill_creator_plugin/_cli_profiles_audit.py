@@ -18,9 +18,9 @@ from hermes_skill_creator_plugin._cli_profiles_apply import (
     load_config_or_error,
     read_disabled_or_empty,
 )
-from hermes_skill_creator_plugin._cli_profiles_bilingual import build_bilingual
-from hermes_skill_creator_plugin._cli_profiles_diff import diff_sets, walk_skills
-from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
+from hermes_skill_creator_plugin._cli_profiles_bilingual import build_bilingual as build_bilingual
+from hermes_skill_creator_plugin._cli_profiles_diff import diff_sets as diff_sets, walk_skills
+from hermes_skill_creator_plugin._cli_profiles_report import AuditReport as AuditReport
 from hermes_skill_creator_plugin._cli_profiles_row import new_row, populate_diff_row
 from hermes_skill_creator_plugin._scope import hermes_home_scope
 
