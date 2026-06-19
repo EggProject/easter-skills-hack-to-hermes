@@ -30,6 +30,20 @@ from hermes_skill_creator_plugin._patcher_sites_table import (
     Site,
 )
 
+
+
+def sites_for_mode(*, task_e_redirect: bool, no_schema_redirect: bool) -> tuple[Site, ...]:
+    """Return the (S1.cap, [Task E...]) tuple for the given flag combination."""
+    sites: list[Site] = [S1_CAP_SITE]
+    if not task_e_redirect:
+        return tuple(sites)
+    for site in ALL_TASK_E_SITES:
+        if no_schema_redirect and site.site_id == E6_SKILL_MANAGE_SCHEMA_DESC.site_id:
+            continue
+        sites.append(site)
+    return tuple(sites)
+
+
 __all__ = [
     "ALL_TASK_E_SITES",
     "Anchor",
@@ -49,15 +63,3 @@ __all__ = [
     "Site",
     "TOOLS_SKILL_UTILS_REL",
 ]
-
-
-def sites_for_mode(*, task_e_redirect: bool, no_schema_redirect: bool) -> tuple[Site, ...]:
-    """Return the (S1.cap, [Task E...]) tuple for the given flag combination."""
-    sites: list[Site] = [S1_CAP_SITE]
-    if not task_e_redirect:
-        return tuple(sites)
-    for site in ALL_TASK_E_SITES:
-        if no_schema_redirect and site.site_id == E6_SKILL_MANAGE_SCHEMA_DESC.site_id:
-            continue
-        sites.append(site)
-    return tuple(sites)

@@ -8,7 +8,6 @@ display string from a ``SkillRow``.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 from hermes_skill_creator_plugin._reporter_format import (
     COL_DESCRIPTION,

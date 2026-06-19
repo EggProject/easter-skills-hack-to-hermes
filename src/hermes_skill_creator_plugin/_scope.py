@@ -71,7 +71,6 @@ def hermes_home_scope(path: Path) -> Iterator[None]:
     # in ``sys.modules`` before the call site runs.
     from hermes_constants import (
         get_hermes_home_override,
-        reset_hermes_home_override,
         set_hermes_home_override,
     )
 
@@ -86,7 +85,14 @@ def hermes_home_scope(path: Path) -> Iterator[None]:
 
 
 def _restore_scope(prev_env: str | None, token: object, prev_override: object) -> None:
-    """Restore both env var and override token (extracted from finally)."""
+    """Restore both env var and override token (extracted from finally).
+
+    ``reset_hermes_home_override`` is imported locally here (not in
+    ``hermes_home_scope``) so that callers who monkeypatch the symbol
+    between the call site and the ``finally`` block see the patch.
+    """
+    from hermes_constants import reset_hermes_home_override
+
     _restore_env(prev_env)
     reset_hermes_home_override(token)
     # ``prev_override`` is captured for symmetry; the live state is

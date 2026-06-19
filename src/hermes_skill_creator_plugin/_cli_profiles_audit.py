@@ -31,14 +31,6 @@ from hermes_skill_creator_plugin._cli_profiles_report import (
 from hermes_skill_creator_plugin._cli_profiles_row import new_row, populate_diff_row
 from hermes_skill_creator_plugin._scope import hermes_home_scope
 
-__all__ = [
-    "build_bilingual",
-    "diff_sets",
-    "AuditReport",
-    "audit_profile",
-    "walk_skills",
-]
-
 
 @dataclasses.dataclass(frozen=True)
 class _ApplyDeps:
@@ -199,3 +191,12 @@ def _run_apply(
         slot.errors,
         deps.bilingual_fn,
     )
+
+
+__all__ = [
+    "build_bilingual",
+    "diff_sets",
+    "AuditReport",
+    "audit_profile",
+    "walk_skills",
+]

@@ -19,14 +19,6 @@ from hermes_skill_creator_plugin._patcher_migration_task_e import (
 )
 from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, Site
 
-__all__ = [
-    "HermesPatchContext",
-    "S1_CAP_SITE",
-    "Site",
-    "_render_cap_row",
-    "_render_patch_table",
-    "_render_task_e_row",
-]
 
 
 @dataclass(frozen=True)
@@ -78,3 +70,13 @@ def _render_patch_table(sites: Iterable[Site]) -> list[str]:
 def _yes_no(flag: bool) -> str:
     """Render a boolean as the bare ``yes``/``no`` cell value."""
     return "yes" if flag else "no"
+
+
+__all__ = [
+    "HermesPatchContext",
+    "S1_CAP_SITE",
+    "Site",
+    "_render_cap_row",
+    "_render_patch_table",
+    "_render_task_e_row",
+]

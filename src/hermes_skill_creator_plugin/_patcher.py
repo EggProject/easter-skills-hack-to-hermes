@@ -134,51 +134,6 @@ _MISSING_FILE = "<file missing>"
 _NOT_FOUND = "<not found>"
 _OUT_OF_RANGE = "<out of range>"
 
-__all__ = [
-    # exit codes
-    "EXIT_OK",
-    "EXIT_VALIDATION",
-    "EXIT_DRIFT",
-    "EXIT_PERMISSION",
-    "EXIT_IO",
-    "EXIT_USER_ABORT",
-    # constants
-    "SKILL_CREATOR_CONSULT_RULE",
-    "STATE_SIDECAR",
-    "REJECTED_SIDECAR",
-    # site table
-    "Anchor",
-    "Site",
-    "S1_CAP_SITE",
-    "E1_SKILLS_GUIDANCE",
-    "E2_MEMORY_GUIDANCE",
-    "E3_BUILD_SKILLS_PROMPT",
-    "E4_SKILL_REVIEW_PROMPT",
-    "E5_COMBINED_REVIEW_PROMPT",
-    "E6_SKILL_MANAGE_SCHEMA_DESC",
-    "E7_SKILLS_DOC_SECTION",
-    "ALL_TASK_E_SITES",
-    # result type
-    "PatcherResult",
-    # public API
-    "run_patch",
-    "hermes_agent_path",
-    "is_hermes_agent",
-    "file_has_circular_import",
-    "locate_anchor",
-    "site_already_patched",
-    "site_in_state",
-    "load_state",
-    "write_state",
-    "generate_migration_note",
-    "migration_rows_for_mode",
-    "write_rejected",
-    # test seam: monkeypatched in tests/unit/test_patcher.py.
-    "_atomic_write_bytes",
-    "_cross_filesystem",
-    "_render_cap_row",
-    "_render_task_e_row",
-]
 
 
 # --- result type ---------------------------------------------------------
@@ -468,3 +423,50 @@ def _line_drift_failure(
         "expected": anchor.text,
         "actual_at_line_<n>": actual,
     }
+
+
+__all__ = [
+    # exit codes
+    "EXIT_OK",
+    "EXIT_VALIDATION",
+    "EXIT_DRIFT",
+    "EXIT_PERMISSION",
+    "EXIT_IO",
+    "EXIT_USER_ABORT",
+    # constants
+    "SKILL_CREATOR_CONSULT_RULE",
+    "STATE_SIDECAR",
+    "REJECTED_SIDECAR",
+    # site table
+    "Anchor",
+    "Site",
+    "S1_CAP_SITE",
+    "E1_SKILLS_GUIDANCE",
+    "E2_MEMORY_GUIDANCE",
+    "E3_BUILD_SKILLS_PROMPT",
+    "E4_SKILL_REVIEW_PROMPT",
+    "E5_COMBINED_REVIEW_PROMPT",
+    "E6_SKILL_MANAGE_SCHEMA_DESC",
+    "E7_SKILLS_DOC_SECTION",
+    "ALL_TASK_E_SITES",
+    # result type
+    "PatcherResult",
+    # public API
+    "run_patch",
+    "hermes_agent_path",
+    "is_hermes_agent",
+    "file_has_circular_import",
+    "locate_anchor",
+    "site_already_patched",
+    "site_in_state",
+    "load_state",
+    "write_state",
+    "generate_migration_note",
+    "migration_rows_for_mode",
+    "write_rejected",
+    # test seam: monkeypatched in tests/unit/test_patcher.py.
+    "_atomic_write_bytes",
+    "_cross_filesystem",
+    "_render_cap_row",
+    "_render_task_e_row",
+]
