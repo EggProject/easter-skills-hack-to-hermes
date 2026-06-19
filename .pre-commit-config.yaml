@@ -47,6 +47,8 @@ repos:
     rev: 1.6.2
     hooks:
       - id: wemake-python-styleguide
+        args:
+          - --max-line-length=120
         files: '^(src/|tests/|tools/).*\.py$'
 
   - repo: https://github.com/pycqa/flake8
