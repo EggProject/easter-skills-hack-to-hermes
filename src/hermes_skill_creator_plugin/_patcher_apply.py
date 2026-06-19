@@ -48,7 +48,8 @@ REJECTED_TOOL_NAME = "hermes-skill-creator-patch"
 REJECTED_TOOL_VERSION = "0.1.0"
 
 
-def _make_tmp_path(parent: Path, final_name: str) -> str:
+def _make_tmp_path(parent: Path, final_name: str) -> tuple[int, str]:
+    """Create a temporary file and return ``(fd, name)`` like mkstemp."""
     return tempfile.mkstemp(
         prefix=final_name + TMP_PREFIX_SUFFIX[0],
         suffix=TMP_PREFIX_SUFFIX[1],

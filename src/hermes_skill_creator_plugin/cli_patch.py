@@ -20,6 +20,7 @@ import click
 
 from hermes_skill_creator_plugin._patcher import (
     EXIT_OK,
+    PatcherResult,
     generate_migration_note,
     is_hermes_agent,
     run_patch,
@@ -151,7 +152,7 @@ def _emit_migration_note_flow(
     raise SystemExit(EXIT_OK)
 
 
-def _emit_diagnostics(patcher_result, *, verbose: bool) -> None:
+def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
     for diagnostic in patcher_result.diagnostics:
         if verbose:
             click.echo(f"[verbose] {diagnostic}")
