@@ -52,7 +52,7 @@ from hermes_skill_creator_plugin._patcher_migration_render import (
 from hermes_skill_creator_plugin._patcher_migration_render import (
     _render_task_e_row as _render_task_e_row,
 )
-from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, sites_for_mode
+from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, Site, sites_for_mode
 
 
 @dataclasses.dataclass(frozen=True)
@@ -64,7 +64,7 @@ class _PatchInputs:
     task_e_redirect: bool
     no_schema_redirect: bool
     timestamp: str
-    sites: tuple
+    sites: tuple["Site", ...]
 
 
 def _now_iso() -> str:
@@ -72,9 +72,7 @@ def _now_iso() -> str:
     frozen = _os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME")
     if frozen:
         return frozen
-    return _datetime.datetime.now(_datetime.UTC).strftime(
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
+    return _datetime.datetime.now(_datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def generate_migration_note(
@@ -132,9 +130,7 @@ def _write_index_md(*, worktree: Path, timestamp: str) -> None:
     (worktree / "MIGRATION.md").write_text(body, encoding="utf-8")
 
 
-def _count_task_e_sites(
-    *, task_e_redirect: bool, no_schema_redirect: bool
-) -> int:
+def _count_task_e_sites(*, task_e_redirect: bool, no_schema_redirect: bool) -> int:
     """Return the number of Task E sites that would be rendered.
 
     Skips :data:`S1_CAP_SITE` (rendered as the cap row, not a Task E
@@ -149,9 +145,7 @@ def _count_task_e_sites(
     return len(rows)
 
 
-def migration_rows_for_mode(
-    *, task_e_redirect: bool, no_schema_redirect: bool
-) -> int:
+def migration_rows_for_mode(*, task_e_redirect: bool, no_schema_redirect: bool) -> int:
     """Return the number of rows in the MIGRATION.hermes-patch.md table."""
     total_rows = 1  # cap
     if task_e_redirect:

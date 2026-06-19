@@ -30,6 +30,7 @@ TDD test cases for this module:
   test_uses_at_suffixed_timestamps
   test_does_not_invent_fields
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -47,7 +48,6 @@ from hermes_skill_creator_plugin._enabled_detection import get_enabled_skills
 from hermes_skill_creator_plugin._reporter import ProfileSection, sort_rows
 from hermes_skill_creator_plugin._tokenizer import estimate_tokens
 
-
 HELP_EN_HEADER = _helpers.HELP_EN_HEADER
 HELP_HU_HEADER = _helpers.HELP_HU_HEADER
 FORMAT_TEXT = _helpers.FORMAT_TEXT
@@ -64,13 +64,15 @@ _resolve_profiles = _paths.resolve_profiles
 
 
 def _check_hermes_home(
-    json_path: Path | None, hermes_home: Path,
+    json_path: Path | None,
+    hermes_home: Path,
 ) -> int | None:
     """Return 6 when json_path falls under hermes_home, else None."""
     from hermes_skill_creator_plugin.i18n import messages_en as EN
 
     if json_path is not None and _check_json_path(
-        json_path, hermes_home,
+        json_path,
+        hermes_home,
     ):
         click.echo(EN.report_json_path_inside_hermes_home, err=True)
         return 6
@@ -99,12 +101,17 @@ def _build_profile_sections(
     text_sections: list[str] = []
     json_sections: list[ProfileSection] = []
     ctx = ProfileBuildContext(
-        fmt=fmt, sort=sort, platform=platform, curator=curator,
+        fmt=fmt,
+        sort=sort,
+        platform=platform,
+        curator=curator,
     )
     for prof in profile_paths:
         rc = _build_one_profile_section(
-            prof, ctx=ctx,
-            text_sections=text_sections, json_sections=json_sections,
+            prof,
+            ctx=ctx,
+            text_sections=text_sections,
+            json_sections=json_sections,
         )
         if rc is not None:
             return text_sections, json_sections, rc
@@ -123,7 +130,9 @@ def _build_one_profile_section(
 
     try:
         rows, total = _build_rows_for_profile(
-            prof, platform=ctx.platform, curator=ctx.curator,
+            prof,
+            platform=ctx.platform,
+            curator=ctx.curator,
             estimate_tokens_fn=estimate_tokens,
             enabled_skills_fn=get_enabled_skills,
         )
@@ -163,7 +172,10 @@ def _emit_sections(
 ) -> None:
     """Render and write/print the final output."""
     output = _helpers.render_output(
-        fmt, text_sections, json_sections, _helpers.now_iso(),
+        fmt,
+        text_sections,
+        json_sections,
+        _helpers.now_iso(),
     )
     _helpers.emit_output(fmt, output, json_path)
 
@@ -192,7 +204,9 @@ def _dispatch(inputs: ReportInputs) -> int:
     if early_rc is not None:
         return early_rc
     json_path, curator, profile_paths, err = _load_context(
-        inputs.fmt, inputs.json_path, inputs.profile,
+        inputs.fmt,
+        inputs.json_path,
+        inputs.profile,
     )
     if err is not None:
         return err
@@ -207,8 +221,11 @@ def _build_and_emit(
 ) -> int:
     """Build sections for ``profile_paths`` and emit the final report."""
     text_sections, json_sections, build_err = _build_profile_sections(
-        profile_paths, fmt=inputs.fmt, sort=inputs.sort,
-        platform=inputs.platform, curator=curator,
+        profile_paths,
+        fmt=inputs.fmt,
+        sort=inputs.sort,
+        platform=inputs.platform,
+        curator=curator,
     )
     if build_err is not None:
         return build_err

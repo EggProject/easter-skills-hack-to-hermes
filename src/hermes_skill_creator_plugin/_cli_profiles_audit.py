@@ -36,6 +36,7 @@ __all__ = [
     "diff_sets",
     "AuditReport",
     "audit_profile",
+    "walk_skills",
 ]
 
 
@@ -74,13 +75,18 @@ def audit_profile(
         _audit_diff_row(row, profile_path, disabled_now)
         if not apply:
             return row
-        _audit_apply(_ApplyCallArgs(
-            config=config, disabled_now=disabled_now, row=row,
-            actions=actions, errors=errors,
-            profile_path=profile_path,
-            skip_install=skip_install,
-            bilingual_fn=bilingual_fn,
-        ))
+        _audit_apply(
+            _ApplyCallArgs(
+                config=config,
+                disabled_now=disabled_now,
+                row=row,
+                actions=actions,
+                errors=errors,
+                profile_path=profile_path,
+                skip_install=skip_install,
+                bilingual_fn=bilingual_fn,
+            )
+        )
     return row
 
 
@@ -130,8 +136,8 @@ def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
     """Build the apply dep set and run the apply pipeline for one profile."""
     from agent.prompt_builder import clear_skills_system_prompt_cache
     from hermes_cli.config import save_config
-    from hermes_cli.skills_hub import do_install
     from hermes_cli.skills_config import save_disabled_skills
+    from hermes_cli.skills_hub import do_install
 
     deps = _ApplyDeps(
         save_disabled_skills=save_disabled_skills,
@@ -142,8 +148,11 @@ def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
     )
     slot = _ApplySlot(row=args.row, actions=args.actions, errors=args.errors)
     _run_apply(
-        args.config, args.disabled_now, deps,
-        slot=slot, skip_install=args.skip_install,
+        args.config,
+        args.disabled_now,
+        deps,
+        slot=slot,
+        skip_install=args.skip_install,
     )
 
     return args.row
@@ -177,7 +186,11 @@ def _run_apply(
     )
     if not skip_install:
         apply_do_install(
-            deps.do_install, slot.row, slot.actions, slot.errors, deps.bilingual_fn,
+            deps.do_install,
+            slot.row,
+            slot.actions,
+            slot.errors,
+            deps.bilingual_fn,
         )
     apply_clear_cache(
         deps.clear_skills_system_prompt_cache,

@@ -2,8 +2,8 @@
 
 Inline-form disabled-list parsing helpers.
 """
-from __future__ import annotations
 
+from __future__ import annotations
 
 _DISABLED_KEY = "disabled"
 _DISABLED_PREFIX = "disabled:"

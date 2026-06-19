@@ -2,6 +2,7 @@
 
 Row construction for the reporter: usage rows, profile rows, json-path safety.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -67,17 +68,9 @@ def _entry_fields(entry: Any) -> dict[str, Any]:
         "use_count": (getattr(entry, "use_count", 0) if persisted else None),
         "view_count": (getattr(entry, "view_count", 0) if persisted else None),
         "patch_count": (getattr(entry, "patch_count", 0) if persisted else None),
-        "last_used_at": (
-            getattr(entry, "last_used_at", None) if persisted else None
-        ),
-        "last_viewed_at": (
-            getattr(entry, "last_viewed_at", None) if persisted else None
-        ),
-        "last_patched_at": (
-            getattr(entry, "last_patched_at", None)
-            if persisted
-            else None
-        ),
+        "last_used_at": (getattr(entry, "last_used_at", None) if persisted else None),
+        "last_viewed_at": (getattr(entry, "last_viewed_at", None) if persisted else None),
+        "last_patched_at": (getattr(entry, "last_patched_at", None) if persisted else None),
         PERSISTED_KEY: persisted,
     }
 
@@ -92,20 +85,26 @@ def build_rows_for_profile(
 ) -> tuple[list[SkillRow], int]:
     """Build the SkillRow list and total_tokens for `profile`."""
     enabled = _enabled_skills_safe(
-        profile=profile, platform=platform, fn=enabled_skills_fn,
+        profile=profile,
+        platform=platform,
+        fn=enabled_skills_fn,
     )
     skills_dir = profile / "skills"
     usage = build_usage_rows(curator, skills_dir, enabled)
-    return _build_skill_rows(profile=profile, skills_dir=skills_dir, usage=usage, enabled=enabled,
-                             estimate_tokens_fn=estimate_tokens_fn)
+    return _build_skill_rows(
+        profile=profile,
+        skills_dir=skills_dir,
+        usage=usage,
+        enabled=enabled,
+        estimate_tokens_fn=estimate_tokens_fn,
+    )
 
 
-def _enabled_skills_safe(
-    *, profile: Path, platform: str | None, fn: Any
-) -> frozenset[str]:
+def _enabled_skills_safe(*, profile: Path, platform: str | None, fn: Any) -> frozenset[str]:
     """Call ``enabled_skills_fn`` and raise :class:`EnabledDetectionUnavailable`."""
     try:
-        return fn(profile, platform=platform)
+        result: frozenset[str] = fn(profile, platform=platform)
+        return result
     except Exception as exc:
         raise EnabledDetectionUnavailable(str(exc)) from exc
 
@@ -123,8 +122,11 @@ def _build_skill_rows(
     total = 0
     for name in sorted(enabled):
         row, tokens = _make_one_row(
-            profile=profile, name=name, skills_dir=skills_dir,
-            usage=usage, estimate_tokens_fn=estimate_tokens_fn,
+            profile=profile,
+            name=name,
+            skills_dir=skills_dir,
+            usage=usage,
+            estimate_tokens_fn=estimate_tokens_fn,
         )
         rows.append(row)
         total += tokens
@@ -141,9 +143,7 @@ def _make_one_row(
 ) -> tuple[SkillRow, int]:
     """Build a single SkillRow (and its token count)."""
     description = load_skill_description(skills_dir, name)
-    tokens = estimate_tokens_fn(
-        name, description, warning=emit_tokenizer_warning
-    )
+    tokens = estimate_tokens_fn(name, description, warning=emit_tokenizer_warning)
     usage_for = usage.get(name, EMPTY_USAGE)
     row = make_row(
         profile=profile.name,

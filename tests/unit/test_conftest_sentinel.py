@@ -2,10 +2,11 @@
 function and the helper functions. These exist to cover lines that are
 otherwise only reachable via conditional branches in the conftest fixture.
 """
+
 from __future__ import annotations
 
 import importlib
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 
@@ -42,6 +43,7 @@ def test_no_live_install_sentinel_helper() -> None:
 def test_install_sentinel_finalizer_registers_check(tmp_path) -> None:
     """The finalizer helper registers a finalizer on the request and runs it."""
     import hashlib
+
     target = tmp_path / "skill_utils.py"
     target.write_text("# content", encoding="utf-8")
     pre_hash = hashlib.sha256(target.read_bytes()).hexdigest()
@@ -65,9 +67,7 @@ def test_install_sentinel_finalizer_registers_check(tmp_path) -> None:
     registered[0]()
 
 
-def test_real_hermes_agent_sentinel_via_fixture(
-    tmp_path, monkeypatch, real_hermes_agent_sentinel: str
-) -> None:
+def test_real_hermes_agent_sentinel_via_fixture(tmp_path, monkeypatch, real_hermes_agent_sentinel: str) -> None:
     """End-to-end: requesting the fixture returns the no-op token
     (when no live install exists) or "sentinel-ok" (when one does).
     Exercises line 240 (no-live-install return)."""
@@ -78,9 +78,7 @@ def test_real_hermes_agent_sentinel_via_fixture(
     assert real_hermes_agent_sentinel in {"sentinel-no-live-install", "sentinel-ok"}
 
 
-def test_real_hermes_agent_sentinel_no_install_branch(
-    tmp_path, monkeypatch
-) -> None:
+def test_real_hermes_agent_sentinel_no_install_branch(tmp_path, monkeypatch) -> None:
     """Cover the no-live-install branch (line 240) by directly invoking the
     implementation with a path that has no live install."""
     monkeypatch.setenv("HOME", str(tmp_path))

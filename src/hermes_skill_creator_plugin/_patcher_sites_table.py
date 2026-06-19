@@ -117,13 +117,11 @@ S1_CAP_SITE = Site(
         Anchor(line=S1_CAP_LINE_B, text='        return desc[:57] + "..."'),
     ),
     insertion=(
-        '    if len(desc) > MAX_DESCRIPTION_LENGTH:\n'
-        '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+        "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n" '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
     # The idempotency check looks for the replacement text:
     expected_replacement=(
-        '    if len(desc) > MAX_DESCRIPTION_LENGTH:\n'
-        '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+        "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n" '        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
     kind="cap",
     line_for_state=S1_CAP_LINE_A,
@@ -191,8 +189,8 @@ E4_SKILL_REVIEW_PROMPT = Site(
             text="    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"",
         ),
     ),
-    insertion="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"\n",
-    expected_replacement="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"",
+    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
+    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
     kind="append",
     line_for_state=E4_LINE,
 )
@@ -206,8 +204,8 @@ E5_COMBINED_REVIEW_PROMPT = Site(
             text='    "(2), or (3).\\n\\n"',
         ),
     ),
-    insertion="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"\n",
-    expected_replacement="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"",
+    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
+    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
     kind="append",
     line_for_state=E5_LINE,
 )

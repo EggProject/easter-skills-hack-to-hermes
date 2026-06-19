@@ -2,6 +2,7 @@
 
 Frontmatter + YAML parsing helpers for enabled-detection.
 """
+
 from __future__ import annotations
 
 import io
@@ -11,7 +12,6 @@ from typing import Any
 
 import frontmatter
 import yaml
-
 
 _SKILLS_KEY = "skills"
 _DISABLED_KEY = "disabled"

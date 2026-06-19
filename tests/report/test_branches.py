@@ -107,7 +107,8 @@ def test_load_skill_description_read_error(tmp_path: Path, monkeypatch) -> None:
     skill_dir.mkdir()
     (skill_dir / "SKILL.md").write_text("---\ndescription: x\n---\n", encoding="utf-8")
 
-    def _boom(*a, **kw):raise OSError("nope")
+    def _boom(*a, **kw):
+        raise OSError("nope")
 
     monkeypatch.setattr(Path, "read_text", _boom)
     s = cli_report._load_skill_description(tmp_path, "a")
@@ -165,7 +166,8 @@ def test_build_usage_rows_with_persisted_false() -> None:
 
 
 def test_build_usage_rows_curator_raises() -> None:
-    def _boom(**kw):raise RuntimeError("nope")
+    def _boom(**kw):
+        raise RuntimeError("nope")
 
     curator = SimpleNamespace(usage_report=_boom)
     out = cli_report._build_usage_rows(curator, Path("/tmp"), frozenset({"a"}))

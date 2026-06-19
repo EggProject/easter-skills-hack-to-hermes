@@ -218,9 +218,7 @@ def assert_hermes_agent_untouched_sentinel(pre: str | None) -> None:
     if not sentinel_path.is_file():
         return
     post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
-    assert post_hash == pre, (
-        f"HERMES AGENT LIVE INSTAL MUTATED! pre={pre} post={post_hash}"
-    )
+    assert post_hash == pre, f"HERMES AGENT LIVE INSTAL MUTATED! pre={pre} post={post_hash}"
 
 
 @pytest.fixture
@@ -360,4 +358,3 @@ __all__ = [
     "MINIMAL_HERMES_FILES",
     "real_hermes_agent_sentinel",
 ]
-

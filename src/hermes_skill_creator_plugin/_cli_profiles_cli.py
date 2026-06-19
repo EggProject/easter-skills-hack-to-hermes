@@ -15,7 +15,6 @@ import click
 from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
 from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
 
-
 # Header labels for the bilingual --help sections.
 HELP_EN_HEADER = "Usage (English):"
 HELP_HU_HEADER = "Használat (magyar):"

@@ -2,6 +2,7 @@
 
 Platform / conditional-exclusion filtering for enabled-detection.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,7 +16,6 @@ from hermes_skill_creator_plugin._enabled_detection_parse import (
     add_list_entries,
     parse_frontmatter,
 )
-
 
 _DISABLE_IF_KEY = "disable_if"
 _PLATFORM_KEY = "platform"

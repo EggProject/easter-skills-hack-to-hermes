@@ -54,12 +54,32 @@ def _format_optional_count(row: SkillRow, attr: str) -> str:
 
 def _format_optional_str(row: SkillRow, attr: str) -> str:
     """Render an Optional[str] timestamp as ``n/a`` or its value."""
-    value = getattr(row, attr)
+    value: str | None = getattr(row, attr)
     return NA_TEXT if value is None else value
+
+
+_COUNT_COLUMNS = frozenset({COL_USE_COUNT, COL_VIEW_COUNT, COL_PATCH_COUNT})
+_TIMESTAMP_COLUMNS = frozenset(
+    {COL_LAST_USED_AT, COL_LAST_VIEWED_AT, COL_LAST_PATCHED_AT}
+)
+
+
+def _render_optional_count(row: SkillRow, attr: str) -> str:
+    """Return the formatted optional count for `attr`."""
+    return _format_optional_count(row, attr)
+
+
+def _render_optional_str(row: SkillRow, attr: str) -> str:
+    """Return the formatted optional str for `attr`."""
+    return _format_optional_str(row, attr)
 
 
 def _format_value_for_text(row: SkillRow, column: str) -> str:
     """Return the text-rendered value for `column` of `row`."""
+    if column in _COUNT_COLUMNS:
+        return _render_optional_count(row, column)
+    if column in _TIMESTAMP_COLUMNS:
+        return _render_optional_str(row, column)
     if column == COL_PROFILE:
         return row.profile
     if column == COL_NAME:
@@ -68,18 +88,6 @@ def _format_value_for_text(row: SkillRow, column: str) -> str:
         return row.description_display
     if column == COL_TOKENS:
         return str(row.tokens)
-    if column == COL_USE_COUNT:
-        return _format_optional_count(row, "use_count")
-    if column == COL_VIEW_COUNT:
-        return _format_optional_count(row, "view_count")
-    if column == COL_PATCH_COUNT:
-        return _format_optional_count(row, "patch_count")
-    if column == COL_LAST_USED_AT:
-        return _format_optional_str(row, "last_used_at")
-    if column == COL_LAST_VIEWED_AT:
-        return _format_optional_str(row, "last_viewed_at")
-    if column == COL_LAST_PATCHED_AT:
-        return _format_optional_str(row, "last_patched_at")
     if column == COL_PCT_OF_CAP:
         return f"{row.pct_of_cap:.1f}"
     return ""
@@ -87,9 +95,7 @@ def _format_value_for_text(row: SkillRow, column: str) -> str:
 
 def _render_row(cells: list[str], widths: list[int]) -> str:
     """Render a single text row with stable column widths (module helper)."""
-    return "  ".join(
-        cell.ljust(widths[idx]) for idx, cell in enumerate(cells)
-    )
+    return "  ".join(cell.ljust(widths[idx]) for idx, cell in enumerate(cells))
 
 
 def _compute_column_widths(headers: list[str], body: list[list[str]]) -> list[int]:
@@ -136,10 +142,7 @@ def format_text(
     string `n/a`.
     """
     headers = list(columns)
-    body = [
-        [_format_value_for_text(row, column_name) for column_name in columns]
-        for row in rows
-    ]
+    body = [[_format_value_for_text(row, column_name) for column_name in columns] for row in rows]
     widths = _compute_column_widths(headers, body)
     lines = [_render_row(headers, widths)]
     for body_row in body:

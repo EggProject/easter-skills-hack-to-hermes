@@ -57,10 +57,7 @@ def sites_for_mode(*, task_e_redirect: bool, no_schema_redirect: bool) -> tuple[
     if not task_e_redirect:
         return tuple(sites)
     for site in ALL_TASK_E_SITES:
-        if (
-            no_schema_redirect
-            and site.site_id == E6_SKILL_MANAGE_SCHEMA_DESC.site_id
-        ):
+        if no_schema_redirect and site.site_id == E6_SKILL_MANAGE_SCHEMA_DESC.site_id:
             continue
         sites.append(site)
     return tuple(sites)

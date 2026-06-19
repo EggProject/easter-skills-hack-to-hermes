@@ -49,7 +49,11 @@ def _metadata_rows(ctx: HermesPatchContext) -> list[str]:
     task_e_cell = _yes_no(ctx.task_e_redirect)
     schema_cell = _yes_no(ctx.no_schema_redirect)
     return _compose_metadata_rows(
-        target_cell, ctx.git_head, task_e_cell, schema_cell, ctx.timestamp,
+        target_cell,
+        ctx.git_head,
+        task_e_cell,
+        schema_cell,
+        ctx.timestamp,
     )
 
 

@@ -119,16 +119,10 @@ def _scan_comparators(comparators: list[ast.expr]) -> str | None:
 
 def _match_comparator(comparator: ast.expr) -> str | None:
     """Return the cap state for one Compare comparator, or ``None``."""
-    is_unpatched = (
-        isinstance(comparator, ast.Constant)
-        and comparator.value == UNPATCHED_CAP
-    )
+    is_unpatched = isinstance(comparator, ast.Constant) and comparator.value == UNPATCHED_CAP
     if is_unpatched:
         return UNPATCHED_STATE
-    is_patched = (
-        isinstance(comparator, ast.Name)
-        and comparator.id == PATCHED_CAP_REFERENCE
-    )
+    is_patched = isinstance(comparator, ast.Name) and comparator.id == PATCHED_CAP_REFERENCE
     if is_patched:
         return PATCHED_STATE
     return None

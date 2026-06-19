@@ -34,7 +34,7 @@ def fail_with_drift(
     diagnostics: list[str],
     git_head: str,
     exit_codes: tuple[int, int],
-) -> "PatcherResult":
+) -> PatcherResult:
     """Build the EXIT_DRIFT result, write rejected sidecar, append diagnostics.
 
     The two exit-code constants are passed in (not imported) so this
@@ -84,9 +84,7 @@ def _append_drift_diagnostic(
                 actual=failure.get("actual_at_line_<missing>", ""),
             )
         )
-    diagnostics.append(
-        _i18n.VALIDATION_FAILED.format(site_id=failure["site_id"])
-    )
+    diagnostics.append(_i18n.VALIDATION_FAILED.format(site_id=failure["site_id"]))
 
 
 def emit_audit_log(

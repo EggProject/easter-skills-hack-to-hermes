@@ -34,8 +34,7 @@ _TOKENIZER_FAILURE_EXCEPTIONS: tuple[type[BaseException], ...] = (
     OSError,
 )
 _FALLBACK_WARNING_MESSAGE = (
-    "[en] tokenizer unavailable, falling back to chars/4 "
-    "/ [hu] a tokenizer nem elérhető, chars/4 becslés"
+    "[en] tokenizer unavailable, falling back to chars/4 " "/ [hu] a tokenizer nem elérhető, chars/4 becslés"
 )
 
 

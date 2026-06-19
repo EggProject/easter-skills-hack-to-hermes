@@ -62,18 +62,20 @@ def make_row(
     last_patched_at: str | None,
 ) -> SkillRow:
     """Build a SkillRow with derived display + pct_of_cap fields."""
-    return _build_row(_RowFields(
-        profile=profile,
-        name=name,
-        description=description,
-        tokens=tokens,
-        use_count=use_count,
-        view_count=view_count,
-        patch_count=patch_count,
-        last_used_at=last_used_at,
-        last_viewed_at=last_viewed_at,
-        last_patched_at=last_patched_at,
-    ))
+    return _build_row(
+        _RowFields(
+            profile=profile,
+            name=name,
+            description=description,
+            tokens=tokens,
+            use_count=use_count,
+            view_count=view_count,
+            patch_count=patch_count,
+            last_used_at=last_used_at,
+            last_viewed_at=last_viewed_at,
+            last_patched_at=last_patched_at,
+        )
+    )
 
 
 def _build_row(fields: _RowFields) -> SkillRow:
@@ -147,9 +149,9 @@ def _sorted_na_rows(rows: list[SkillRow]) -> list[SkillRow]:
     )
 
 
-def _group_dated_rows(rows: list[SkillRow]) -> "OrderedDict[str, list[SkillRow]]":
+def _group_dated_rows(rows: list[SkillRow]) -> OrderedDict[str, list[SkillRow]]:
     """Bucket ``rows`` whose ``last_used_at`` is non-None by their timestamp."""
-    groups: "OrderedDict[str, list[SkillRow]]" = OrderedDict()
+    groups: OrderedDict[str, list[SkillRow]] = OrderedDict()
     for dated_row in rows:
         if dated_row.last_used_at is not None:
             groups.setdefault(dated_row.last_used_at, []).append(dated_row)

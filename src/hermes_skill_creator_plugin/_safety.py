@@ -61,10 +61,12 @@ def assert_hermes_agent_untouched(
         if _current_hermes_home() == _LIVE_HERMES_AGENT and _LIVE_HERMES_AGENT.exists():
             import pytest as _pytest
 
-            _pytest.skip(_SKIP_TEMPLATE.format(
-                name=func.__name__,
-                home=_current_hermes_home(),
-            ))
+            _pytest.skip(
+                _SKIP_TEMPLATE.format(
+                    name=func.__name__,
+                    home=_current_hermes_home(),
+                )
+            )
         return func(*args, **kwargs)
 
     return wrapper

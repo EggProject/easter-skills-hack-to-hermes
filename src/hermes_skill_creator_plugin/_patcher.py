@@ -63,17 +63,21 @@ from hermes_skill_creator_plugin._patcher_apply_state import (
 from hermes_skill_creator_plugin._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
 )
-from hermes_skill_creator_plugin._patcher_helpers import file_has_circular_import
-from hermes_skill_creator_plugin._patcher_helpers import hermes_agent_path
-from hermes_skill_creator_plugin._patcher_helpers import is_hermes_agent
-from hermes_skill_creator_plugin._patcher_helpers import locate_anchor
-from hermes_skill_creator_plugin._patcher_helpers import site_already_patched
-from hermes_skill_creator_plugin._patcher_helpers import site_in_state
+from hermes_skill_creator_plugin._patcher_helpers import (
+    file_has_circular_import,
+    hermes_agent_path,
+    is_hermes_agent,
+    locate_anchor,
+    site_already_patched,
+    site_in_state,
+)
 from hermes_skill_creator_plugin._patcher_migration import (
-    _render_cap_row,
-    _render_task_e_row,
     generate_migration_note,
     migration_rows_for_mode,
+)
+from hermes_skill_creator_plugin._patcher_migration_render import (
+    _render_cap_row,
+    _render_task_e_row,
 )
 from hermes_skill_creator_plugin._patcher_pipeline import (
     apply_sites as _apply_sites_pipeline,
@@ -215,25 +219,41 @@ def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
 # --- the main entry point -------------------------------------------------
 
 
-def run_patch(*, target: Path | None, check: bool, apply: bool,
-              force: bool, i_accept_line_drift: bool,
-              task_e_redirect: bool, no_schema_redirect: bool,
-              yes: bool = False, verbose: bool = False,
-              audit_log_path: Path | None = None,
-              git_head: str = "") -> PatcherResult:
+def run_patch(
+    *,
+    target: Path | None,
+    check: bool,
+    apply: bool,
+    force: bool,
+    i_accept_line_drift: bool,
+    task_e_redirect: bool,
+    no_schema_redirect: bool,
+    yes: bool = False,
+    verbose: bool = False,
+    audit_log_path: Path | None = None,
+    git_head: str = "",
+) -> PatcherResult:
     """Run the patcher.
 
     Returns a :class:`PatcherResult`; the caller (CLI) is responsible
     for translating ``exit_code`` into a ``SystemExit``. This function
     never raises SystemExit; it returns a result.
     """
-    return _run_patch_with_inputs(PatchRunInputs(
-        target=target, check=check, apply=apply, force=force,
-        i_accept_line_drift=i_accept_line_drift,
-        task_e_redirect=task_e_redirect,
-        no_schema_redirect=no_schema_redirect, yes=yes, verbose=verbose,
-        audit_log_path=audit_log_path, git_head=git_head,
-    ))
+    return _run_patch_with_inputs(
+        PatchRunInputs(
+            target=target,
+            check=check,
+            apply=apply,
+            force=force,
+            i_accept_line_drift=i_accept_line_drift,
+            task_e_redirect=task_e_redirect,
+            no_schema_redirect=no_schema_redirect,
+            yes=yes,
+            verbose=verbose,
+            audit_log_path=audit_log_path,
+            git_head=git_head,
+        )
+    )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -275,10 +295,12 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     if file_has_circular_import(skill_utils):
         diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
         return _empty_result(diagnostics, EXIT_IO)
-    sites = list(sites_for_mode(
-        task_e_redirect=inputs.task_e_redirect,
-        no_schema_redirect=inputs.no_schema_redirect,
-    ))
+    sites = list(
+        sites_for_mode(
+            task_e_redirect=inputs.task_e_redirect,
+            no_schema_redirect=inputs.no_schema_redirect,
+        )
+    )
     state = load_state(target_path)
     sites_patched: list[str] = []
     sites_already: list[str] = []

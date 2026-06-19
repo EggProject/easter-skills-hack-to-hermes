@@ -2,6 +2,7 @@
 
 Click command definition for the reporter CLI.
 """
+
 from __future__ import annotations
 
 import sys
@@ -42,7 +43,10 @@ from hermes_skill_creator_plugin.i18n import messages_en as EN
     help=EN.report_opt_json,
 )
 @click.option(
-    "--help", "show_help", is_flag=True, default=False,
+    "--help",
+    "show_help",
+    is_flag=True,
+    default=False,
     help=EN.report_opt_help,
 )
 def main(

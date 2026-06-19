@@ -50,17 +50,26 @@ import click
 # the audit helpers live in ``_cli_profiles_audit`` and the unused-
 # import silencer is mandated by the test contract.
 from agent.skill_utils import get_disabled_skill_names  # noqa: F401
+from hermes_cli.profiles import ProfileInfo
 from hermes_cli.skills_config import save_disabled_skills  # noqa: F401
 
 from hermes_skill_creator_plugin._cli_profiles_audit import (
     audit_profile as _audit_profile,
+)
+from hermes_skill_creator_plugin._cli_profiles_audit import (
     build_bilingual as _build_bilingual,
+)
+from hermes_skill_creator_plugin._cli_profiles_audit import (
     diff_sets,
     walk_skills,
 )
 from hermes_skill_creator_plugin._cli_profiles_cli import (
     build_help_text as _build_help_text,
+)
+from hermes_skill_creator_plugin._cli_profiles_cli import (
     main_cmd,
+)
+from hermes_skill_creator_plugin._cli_profiles_cli import (
     make_cli as _make_cli,
 )
 from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
@@ -133,17 +142,13 @@ def _live_install_refused(apply: bool, yes: bool) -> bool:
 
 
 def _select_profiles(
-    all_profiles: list[object],
+    all_profiles: list[ProfileInfo],
     profile: str | None,
-) -> list[object]:
+) -> list[ProfileInfo]:
     """Filter all_profiles to the requested NAME (or return them all)."""
     if profile is None:
         return list(all_profiles)
-    return [
-        profile_info
-        for profile_info in all_profiles
-        if profile_info.name == profile
-    ]
+    return [profile_info for profile_info in all_profiles if profile_info.name == profile]
 
 
 def _empty_report(frozen_time: str | None) -> AuditReport:
@@ -162,18 +167,18 @@ def _echo_row_summary(row: dict[str, object]) -> None:
         _bilingual(
             "profiles_msg_profile_audit",
             name=row["profile_name"],
-            disabled=_join_or_dash(row["current_disabled"]),
-            installed=_join_or_dash(row["current_installed"]),
+            disabled=_join_or_dash(cast("list[str]", row["current_disabled"])),
+            installed=_join_or_dash(cast("list[str]", row["current_installed"])),
         )
     )
-    diff_row = row["diff"]
+    diff_row = cast("dict[str, object]", row["diff"])
     click.echo(
         _bilingual(
             "profiles_msg_diff",
-            ad=_join_or_dash(diff_row["added_disabled"]),
-            rd=_join_or_dash(diff_row["removed_disabled"]),
-            ai=_join_or_dash(diff_row["added_installed"]),
-            ri=_join_or_dash(diff_row["removed_installed"]),
+            ad=_join_or_dash(cast("list[str]", diff_row["added_disabled"])),
+            rd=_join_or_dash(cast("list[str]", diff_row["removed_disabled"])),
+            ai=_join_or_dash(cast("list[str]", diff_row["added_installed"])),
+            ri=_join_or_dash(cast("list[str]", diff_row["removed_installed"])),
         )
     )
 
@@ -186,7 +191,7 @@ def _write_json_report(report: AuditReport, json_path: Path) -> None:
 
 
 def _audit_and_collect_row(
-    profile_info: object,
+    profile_info: ProfileInfo,
     *,
     apply: bool,
     skip_install: bool,
@@ -227,9 +232,9 @@ def _extract_audit_options(options: dict[str, object]) -> dict[str, object]:
 def _run_audit_phase(opts: dict[str, object]) -> AuditReport:
     """Drive the audit/flip after the live-install refusal gate."""
     apply = bool(opts["apply"])
-    frozen_time = opts["frozen_time"]
+    frozen_time: str | None = cast("str | None", opts["frozen_time"])
     skip_install = bool(opts["skip_install"])
-    profile = opts["profile"]
+    profile: str | None = cast("str | None", opts["profile"])
 
     from hermes_cli.profiles import list_profiles
 

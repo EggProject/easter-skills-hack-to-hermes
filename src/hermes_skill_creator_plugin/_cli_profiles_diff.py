@@ -19,7 +19,6 @@ def walk_skills(skills_dir: Path) -> set[str]:
     directory name is the fallback. Directories without SKILL.md are
     ignored. The walk is robust to read errors (the skill is dropped).
     """
-    from agent.skill_utils import parse_frontmatter
 
     if not skills_dir.is_dir():
         return set()

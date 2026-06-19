@@ -3,6 +3,7 @@
 Path resolution + SKILL.md helpers live in ``_cli_report_helpers_paths``
 (split to keep module surface WPS202-clean).
 """
+
 from __future__ import annotations
 
 import os
@@ -12,9 +13,13 @@ from typing import Any
 
 import click
 
-from hermes_skill_creator_plugin._reporter import ProfileSection, format_json, format_text
+from hermes_skill_creator_plugin._reporter import (
+    ProfileSection,
+    SkillRow,
+    format_json,
+    format_text,
+)
 from hermes_skill_creator_plugin.i18n import messages_en as EN
-
 
 REJECTED_FLAGS = {
     "--apply": "apply",
@@ -52,9 +57,7 @@ def emit_tokenizer_warning(_msg: str) -> None:
 
 def now_iso() -> str:
     """Return an ISO 8601 UTC timestamp. Honors frozen-time env var."""
-    frozen = os.environ.get(
-        "HERMES_SKILL_CREATOR_FROZEN_TIME", ""
-    ).strip()
+    frozen = os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME", "").strip()
     if frozen:
         return frozen
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -102,13 +105,18 @@ def resolve_json_path(fmt: str, json_path: Path | None) -> Path | None:
 
 
 def make_section(
-    fmt: str, name: str, rows: list, total: int,
+    fmt: str,
+    name: str,
+    rows: list[SkillRow],
+    total: int,
 ) -> str | ProfileSection:
     """Build a single text section string or json ProfileSection."""
     if fmt == FORMAT_TEXT:
         return format_text(name, rows, total_tokens=total)
     return ProfileSection(
-        profile_name=name, rows=rows, total_tokens=total,
+        profile_name=name,
+        rows=rows,
+        total_tokens=total,
     )
 
 

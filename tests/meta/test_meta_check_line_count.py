@@ -695,6 +695,7 @@ def test_main_block_executes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     # `if __name__ == "__main__":` block fires when the file's source is
     # executed as __main__ via runpy (no exec() per S102).
     import runpy
+
     main_module = types.ModuleType("__main__")
     main_module.__name__ = "__main__"
     try:

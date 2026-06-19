@@ -31,6 +31,20 @@ TDD test cases for this module:
 
 from __future__ import annotations
 
+from hermes_skill_creator_plugin._reporter_format import (
+    _format_value_for_text,
+    _skill_to_dict,
+    format_json,
+    format_text,
+)
+from hermes_skill_creator_plugin._reporter_models import ProfileSection, SkillRow
+from hermes_skill_creator_plugin._reporter_sort import (
+    _sort_key,
+    _truncate_for_display,
+    make_row,
+    sort_rows,
+)
+
 # Curator's 6 documented field names (verified against tools/skill_usage.py:463-468).
 DOCUMENTED_USAGE_FIELDS = frozenset(
     {
@@ -61,20 +75,6 @@ TEXT_COLUMNS = (
 # ---------------------------------------------------------------------------
 # Re-exports — keep the public surface stable for tests / external callers.
 # ---------------------------------------------------------------------------
-
-from hermes_skill_creator_plugin._reporter_format import (
-    _format_value_for_text,
-    _skill_to_dict,
-    format_json,
-    format_text,
-)
-from hermes_skill_creator_plugin._reporter_models import ProfileSection, SkillRow
-from hermes_skill_creator_plugin._reporter_sort import (
-    _sort_key,
-    _truncate_for_display,
-    make_row,
-    sort_rows,
-)
 
 __all__ = [
     "DOCUMENTED_USAGE_FIELDS",
