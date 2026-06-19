@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from datetime import UTC, datetime
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import click
@@ -21,16 +22,18 @@ from hermes_skill_creator_plugin._reporter import (
 )
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 
-REJECTED_FLAGS = {
-    "--apply": "apply",
-    "--emit-migration-note": "emit-migration-note",
-    "--write-report": "write-report",
-}
+REJECTED_FLAGS: MappingProxyType[str, str] = MappingProxyType(
+    {
+        "--apply": "apply",
+        "--emit-migration-note": "emit-migration-note",
+        "--write-report": "write-report",
+    },
+)
 
 HELP_EN_HEADER = "Usage (English):"
 HELP_HU_HEADER = "Használat (magyar):"
 
-EMPTY_USAGE: dict[str, Any | None] = {
+_EMPTY_USAGE_MUTABLE: dict[str, Any | None] = {
     "use_count": None,
     "view_count": None,
     "patch_count": None,
@@ -38,6 +41,8 @@ EMPTY_USAGE: dict[str, Any | None] = {
     "last_viewed_at": None,
     "last_patched_at": None,
 }
+
+EMPTY_USAGE: MappingProxyType[str, Any | None] = MappingProxyType(_EMPTY_USAGE_MUTABLE)
 PERSISTED_KEY = "_persisted"
 
 FORMAT_TEXT = "text"

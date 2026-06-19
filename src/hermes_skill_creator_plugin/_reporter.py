@@ -46,15 +46,15 @@ from hermes_skill_creator_plugin._reporter_sort import (
 )
 
 # Curator's 6 documented field names (verified against tools/skill_usage.py:463-468).
-DOCUMENTED_USAGE_FIELDS = frozenset(
-    {
+DOCUMENTED_USAGE_FIELDS: frozenset[str] = frozenset(
+    (
         "use_count",
         "view_count",
         "patch_count",
         "last_used_at",
         "last_viewed_at",
         "last_patched_at",
-    }
+    )
 )
 
 # Columns rendered in the plain-text table (in this fixed order).

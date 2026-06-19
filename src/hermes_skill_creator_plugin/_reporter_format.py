@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from hermes_skill_creator_plugin._reporter_dispatch import VALUE_DISPATCH
 from hermes_skill_creator_plugin._reporter_models import ProfileSection, SkillRow
 from hermes_skill_creator_plugin._tokenizer import MAX_DESCRIPTION_LENGTH
 
@@ -46,20 +47,22 @@ DEFAULT_TEXT_COLUMNS: tuple[str, ...] = (
 )
 
 
+_COUNT_COLUMNS: frozenset[str] = frozenset((COL_USE_COUNT, COL_VIEW_COUNT, COL_PATCH_COUNT))
+_TIMESTAMP_COLUMNS: frozenset[str] = frozenset(
+    (COL_LAST_USED_AT, COL_LAST_VIEWED_AT, COL_LAST_PATCHED_AT),
+)
+
+
 def _format_optional_count(row: SkillRow, attr: str) -> str:
     """Render an Optional[int] counter as ``n/a`` or its str form."""
-    value = getattr(row, attr)
-    return NA_TEXT if value is None else str(value)
+    raw = getattr(row, attr)
+    return NA_TEXT if raw is None else str(raw)
 
 
 def _format_optional_str(row: SkillRow, attr: str) -> str:
     """Render an Optional[str] timestamp as ``n/a`` or its value."""
-    value: str | None = getattr(row, attr)
-    return NA_TEXT if value is None else value
-
-
-_COUNT_COLUMNS = frozenset({COL_USE_COUNT, COL_VIEW_COUNT, COL_PATCH_COUNT})
-_TIMESTAMP_COLUMNS = frozenset({COL_LAST_USED_AT, COL_LAST_VIEWED_AT, COL_LAST_PATCHED_AT})
+    raw_text: str | None = getattr(row, attr)
+    return NA_TEXT if raw_text is None else raw_text
 
 
 def _render_optional_count(row: SkillRow, attr: str) -> str:
@@ -78,22 +81,20 @@ def _format_value_for_text(row: SkillRow, column: str) -> str:
         return _render_optional_count(row, column)
     if column in _TIMESTAMP_COLUMNS:
         return _render_optional_str(row, column)
-    if column == COL_PROFILE:
-        return row.profile
-    if column == COL_NAME:
-        return row.name
-    if column == COL_DESCRIPTION:
-        return row.description_display
-    if column == COL_TOKENS:
-        return str(row.tokens)
-    if column == COL_PCT_OF_CAP:
-        return f"{row.pct_of_cap:.1f}"
-    return ""
+    getter = VALUE_DISPATCH.get(column)
+    if getter is None:
+        return ""
+    return getter(row)
 
 
 def _render_row(cells: list[str], widths: list[int]) -> str:
     """Render a single text row with stable column widths (module helper)."""
-    return "  ".join(cell.ljust(widths[idx]) for idx, cell in enumerate(cells))
+    return "  ".join(_padded_cell(cell, widths[idx]) for idx, cell in enumerate(cells))
+
+
+def _padded_cell(cell: str, width: int) -> str:
+    """Pad `cell` to `width` (extracted to keep WPS221 quiet)."""
+    return cell.ljust(width)
 
 
 def _compute_column_widths(headers: list[str], body: list[list[str]]) -> list[int]:

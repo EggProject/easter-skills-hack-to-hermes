@@ -103,8 +103,8 @@ def build_rows_for_profile(
 def _enabled_skills_safe(*, profile: Path, platform: str | None, fn: Any) -> frozenset[str]:
     """Call ``enabled_skills_fn`` and raise :class:`EnabledDetectionUnavailable`."""
     try:
-        result: frozenset[str] = fn(profile, platform=platform)
-        return result
+        detected: frozenset[str] = fn(profile, platform=platform)
+        return detected
     except Exception as exc:
         raise EnabledDetectionUnavailable(str(exc)) from exc
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 DESIRED_SKILL = "skill-creator"
-NEVER_DISABLE = frozenset({"openai", "skills"})
+NEVER_DISABLE: frozenset[str] = frozenset(("openai", "skills"))
 
 
 def walk_skills(skills_dir: Path) -> set[str]:

@@ -51,7 +51,7 @@ def plat_value_blocks(plat_value: Any) -> bool:
     if list_blocks(plat_value):
         return True
     if isinstance(plat_value, dict):
-        return any(bool(v) for v in plat_value.values()) if plat_value else False
+        return any(bool(val) for val in plat_value.values()) if plat_value else False
     if plat_value is None:
         return False
     return bool(plat_value)

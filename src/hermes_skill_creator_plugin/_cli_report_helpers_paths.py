@@ -24,7 +24,7 @@ def resolve_hermes_home() -> Path:
 def load_curator(hermes_home: Path) -> Any | None:
     """Best-effort: load tools.skill_usage. Return None when unavailable."""
     try:
-        import tools.skill_usage as usage_mod
+        from tools import skill_usage as usage_mod
     except Exception:
         return None
     if not hasattr(usage_mod, "usage_report"):

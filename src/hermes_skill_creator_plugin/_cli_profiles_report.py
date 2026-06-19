@@ -62,13 +62,13 @@ class AuditReport:
     def __hash__(self) -> int:
         # Hash on a frozen view of to_dict(); lists are not hashable so
         # we freeze the profiles list into a tuple of tuples.
-        d = self.to_dict()
+        report_dict = self.to_dict()
         return hash(
             (
-                d["tool"],
-                d["version"],
-                d["generated_at"],
-                tuple(tuple(sorted(report_row.items())) for report_row in d["profiles"]),
+                report_dict["tool"],
+                report_dict["version"],
+                report_dict["generated_at"],
+                tuple(tuple(sorted(report_row.items())) for report_row in report_dict["profiles"]),
             )
         )
 
