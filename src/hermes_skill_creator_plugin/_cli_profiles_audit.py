@@ -10,26 +10,27 @@ import dataclasses
 from pathlib import Path
 from typing import Any
 
-from hermes_skill_creator_plugin._cli_profiles_apply import (
-    apply_clear_cache,
-    apply_do_install,
-    apply_save_disabled,
-    desired_disabled_after_save,
-    load_config_or_error,
-    read_disabled_or_empty,
-)
-from hermes_skill_creator_plugin._cli_profiles_bilingual import (
-    build_bilingual as build_bilingual,
-)
-from hermes_skill_creator_plugin._cli_profiles_diff import (
-    diff_sets as diff_sets,
-)
-from hermes_skill_creator_plugin._cli_profiles_diff import walk_skills
-from hermes_skill_creator_plugin._cli_profiles_report import (
-    AuditReport as AuditReport,
-)
-from hermes_skill_creator_plugin._cli_profiles_row import new_row, populate_diff_row
-from hermes_skill_creator_plugin._scope import hermes_home_scope
+from hermes_skill_creator_plugin import _cli_profiles_audit_imports as _imps
+
+# Local bindings keep the body readable; the source-of-truth imports
+# live in :mod:`._cli_profiles_audit_imports` (extracted to satisfy
+# WPS201). The canonical re-export names (AuditReport, build_bilingual,
+# diff_sets) are also bound so external callers can still do
+# ``from hermes_skill_creator_plugin._cli_profiles_audit import
+# build_bilingual``.
+AuditReport = _imps.AuditReport
+apply_clear_cache = _imps.apply_clear_cache
+apply_do_install = _imps.apply_do_install
+apply_save_disabled = _imps.apply_save_disabled
+build_bilingual = _imps.build_bilingual
+desired_disabled_after_save = _imps.desired_disabled_after_save
+diff_sets = _imps.diff_sets
+hermes_home_scope = _imps.hermes_home_scope
+load_config_or_error = _imps.load_config_or_error
+new_row = _imps.new_row
+populate_diff_row = _imps.populate_diff_row
+read_disabled_or_empty = _imps.read_disabled_or_empty
+walk_skills = _imps.walk_skills
 
 
 @dataclasses.dataclass(frozen=True)
