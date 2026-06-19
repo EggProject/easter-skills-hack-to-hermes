@@ -7,6 +7,7 @@ re-exports them so existing imports continue to work.
 
 from __future__ import annotations
 
+import dataclasses
 from collections import OrderedDict
 
 from hermes_skill_creator_plugin._reporter_models import SkillRow
@@ -14,6 +15,10 @@ from hermes_skill_creator_plugin._tokenizer import MAX_DESCRIPTION_LENGTH
 
 # Default ellipsis suffix for truncated descriptions (3 chars).
 ELLIPSIS = "..."
+
+# Markers used to push n/a rows AFTER populated rows in the sort tuple.
+_NA_MARKER_LAST = 1
+_NA_MARKER_FIRST = 0
 
 
 def _truncate_for_display(description: str, *, width: int = 60) -> str:
@@ -25,6 +30,22 @@ def _truncate_for_display(description: str, *, width: int = 60) -> str:
     if len(description) > width:
         return description[: width - len(ELLIPSIS)] + ELLIPSIS
     return description
+
+
+@dataclasses.dataclass(frozen=True)
+class _RowFields:
+    """Group of keyword-only inputs for :func:`make_row`."""
+
+    profile: str
+    name: str
+    description: str
+    tokens: int
+    use_count: int | None
+    view_count: int | None
+    patch_count: int | None
+    last_used_at: str | None
+    last_viewed_at: str | None
+    last_patched_at: str | None
 
 
 def make_row(
@@ -41,12 +62,10 @@ def make_row(
     last_patched_at: str | None,
 ) -> SkillRow:
     """Build a SkillRow with derived display + pct_of_cap fields."""
-    pct = round((tokens / MAX_DESCRIPTION_LENGTH) * 100, 1)
-    return SkillRow(
+    return _build_row(_RowFields(
         profile=profile,
         name=name,
-        description_full=description,
-        description_display=_truncate_for_display(description),
+        description=description,
         tokens=tokens,
         use_count=use_count,
         view_count=view_count,
@@ -54,6 +73,24 @@ def make_row(
         last_used_at=last_used_at,
         last_viewed_at=last_viewed_at,
         last_patched_at=last_patched_at,
+    ))
+
+
+def _build_row(fields: _RowFields) -> SkillRow:
+    """Compose a SkillRow from a :class:`_RowFields` bundle."""
+    pct = round((fields.tokens / MAX_DESCRIPTION_LENGTH) * 100, 1)
+    return SkillRow(
+        profile=fields.profile,
+        name=fields.name,
+        description_full=fields.description,
+        description_display=_truncate_for_display(fields.description),
+        tokens=fields.tokens,
+        use_count=fields.use_count,
+        view_count=fields.view_count,
+        patch_count=fields.patch_count,
+        last_used_at=fields.last_used_at,
+        last_viewed_at=fields.last_viewed_at,
+        last_patched_at=fields.last_patched_at,
         pct_of_cap=pct,
     )
 
@@ -73,8 +110,8 @@ def _sort_key(row: SkillRow, sort_key: str) -> tuple[int, int, str] | tuple[int,
         if row.use_count is None:
             # n/a rows sort AFTER non-na rows (1 > 0). The 0/0 placeholders
             # for primary+name are not consulted because na_marker dominates.
-            return (1, 0, name)
-        return (0, -row.use_count, name)
+            return (_NA_MARKER_LAST, 0, name)
+        return (_NA_MARKER_FIRST, -row.use_count, name)
     # Unknown — fall back to tokens desc.
     return (-row.tokens, name)
 
@@ -86,22 +123,34 @@ def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
     Rows with `n/a` on the primary sort column sort LAST.
     """
     if sort_key == "last_used_at":
-        # n/a rows sort LAST (name asc within the n/a group).
-        # non-na rows: most-recent first; within equal timestamps, name asc.
-        # Implementation: group by timestamp, name-asc sort within each
-        # group, then concatenate groups in reverse timestamp order.
-        na_rows = sorted(
-            [r for r in rows if r.last_used_at is None],
-            key=lambda r: r.name,
-        )
-        groups: OrderedDict[str, list[SkillRow]] = OrderedDict()
-        for r in rows:
-            if r.last_used_at is not None:
-                groups.setdefault(r.last_used_at, []).append(r)
-        for ts in groups:
-            groups[ts].sort(key=lambda r: r.name)
-        out: list[SkillRow] = []
-        for ts in reversed(list(groups.keys())):
-            out.extend(groups[ts])
-        return out + na_rows
-    return sorted(rows, key=lambda r: _sort_key(r, sort_key))
+        return _sort_by_last_used_at(rows)
+    return sorted(rows, key=lambda row: _sort_key(row, sort_key))
+
+
+def _sort_by_last_used_at(rows: list[SkillRow]) -> list[SkillRow]:
+    """Sort by ``last_used_at`` desc with name-asc tiebreaker and n/a LAST."""
+    na_rows = _sorted_na_rows(rows)
+    groups = _group_dated_rows(rows)
+    for bucket in groups.values():
+        bucket.sort(key=lambda bucket_row: bucket_row.name)
+    out: list[SkillRow] = []
+    for ts in reversed(list(groups.keys())):
+        out.extend(groups[ts])
+    return out + na_rows
+
+
+def _sorted_na_rows(rows: list[SkillRow]) -> list[SkillRow]:
+    """Return ``rows`` with ``last_used_at is None`` sorted by name asc."""
+    return sorted(
+        (na_row for na_row in rows if na_row.last_used_at is None),
+        key=lambda na_row: na_row.name,
+    )
+
+
+def _group_dated_rows(rows: list[SkillRow]) -> "OrderedDict[str, list[SkillRow]]":
+    """Bucket ``rows`` whose ``last_used_at`` is non-None by their timestamp."""
+    groups: "OrderedDict[str, list[SkillRow]]" = OrderedDict()
+    for dated_row in rows:
+        if dated_row.last_used_at is not None:
+            groups.setdefault(dated_row.last_used_at, []).append(dated_row)
+    return groups
