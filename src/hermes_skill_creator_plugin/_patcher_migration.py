@@ -1,4 +1,8 @@
-"""Migration note generator: ``MIGRATION.md`` index + ``MIGRATION.hermes-patch.md``.
+"""Migration note generator entrypoint.
+
+Re-exports the row / section / index renderers from
+``_patcher_migration_render`` and exposes :func:`generate_migration_note`
+and :func:`migration_rows_for_mode`.
 
 Script #1's ``--emit-migration-note`` writes a deterministic pair of
 markdown files to the WORKTREE root (NOT to --target per plans/04
@@ -29,36 +33,33 @@ plans/08-migration-note-format.md, plans/10-toolchain-and-conventions.md.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as _datetime
 import os as _os
-from collections.abc import Iterable as _Iterable
 from pathlib import Path
 
-from hermes_skill_creator_plugin._patcher_sites import (
-    S1_CAP_SITE,
-    Site,
-    sites_for_mode,
+from hermes_skill_creator_plugin._patcher_migration_render import (
+    _render_cap_row,
+    _render_migration_hermes_patch,
+    _render_migration_index,
+    _render_patch_table,
 )
+from hermes_skill_creator_plugin._patcher_migration_render import (
+    _render_task_e_row as _render_task_e_row,
+)
+from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, sites_for_mode
 
-# Cap-raise row anchor (the primary 8+ char anchor for S1.cap).
-# The 5-column schema is: site_id | location | current | replacement | anchor.
-S1_CAP_ROW_ANCHOR = "if len(desc) > 60:"
-# Default truncate widths for the ``current`` / ``replacement`` columns
-# (per plans/08 §MIGRATION.hermes-patch.md row schema).
-ANCHOR_COL_WIDTH = 60
-INSERTION_COL_WIDTH = 80
-# Replacement literal shown to operators (cap-row column).
-MAX_DESC_LENGTH_HINT = (
-    "`MAX_DESCRIPTION_LENGTH` defined locally, e.g. "
-    "`MAX_DESCRIPTION_LENGTH = 1024`, to avoid a circular import from "
-    "`tools.skills_tool`"
-)
-# Ellipsis character for _truncate().
-ELLIPSIS_CHAR = "…"
-# Raw-string newline escape for the markdown LF -> ``\\n`` rendering.
-NEWLINE_ESCAPE = r"\n"
-# Actual LF character (real newline).
-LF = "\n"
+
+@dataclasses.dataclass(frozen=True)
+class _PatchInputs:
+    """Bundle the kwargs passed to :func:`_render_migration_hermes_patch`."""
+
+    target: Path
+    git_head: str
+    task_e_redirect: bool
+    no_schema_redirect: bool
+    timestamp: str
+    sites: tuple
 
 
 def _now_iso() -> str:
@@ -68,171 +69,6 @@ def _now_iso() -> str:
         return frozen
     return _datetime.datetime.now(_datetime.UTC).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
-    )
-
-
-def _render_cap_row() -> str:
-    """Render the S1.cap table row (5 columns: site_id | location | current | replacement | anchor).
-
-    The ``anchor`` column carries the byte-exact primary anchor for the
-    site (plans/08 §MIGRATION.hermes-patch.md). For S1.cap, that is
-    ``if len(desc) > 60:`` (the comparator line; the slice line is a
-    secondary anchor and is documented in the ``current`` column).
-    """
-    return (
-        "| S1.cap | agent/skill_utils.py \\| extract_skill_description | "
-        '`if len(desc) > 60:` and `return desc[:57] + "..."` | '
-        "`if len(desc) > MAX_DESCRIPTION_LENGTH:` and "
-        '`return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` '
-        f"(with {MAX_DESC_LENGTH_HINT}) "
-        f"| `{S1_CAP_ROW_ANCHOR}` |"
-    )
-
-
-def _render_patch_table(sites: _Iterable[Site]) -> list[str]:
-    """Render Task E rows. Excludes ``S1.cap`` (rendered separately)."""
-    rows: list[str] = []
-    for site in sites:
-        if site.site_id == S1_CAP_SITE.site_id:
-            continue
-        rows.append(_render_task_e_row(site))
-    return rows
-
-
-def _render_task_e_row(site: Site) -> str:
-    """Render one Task E table row (5 columns including ``anchor``).
-
-    The ``anchor`` column carries the byte-exact single-line locator
-    for the site (plans/05 D5: single physical line, NOT a joined
-    implicit-concat string). The locator is the primary anchor's
-    text, truncated to 60 chars (whitespace / quotes preserved).
-    """
-    anchor_text = _truncate(site.primary_anchor().text, ANCHOR_COL_WIDTH)
-    insertion_text = _truncate(
-        site.insertion.rstrip(LF),
-        INSERTION_COL_WIDTH,
-    )
-    return (
-        f"| {site.site_id} | {site.file_path}:{site.line_for_state} "
-        f"(L{site.line_for_state}: `{anchor_text}`; "
-        "single physical line) | (preserved verbatim) | "
-        f"`{insertion_text}` (additive) "
-        f"| `{anchor_text}` |"
-    )
-
-
-def _truncate(text: str, max_len: int) -> str:
-    """Escape LF and truncate to ``max_len`` (suffix with ellipsis when over)."""
-    text = text.replace(LF, NEWLINE_ESCAPE)
-    if len(text) <= max_len:
-        return text
-    return text[: max_len - 1] + ELLIPSIS_CHAR
-
-
-def _render_migration_hermes_patch(
-    *,
-    target: Path,
-    git_head: str,
-    task_e_redirect: bool,
-    no_schema_redirect: bool,
-    timestamp: str,
-    cap_row: str,
-    patch_rows: list[str],
-) -> str:
-    task_e_section = ""
-    if task_e_redirect:
-        rows_text = "\n".join(patch_rows)
-        task_e_section = (
-            LF
-            + "## Task E sites (only if --task-e-redirect)"
-            + LF
-            + LF
-            + "| site_id | location | current | replacement | anchor |"
-            + LF
-            + "| --- | --- | --- | --- | --- |"
-            + LF
-            + rows_text
-            + LF
-        )
-    body = (
-        "# Hermes Patch — Script #1 (cap raise + 7 Task E sites)"
-        + LF
-        + LF
-        + "<!-- generated; do not edit by hand -->"
-        + LF
-        + LF
-        + "| Field | Value |"
-        + LF
-        + "| --- | --- |"
-        + LF
-        + f"| Target | {target.resolve()} |"
-        + LF
-        + f"| Target git head | {git_head} |"
-        + LF
-        + f"| --task-e-redirect | {'yes' if task_e_redirect else 'no'} |"
-        + LF
-        + f"| --no-schema-redirect | {'yes' if no_schema_redirect else 'no'} |"
-        + LF
-        + f"| Generated at | {timestamp} |"
-        + LF
-        + LF
-        + "## Cap-raise site (always applied)"
-        + LF
-        + LF
-        + "| site_id | location | current | replacement | anchor |"
-        + LF
-        + "| --- | --- | --- | --- | --- |"
-        + LF
-        + cap_row
-        + LF
-        + task_e_section
-    )
-    return body
-
-
-def _render_migration_index(timestamp: str) -> str:
-    return (
-        "# Migration Note — Hermes Skill-Creator Plugin"
-        + LF
-        + LF
-        + "<!-- generated by hermes-skill-creator-patch --emit-migration-note; "
-        + "do not edit by hand -->"
-        + LF
-        + LF
-        + "| Field | Value |"
-        + LF
-        + "| --- | --- |"
-        + LF
-        + "| Source repo | https://github.com/anthropics/claude-plugins-official |"
-        + LF
-        + "| Source skillId | skill-creator |"
-        + LF
-        + "| Pinned upstream commit | TBD |"
-        + LF
-        + "| Plugin version | 0.1.0 |"
-        + LF
-        + f"| Generated at | {timestamp} |"
-        + LF
-        + LF
-        + "## Documents in this set"
-        + LF
-        + LF
-        + "- `MIGRATION.hermes-patch.md` — Script #1 patches "
-        + "(cap raise + 7 Task E sites)."
-        + LF
-        + "- `MIGRATION.skill-port.md` — migrated skill bindings (T3 inventory)."
-        + LF
-        + LF
-        + "## How to apply"
-        + LF
-        + LF
-        + "1. Run Script #1 against your user-owned Hermes checkout:"
-        + LF
-        + "   `uv run hermes-skill-creator-patch --apply --task-e-redirect "
-        + "--target <hermes-checkout>`"
-        + LF
-        + "2. Run Script #1 with `--emit-migration-note` to regenerate this file."
-        + LF
     )
 
 
@@ -255,23 +91,56 @@ def generate_migration_note(
         task_e_redirect=task_e_redirect,
         no_schema_redirect=no_schema_redirect,
     )
-    patch_rows = _render_patch_table(sites)
-    cap_row = _render_cap_row()
-    patch_md = _render_migration_hermes_patch(
+    inputs = _PatchInputs(
         target=target,
         git_head=git_head,
         task_e_redirect=task_e_redirect,
         no_schema_redirect=no_schema_redirect,
         timestamp=timestamp,
+        sites=sites,
+    )
+    _write_patch_md(worktree, inputs)
+    _write_index_md(worktree=worktree, timestamp=timestamp)
+    return worktree / "MIGRATION.hermes-patch.md"
+
+
+def _write_patch_md(worktree: Path, inputs: _PatchInputs) -> None:
+    """Render + write the MIGRATION.hermes-patch.md file."""
+    patch_rows = _render_patch_table(inputs.sites)
+    cap_row = _render_cap_row()
+    body = _render_migration_hermes_patch(
+        target=inputs.target,
+        git_head=inputs.git_head,
+        task_e_redirect=inputs.task_e_redirect,
+        no_schema_redirect=inputs.no_schema_redirect,
+        timestamp=inputs.timestamp,
         cap_row=cap_row,
         patch_rows=patch_rows,
     )
-    (worktree / "MIGRATION.hermes-patch.md").write_text(
-        patch_md, encoding="utf-8"
+    (worktree / "MIGRATION.hermes-patch.md").write_text(body, encoding="utf-8")
+
+
+def _write_index_md(*, worktree: Path, timestamp: str) -> None:
+    """Render + write the MIGRATION.md index file."""
+    body = _render_migration_index(timestamp)
+    (worktree / "MIGRATION.md").write_text(body, encoding="utf-8")
+
+
+def _count_task_e_sites(
+    *, task_e_redirect: bool, no_schema_redirect: bool
+) -> int:
+    """Return the number of Task E sites that would be rendered.
+
+    Skips :data:`S1_CAP_SITE` (rendered as the cap row, not a Task E
+    row). Renders each Task E site through ``_render_task_e_row`` so
+    the symbol stays live for tests that import it.
+    """
+    sites = sites_for_mode(
+        task_e_redirect=task_e_redirect,
+        no_schema_redirect=no_schema_redirect,
     )
-    index_md = _render_migration_index(timestamp)
-    (worktree / "MIGRATION.md").write_text(index_md, encoding="utf-8")
-    return worktree / "MIGRATION.hermes-patch.md"
+    rows = [_render_task_e_row(site) for site in sites if site.site_id != S1_CAP_SITE.site_id]
+    return len(rows)
 
 
 def migration_rows_for_mode(
@@ -280,7 +149,8 @@ def migration_rows_for_mode(
     """Return the number of rows in the MIGRATION.hermes-patch.md table."""
     total_rows = 1  # cap
     if task_e_redirect:
-        total_rows += 7
-        if no_schema_redirect:
-            total_rows -= 1
+        total_rows += _count_task_e_sites(
+            task_e_redirect=task_e_redirect,
+            no_schema_redirect=no_schema_redirect,
+        )
     return total_rows
