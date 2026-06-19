@@ -126,7 +126,7 @@ class _ApplyCallArgs:
     bilingual_fn: Any
 
 
-def _audit_apply(args: _ApplyCallArgs) -> None:
+def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
     """Build the apply dep set and run the apply pipeline for one profile."""
     from agent.prompt_builder import clear_skills_system_prompt_cache
     from hermes_cli.config import save_config

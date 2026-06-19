@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import sys
-from typing import Any
+from types import ModuleType
 
 import click
 
@@ -318,7 +318,7 @@ def _git_head(target: Path) -> str:
         return ""
 
 
-def _run_git_rev_parse(subprocess_module: Any, target: Path) -> str:
+def _run_git_rev_parse(subprocess_module: ModuleType, target: Path) -> str:
     """Run ``git rev-parse HEAD`` in ``target``; return stripped stdout."""
     proc = subprocess_module.run(
         ["git", "-C", str(target), "rev-parse", "HEAD"],
@@ -327,7 +327,7 @@ def _run_git_rev_parse(subprocess_module: Any, target: Path) -> str:
         text=True,
         timeout=_GIT_REV_PARSE_TIMEOUT_SEC,
     )
-    return proc.stdout.strip()
+    return str(proc.stdout).strip()
 
 
 def _main_entry() -> int:
