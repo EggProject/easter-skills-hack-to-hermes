@@ -31,7 +31,6 @@ from hermes_skill_creator_plugin._patcher_sites_table import (
 )
 
 
-
 def sites_for_mode(*, task_e_redirect: bool, no_schema_redirect: bool) -> tuple[Site, ...]:
     """Return the (S1.cap, [Task E...]) tuple for the given flag combination."""
     sites: list[Site] = [S1_CAP_SITE]

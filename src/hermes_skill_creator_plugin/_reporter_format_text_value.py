@@ -13,8 +13,12 @@ from __future__ import annotations
 from hermes_skill_creator_plugin._reporter_dispatch import VALUE_DISPATCH
 from hermes_skill_creator_plugin._reporter_format_consts import (
     COUNT_COLUMNS as _COUNT_COLUMNS,
+)
+from hermes_skill_creator_plugin._reporter_format_consts import (
     DEFAULT_TEXT_COLUMNS,
     NA_TEXT,
+)
+from hermes_skill_creator_plugin._reporter_format_consts import (
     TIMESTAMP_COLUMNS as _TIMESTAMP_COLUMNS,
 )
 from hermes_skill_creator_plugin._reporter_format_text_render import (

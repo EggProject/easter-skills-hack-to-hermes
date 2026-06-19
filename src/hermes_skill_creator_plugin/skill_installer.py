@@ -47,11 +47,13 @@ from pathlib import Path
 from hermes_skill_creator_plugin._skill_installer_cap import detect_active_cap
 from hermes_skill_creator_plugin._skill_installer_consts import (
     FULL_DESC_CAP,
-    LIVE_HERMES_AGENT as _LIVE_HERMES_AGENT,
     PINNED_UPSTREAM_COMMIT,
     SHORT_DESC_CAP,
     SKILL_DEST_REL_PARTS,
     STATE_UNPATCHED,
+)
+from hermes_skill_creator_plugin._skill_installer_consts import (
+    LIVE_HERMES_AGENT as _LIVE_HERMES_AGENT,
 )
 from hermes_skill_creator_plugin._skill_installer_note import (
     write_migration_note as _write_migration_note,
@@ -94,10 +96,7 @@ def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
 
         short = skill_dir / SHORT_SKILL_MD_NAME
         if not short.exists():
-            message = (
-                f"SKILL.md.short not found in {skill_dir}; "
-                "cannot install under 60-char cap"
-            )
+            message = f"SKILL.md.short not found in {skill_dir}; cannot install under 60-char cap"
             raise FileNotFoundError(message)
         return short
     from hermes_skill_creator_plugin._skill_installer_consts import (

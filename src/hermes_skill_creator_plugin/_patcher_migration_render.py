@@ -20,7 +20,6 @@ from hermes_skill_creator_plugin._patcher_migration_task_e import (
 from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, Site
 
 
-
 @dataclass(frozen=True)
 class HermesPatchContext:
     """Render-time inputs for the Script #1 migration note body."""
