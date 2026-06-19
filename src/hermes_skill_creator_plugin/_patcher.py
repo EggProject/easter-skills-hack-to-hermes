@@ -15,6 +15,9 @@ hard cap (plans/10 D1):
   ``MIGRATION.md`` rendering.
 - :mod:`._patcher_helpers` — pure-function helpers (anchor locator,
   circular-import pre-flight, cross-FS detector, ISO timestamp).
+- :mod:`._patcher_consts` — exit codes, state strings, drift reasons.
+- :mod:`._patcher_preflight` — refusal-rule preflight.
+- :mod:`._patcher_validation` — per-site drift detection.
 
 The orchestrator's public API (``run_patch``, ``PatcherResult``, the
 ``Anchor`` / ``Site`` dataclasses, the site constants, exit codes,
@@ -48,7 +51,6 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any
 
 from hermes_skill_creator_plugin._patcher_apply import (
     REJECTED_SIDECAR,
@@ -59,6 +61,14 @@ from hermes_skill_creator_plugin._patcher_apply_state import (
     STATE_SIDECAR,
     load_state,
     write_state,
+)
+from hermes_skill_creator_plugin._patcher_consts import (
+    EXIT_DRIFT,
+    EXIT_IO,
+    EXIT_OK,
+    EXIT_PERMISSION,
+    EXIT_USER_ABORT,
+    EXIT_VALIDATION,
 )
 from hermes_skill_creator_plugin._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
@@ -88,6 +98,7 @@ from hermes_skill_creator_plugin._patcher_pipeline import (
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     fail_with_drift as _fail_with_drift_pipeline,
 )
+from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
 from hermes_skill_creator_plugin._patcher_sites import (
     ALL_TASK_E_SITES,
     E1_SKILLS_GUIDANCE,
@@ -104,37 +115,8 @@ from hermes_skill_creator_plugin._patcher_sites import (
     Site,
     sites_for_mode,
 )
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    CIRCULAR_IMPORT_PREFLIGHT,
-    FORCE_REQUIRES_I_ACCEPT,
-    TARGET_IS_HERMES_AGENT,
-    TARGET_MISSING_SKILL_UTILS,
-    TARGET_REQUIRED,
-)
-
-# --- exit codes (per plans/04-script-1-patch.md §Exit code matrix) --------
-EXIT_OK = 0
-EXIT_VALIDATION = 1
-EXIT_DRIFT = 2
-EXIT_PERMISSION = 3
-EXIT_IO = 4
-EXIT_USER_ABORT = 5
-
-# State strings used in the ``state`` dict (also referenced in tests).
-_STATE_MATCHED = "matched"
-_STATE_PATCHED = "patched"
-_STATE_DRIFTED = "drifted"
-
-# Failure-reason strings emitted to the rejected sidecar.
-_REASON_LINE_DRIFT = "LINE_DRIFT"
-_REASON_TEXT_DRIFT = "TEXT_DRIFT"
-
-# Sentinel placeholder text for missing-file / out-of-range line drift.
-_MISSING_FILE = "<file missing>"
-_NOT_FOUND = "<not found>"
-_OUT_OF_RANGE = "<out of range>"
-
-
+from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
+from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
 
 # --- result type ---------------------------------------------------------
 
@@ -169,9 +151,6 @@ def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
         state={},
         diagnostics=tuple(diagnostics),
     )
-
-
-# --- the main entry point -------------------------------------------------
 
 
 def run_patch(
@@ -295,138 +274,8 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     )
 
 
-# --- preflight ------------------------------------------------------------
-
-
-def _run_preflight(
-    target: Path | None,
-    force: bool,
-    i_accept_line_drift: bool,
-) -> tuple[int, str] | None:
-    """Return ``(exit_code, diagnostic)`` on failure, ``None`` to continue.
-
-    Encodes the refusal rules: no target, target is the hermes-agent
-    checkout, missing skill_utils, force without --i-accept-line-drift.
-    """
-    if target is None:
-        return (EXIT_IO, TARGET_REQUIRED)
-    target_path = Path(target).resolve()
-    if is_hermes_agent(target_path):
-        msg = TARGET_IS_HERMES_AGENT.format(resolved=str(target_path))
-        return (EXIT_IO, msg)
-    skill_utils = target_path / TOOLS_SKILL_UTILS_REL
-    if not skill_utils.exists():
-        msg = TARGET_MISSING_SKILL_UTILS.format(path=str(skill_utils))
-        return (EXIT_IO, msg)
-    if force and not i_accept_line_drift:
-        return (EXIT_USER_ABORT, FORCE_REQUIRES_I_ACCEPT)
-    return None
-
-
-# --- validation -----------------------------------------------------------
-
-
-@dataclasses.dataclass(frozen=True)
-class _ValidationResult:
-    """Outcome of pre-validation across all sites."""
-
-    failures: list[dict[str, Any]]
-    matched_count: int
-
-
-def _validate_sites(
-    sites: list[Site],
-    target_path: Path,
-    state: dict[str, str],
-    sites_already: list[str],
-) -> _ValidationResult:
-    """Pre-validate every site and update ``state`` / ``sites_already``."""
-    failures: list[dict[str, Any]] = []
-    for site in sites:
-        outcome = _validate_one_site(site, target_path, state, sites_already)
-        if outcome is not None:
-            failures.append(outcome)
-    return _ValidationResult(failures=failures, matched_count=0)
-
-
-def _validate_one_site(
-    site: Site,
-    target_path: Path,
-    state: dict[str, str],
-    sites_already: list[str],
-) -> dict[str, Any] | None:
-    """Validate one site; return a failure dict or ``None``."""
-    path = target_path / site.file_path
-    if not path.exists():
-        return _missing_file_failure(site)
-    text = path.read_text(encoding="utf-8", errors="replace")
-    if site_already_patched(text, site):
-        sites_already.append(site.site_id)
-        state[site.site_id] = _STATE_PATCHED
-        return None
-    failure = _validate_site_anchors(site, text)
-    if failure is not None:
-        return failure
-    state[site.site_id] = _STATE_MATCHED
-    return None
-
-
-def _missing_file_failure(site: Site) -> dict[str, Any]:
-    """Build a TEXT_DRIFT failure for a site whose file is missing."""
-    return {
-        "site_id": site.site_id,
-        "reason": _REASON_TEXT_DRIFT,
-        "expected": site.primary_anchor().text,
-        "actual_at_line_<missing>": _MISSING_FILE,
-    }
-
-
-def _validate_site_anchors(
-    site: Site,
-    text: str,
-) -> dict[str, Any] | None:
-    """Return a drift failure dict for ``site`` if any anchor drifted."""
-    for anchor in site.anchors:
-        line_no = locate_anchor(text, anchor)
-        if line_no == 0:
-            return _text_drift_failure(site, anchor)
-        if line_no != anchor.line:
-            return _line_drift_failure(site, anchor, line_no, text)
-    return None
-
-
-def _text_drift_failure(site: Site, anchor: Anchor) -> dict[str, Any]:
-    """Build a TEXT_DRIFT failure (anchor not found)."""
-    return {
-        "site_id": site.site_id,
-        "anchor_line": anchor.line,
-        "reason": _REASON_TEXT_DRIFT,
-        "expected": anchor.text,
-        "actual_at_line_<missing>": _NOT_FOUND,
-    }
-
-
-def _line_drift_failure(
-    site: Site,
-    anchor: Anchor,
-    line_no: int,
-    text: str,
-) -> dict[str, Any]:
-    """Build a LINE_DRIFT failure (anchor at wrong line)."""
-    lines = text.splitlines()
-    actual = lines[line_no - 1] if line_no <= len(lines) else _OUT_OF_RANGE
-    return {
-        "site_id": site.site_id,
-        "anchor_line": anchor.line,
-        "found_at_line": line_no,
-        "reason": _REASON_LINE_DRIFT,
-        "expected": anchor.text,
-        "actual_at_line_<n>": actual,
-    }
-
-
 __all__ = [
-    # exit codes
+    # exit codes (re-exported from _patcher_consts)
     "EXIT_OK",
     "EXIT_VALIDATION",
     "EXIT_DRIFT",
