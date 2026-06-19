@@ -10,7 +10,7 @@ several private helpers from ``hermes_skill_creator_plugin._patcher``;
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from hermes_skill_creator_plugin._patcher_apply import (
     AUDIT_LOG,
@@ -19,6 +19,13 @@ from hermes_skill_creator_plugin._patcher_apply import (
     write_rejected,
     write_state,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from hermes_skill_creator_plugin._patcher import PatcherResult
+
+    WriteStateFn = Callable[[Path, dict[str, str]], None]  # noqa: WPS462
 # Imported lazily inside the helper so monkeypatch.setattr on the
 # ``_patcher`` module's ``_atomic_write_bytes`` (test seam) takes effect.
 # (See ``tests/unit/test_patcher.py::test_apply_permission_error_branch``.)
@@ -121,7 +128,7 @@ def ok_check_result(
     target_path: Path,
     diagnostics: list[str],
     exit_ok_code: int,
-    write_state_fn: Any,
+    write_state_fn: "WriteStateFn",
 ) -> "PatcherResult":
     """Build the EXIT_OK result for ``--check`` (or non-apply runs)."""
     for site in sites:
@@ -151,7 +158,7 @@ def apply_sites(
     force: bool,
     audit_log_path: Path | None,
     exit_ok_code: int,
-    write_state_fn: Any,
+    write_state_fn: "WriteStateFn",
 ) -> "PatcherResult":
     """Apply sites in DESCENDING line order (insertions don't shift later sites)."""
     audit_path = audit_log_path or (target_path / AUDIT_LOG)
@@ -268,6 +275,7 @@ def _build_result(
     rejected_path: Path | None = None,
 ) -> "PatcherResult":
     """Build a ``PatcherResult`` (lazy import to avoid the cycle)."""
+    # Runtime import: the cycle is real, so TYPE_CHECKING isn't enough.
     from hermes_skill_creator_plugin._patcher import PatcherResult
 
     return PatcherResult(
