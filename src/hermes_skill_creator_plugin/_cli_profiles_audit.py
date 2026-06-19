@@ -6,6 +6,7 @@ Re-exports helpers from the split sub-modules so existing
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,17 @@ from hermes_skill_creator_plugin._cli_profiles_diff import diff_sets, walk_skill
 from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
 from hermes_skill_creator_plugin._cli_profiles_row import new_row, populate_diff_row
 from hermes_skill_creator_plugin._scope import hermes_home_scope
+
+
+@dataclasses.dataclass(frozen=True)
+class _ApplyDeps:
+    """Lazily-bound callables captured inside ``hermes_home_scope``."""
+
+    save_disabled_skills: Any
+    save_config: Any
+    do_install: Any
+    clear_skills_system_prompt_cache: Any
+    bilingual_fn: Any
 
 
 def audit_profile(
@@ -62,15 +74,18 @@ def audit_profile(
         if not apply:
             return row
 
+        deps = _ApplyDeps(
+            save_disabled_skills=save_disabled_skills,
+            save_config=save_config,
+            do_install=do_install,
+            clear_skills_system_prompt_cache=clear_skills_system_prompt_cache,
+            bilingual_fn=bilingual_fn,
+        )
         _run_apply(
             row,
             config,
             disabled_now,
-            save_disabled_skills,
-            save_config,
-            do_install,
-            clear_skills_system_prompt_cache,
-            bilingual_fn,
+            deps,
             skip_install=skip_install,
             actions=actions,
             errors=errors,
@@ -83,19 +98,15 @@ def _run_apply(
     row: dict[str, Any],
     config: Any,
     disabled_now: set[str],
-    save_disabled_skills: Any,
-    save_config: Any,
-    do_install: Any,
-    clear_skills_system_prompt_cache: Any,
-    bilingual_fn: Any,
+    deps: _ApplyDeps,
     *,
     skip_install: bool,
     actions: list[str],
     errors: list[str],
 ) -> None:
     apply_save_disabled(
-        save_disabled_skills,
-        save_config,
+        deps.save_disabled_skills,
+        deps.save_config,
         config,
         desired_disabled_after_save(disabled_now),
         disabled_now,
@@ -103,27 +114,11 @@ def _run_apply(
         errors,
     )
     if not skip_install:
-        apply_do_install(do_install, row, actions, errors, bilingual_fn)
+        apply_do_install(deps.do_install, row, actions, errors, deps.bilingual_fn)
     apply_clear_cache(
-        clear_skills_system_prompt_cache,
+        deps.clear_skills_system_prompt_cache,
         row,
         actions,
         errors,
-        bilingual_fn,
+        deps.bilingual_fn,
     )
-
-
-__all__ = [
-    "AuditReport",
-    "apply_clear_cache",
-    "apply_do_install",
-    "apply_save_disabled",
-    "audit_profile",
-    "build_bilingual",
-    "diff_sets",
-    "load_config_or_error",
-    "new_row",
-    "populate_diff_row",
-    "read_disabled_or_empty",
-    "walk_skills",
-]
