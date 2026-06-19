@@ -4,7 +4,10 @@ Bilingual help/rejection messages for the reporter CLI.
 """
 from __future__ import annotations
 
-from hermes_skill_creator_plugin._cli_report_helpers import HELP_EN_HEADER, HELP_HU_HEADER
+from hermes_skill_creator_plugin._cli_report_helpers import (
+    HELP_EN_HEADER,
+    HELP_HU_HEADER,
+)
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 from hermes_skill_creator_plugin.i18n import messages_hu as HU
 
@@ -17,6 +20,8 @@ _USAGE_CONT = (
     "                                     [--format text|json] "
     "[--json PATH] [--help]"
 )
+OPTIONS_HEADER_EN = "Options:"
+OPTIONS_HEADER_HU = "Opciok:"
 
 
 def emit_bilingual_help() -> None:
@@ -29,12 +34,12 @@ def emit_bilingual_help() -> None:
         _USAGE_LINE,
         _USAGE_CONT,
         "",
-        "Options:",
-        "  --profile <name>    " + EN.report_opt_profile,
-        "  --sort <key>        " + EN.report_opt_sort,
-        "  --format <fmt>      " + EN.report_opt_format,
-        "  --json PATH         " + EN.report_opt_json,
-        "  --help              " + EN.report_opt_help,
+        OPTIONS_HEADER_EN,
+        f"  --profile <name>    {EN.report_opt_profile}",
+        f"  --sort <key>        {EN.report_opt_sort}",
+        f"  --format <fmt>      {EN.report_opt_format}",
+        f"  --json PATH         {EN.report_opt_json}",
+        f"  --help              {EN.report_opt_help}",
     ]
     hu_lines = [
         HELP_HU_HEADER,
@@ -42,12 +47,12 @@ def emit_bilingual_help() -> None:
         _USAGE_LINE,
         _USAGE_CONT,
         "",
-        "Opciok:",
-        "  --profile <name>    " + HU.report_opt_profile,
-        "  --sort <key>        " + HU.report_opt_sort,
-        "  --format <fmt>      " + HU.report_opt_format,
-        "  --json PATH         " + HU.report_opt_json,
-        "  --help              " + HU.report_opt_help,
+        OPTIONS_HEADER_HU,
+        f"  --profile <name>    {HU.report_opt_profile}",
+        f"  --sort <key>        {HU.report_opt_sort}",
+        f"  --format <fmt>      {HU.report_opt_format}",
+        f"  --json PATH         {HU.report_opt_json}",
+        f"  --help              {HU.report_opt_help}",
     ]
     click.echo("\n".join(en_lines))
     click.echo("")
