@@ -40,25 +40,56 @@ def _skill_name_from(child: Path) -> str | None:
     skill_md = child / "SKILL.md"
     if not skill_md.is_file():
         return None
+    fm = _parse_skill_frontmatter(skill_md)
+    if fm is None:
+        return None
+    return _name_from_frontmatter(fm, fallback=child.name)
+
+
+def _parse_skill_frontmatter(skill_md: Path) -> dict[str, object] | None:
+    """Read SKILL.md + parse frontmatter; return None on any failure."""
+    text = _read_skill_md(skill_md)
+    if text is None:
+        return None
+    return _parse_frontmatter_text(text)
+
+
+def _read_skill_md(skill_md: Path) -> str | None:
+    """Read SKILL.md text or return None on OSError."""
     try:
-        text = skill_md.read_text(encoding="utf-8")
+        return skill_md.read_text(encoding="utf-8")
     except OSError:
         return None
+
+
+def _parse_frontmatter_text(text: str) -> dict[str, object] | None:
+    """Parse frontmatter text; return None on any exception."""
     try:
         from agent.skill_utils import parse_frontmatter
 
         fm, _body = parse_frontmatter(text)
     except Exception:
         return None
+    return fm
+
+
+def _name_from_frontmatter(
+    fm: dict[str, object],
+    *,
+    fallback: str,
+) -> str:
+    """Return the ``name`` field if it is a non-empty string, else ``fallback``."""
     name = fm.get("name")
     if isinstance(name, str) and name:
         return name
-    return child.name
+    return fallback
 
 
-def diff_sets(current: set[str], desired: set[str]) -> dict[str, list[str]]:
+def diff_sets(
+    current: set[str],
+    desired: set[str],
+) -> dict[str, list[str]]:
     """Compute the symmetric diff between current and desired as sorted lists."""
-    return {
-        "added": sorted(desired - current),
-        "removed": sorted(current - desired),
-    }
+    added = sorted(desired - current)
+    removed = sorted(current - desired)
+    return {"added": added, "removed": removed}

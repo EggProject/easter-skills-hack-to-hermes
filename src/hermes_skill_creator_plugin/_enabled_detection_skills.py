@@ -30,9 +30,22 @@ def find_skill_md(skills_dir: Path, name: str) -> Path | None:
     """Locate the ``SKILL.md`` for a skill by NAME."""
     if not skills_dir.is_dir():
         return None
+    direct_hit = _direct_skill_md(skills_dir, name)
+    if direct_hit is not None:
+        return direct_hit
+    return _scan_for_skill_md(skills_dir, name)
+
+
+def _direct_skill_md(skills_dir: Path, name: str) -> Path | None:
+    """Return ``skills_dir/name/SKILL.md`` when it exists, else ``None``."""
     direct = skills_dir / name / SKILL_MD_NAME
     if direct.is_file():
         return direct
+    return None
+
+
+def _scan_for_skill_md(skills_dir: Path, name: str) -> Path | None:
+    """Walk ``skills_dir`` looking for a SKILL.md whose name matches ``name``."""
     for child in sorted(skills_dir.iterdir()):
         if not child.is_dir():
             continue

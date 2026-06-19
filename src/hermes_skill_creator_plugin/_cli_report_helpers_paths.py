@@ -69,7 +69,14 @@ def _strip_frontmatter(text: str, skill_name: str) -> str:
     desc = _description_from_frontmatter(frontmatter)
     if desc is not None:
         return desc
-    return body.split("\n\n", 1)[0] if body else UNAVAILABLE_DESC_FMT.format(name=skill_name)
+    return _fallback_description(body, skill_name)
+
+
+def _fallback_description(body: str, skill_name: str) -> str:
+    """First paragraph of ``body``, or the placeholder when ``body`` is empty."""
+    if not body:
+        return UNAVAILABLE_DESC_FMT.format(name=skill_name)
+    return body.split("\n\n", 1)[0]
 
 
 def _description_from_frontmatter(frontmatter: str) -> str | None:

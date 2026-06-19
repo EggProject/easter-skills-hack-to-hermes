@@ -7,6 +7,7 @@ them so existing imports continue to work.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,41 @@ HU_USAGE_BAR = (
     "                                  [--frozen-time ISO] [--help]"
 )
 
+# (flag_label, i18n_key) pairs — kept short to keep WPS221 quiet.
+_EN_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("--apply            ", "profiles_opt_apply"),
+    ("--audit            ", "profiles_opt_audit"),
+    ("--profile NAME     ", "profiles_opt_profile"),
+    ("--json PATH        ", "profiles_opt_json"),
+    ("--yes              ", "profiles_opt_yes"),
+    ("--skip-install     ", "profiles_opt_skip_install"),
+    ("--frozen-time ISO  ", "profiles_opt_frozen_time"),
+    ("--help             ", "profiles_opt_help"),
+)
+_HU_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("--apply            ", "profiles_opt_apply"),
+    ("--profile NÉV      ", "profiles_opt_profile"),
+    ("--json ÚTVONAL     ", "profiles_opt_json"),
+    ("--yes              ", "profiles_opt_yes"),
+    ("--skip-install     ", "profiles_opt_skip_install"),
+    ("--frozen-time ISO  ", "profiles_opt_frozen_time"),
+    ("--help             ", "profiles_opt_help"),
+)
+
+
+def _format_options_block(
+    options: tuple[tuple[str, str], ...],
+    messages: Mapping[str, str],
+) -> str:
+    """Render an options block: ``  FLAG  description`` per line."""
+    parts = [_format_option_line(flag, messages[key]) for flag, key in options]
+    return "".join(parts)
+
+
+def _format_option_line(flag: str, description: str) -> str:
+    """Format a single ``  FLAG  description\\n`` option line."""
+    return f"  {flag}{description}\n"
+
 
 def _build_en_help() -> str:
     """Build the English --help text body."""
@@ -40,14 +76,7 @@ def _build_en_help() -> str:
         f"{EN_USAGE_BAR}\n\n"
         f"{EN['profiles_help_long']}\n\n"
         f"{EN_SECTION}\n"
-        f"  --apply            {EN['profiles_opt_apply']}\n"
-        f"  --audit            {EN['profiles_opt_audit']}\n"
-        f"  --profile NAME     {EN['profiles_opt_profile']}\n"
-        f"  --json PATH        {EN['profiles_opt_json']}\n"
-        f"  --yes              {EN['profiles_opt_yes']}\n"
-        f"  --skip-install     {EN['profiles_opt_skip_install']}\n"
-        f"  --frozen-time ISO  {EN['profiles_opt_frozen_time']}\n"
-        f"  --help             {EN['profiles_opt_help']}\n"
+        f"{_format_options_block(_EN_OPTIONS, EN)}"
     )
 
 
@@ -59,13 +88,7 @@ def _build_hu_help() -> str:
         f"{HU_USAGE_BAR}\n\n"
         f"{HU['profiles_help_long']}\n\n"
         f"{HU_SECTION}\n"
-        f"  --apply            {HU['profiles_opt_apply']}\n"
-        f"  --profile NÉV      {HU['profiles_opt_profile']}\n"
-        f"  --json ÚTVONAL     {HU['profiles_opt_json']}\n"
-        f"  --yes              {HU['profiles_opt_yes']}\n"
-        f"  --skip-install     {HU['profiles_opt_skip_install']}\n"
-        f"  --frozen-time ISO  {HU['profiles_opt_frozen_time']}\n"
-        f"  --help             {HU['profiles_opt_help']}\n"
+        f"{_format_options_block(_HU_OPTIONS, HU)}"
     )
 
 
