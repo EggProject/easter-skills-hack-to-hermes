@@ -6,7 +6,7 @@ from __future__ import annotations
 
 
 _DISABLED_KEY = "disabled"
-_DISABLED_PREFIX = _DISABLED_KEY + ":"
+_DISABLED_PREFIX = "disabled:"
 _OPEN_BRACES = "{["
 _CLOSE_BRACES = "}]"
 _QUOTE_CHARS = ("'", '"')
@@ -18,10 +18,7 @@ def split_top_level_commas(text: str) -> list[str]:
     depth = 0
     buf: list[str] = []
     for ch in text:
-        if ch in _OPEN_BRACES:
-            depth += 1
-        elif ch in _CLOSE_BRACES:
-            depth -= 1
+        depth = _update_brace_depth(ch, depth)
         if ch == "," and depth == 0:
             parts.append("".join(buf))
             buf = []
@@ -32,12 +29,21 @@ def split_top_level_commas(text: str) -> list[str]:
     return parts
 
 
+def _update_brace_depth(ch: str, depth: int) -> int:
+    """Return the new brace depth after consuming ``ch``."""
+    if ch in _OPEN_BRACES:
+        return depth + 1
+    if ch in _CLOSE_BRACES:
+        return depth - 1
+    return depth
+
+
 def strip_quotes(text: str) -> str:
     """Strip whitespace and outer quote characters from ``text``."""
-    result = text.strip()
+    cleaned = text.strip()
     for quote in _QUOTE_CHARS:
-        result = result.strip(quote)
-    return result
+        cleaned = cleaned.strip(quote)
+    return cleaned
 
 
 def extract_disabled_from_inline(text: str, out: set[str]) -> None:
@@ -46,14 +52,18 @@ def extract_disabled_from_inline(text: str, out: set[str]) -> None:
     if inner.startswith("{") and inner.endswith("}"):
         inner = inner[1:-1].strip()
     for part in split_top_level_commas(inner):
-        kv = part.strip()
-        if not kv.startswith(_DISABLED_PREFIX):
-            continue
-        value = kv[len(_DISABLED_PREFIX):].strip()
-        if not (value.startswith("[") and value.endswith("]")):
-            continue
-        items = split_top_level_commas(value[1:-1].strip())
-        for item in items:
-            name = strip_quotes(item)
-            if name:
-                out.add(name)
+        _extract_name(part, out)
+
+
+def _extract_name(part: str, out: set[str]) -> None:
+    """Add the disabled-name from ``part`` to ``out`` if well-formed."""
+    kv = part.strip()
+    if not kv.startswith(_DISABLED_PREFIX):
+        return
+    payload = kv[len(_DISABLED_PREFIX):].strip()
+    if not (payload.startswith("[") and payload.endswith("]")):
+        return
+    for raw in split_top_level_commas(payload[1:-1].strip()):
+        name = strip_quotes(raw)
+        if name:
+            out.add(name)
