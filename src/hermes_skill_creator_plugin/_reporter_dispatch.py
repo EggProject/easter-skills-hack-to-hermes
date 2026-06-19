@@ -8,6 +8,7 @@ display string from a ``SkillRow``.
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import MappingProxyType
 
 from hermes_skill_creator_plugin._reporter_format import (
     COL_DESCRIPTION,
@@ -44,10 +45,12 @@ def _get_pct_of_cap(row: SkillRow) -> str:
     return f"{row.pct_of_cap:.1f}"
 
 
-VALUE_DISPATCH: dict[str, Callable[[SkillRow], str]] = {
-    COL_PROFILE: _get_profile,
-    COL_NAME: _get_name,
-    COL_DESCRIPTION: _get_description,
-    COL_TOKENS: _get_tokens,
-    COL_PCT_OF_CAP: _get_pct_of_cap,
-}
+VALUE_DISPATCH: MappingProxyType[str, Callable[[SkillRow], str]] = MappingProxyType(
+    {
+        COL_PROFILE: _get_profile,
+        COL_NAME: _get_name,
+        COL_DESCRIPTION: _get_description,
+        COL_TOKENS: _get_tokens,
+        COL_PCT_OF_CAP: _get_pct_of_cap,
+    },
+)
