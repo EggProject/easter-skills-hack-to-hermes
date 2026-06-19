@@ -9,6 +9,7 @@ from typing import Any
 
 from hermes_skill_creator_plugin._cli_report_helpers import (
     EMPTY_USAGE,
+    PERSISTED_KEY,
     emit_tokenizer_warning,
     load_skill_description,
 )
@@ -27,45 +28,58 @@ def build_usage_rows(
     """Build a name -> usage-fields map. None values when not persisted."""
     out: dict[str, dict[str, Any]] = {}
     if curator is None:
-        for n in enabled_names:
-            out[n] = {**EMPTY_USAGE, "_persisted": False}
+        for name in enabled_names:
+            out[name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
         return out
+    report = _usage_report_safe(curator, skills_dir)
+    for entry in report:
+        entry_name = _entry_name(entry)
+        if entry_name is None or entry_name not in enabled_names:
+            continue
+        out[entry_name] = _entry_fields(entry)
+    for enabled_name in enabled_names:
+        if enabled_name not in out:
+            out[enabled_name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
+    return out
+
+
+def _usage_report_safe(curator: Any, skills_dir: Path) -> list[Any]:
+    """Call ``curator.usage_report`` and return [] on any error."""
     try:
         report = curator.usage_report(skills_dir=skills_dir)
     except Exception:
-        report = []
-    for entry in report or []:
-        name = getattr(entry, "name", None)
-        if name is None or name not in enabled_names:
-            continue
-        persisted = bool(getattr(entry, "_persisted", False))
-        out[name] = {
-            "use_count": (
-                getattr(entry, "use_count", 0) if persisted else None
-            ),
-            "view_count": (
-                getattr(entry, "view_count", 0) if persisted else None
-            ),
-            "patch_count": (
-                getattr(entry, "patch_count", 0) if persisted else None
-            ),
-            "last_used_at": (
-                getattr(entry, "last_used_at", None) if persisted else None
-            ),
-            "last_viewed_at": (
-                getattr(entry, "last_viewed_at", None) if persisted else None
-            ),
-            "last_patched_at": (
-                getattr(entry, "last_patched_at", None)
-                if persisted
-                else None
-            ),
-            "_persisted": persisted,
-        }
-    for n in enabled_names:
-        if n not in out:
-            out[n] = {**EMPTY_USAGE, "_persisted": False}
-    return out
+        return []
+    return report or []
+
+
+def _entry_name(entry: Any) -> str | None:
+    """Return ``entry.name`` if it is a string, else ``None``."""
+    raw_name = getattr(entry, "name", None)
+    if isinstance(raw_name, str) and raw_name:
+        return raw_name
+    return None
+
+
+def _entry_fields(entry: Any) -> dict[str, Any]:
+    """Project the persisted usage fields from ``entry`` (None if not persisted)."""
+    persisted = bool(getattr(entry, PERSISTED_KEY, False))
+    return {
+        "use_count": (getattr(entry, "use_count", 0) if persisted else None),
+        "view_count": (getattr(entry, "view_count", 0) if persisted else None),
+        "patch_count": (getattr(entry, "patch_count", 0) if persisted else None),
+        "last_used_at": (
+            getattr(entry, "last_used_at", None) if persisted else None
+        ),
+        "last_viewed_at": (
+            getattr(entry, "last_viewed_at", None) if persisted else None
+        ),
+        "last_patched_at": (
+            getattr(entry, "last_patched_at", None)
+            if persisted
+            else None
+        ),
+        PERSISTED_KEY: persisted,
+    }
 
 
 def build_rows_for_profile(
@@ -77,36 +91,73 @@ def build_rows_for_profile(
     enabled_skills_fn: Any,
 ) -> tuple[list[SkillRow], int]:
     """Build the SkillRow list and total_tokens for `profile`."""
-    try:
-        enabled = enabled_skills_fn(profile, platform=platform)
-    except Exception as exc:
-        raise EnabledDetectionUnavailable(str(exc)) from exc
+    enabled = _enabled_skills_safe(
+        profile=profile, platform=platform, fn=enabled_skills_fn,
+    )
     skills_dir = profile / "skills"
     usage = build_usage_rows(curator, skills_dir, enabled)
+    return _build_skill_rows(profile=profile, skills_dir=skills_dir, usage=usage, enabled=enabled,
+                             estimate_tokens_fn=estimate_tokens_fn)
+
+
+def _enabled_skills_safe(
+    *, profile: Path, platform: str | None, fn: Any
+) -> frozenset[str]:
+    """Call ``enabled_skills_fn`` and raise :class:`EnabledDetectionUnavailable`."""
+    try:
+        return fn(profile, platform=platform)
+    except Exception as exc:
+        raise EnabledDetectionUnavailable(str(exc)) from exc
+
+
+def _build_skill_rows(
+    *,
+    profile: Path,
+    skills_dir: Path,
+    usage: dict[str, dict[str, Any]],
+    enabled: frozenset[str],
+    estimate_tokens_fn: Any,
+) -> tuple[list[SkillRow], int]:
+    """Build the SkillRow list and total_tokens."""
     rows: list[SkillRow] = []
     total = 0
     for name in sorted(enabled):
-        description = load_skill_description(skills_dir, name)
-        tokens = estimate_tokens_fn(
-            name, description, warning=emit_tokenizer_warning
+        row, tokens = _make_one_row(
+            profile=profile, name=name, skills_dir=skills_dir,
+            usage=usage, estimate_tokens_fn=estimate_tokens_fn,
         )
+        rows.append(row)
         total += tokens
-        u = usage.get(name, EMPTY_USAGE)
-        rows.append(
-            make_row(
-                profile=profile.name,
-                name=name,
-                description=description,
-                tokens=tokens,
-                use_count=u["use_count"],
-                view_count=u["view_count"],
-                patch_count=u["patch_count"],
-                last_used_at=u["last_used_at"],
-                last_viewed_at=u["last_viewed_at"],
-                last_patched_at=u["last_patched_at"],
-            )
-        )
     return rows, total
+
+
+def _make_one_row(
+    *,
+    profile: Path,
+    name: str,
+    skills_dir: Path,
+    usage: dict[str, dict[str, Any]],
+    estimate_tokens_fn: Any,
+) -> tuple[SkillRow, int]:
+    """Build a single SkillRow (and its token count)."""
+    description = load_skill_description(skills_dir, name)
+    tokens = estimate_tokens_fn(
+        name, description, warning=emit_tokenizer_warning
+    )
+    usage_for = usage.get(name, EMPTY_USAGE)
+    row = make_row(
+        profile=profile.name,
+        name=name,
+        description=description,
+        tokens=tokens,
+        use_count=usage_for["use_count"],
+        view_count=usage_for["view_count"],
+        patch_count=usage_for["patch_count"],
+        last_used_at=usage_for["last_used_at"],
+        last_viewed_at=usage_for["last_viewed_at"],
+        last_patched_at=usage_for["last_patched_at"],
+    )
+    return row, tokens
 
 
 def check_json_path(json_path: Path, hermes_home: Path) -> bool:

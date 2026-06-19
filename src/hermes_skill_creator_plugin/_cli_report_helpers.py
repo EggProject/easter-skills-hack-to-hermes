@@ -33,6 +33,7 @@ EMPTY_USAGE: dict[str, Any] = {
     "last_viewed_at": None,
     "last_patched_at": None,
 }
+PERSISTED_KEY = "_persisted"
 
 FORMAT_TEXT = "text"
 FORMAT_JSON = "json"
