@@ -4,6 +4,12 @@ The patcher pipeline and several other modules import many message
 strings from ``i18n.messages_en``. Importing them as ``_i18n.X`` keeps
 the wemake WPS235 "too many imported names" cap from triggering
 without losing type-checker visibility.
+
+This module re-exports a curated subset (the strings the patcher
+pipeline touches most often). Pipeline modules prefer importing from
+here so that the strict WPS235 limit (<=8) is met for this hub.
+For strings NOT exposed here (e.g. ``VALIDATION_FAILED``),
+import directly from :mod:`hermes_skill_creator_plugin.i18n.messages_en`.
 """
 
 from hermes_skill_creator_plugin.i18n.messages_en import (
@@ -15,7 +21,6 @@ from hermes_skill_creator_plugin.i18n.messages_en import (
     OK_PATCHED,
     PERMISSION_DENIED,
     TEXT_DRIFT,
-    VALIDATION_FAILED,
 )
 
 __all__ = [
@@ -27,5 +32,4 @@ __all__ = [
     "OK_PATCHED",
     "PERMISSION_DENIED",
     "TEXT_DRIFT",
-    "VALIDATION_FAILED",
 ]

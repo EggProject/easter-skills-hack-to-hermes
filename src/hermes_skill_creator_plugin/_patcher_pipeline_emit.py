@@ -21,6 +21,7 @@ from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     REMEDIATION_HU,
 )
 from hermes_skill_creator_plugin._patcher_sites import Site
+from hermes_skill_creator_plugin.i18n.messages_en import VALIDATION_FAILED
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
@@ -84,7 +85,7 @@ def _append_drift_diagnostic(
                 actual=failure.get("actual_at_line_<missing>", ""),
             )
         )
-    diagnostics.append(_i18n.VALIDATION_FAILED.format(site_id=failure["site_id"]))
+    diagnostics.append(VALIDATION_FAILED.format(site_id=failure["site_id"]))
 
 
 def emit_audit_log(

@@ -14,13 +14,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hermes_skill_creator_plugin import _patcher as _patcher_mod
 from hermes_skill_creator_plugin import i18n as _i18n
 from hermes_skill_creator_plugin._patcher_apply import AUDIT_LOG
 from hermes_skill_creator_plugin._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
+    now_iso as _now_iso,
 )
-from hermes_skill_creator_plugin._patcher_helpers import now_iso as _now_iso
 from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     EXIT_IO,
     EXIT_PERMISSION,
@@ -31,10 +30,10 @@ from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     emit_audit_log,
     mutate_lines_for_site,
 )
-from hermes_skill_creator_plugin._patcher_sites import Site
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
+    from hermes_skill_creator_plugin._patcher_sites import Site
 
     WriteStateFn = Any  # Callable[[Path, dict[str, str]], None]
 
@@ -146,6 +145,8 @@ def _try_atomic_write(path: Path, after_bytes: bytes) -> PatcherResult | None:
     Lazy-imports ``_patcher`` so monkeypatch.setattr on the test seam
     is picked up. (See ``tests/unit/test_patcher.py::test_apply_permission_error_branch``.)
     """
+    from hermes_skill_creator_plugin import _patcher as _patcher_mod
+
     try:
         _patcher_mod._atomic_write_bytes(path, after_bytes)
     except (PermissionError, OSError) as exc:

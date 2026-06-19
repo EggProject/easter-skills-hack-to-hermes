@@ -50,31 +50,21 @@ import click
 # the audit helpers live in ``_cli_profiles_audit`` and the unused-
 # import silencer is mandated by the test contract.
 from agent.skill_utils import get_disabled_skill_names  # noqa: F401
-from hermes_cli.profiles import ProfileInfo
+from hermes_cli.profiles import ProfileInfo, list_profiles
 from hermes_cli.skills_config import save_disabled_skills  # noqa: F401
 
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    audit_profile as _audit_profile,
-)
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    build_bilingual as _build_bilingual,
-)
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    diff_sets,
-    walk_skills,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    build_help_text as _build_help_text,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    main_cmd,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    make_cli as _make_cli,
-)
-from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
-from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
-from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
+from hermes_skill_creator_plugin import cli_profiles_imports as _imps
+
+# Local bindings for readability; source-of-truth imports live in
+# :mod:`.cli_profiles_imports` (extracted to satisfy WPS201).
+AuditReport = _imps.AuditReport
+_audit_profile = _imps._audit_profile
+_build_bilingual = _imps._build_bilingual
+_build_help_text = _imps._build_help_text
+_make_cli = _imps._make_cli
+diff_sets = _imps.diff_sets
+main_cmd = _imps.main_cmd
+walk_skills = _imps.walk_skills
 
 # Re-exports for tests / external callers (do NOT remove — tests
 # import these by name from ``hermes_skill_creator_plugin.cli_profiles``).
@@ -110,7 +100,7 @@ LIVE_HERMES_HOME = Path.home() / ".hermes"
 
 def _bilingual(key: str, **format_kwargs: object) -> str:
     """Build a ``[en] ... / [hu] ...`` line for the given message key."""
-    return _build_bilingual(EN, HU, key, **format_kwargs)
+    return _build_bilingual(_imps.EN, _imps.HU, key, **format_kwargs)
 
 
 def _now_iso(frozen_time: str | None) -> str:
@@ -235,8 +225,6 @@ def _run_audit_phase(opts: dict[str, object]) -> AuditReport:
     frozen_time: str | None = cast("str | None", opts["frozen_time"])
     skip_install = bool(opts["skip_install"])
     profile: str | None = cast("str | None", opts["profile"])
-
-    from hermes_cli.profiles import list_profiles
 
     click.echo(_bilingual("profiles_msg_scanning"))
     selected = _select_profiles(list_profiles(), profile)

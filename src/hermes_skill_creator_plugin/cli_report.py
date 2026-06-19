@@ -39,14 +39,26 @@ from typing import Any
 
 import click
 
-from hermes_skill_creator_plugin import _cli_report_helpers as _helpers
-from hermes_skill_creator_plugin import _cli_report_helpers_paths as _paths
-from hermes_skill_creator_plugin import _cli_report_rows as _rows
-from hermes_skill_creator_plugin._cli_report_cmd import main
-from hermes_skill_creator_plugin._cli_report_ui import emit_bilingual_help
+from hermes_skill_creator_plugin import cli_report_imports as _imps
 from hermes_skill_creator_plugin._enabled_detection import get_enabled_skills
-from hermes_skill_creator_plugin._reporter import ProfileSection, sort_rows
-from hermes_skill_creator_plugin._tokenizer import estimate_tokens
+from hermes_skill_creator_plugin.i18n import messages_en as EN
+
+# Local bindings for readability; source-of-truth imports live in
+# :mod:`.cli_report_imports` (extracted to satisfy WPS201).
+_helpers = _imps._helpers
+_paths = _imps._paths
+_rows = _imps._rows
+emit_bilingual_help = _imps.emit_bilingual_help
+estimate_tokens = _imps.estimate_tokens
+main = _imps.main
+sort_rows = _imps.sort_rows
+
+# ``ProfileSection`` is used in type annotations only; with
+# ``from __future__ import annotations`` the type-checker can resolve
+# it through the imports module without a module-level binding.
+# Tests import ``ProfileSection`` by name from this module via the
+# reporter submodule, so we DO need to bind it.
+ProfileSection = _imps.ProfileSection
 
 HELP_EN_HEADER = _helpers.HELP_EN_HEADER
 HELP_HU_HEADER = _helpers.HELP_HU_HEADER
@@ -68,8 +80,6 @@ def _check_hermes_home(
     hermes_home: Path,
 ) -> int | None:
     """Return 6 when json_path falls under hermes_home, else None."""
-    from hermes_skill_creator_plugin.i18n import messages_en as EN
-
     if json_path is not None and _check_json_path(
         json_path,
         hermes_home,
@@ -126,8 +136,6 @@ def _build_one_profile_section(
     json_sections: list[ProfileSection],
 ) -> int | None:
     """Append one profile's section; return 6 on detection error, else None."""
-    from hermes_skill_creator_plugin.i18n import messages_en as EN
-
     try:
         rows, total = _build_rows_for_profile(
             prof,
