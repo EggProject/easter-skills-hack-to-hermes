@@ -42,14 +42,14 @@ packages = ["src/hermes_skill_creator_plugin"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py314"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.black]
 line-length = 120
-target-version = ["py314"]
+target-version = ["py313"]
 
 [tool.mypy]
 python_version = "3.14"
