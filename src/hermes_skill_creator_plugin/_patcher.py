@@ -54,10 +54,17 @@ from pathlib import Path
 
 from hermes_skill_creator_plugin import _patcher_imports as _imps
 from hermes_skill_creator_plugin._patcher_pipeline import (
+    _ApplySitesInputs,
+    _OkCheckInputs,
+)
+from hermes_skill_creator_plugin._patcher_pipeline import (
     apply_sites as _apply_sites_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_pipeline import (
     ok_check_result as _ok_check_result_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    _FailDriftInputs,
 )
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     fail_with_drift as _fail_with_drift_pipeline,
@@ -141,41 +148,14 @@ def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
     )
 
 
-def run_patch(
-    *,
-    target: Path | None,
-    check: bool,
-    apply: bool,
-    force: bool,
-    i_accept_line_drift: bool,
-    task_e_redirect: bool,
-    no_schema_redirect: bool,
-    yes: bool = False,
-    verbose: bool = False,
-    audit_log_path: Path | None = None,
-    git_head: str = "",
-) -> PatcherResult:
+def run_patch(inputs: PatchRunInputs) -> PatcherResult:
     """Run the patcher.
 
     Returns a :class:`PatcherResult`; the caller (CLI) is responsible
     for translating ``exit_code`` into a ``SystemExit``. This function
     never raises SystemExit; it returns a result.
     """
-    return _run_patch_with_inputs(
-        PatchRunInputs(
-            target=target,
-            check=check,
-            apply=apply,
-            force=force,
-            i_accept_line_drift=i_accept_line_drift,
-            task_e_redirect=task_e_redirect,
-            no_schema_redirect=no_schema_redirect,
-            yes=yes,
-            verbose=verbose,
-            audit_log_path=audit_log_path,
-            git_head=git_head,
-        )
-    )
+    return _run_patch_with_inputs(inputs)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -229,36 +209,42 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     validation = _validate_sites(sites, target_path, state, sites_already)
     if validation.failures:
         return _fail_with_drift_pipeline(
-            target_path,
-            validation.failures,
-            state,
-            sites_already,
-            diagnostics,
-            inputs.git_head,
-            exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+            _FailDriftInputs(
+                target_path=target_path,
+                failures=validation.failures,
+                state=state,
+                sites_already=sites_already,
+                diagnostics=diagnostics,
+                git_head=inputs.git_head,
+                exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+            ),
         )
     if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(
-            sites,
-            state,
-            sites_patched,
-            sites_already,
-            target_path,
-            diagnostics,
-            exit_ok_code=EXIT_OK,
-            write_state_fn=write_state,
+            _OkCheckInputs(
+                sites=sites,
+                state=state,
+                sites_patched=sites_patched,
+                sites_already=sites_already,
+                target_path=target_path,
+                diagnostics=diagnostics,
+                exit_ok_code=EXIT_OK,
+                write_state_fn=write_state,
+            ),
         )
     return _apply_sites_pipeline(
-        sites,
-        target_path,
-        state,
-        sites_patched,
-        sites_already,
-        diagnostics,
-        inputs.force,
-        inputs.audit_log_path,
-        exit_ok_code=EXIT_OK,
-        write_state_fn=write_state,
+        _ApplySitesInputs(
+            sites=sites,
+            target_path=target_path,
+            state=state,
+            sites_patched=sites_patched,
+            sites_already=sites_already,
+            diagnostics=diagnostics,
+            force=inputs.force,
+            audit_log_path=inputs.audit_log_path,
+            exit_ok_code=EXIT_OK,
+            write_state_fn=write_state,
+        ),
     )
 
 
@@ -289,6 +275,7 @@ __all__ = [
     # result type
     "PatcherResult",
     # public API
+    "PatchRunInputs",
     "run_patch",
     "hermes_agent_path",
     "is_hermes_agent",

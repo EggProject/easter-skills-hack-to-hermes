@@ -48,34 +48,9 @@ class _RowFields:
     last_patched_at: str | None
 
 
-def make_row(
-    *,
-    profile: str,
-    name: str,
-    description: str,
-    tokens: int,
-    use_count: int | None,
-    view_count: int | None,
-    patch_count: int | None,
-    last_used_at: str | None,
-    last_viewed_at: str | None,
-    last_patched_at: str | None,
-) -> SkillRow:
+def make_row(fields: _RowFields) -> SkillRow:
     """Build a SkillRow with derived display + pct_of_cap fields."""
-    return _build_row(
-        _RowFields(
-            profile=profile,
-            name=name,
-            description=description,
-            tokens=tokens,
-            use_count=use_count,
-            view_count=view_count,
-            patch_count=patch_count,
-            last_used_at=last_used_at,
-            last_viewed_at=last_viewed_at,
-            last_patched_at=last_patched_at,
-        )
-    )
+    return _build_row(fields)
 
 
 def _build_row(fields: _RowFields) -> SkillRow:

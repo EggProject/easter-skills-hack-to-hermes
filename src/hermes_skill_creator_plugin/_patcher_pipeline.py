@@ -11,6 +11,7 @@ helpers from ``hermes_skill_creator_plugin._patcher``;
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +28,7 @@ from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     STATE_PATCHED,
 )
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    _AuditLogInputs,
     emit_audit_log,
     mutate_lines_for_site,
 )
@@ -38,74 +40,104 @@ if TYPE_CHECKING:
     WriteStateFn = Any  # Callable[[Path, dict[str, str]], None]
 
 
-def ok_check_result(
-    sites: list[Site],
-    state: dict[str, str],
-    sites_patched: list[str],
-    sites_already: list[str],
-    target_path: Path,
-    diagnostics: list[str],
-    exit_ok_code: int,
-    write_state_fn: WriteStateFn,
-) -> PatcherResult:
+@dataclasses.dataclass(frozen=True)
+class _OkCheckInputs:
+    """Inputs for :func:`ok_check_result` (bundled for WPS211)."""
+
+    sites: list[Site]
+    state: dict[str, str]
+    sites_patched: list[str]
+    sites_already: list[str]
+    target_path: Path
+    diagnostics: list[str]
+    exit_ok_code: int
+    write_state_fn: WriteStateFn
+
+
+@dataclasses.dataclass(frozen=True)
+class _ApplySitesInputs:
+    """Inputs for :func:`apply_sites` (bundled for WPS211)."""
+
+    sites: list[Site]
+    target_path: Path
+    state: dict[str, str]
+    sites_patched: list[str]
+    sites_already: list[str]
+    diagnostics: list[str]
+    force: bool
+    audit_log_path: Path | None
+    exit_ok_code: int
+    write_state_fn: WriteStateFn
+
+
+@dataclasses.dataclass(frozen=True)
+class _ResultInputs:
+    """Inputs for :func:`_build_result` (bundled for WPS211)."""
+
+    exit_code: int
+    sites_patched: tuple[str, ...]
+    sites_already: tuple[str, ...]
+    state: dict[str, str]
+    diagnostics: tuple[str, ...]
+    rejected_path: Path | None = None
+
+
+def ok_check_result(inputs: _OkCheckInputs) -> PatcherResult:
     """Build the EXIT_OK result for ``--check`` (or non-apply runs)."""
-    for site in sites:
-        if site.site_id in sites_already:
-            diagnostics.append(_i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id))
+    for site in inputs.sites:
+        if site.site_id in inputs.sites_already:
+            inputs.diagnostics.append(
+                _i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id),
+            )
         else:
-            diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
-    write_state_fn(target_path, state)
+            inputs.diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
+    inputs.write_state_fn(inputs.target_path, inputs.state)
     return _build_result(
-        exit_code=exit_ok_code,
-        sites_patched=tuple(sites_patched),
-        sites_already=tuple(sites_already),
-        state=state,
-        diagnostics=tuple(diagnostics),
+        _ResultInputs(
+            exit_code=inputs.exit_ok_code,
+            sites_patched=tuple(inputs.sites_patched),
+            sites_already=tuple(inputs.sites_already),
+            state=inputs.state,
+            diagnostics=tuple(inputs.diagnostics),
+        ),
     )
 
 
-def apply_sites(
-    sites: list[Site],
-    target_path: Path,
-    state: dict[str, str],
-    sites_patched: list[str],
-    sites_already: list[str],
-    diagnostics: list[str],
-    force: bool,
-    audit_log_path: Path | None,
-    exit_ok_code: int,
-    write_state_fn: WriteStateFn,
-) -> PatcherResult:
+def apply_sites(inputs: _ApplySitesInputs) -> PatcherResult:
     """Apply sites in DESCENDING line order (insertions don't shift later sites)."""
-    audit_path = audit_log_path or (target_path / AUDIT_LOG)
+    audit_path = inputs.audit_log_path or (inputs.target_path / AUDIT_LOG)
     timestamp = _now_iso()
-    for site in sorted(sites, key=lambda site: site.line_for_state, reverse=True):
-        if site.site_id in sites_already:
-            diagnostics.append(_i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id))
+    for site in sorted(inputs.sites, key=lambda site: site.line_for_state, reverse=True):
+        if site.site_id in inputs.sites_already:
+            inputs.diagnostics.append(
+                _i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id),
+            )
             continue
         outcome = _apply_one_site(
             site=site,
-            target_path=target_path,
-            force=force,
+            target_path=inputs.target_path,
+            force=inputs.force,
             audit_path=audit_path,
             timestamp=timestamp,
         )
         if outcome is not None:
-            state[site.site_id] = STATE_DRIFTED
-            write_state_fn(target_path, state)
+            inputs.state[site.site_id] = STATE_DRIFTED
+            inputs.write_state_fn(inputs.target_path, inputs.state)
             return outcome
-        sites_patched.append(site.site_id)
-        state[site.site_id] = STATE_PATCHED
-        diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
-    if _cross_filesystem(target_path):
-        diagnostics.append(_i18n.CROSS_FS_WARN)
-    write_state_fn(target_path, state)
+        inputs.sites_patched.append(site.site_id)
+        inputs.state[site.site_id] = STATE_PATCHED
+        inputs.diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
+    if _cross_filesystem(inputs.target_path):
+        inputs.diagnostics.append(_i18n.CROSS_FS_WARN)
+    inputs.write_state_fn(inputs.target_path, inputs.state)
     return _build_result(
-        exit_code=exit_ok_code,
-        sites_patched=tuple(sites_patched),
-        sites_already=tuple(sites_already),
-        state=state,
-        diagnostics=tuple(diagnostics),
+        _ResultInputs(
+            exit_code=inputs.exit_ok_code,
+            sites_patched=tuple(inputs.sites_patched),
+            sites_already=tuple(inputs.sites_already),
+            state=inputs.state,
+            diagnostics=tuple(inputs.diagnostics),
+        ),
     )
 
 
@@ -128,12 +160,14 @@ def _apply_one_site(
         return io_result
     if force:
         emit_audit_log(
-            audit_path,
-            timestamp,
-            site.site_id,
-            before,
-            after_bytes,
-            target_path,
+            _AuditLogInputs(
+                audit_path=audit_path,
+                timestamp=timestamp,
+                site_id=site.site_id,
+                before=before,
+                after_bytes=after_bytes,
+                target_path=target_path,
+            ),
         )
     return None
 
@@ -166,32 +200,26 @@ def _io_error_result(
         diag = _i18n.IO_ERROR.format(path=str(path), error=str(exc))
         exit_code = EXIT_IO
     return _build_result(
-        exit_code=exit_code,
-        sites_patched=(),
-        sites_already=(),
-        state={},
-        diagnostics=(diag,),
+        _ResultInputs(
+            exit_code=exit_code,
+            sites_patched=(),
+            sites_already=(),
+            state={},
+            diagnostics=(diag,),
+        ),
     )
 
 
-def _build_result(
-    *,
-    exit_code: int,
-    sites_patched: tuple[str, ...],
-    sites_already: tuple[str, ...],
-    state: dict[str, str],
-    diagnostics: tuple[str, ...],
-    rejected_path: Path | None = None,
-) -> PatcherResult:
+def _build_result(inputs: _ResultInputs) -> PatcherResult:
     """Build a ``PatcherResult`` (lazy import to avoid the cycle)."""
     # Runtime import: the cycle is real, so TYPE_CHECKING isn't enough.
     from hermes_skill_creator_plugin._patcher import PatcherResult
 
     return PatcherResult(
-        exit_code=exit_code,
-        sites_patched=sites_patched,
-        sites_already=sites_already,
-        state=state,
-        diagnostics=diagnostics,
-        rejected_path=rejected_path,
+        exit_code=inputs.exit_code,
+        sites_patched=inputs.sites_patched,
+        sites_already=inputs.sites_already,
+        state=inputs.state,
+        diagnostics=inputs.diagnostics,
+        rejected_path=inputs.rejected_path,
     )

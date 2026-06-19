@@ -5,6 +5,7 @@ Split from ``_cli_profiles_audit`` (WPS202 / WPS211).
 
 from __future__ import annotations
 
+import dataclasses
 from typing import Any
 
 import click
@@ -30,24 +31,34 @@ def read_disabled_or_empty(get_disabled_skill_names: Any, errors: list[str]) -> 
         return set()
 
 
-def apply_save_disabled(
-    save_disabled_skills: Any,
-    save_config: Any,
-    config: Any,
-    desired_disabled: set[str],
-    disabled_now: set[str],
-    actions: list[str],
-    errors: list[str],
-) -> None:
+@dataclasses.dataclass(frozen=True)
+class _SaveDisabledArgs:
+    """Group of inputs for :func:`apply_save_disabled` (bundled for WPS211)."""
+
+    save_disabled_skills: Any
+    save_config: Any
+    config: Any
+    desired_disabled: set[str]
+    disabled_now: set[str]
+    actions: list[str]
+    errors: list[str]
+
+
+def apply_save_disabled(args: _SaveDisabledArgs) -> None:
     """Persist the desired-disabled set when it actually changes."""
-    if desired_disabled == disabled_now:
+    if args.desired_disabled == args.disabled_now:
         return
-    if not _save_disabled_skills_safe(save_disabled_skills, config, desired_disabled, errors):
+    if not _save_disabled_skills_safe(
+        args.save_disabled_skills,
+        args.config,
+        args.desired_disabled,
+        args.errors,
+    ):
         return
-    actions.append("save_disabled_skills")
-    if not _save_config_safe(save_config, config, errors):
+    args.actions.append("save_disabled_skills")
+    if not _save_config_safe(args.save_config, args.config, args.errors):
         return
-    actions.append("save_config")
+    args.actions.append("save_config")
 
 
 def _save_disabled_skills_safe(
