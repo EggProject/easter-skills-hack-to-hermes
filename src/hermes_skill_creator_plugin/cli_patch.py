@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import sys
+from typing import Any
 
 import click
 
@@ -131,7 +132,7 @@ def _refuse_hermes_agent(target_path: Path) -> None:
         TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
         err=True,
     )
-    raise SystemExit(4)
+    sys.exit(4)
 
 
 def _emit_migration_note_flow(
@@ -158,7 +159,7 @@ def _emit_migration_note_flow(
         git_head=git_head,
     )
     click.echo(MIGRATION_REGENERATED.format(path=str(path)))
-    raise SystemExit(EXIT_OK)
+    sys.exit(EXIT_OK)
 
 
 def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
@@ -312,16 +313,21 @@ def _git_head(target: Path) -> str:
     import subprocess
 
     try:
-        proc = subprocess.run(
-            ["git", "-C", str(target), "rev-parse", "HEAD"],
-            capture_output=True,
-            check=True,
-            text=True,
-            timeout=_GIT_REV_PARSE_TIMEOUT_SEC,
-        )
-        return proc.stdout.strip()
+        return _run_git_rev_parse(subprocess, target)
     except Exception:
         return ""
+
+
+def _run_git_rev_parse(subprocess_module: Any, target: Path) -> str:
+    """Run ``git rev-parse HEAD`` in ``target``; return stripped stdout."""
+    proc = subprocess_module.run(
+        ["git", "-C", str(target), "rev-parse", "HEAD"],
+        capture_output=True,
+        check=True,
+        text=True,
+        timeout=_GIT_REV_PARSE_TIMEOUT_SEC,
+    )
+    return proc.stdout.strip()
 
 
 def _main_entry() -> int:

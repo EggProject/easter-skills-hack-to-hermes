@@ -9,7 +9,6 @@ documents list, and apply steps.
 from __future__ import annotations
 
 from hermes_skill_creator_plugin._patcher_migration_consts import LF
-from hermes_skill_creator_plugin._patcher_migration_render import _yes_no
 
 
 def _render_migration_index(timestamp: str) -> str:
