@@ -12,47 +12,41 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hermes_skill_creator_plugin import _patcher as _patcher_mod
+from hermes_skill_creator_plugin import i18n as _i18n
 from hermes_skill_creator_plugin._patcher_apply import (
     AUDIT_LOG,
     _append_audit_log,
     _diff_sha,
     write_rejected,
-    write_state,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from hermes_skill_creator_plugin._patcher import PatcherResult
-
-    WriteStateFn = Callable[[Path, dict[str, str]], None]  # noqa: WPS462
-# Imported lazily inside the helper so monkeypatch.setattr on the
-# ``_patcher`` module's ``_atomic_write_bytes`` (test seam) takes effect.
-# (See ``tests/unit/test_patcher.py::test_apply_permission_error_branch``.)
 from hermes_skill_creator_plugin._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
 )
 from hermes_skill_creator_plugin._patcher_helpers import now_iso as _now_iso
-from hermes_skill_creator_plugin._patcher_sites import Site
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    CROSS_FS_WARN,
-    FORCE_AUDIT_LOG,
-    IO_ERROR,
-    LINE_DRIFT,
-    OK_ALREADY_PATCHED,
-    OK_PATCHED,
-    PERMISSION_DENIED,
-    TEXT_DRIFT,
-    VALIDATION_FAILED,
+from hermes_skill_creator_plugin._patcher_pipeline_consts import (
+    EXIT_IO,
+    EXIT_PERMISSION,
+    REASON_LINE_DRIFT,
+    REMEDIATION_EN,
+    REMEDIATION_HU,
+    STATE_DRIFTED,
+    STATE_PATCHED,
 )
+from hermes_skill_creator_plugin._patcher_sites import Site
 
-# State strings used in the ``state`` dict (mirrored in ``_patcher``).
-_STATE_PATCHED = "patched"
-_STATE_DRIFTED = "drifted"
+__all__ = [
+    "apply_sites",
+    "emit_audit_log",
+    "fail_with_drift",
+    "mutate_lines_for_site",
+    "ok_check_result",
+]
 
-# Failure-reason strings emitted to the rejected sidecar.
-_REASON_LINE_DRIFT = "LINE_DRIFT"
-_REASON_TEXT_DRIFT = "TEXT_DRIFT"
+if TYPE_CHECKING:
+    from hermes_skill_creator_plugin._patcher import PatcherResult
+
+    WriteStateFn = Any  # Callable[[Path, dict[str, str]], None]
 
 
 def fail_with_drift(
@@ -62,8 +56,7 @@ def fail_with_drift(
     sites_already: list[str],
     diagnostics: list[str],
     git_head: str,
-    exit_drift_code: int,
-    exit_permission_code: int,
+    exit_codes: tuple[int, int],
 ) -> "PatcherResult":
     """Build the EXIT_DRIFT result, write rejected sidecar, append diagnostics.
 
@@ -72,17 +65,12 @@ def fail_with_drift(
     (``_patcher.run_patch``) supplies the canonical values from
     ``EXIT_DRIFT`` and ``EXIT_PERMISSION``.
     """
+    exit_drift_code, _ = exit_codes
     rejected_path = write_rejected(
         target_path,
         failures=failures,
-        remediation_en=(
-            "Re-run with --force --i-accept-line-drift "
-            "after reviewing the diff."
-        ),
-        remediation_hu=(
-            "Futtassa újra --force --i-accept-line-drift "
-            "kapcsolóval a diff átnézése után."
-        ),
+        remediation_en=REMEDIATION_EN,
+        remediation_hu=REMEDIATION_HU,
         git_head=git_head,
     )
     for failure in failures:
@@ -102,22 +90,24 @@ def _append_drift_diagnostic(
     diagnostics: list[str],
 ) -> None:
     """Append the right i18n diagnostic for one failure entry."""
-    if failure.get("reason") == _REASON_LINE_DRIFT:
+    if failure.get("reason") == REASON_LINE_DRIFT:
         diagnostics.append(
-            LINE_DRIFT.format(
+            _i18n.LINE_DRIFT.format(
                 site_id=failure["site_id"],
                 line=failure["anchor_line"],
             )
         )
     else:
         diagnostics.append(
-            TEXT_DRIFT.format(
+            _i18n.TEXT_DRIFT.format(
                 site_id=failure["site_id"],
                 expected=failure.get("expected", ""),
                 actual=failure.get("actual_at_line_<missing>", ""),
             )
         )
-    diagnostics.append(VALIDATION_FAILED.format(site_id=failure["site_id"]))
+    diagnostics.append(
+        _i18n.VALIDATION_FAILED.format(site_id=failure["site_id"])
+    )
 
 
 def ok_check_result(
@@ -134,10 +124,12 @@ def ok_check_result(
     for site in sites:
         if site.site_id in sites_already:
             diagnostics.append(
-                OK_ALREADY_PATCHED.format(site_id=site.site_id)
+                _i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id)
             )
         else:
-            diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(
+                _i18n.OK_PATCHED.format(site_id=site.site_id)
+            )
     write_state_fn(target_path, state)
     return _build_result(
         exit_code=exit_ok_code,
@@ -169,21 +161,27 @@ def apply_sites(
     for site in apply_sites_sorted:
         if site.site_id in sites_already:
             diagnostics.append(
-                OK_ALREADY_PATCHED.format(site_id=site.site_id)
+                _i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id)
             )
             continue
         outcome = _apply_one_site(
-            site, target_path, force, audit_path, timestamp
+            site=site,
+            target_path=target_path,
+            force=force,
+            audit_path=audit_path,
+            timestamp=timestamp,
         )
         if outcome is not None:
-            state[site.site_id] = _STATE_DRIFTED
+            state[site.site_id] = STATE_DRIFTED
             write_state_fn(target_path, state)
             return outcome
         sites_patched.append(site.site_id)
-        state[site.site_id] = _STATE_PATCHED
-        diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
+        state[site.site_id] = STATE_PATCHED
+        diagnostics.append(
+            _i18n.OK_PATCHED.format(site_id=site.site_id)
+        )
     if _cross_filesystem(target_path):
-        diagnostics.append(CROSS_FS_WARN)
+        diagnostics.append(_i18n.CROSS_FS_WARN)
     write_state_fn(target_path, state)
     return _build_result(
         exit_code=exit_ok_code,
@@ -195,6 +193,7 @@ def apply_sites(
 
 
 def _apply_one_site(
+    *,
     site: Site,
     target_path: Path,
     force: bool,
@@ -207,32 +206,49 @@ def _apply_one_site(
     text = before.decode("utf-8", errors="replace")
     new_lines = mutate_lines_for_site(site, text)
     after_bytes = "".join(new_lines).encode("utf-8")
-    try:
-        # Lazy import so monkeypatch.setattr on the ``_patcher`` module
-        # (the test seam) is picked up.
-        from hermes_skill_creator_plugin import _patcher
-
-        _patcher._atomic_write_bytes(path, after_bytes)
-    except (PermissionError, OSError) as exc:
-        if isinstance(exc, PermissionError):
-            diag = PERMISSION_DENIED.format(path=str(path))
-            exit_code = 3  # EXIT_PERMISSION
-        else:
-            diag = IO_ERROR.format(path=str(path), error=str(exc))
-            exit_code = 4  # EXIT_IO
-        return _build_result(
-            exit_code=exit_code,
-            sites_patched=(),
-            sites_already=(),
-            state={},
-            diagnostics=(diag,),
-        )
+    io_result = _try_atomic_write(path, after_bytes)
+    if io_result is not None:
+        return io_result
     if force:
         emit_audit_log(
             audit_path, timestamp, site.site_id, before, after_bytes,
             target_path,
         )
     return None
+
+
+def _try_atomic_write(path: Path, after_bytes: bytes) -> "PatcherResult | None":
+    """Atomic-write wrapper that converts IO errors to a PatcherResult.
+
+    Returns ``None`` on success, or a PatcherResult on handled error.
+    Lazy-imports ``_patcher`` so monkeypatch.setattr on the test seam
+    is picked up. (See ``tests/unit/test_patcher.py::test_apply_permission_error_branch``.)
+    """
+    try:
+        _patcher_mod._atomic_write_bytes(path, after_bytes)
+    except (PermissionError, OSError) as exc:
+        return _io_error_result(path, exc)
+    return None
+
+
+def _io_error_result(
+    path: Path,
+    exc: "OSError | PermissionError",
+) -> "PatcherResult":
+    """Build the IO-error PatcherResult for the given exception."""
+    if isinstance(exc, PermissionError):
+        diag = _i18n.PERMISSION_DENIED.format(path=str(path))
+        exit_code = EXIT_PERMISSION
+    else:
+        diag = _i18n.IO_ERROR.format(path=str(path), error=str(exc))
+        exit_code = EXIT_IO
+    return _build_result(
+        exit_code=exit_code,
+        sites_patched=(),
+        sites_already=(),
+        state={},
+        diagnostics=(diag,),
+    )
 
 
 def mutate_lines_for_site(site: Site, text: str) -> list[str]:
@@ -256,7 +272,7 @@ def emit_audit_log(
 ) -> None:
     """Append one FORCE_AUDIT_LOG line for a successful ``--force`` site."""
     diff_sha = _diff_sha(before, after_bytes)
-    audit_line = FORCE_AUDIT_LOG.format(
+    audit_line = _i18n.FORCE_AUDIT_LOG.format(
         timestamp=timestamp,
         site_id=site_id,
         diff_sha=diff_sha,
@@ -286,12 +302,3 @@ def _build_result(
         diagnostics=diagnostics,
         rejected_path=rejected_path,
     )
-
-
-__all__ = [
-    "apply_sites",
-    "emit_audit_log",
-    "fail_with_drift",
-    "mutate_lines_for_site",
-    "ok_check_result",
-]

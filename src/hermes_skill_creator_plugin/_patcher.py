@@ -251,8 +251,7 @@ def run_patch(*, target: Path | None, check: bool, apply: bool,
             sites_already,
             diagnostics,
             git_head,
-            exit_drift_code=EXIT_DRIFT,
-            exit_permission_code=EXIT_PERMISSION,
+            exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
         )
     if check or not apply:
         return _ok_check_result_pipeline(
