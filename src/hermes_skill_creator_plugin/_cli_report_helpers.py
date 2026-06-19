@@ -1,6 +1,7 @@
-"""src/hermes_skill_creator_plugin/_cli_report_helpers.py
+"""Constants + emit/output helpers for the reporter CLI.
 
-Internal helpers for the reporter CLI (paths, profiles, descriptions).
+Path resolution + SKILL.md helpers live in ``_cli_report_helpers_paths``
+(split to keep module surface WPS202-clean).
 """
 from __future__ import annotations
 
@@ -12,7 +13,6 @@ from typing import Any
 import click
 
 from hermes_skill_creator_plugin._reporter import ProfileSection, format_json, format_text
-from hermes_skill_creator_plugin._reporter_models import SkillRow
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 
 
@@ -25,7 +25,7 @@ REJECTED_FLAGS = {
 HELP_EN_HEADER = "Usage (English):"
 HELP_HU_HEADER = "Használat (magyar):"
 
-EMPTY_USAGE: dict[str, Any] = {
+EMPTY_USAGE: dict[str, Any | None] = {
     "use_count": None,
     "view_count": None,
     "patch_count": None,
@@ -38,8 +38,8 @@ PERSISTED_KEY = "_persisted"
 FORMAT_TEXT = "text"
 FORMAT_JSON = "json"
 SORT_TOKENS = "tokens"
-SORT_KEYS = (SORT_TOKENS, "use_count", "last_used_at")
-FORMAT_KEYS = (FORMAT_TEXT, FORMAT_JSON)
+SORT_KEYS: tuple[str, ...] = (SORT_TOKENS, "use_count", "last_used_at")
+FORMAT_KEYS: tuple[str, ...] = (FORMAT_TEXT, FORMAT_JSON)
 TOOL_NAME = "hermes-skill-creator-report"
 TOOL_VERSION = "0.1.0"
 DEFAULT_JSON_NAME = "./skill-report.json"
@@ -48,59 +48,6 @@ DEFAULT_JSON_NAME = "./skill-report.json"
 def emit_tokenizer_warning(_msg: str) -> None:
     """Bilingual warning callback for tokenizer. See cli_report."""
     click.echo(EN.report_tokenizer_unavailable, err=True)
-
-
-def resolve_hermes_home() -> Path:
-    """Resolve HERMES_HOME from env, default to ~/.hermes."""
-    raw = os.environ.get("HERMES_HOME", "").strip()
-    if raw:
-        return Path(raw).expanduser()
-    return Path("~/.hermes").expanduser()
-
-
-def load_curator(hermes_home: Path) -> Any | None:
-    """Best-effort: load tools.skill_usage. Return None when unavailable."""
-    try:
-        import tools.skill_usage as usage_mod
-    except Exception:
-        return None
-    if not hasattr(usage_mod, "usage_report"):
-        return None
-    return usage_mod
-
-
-def resolve_profiles(hermes_home: Path, profile_arg: str | None) -> list[Path]:
-    """Return the list of profile roots to report on."""
-    if profile_arg:
-        return [hermes_home / profile_arg]
-    out: list[Path] = [hermes_home / "hermes"]
-    profiles_dir = hermes_home / "profiles"
-    if profiles_dir.is_dir():
-        for child in sorted(profiles_dir.iterdir()):
-            if child.is_dir():
-                out.append(child)
-    return out
-
-
-def load_skill_description(skills_dir: Path, skill_name: str) -> str:
-    """Read the full description from <skills_dir>/<skill_name>/SKILL.md."""
-    skill_md = skills_dir / skill_name / "SKILL.md"
-    if not skill_md.is_file():
-        return f"<description unavailable for {skill_name}>"
-    try:
-        text = skill_md.read_text(encoding="utf-8")
-    except OSError:
-        return f"<description unavailable for {skill_name}>"
-    if text.startswith("---"):
-        end = text.find("\n---", 3)
-        if end > 0:
-            frontmatter = text[3:end]
-            body = text[end + 4 :].strip()
-            for line in frontmatter.splitlines():
-                if line.startswith("description:"):
-                    return line.split(":", 1)[1].strip().strip("'\"")
-            return body.split("\n\n", 1)[0] if body else text.strip()
-    return text.strip()
 
 
 def now_iso() -> str:
@@ -117,14 +64,22 @@ def reject_unwanted_flags(argv: list[str]) -> int | None:
     """Return reject_flag code if argv contains a rejected flag, else None."""
     sep = "="
     for arg in argv:
-        for prefix, key in REJECTED_FLAGS.items():
-            with_eq = prefix + sep
-            if arg == prefix or arg.startswith(with_eq):
-                from hermes_skill_creator_plugin._cli_report_ui import (
-                    reject_flag as _reject,
-                )
+        reject_code = _reject_for_arg(arg, sep)
+        if reject_code is not None:
+            return reject_code
+    return None
 
-                return _reject(key)
+
+def _reject_for_arg(arg: str, sep: str) -> int | None:
+    """Return the reject flag code for ``arg`` when it matches a rejected flag."""
+    for prefix, key in REJECTED_FLAGS.items():
+        with_eq = prefix + sep
+        if arg == prefix or arg.startswith(with_eq):
+            from hermes_skill_creator_plugin._cli_report_ui import (
+                reject_flag as _reject,
+            )
+
+            return _reject(key)
     return None
 
 
@@ -147,7 +102,7 @@ def resolve_json_path(fmt: str, json_path: Path | None) -> Path | None:
 
 
 def make_section(
-    fmt: str, name: str, rows: list[SkillRow], total: int,
+    fmt: str, name: str, rows: list, total: int,
 ) -> str | ProfileSection:
     """Build a single text section string or json ProfileSection."""
     if fmt == FORMAT_TEXT:

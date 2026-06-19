@@ -11,8 +11,8 @@ from hermes_skill_creator_plugin._cli_report_helpers import (
     EMPTY_USAGE,
     PERSISTED_KEY,
     emit_tokenizer_warning,
-    load_skill_description,
 )
+from hermes_skill_creator_plugin._cli_report_helpers_paths import load_skill_description
 from hermes_skill_creator_plugin._reporter import SkillRow, make_row
 
 

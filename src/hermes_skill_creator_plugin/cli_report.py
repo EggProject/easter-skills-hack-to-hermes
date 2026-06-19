@@ -38,6 +38,7 @@ from typing import Any
 import click
 
 from hermes_skill_creator_plugin import _cli_report_helpers as _helpers
+from hermes_skill_creator_plugin import _cli_report_helpers_paths as _paths
 from hermes_skill_creator_plugin import _cli_report_rows as _rows
 from hermes_skill_creator_plugin._cli_report_cmd import main
 from hermes_skill_creator_plugin._cli_report_ui import emit_bilingual_help
@@ -54,11 +55,11 @@ EnabledDetectionUnavailable = _rows.EnabledDetectionUnavailable
 _build_rows_for_profile = _rows.build_rows_for_profile
 _build_usage_rows = _rows.build_usage_rows
 _check_json_path = _rows.check_json_path
-_load_curator = _helpers.load_curator
-_load_skill_description = _helpers.load_skill_description
+_load_curator = _paths.load_curator
+_load_skill_description = _paths.load_skill_description
 _now_iso = _helpers.now_iso
-_resolve_hermes_home = _helpers.resolve_hermes_home
-_resolve_profiles = _helpers.resolve_profiles
+_resolve_hermes_home = _paths.resolve_hermes_home
+_resolve_profiles = _paths.resolve_profiles
 
 
 def _check_hermes_home(
@@ -113,13 +114,13 @@ def _load_context(
     profile: str | None,
 ) -> tuple[Path | None, object, list[Path], int | None]:
     """Resolve paths + curator + profiles. Return error code or None."""
-    hermes_home = _helpers.resolve_hermes_home()
+    hermes_home = _paths.resolve_hermes_home()
     json_path = _helpers.resolve_json_path(fmt, json_path)
     rc = _check_hermes_home(json_path, hermes_home)
     if rc is not None:
         return json_path, None, [], rc
-    curator = _helpers.load_curator(hermes_home)
-    profile_paths = _helpers.resolve_profiles(hermes_home, profile)
+    curator = _paths.load_curator(hermes_home)
+    profile_paths = _paths.resolve_profiles(hermes_home, profile)
     return json_path, curator, profile_paths, None
 
 
