@@ -3,7 +3,7 @@ name = "hermes-skill-creator-plugin"
 version = "0.1.0"
 description = "Hermes skill-creator plugin + migration scripts (Phase 5)"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = { text = "Proprietary" }
 authors = [{ name = "Hermes Skills Hack Team" }]
 dependencies = [
@@ -41,18 +41,18 @@ build-backend = "hatchling.build"
 packages = ["src/hermes_skill_creator_plugin"]
 
 [tool.ruff]
-line-length = 100
-target-version = "py311"
+line-length = 120
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.black]
-line-length = 100
-target-version = ["py311"]
+line-length = 120
+target-version = ["py314"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 strict = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
