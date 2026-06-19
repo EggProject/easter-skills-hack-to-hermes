@@ -34,12 +34,19 @@ def parse_frontmatter(path: Path) -> dict[str, Any]:
         return {}
     block = text[3:end].strip()
     try:
-        post = frontmatter.load(io.StringIO(text))
-        if post.metadata:
-            return dict(post.metadata)
+        loaded = _load_frontmatter_or_none(text)
     except Exception:
-        return safe_yaml_dict(block)
-    return safe_yaml_dict(block)
+        loaded = None
+    if loaded is None:
+        loaded = safe_yaml_dict(block)
+    return loaded
+
+
+def _load_frontmatter_or_none(text: str) -> dict[str, Any] | None:
+    post = frontmatter.load(io.StringIO(text))
+    if post.metadata:
+        return dict(post.metadata)
+    return None
 
 
 def safe_yaml_dict(block: str) -> dict[str, Any]:

@@ -34,62 +34,52 @@ def _collect_skill_names(children: list[Path]) -> set[str]:
     return out
 
 
+_NAME_PARSE_FAILED: str = "__NAME_PARSE_FAILED__"
+
+
 def _skill_name_from(child: Path) -> str | None:
     if not child.is_dir():
         return None
     skill_md = child / "SKILL.md"
     if not skill_md.is_file():
         return None
-    fm = _parse_skill_frontmatter(skill_md)
-    if fm is None:
-        return None
-    return _name_from_frontmatter(fm, fallback=child.name)
-
-
-def _parse_skill_frontmatter(skill_md: Path) -> dict[str, object] | None:
-    """Read SKILL.md + parse frontmatter; return None on any failure."""
-    text = _read_skill_md(skill_md)
-    if text is None:
-        return None
-    return _parse_frontmatter_text(text)
-
-
-def _read_skill_md(skill_md: Path) -> str | None:
-    """Read SKILL.md text or return None on OSError."""
     try:
-        return skill_md.read_text(encoding="utf-8")
+        text = skill_md.read_text(encoding="utf-8")
     except OSError:
         return None
+    name = _parse_name_or_marker(text)
+    return _resolve_name(name, child)
 
 
-def _parse_frontmatter_text(text: str) -> dict[str, object] | None:
-    """Parse frontmatter text; return None on any exception."""
-    try:
-        from agent.skill_utils import parse_frontmatter
-
-        fm, _body = parse_frontmatter(text)
-    except Exception:
+def _resolve_name(name: str, child: Path) -> str | None:
+    if name == _NAME_PARSE_FAILED:
         return None
-    return fm
+    if name == "":
+        return child.name
+    return name
 
 
-def _name_from_frontmatter(
-    fm: dict[str, object],
-    *,
-    fallback: str,
-) -> str:
-    """Return the ``name`` field if it is a non-empty string, else ``fallback``."""
-    name = fm.get("name")
-    if isinstance(name, str) and name:
-        return name
-    return fallback
+def _parse_name_or_marker(text: str) -> str:
+    """Return the name, or ``_NAME_PARSE_FAILED`` sentinel on parse error / missing."""
+    try:
+        return _extract_name(text)
+    except Exception:
+        return _NAME_PARSE_FAILED
 
 
-def diff_sets(
-    current: set[str],
-    desired: set[str],
-) -> dict[str, list[str]]:
+def _extract_name(text: str) -> str:
+    from agent.skill_utils import parse_frontmatter
+
+    fm, _body = parse_frontmatter(text)
+    candidate = fm.get("name")
+    if isinstance(candidate, str) and candidate:
+        return candidate
+    return ""
+
+
+def diff_sets(current: set[str], desired: set[str]) -> dict[str, list[str]]:
     """Compute the symmetric diff between current and desired as sorted lists."""
-    added = sorted(desired - current)
-    removed = sorted(current - desired)
-    return {"added": added, "removed": removed}
+    return {
+        "added": sorted(desired - current),
+        "removed": sorted(current - desired),
+    }

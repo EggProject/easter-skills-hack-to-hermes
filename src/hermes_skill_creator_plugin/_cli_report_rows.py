@@ -15,7 +15,6 @@ from hermes_skill_creator_plugin._cli_report_helpers import (
 )
 from hermes_skill_creator_plugin._cli_report_helpers_paths import load_skill_description
 from hermes_skill_creator_plugin._reporter import SkillRow, make_row
-from hermes_skill_creator_plugin._reporter_sort import _RowFields
 
 
 class EnabledDetectionUnavailable(Exception):
@@ -29,24 +28,31 @@ def build_usage_rows(
 ) -> dict[str, dict[str, Any]]:
     """Build a name -> usage-fields map. None values when not persisted."""
     if curator is None:
-        return _empty_usage_for_all(enabled_names)
-    report = _usage_report_safe(curator, skills_dir)
-    out = _collect_persisted_entries(report, enabled_names)
-    _fill_missing_with_empty(out, enabled_names)
+        return _empty_usage_map(enabled_names)
+    return _filled_usage_map(curator, skills_dir, enabled_names)
+
+
+def _empty_usage_map(enabled_names: frozenset[str]) -> dict[str, dict[str, Any]]:
+    return {name: {**EMPTY_USAGE, PERSISTED_KEY: False} for name in enabled_names}
+
+
+def _filled_usage_map(
+    curator: Any,
+    skills_dir: Path,
+    enabled_names: frozenset[str],
+) -> dict[str, dict[str, Any]]:
+    out = _filled_usage_map_for_report(curator, skills_dir, enabled_names)
+    out = _backfill_missing_usage(out, enabled_names)
     return out
 
 
-def _empty_usage_for_all(names: frozenset[str]) -> dict[str, dict[str, Any]]:
-    """Return a name -> empty-usage dict for every name in ``names``."""
-    return {name: {**EMPTY_USAGE, PERSISTED_KEY: False} for name in names}
-
-
-def _collect_persisted_entries(
-    report: list[Any],
+def _filled_usage_map_for_report(
+    curator: Any,
+    skills_dir: Path,
     enabled_names: frozenset[str],
 ) -> dict[str, dict[str, Any]]:
-    """Project persisted entry fields for entries whose name is enabled."""
     out: dict[str, dict[str, Any]] = {}
+    report = _usage_report_safe(curator, skills_dir)
     for entry in report:
         entry_name = _entry_name(entry)
         if entry_name is None or entry_name not in enabled_names:
@@ -55,14 +61,14 @@ def _collect_persisted_entries(
     return out
 
 
-def _fill_missing_with_empty(
+def _backfill_missing_usage(
     out: dict[str, dict[str, Any]],
     enabled_names: frozenset[str],
-) -> None:
-    """Add empty-usage rows for any enabled name missing from ``out``."""
+) -> dict[str, dict[str, Any]]:
     for enabled_name in enabled_names:
         if enabled_name not in out:
             out[enabled_name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
+    return out
 
 
 def _usage_report_safe(curator: Any, skills_dir: Path) -> list[Any]:
@@ -124,10 +130,15 @@ def build_rows_for_profile(
 def _enabled_skills_safe(*, profile: Path, platform: str | None, fn: Any) -> frozenset[str]:
     """Call ``enabled_skills_fn`` and raise :class:`EnabledDetectionUnavailable`."""
     try:
-        detected: frozenset[str] = fn(profile, platform=platform)
-        return detected
+        return _call_enabled_skills(profile, platform, fn)
     except Exception as exc:
         raise EnabledDetectionUnavailable(str(exc)) from exc
+
+
+def _call_enabled_skills(profile: Path, platform: str | None, fn: Any) -> frozenset[str]:
+    """Call ``fn`` and return its detected skills as a frozenset."""
+    detected: frozenset[str] = fn(profile, platform=platform)
+    return detected
 
 
 def _build_skill_rows(
@@ -167,18 +178,16 @@ def _make_one_row(
     tokens = estimate_tokens_fn(name, description, warning=emit_tokenizer_warning)
     usage_for = usage.get(name, EMPTY_USAGE)
     row = make_row(
-        _RowFields(
-            profile=profile.name,
-            name=name,
-            description=description,
-            tokens=tokens,
-            use_count=usage_for["use_count"],
-            view_count=usage_for["view_count"],
-            patch_count=usage_for["patch_count"],
-            last_used_at=usage_for["last_used_at"],
-            last_viewed_at=usage_for["last_viewed_at"],
-            last_patched_at=usage_for["last_patched_at"],
-        ),
+        profile=profile.name,
+        name=name,
+        description=description,
+        tokens=tokens,
+        use_count=usage_for["use_count"],
+        view_count=usage_for["view_count"],
+        patch_count=usage_for["patch_count"],
+        last_used_at=usage_for["last_used_at"],
+        last_viewed_at=usage_for["last_viewed_at"],
+        last_patched_at=usage_for["last_patched_at"],
     )
     return row, tokens
 
