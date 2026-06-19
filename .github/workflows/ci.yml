@@ -1,0 +1,64 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pre-commit-and-pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run pre-commit (all hooks)
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Run pytest (100% coverage required)
+        run: uv run pytest --cov=hermes_skill_creator_plugin --cov-branch --cov-fail-under=100 -q
+
+      - name: Real silencers check (must be 0)
+        run: |
+          python3 -c "
+          import re, pathlib
+          n = sum(1 for p in pathlib.Path('src').rglob('*.py') for i, l in enumerate(p.read_text().splitlines(), 1) if re.match(r'^\s*#[ ]*(noqa|type:\s*ignore|pragma:\s*no\s*cover)', l))
+          print(f'silencer_count={n}')
+          assert n == 0, f'Found {n} silencers in src/'
+          "
+
+      - name: Verify .gitignore not reverted
+        run: |
+          # The .gitignore on main was user-modified (memory rule). If
+          # this PR diff shows .gitignore changes beyond trailing-newline,
+          # the CI fails. This protects the user modification.
+          if ! git diff --exit-code origin/main -- .gitignore >/dev/null 2>&1; then
+            if git diff origin/main -- .gitignore | grep -qE '^[+-][^+-]'; then
+              echo ".gitignore was modified in this PR. This is a memory-protected file (user-modified on main). Failing CI."
+              exit 1
+            fi
+          fi
