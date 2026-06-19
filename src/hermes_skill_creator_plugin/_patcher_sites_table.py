@@ -50,6 +50,11 @@ SKILL_CREATOR_CONSULT_RULE = (
     "not from the background review)."
 )
 
+# --- site ``kind`` constants (WPS226 — reused > 3 times) -------------------
+KIND_APPEND = "append"
+KIND_CAP = "cap"
+KIND_SCHEMA_APPEND = "schema_append"
+
 
 # --- site data classes ----------------------------------------------------
 
@@ -89,7 +94,7 @@ class Site:
     anchors: tuple[Anchor, ...]
     insertion: str
     expected_replacement: str
-    kind: str = "append"
+    kind: str = KIND_APPEND
     line_for_state: int = 0  # primary anchor line for sidecar / migration note
 
     def primary_anchor(self) -> Anchor:
@@ -123,7 +128,7 @@ S1_CAP_SITE = Site(
     expected_replacement=(
         '    if len(desc) > MAX_DESCRIPTION_LENGTH:\n        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
-    kind="cap",
+    kind=KIND_CAP,
     line_for_state=S1_CAP_LINE_A,
 )
 
@@ -146,7 +151,7 @@ E1_SKILLS_GUIDANCE = Site(
     # Idempotency: the site is patched iff the appended line is present
     # verbatim after the L179 anchor.
     expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE',
-    kind="append",
+    kind=KIND_APPEND,
     line_for_state=E1_LINE,
 )
 
@@ -161,7 +166,7 @@ E2_MEMORY_GUIDANCE = Site(
     ),
     insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
     expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"',
-    kind="append",
+    kind=KIND_APPEND,
     line_for_state=E2_LINE,
 )
 
@@ -176,7 +181,7 @@ E3_BUILD_SKILLS_PROMPT = Site(
     ),
     insertion=r'            SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
     expected_replacement=r'            SKILL_CREATOR_CONSULT_RULE + "\n"',
-    kind="append",
+    kind=KIND_APPEND,
     line_for_state=E3_LINE,
 )
 
@@ -191,7 +196,7 @@ E4_SKILL_REVIEW_PROMPT = Site(
     ),
     insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
     expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
-    kind="append",
+    kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
 
@@ -206,7 +211,7 @@ E5_COMBINED_REVIEW_PROMPT = Site(
     ),
     insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
     expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
-    kind="append",
+    kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )
 
@@ -233,7 +238,7 @@ E6_SKILL_MANAGE_SCHEMA_DESC = Site(
         "guidance only (skill_view(name='skill-creator')); skill_manage "
         'remains the writer and never auto-installs it."'
     ),
-    kind="schema_append",
+    kind=KIND_SCHEMA_APPEND,
     line_for_state=E6_LINE,
 )
 
@@ -272,7 +277,7 @@ E7_SKILLS_DOC_SECTION = Site(
         "absent (auto-creation stays enabled), and the background review "
         "never auto-installs it."
     ),
-    kind="append",
+    kind=KIND_APPEND,
     line_for_state=E7_LINE,
 )
 
