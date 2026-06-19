@@ -31,6 +31,7 @@ import click
 from hermes_skill_creator_plugin._patcher import (
     EXIT_OK,
     PatcherResult,
+    PatchRunInputs,
     generate_migration_note,
     is_hermes_agent,
     run_patch,
@@ -223,89 +224,85 @@ def _patch_impl(args: PatchArgs) -> int:
 
     git_head = _git_head(target_path) if target_path else ""
     patcher_result = run_patch(
-        target=target_path,
-        check=check,
-        apply=args.do_apply,
-        force=args.force,
-        i_accept_line_drift=args.i_accept_line_drift,
-        task_e_redirect=args.task_e_redirect,
-        no_schema_redirect=args.no_schema_redirect,
-        yes=args.yes,
-        verbose=args.verbose,
-        git_head=git_head,
+        PatchRunInputs(
+            target=target_path,
+            check=check,
+            apply=args.do_apply,
+            force=args.force,
+            i_accept_line_drift=args.i_accept_line_drift,
+            task_e_redirect=args.task_e_redirect,
+            no_schema_redirect=args.no_schema_redirect,
+            yes=args.yes,
+            verbose=args.verbose,
+            git_head=git_head,
+        ),
     )
 
     _emit_diagnostics(patcher_result, verbose=args.verbose)
     return patcher_result.exit_code
 
 
-@click.command(
+@click.pass_context
+def main(ctx: click.Context, /, **_kwargs: object) -> None:
+    """Thin click wrapper — see :func:`_patch_impl` for logic."""
+    opts = ctx.params
+    sys.exit(
+        _patch_impl(
+            PatchArgs(
+                target=opts.get("target"),
+                check=bool(opts.get("check", False)),
+                do_apply=bool(opts.get("do_apply", False)),
+                task_e_redirect=bool(opts.get("task_e_redirect", False)),
+                no_schema_redirect=bool(opts.get("no_schema_redirect", False)),
+                i_accept_line_drift=bool(opts.get("i_accept_line_drift", False)),
+                force=bool(opts.get("force", False)),
+                emit_migration_note=bool(opts.get("emit_migration_note", False)),
+                yes=bool(opts.get("yes", False)),
+                verbose=bool(opts.get("verbose", False)),
+            ),
+        ),
+    )
+
+
+# Apply click options to ``main`` directly (the entry-point contract).
+main = click.command(
     help=f"{HELP_EN}\n{HELP_HU}",
     context_settings={"help_option_names": ["-h", "--help"]},
-)
-@click.option("--target", type=click.Path(), default=None, help=())
-@click.option("--check", is_flag=True, default=False, help=())
-@click.option("--apply", "do_apply", is_flag=True, default=False, help=())
-@click.option(
+)(main)
+main = click.option("--target", type=click.Path(), default=None, help=())(main)
+main = click.option("--check", is_flag=True, default=False, help=())(main)
+main = click.option("--apply", "do_apply", is_flag=True, default=False, help=())(main)
+main = click.option(
     "--task-e-redirect",
     "task_e_redirect",
     is_flag=True,
     default=False,
     help=(),
-)
-@click.option(
+)(main)
+main = click.option(
     "--no-schema-redirect",
     "no_schema_redirect",
     is_flag=True,
     default=False,
     help=(),
-)
-@click.option(
+)(main)
+main = click.option(
     "--i-accept-line-drift",
     "i_accept_line_drift",
     is_flag=True,
     default=False,
     help=(),
-)
-@click.option("--force", is_flag=True, default=False, help=())
-@click.option(
+)(main)
+main = click.option("--force", is_flag=True, default=False, help=())(main)
+main = click.option(
     "--emit-migration-note",
     "emit_migration_note",
     is_flag=True,
     default=False,
     help=(),
-)
-@click.option("--yes", is_flag=True, default=False, help=())
-@click.option("--verbose", is_flag=True, default=False, help=())
-def main(
-    target: str | None,
-    check: bool,
-    do_apply: bool,
-    task_e_redirect: bool,
-    no_schema_redirect: bool,
-    i_accept_line_drift: bool,
-    force: bool,
-    emit_migration_note: bool,
-    yes: bool,
-    verbose: bool,
-) -> None:
-    """Thin click wrapper — see :func:`_patch_impl` for logic."""
-    sys.exit(
-        _patch_impl(
-            PatchArgs(
-                target=target,
-                check=check,
-                do_apply=do_apply,
-                task_e_redirect=task_e_redirect,
-                no_schema_redirect=no_schema_redirect,
-                i_accept_line_drift=i_accept_line_drift,
-                force=force,
-                emit_migration_note=emit_migration_note,
-                yes=yes,
-                verbose=verbose,
-            ),
-        ),
-    )
+)(main)
+main = click.option("--yes", is_flag=True, default=False, help=())(main)
+main = click.option("--verbose", is_flag=True, default=False, help=())(main)
 
 
 def _git_head(target: Path) -> str:
@@ -332,4 +329,5 @@ def _run_git_rev_parse(subprocess_module: ModuleType, target: Path) -> str:
 
 def _main_entry() -> int:
     """Module entry point — extracted for testability."""
-    return main.main(standalone_mode=True)
+    main(standalone_mode=True)
+    return 0

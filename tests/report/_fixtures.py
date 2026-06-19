@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from hermes_skill_creator_plugin._reporter import SkillRow, make_row
+from hermes_skill_creator_plugin._reporter_sort import _RowFields
 
 
 def _make_skill_dir(root: Path, name: str, *, description: str = "x" * 10) -> Path:
@@ -70,14 +71,16 @@ def make_row_factory(
 ) -> SkillRow:
     """Build a SkillRow for tests."""
     return make_row(
-        profile=profile,
-        name=name,
-        description=description,
-        tokens=tokens,
-        use_count=use_count,
-        view_count=view_count,
-        patch_count=patch_count,
-        last_used_at=last_used_at,
-        last_viewed_at=last_viewed_at,
-        last_patched_at=last_patched_at,
+        _RowFields(
+            profile=profile,
+            name=name,
+            description=description,
+            tokens=tokens,
+            use_count=use_count,
+            view_count=view_count,
+            patch_count=patch_count,
+            last_used_at=last_used_at,
+            last_viewed_at=last_viewed_at,
+            last_patched_at=last_patched_at,
+        ),
     )

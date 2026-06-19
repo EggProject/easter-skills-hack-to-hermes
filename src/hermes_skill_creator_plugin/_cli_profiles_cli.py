@@ -7,6 +7,7 @@ them so existing imports continue to work.
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Any
 
@@ -74,80 +75,105 @@ def build_help_text() -> str:
     return _build_en_help() + "\n" + _build_hu_help()
 
 
-@click.command(
+@dataclasses.dataclass(frozen=True)
+class _ProfilesCmdArgs:
+    """Parsed CLI args for :func:`main_cmd` (bundled for WPS211)."""
+
+    apply: bool
+    audit_only: bool
+    profile: str | None
+    json_path: str | None
+    yes: bool
+    skip_install: bool
+    frozen_time: str | None
+
+
+def _run_profiles_cmd(args: _ProfilesCmdArgs) -> None:
+    """Internal: dispatch :class:`_ProfilesCmdArgs` into ``run_audit``."""
+    from hermes_skill_creator_plugin.cli_profiles import run_audit
+
+    effective_apply = args.apply and not args.audit_only
+    resolved_json: Path | None = Path(args.json_path) if args.json_path else None
+    run_audit(
+        apply=effective_apply,
+        json_path=resolved_json,
+        frozen_time=args.frozen_time,
+        skip_install=args.skip_install,
+        yes=args.yes,
+        profile=args.profile,
+    )
+
+
+@click.pass_context
+def main_cmd(ctx: click.Context, /, **_kwargs: object) -> None:
+    """Per-profile audit/flip (Script #2). Options are read from ``ctx.params``."""
+    opts = ctx.params
+    _run_profiles_cmd(
+        _ProfilesCmdArgs(
+            apply=bool(opts.get("apply", False)),
+            audit_only=bool(opts.get("audit_only", False)),
+            profile=opts.get("profile"),
+            json_path=opts.get("json_path"),
+            yes=bool(opts.get("yes", False)),
+            skip_install=bool(opts.get("skip_install", False)),
+            frozen_time=opts.get("frozen_time"),
+        ),
+    )
+
+
+# Apply click options to ``main_cmd`` directly (the entry-point contract).
+main_cmd = click.command(
     help=build_help_text(),
     context_settings={"help_option_names": ["-h", "--help"]},
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--apply",
     "apply",
     is_flag=True,
     default=False,
     help=EN["profiles_opt_apply"],
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--audit",
     "audit_only",
     is_flag=True,
     default=False,
     help=EN["profiles_opt_audit"],
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--profile",
     "profile",
     default=None,
     help=EN["profiles_opt_profile"],
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--json",
     "json_path",
     default=None,
     type=click.Path(),
     help=EN["profiles_opt_json"],
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--yes",
     "yes",
     is_flag=True,
     default=False,
     help=EN["profiles_opt_yes"],
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--skip-install",
     "skip_install",
     is_flag=True,
     default=False,
     help=EN["profiles_opt_skip_install"],
-)
-@click.option(
+)(main_cmd)
+main_cmd = click.option(
     "--frozen-time",
     "frozen_time",
     default=None,
     envvar="HERMES_SKILL_CREATOR_FROZEN_TIME",
     help=EN["profiles_opt_frozen_time"],
-)
-def main_cmd(
-    apply: bool,
-    audit_only: bool,
-    profile: str | None,
-    json_path: str | None,
-    yes: bool,
-    skip_install: bool,
-    frozen_time: str | None,
-) -> None:
-    """Per-profile audit/flip for the migrated skill-creator skill (Script #2)."""
-    from hermes_skill_creator_plugin.cli_profiles import run_audit
-
-    effective_apply = apply and not audit_only
-    resolved_json: Path | None = Path(json_path) if json_path else None
-    run_audit(
-        apply=effective_apply,
-        json_path=resolved_json,
-        frozen_time=frozen_time,
-        skip_install=skip_install,
-        yes=yes,
-        profile=profile,
-    )
+)(main_cmd)
 
 
 def make_cli() -> Any:

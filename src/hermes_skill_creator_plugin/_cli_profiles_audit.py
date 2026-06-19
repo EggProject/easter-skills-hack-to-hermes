@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from hermes_skill_creator_plugin._cli_profiles_apply import (
+    _SaveDisabledArgs,
     apply_clear_cache,
     apply_do_install,
     apply_save_disabled,
@@ -168,13 +169,15 @@ def _run_apply(
     skip_install: bool,
 ) -> None:
     apply_save_disabled(
-        deps.save_disabled_skills,
-        deps.save_config,
-        config,
-        desired_disabled_after_save(disabled_now),
-        disabled_now,
-        slot.actions,
-        slot.errors,
+        _SaveDisabledArgs(
+            save_disabled_skills=deps.save_disabled_skills,
+            save_config=deps.save_config,
+            config=config,
+            desired_disabled=desired_disabled_after_save(disabled_now),
+            disabled_now=disabled_now,
+            actions=slot.actions,
+            errors=slot.errors,
+        ),
     )
     if not skip_install:
         apply_do_install(

@@ -32,3 +32,5 @@ dist/
 
 .claude
 .workflow-scripts
+!.claude/settings.json
+!.claude/CLAUDE.md

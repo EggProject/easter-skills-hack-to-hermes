@@ -6,6 +6,7 @@ Split from ``_patcher_pipeline`` to keep module surface small
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -26,15 +27,32 @@ if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
 
 
-def fail_with_drift(
-    target_path: Path,
-    failures: list[dict[str, Any]],
-    state: dict[str, str],
-    sites_already: list[str],
-    diagnostics: list[str],
-    git_head: str,
-    exit_codes: tuple[int, int],
-) -> PatcherResult:
+@dataclasses.dataclass(frozen=True)
+class _FailDriftInputs:
+    """Inputs for :func:`fail_with_drift` (bundled for WPS211)."""
+
+    target_path: Path
+    failures: list[dict[str, Any]]
+    state: dict[str, str]
+    sites_already: list[str]
+    diagnostics: list[str]
+    git_head: str
+    exit_codes: tuple[int, int]
+
+
+@dataclasses.dataclass(frozen=True)
+class _AuditLogInputs:
+    """Inputs for :func:`emit_audit_log` (bundled for WPS211)."""
+
+    audit_path: Path
+    timestamp: str
+    site_id: str
+    before: bytes
+    after_bytes: bytes
+    target_path: Path
+
+
+def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
     """Build the EXIT_DRIFT result, write rejected sidecar, append diagnostics.
 
     The two exit-code constants are passed in (not imported) so this
@@ -42,25 +60,27 @@ def fail_with_drift(
     (``_patcher.run_patch``) supplies the canonical values from
     ``EXIT_DRIFT`` and ``EXIT_PERMISSION``.
     """
-    exit_drift_code, _ = exit_codes
+    exit_drift_code, _ = inputs.exit_codes
     rejected_path = write_rejected(
-        target_path,
-        failures=failures,
+        inputs.target_path,
+        failures=inputs.failures,
         remediation_en=REMEDIATION_EN,
         remediation_hu=REMEDIATION_HU,
-        git_head=git_head,
+        git_head=inputs.git_head,
     )
-    for failure in failures:
-        _append_drift_diagnostic(failure, diagnostics)
-    from hermes_skill_creator_plugin._patcher_pipeline import _build_result
+    for failure in inputs.failures:
+        _append_drift_diagnostic(failure, inputs.diagnostics)
+    from hermes_skill_creator_plugin._patcher_pipeline import _build_result, _ResultInputs
 
     return _build_result(
-        exit_code=exit_drift_code,
-        sites_patched=(),
-        sites_already=tuple(sites_already),
-        state=state,
-        diagnostics=tuple(diagnostics),
-        rejected_path=rejected_path,
+        _ResultInputs(
+            exit_code=exit_drift_code,
+            sites_patched=(),
+            sites_already=tuple(inputs.sites_already),
+            state=inputs.state,
+            diagnostics=tuple(inputs.diagnostics),
+            rejected_path=rejected_path,
+        ),
     )
 
 
@@ -87,23 +107,16 @@ def _append_drift_diagnostic(
     diagnostics.append(_i18n.VALIDATION_FAILED.format(site_id=failure["site_id"]))
 
 
-def emit_audit_log(
-    audit_path: Path,
-    timestamp: str,
-    site_id: str,
-    before: bytes,
-    after_bytes: bytes,
-    target_path: Path,
-) -> None:
+def emit_audit_log(inputs: _AuditLogInputs) -> None:
     """Append one FORCE_AUDIT_LOG line for a successful ``--force`` site."""
-    diff_sha = _diff_sha(before, after_bytes)
+    diff_sha = _diff_sha(inputs.before, inputs.after_bytes)
     audit_line = _i18n.FORCE_AUDIT_LOG.format(
-        timestamp=timestamp,
-        site_id=site_id,
+        timestamp=inputs.timestamp,
+        site_id=inputs.site_id,
         diff_sha=diff_sha,
-        target=str(target_path),
+        target=str(inputs.target_path),
     )
-    _append_audit_log(audit_path, audit_line)
+    _append_audit_log(inputs.audit_path, audit_line)
 
 
 def mutate_lines_for_site(site: Site, text: str) -> list[str]:

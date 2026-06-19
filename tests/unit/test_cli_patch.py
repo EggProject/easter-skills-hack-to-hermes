@@ -248,5 +248,5 @@ def test_cli_patch_main_entry_returns_main_exit_code(monkeypatch) -> None:
     """Calling the _main_entry function exercises the standalone CLI path."""
     from hermes_skill_creator_plugin import cli_patch
 
-    monkeypatch.setattr(cli_patch.main, "main", lambda standalone_mode=False: 0)
+    monkeypatch.setattr(cli_patch, "main", lambda standalone_mode=False: None)
     assert cli_patch._main_entry() == 0
