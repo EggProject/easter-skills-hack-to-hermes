@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "minimax-mcp-server": {
+      "command": "uvx",
+      "args": ["minimax-coding-plan-mcp", "-y"]
+    }
+  }
+}
+
