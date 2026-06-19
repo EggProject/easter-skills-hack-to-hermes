@@ -64,7 +64,7 @@ class _PatchInputs:
     task_e_redirect: bool
     no_schema_redirect: bool
     timestamp: str
-    sites: tuple["Site", ...]
+    sites: tuple[Site, ...]
 
 
 def _now_iso() -> str:

@@ -59,9 +59,7 @@ def _format_optional_str(row: SkillRow, attr: str) -> str:
 
 
 _COUNT_COLUMNS = frozenset({COL_USE_COUNT, COL_VIEW_COUNT, COL_PATCH_COUNT})
-_TIMESTAMP_COLUMNS = frozenset(
-    {COL_LAST_USED_AT, COL_LAST_VIEWED_AT, COL_LAST_PATCHED_AT}
-)
+_TIMESTAMP_COLUMNS = frozenset({COL_LAST_USED_AT, COL_LAST_VIEWED_AT, COL_LAST_PATCHED_AT})
 
 
 def _render_optional_count(row: SkillRow, attr: str) -> str:
