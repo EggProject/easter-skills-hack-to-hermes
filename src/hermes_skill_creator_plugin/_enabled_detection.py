@@ -91,21 +91,27 @@ def _walk_installed_skill_names(skills_dir: Path) -> set[str]:
         return set()
     names: set[str] = set()
     for child in sorted(skills_dir.iterdir()):
-        if not child.is_dir():
-            continue
-        skill_md = child / _SKILL_MD_NAME
-        if not skill_md.is_file():
-            continue
-        try:
-            text = skill_md.read_text(encoding=_TEXT_ENCODING)
-        except OSError:
-            continue
-        match = _NAME_RE.search(text)
-        if match is None:
-            names.add(str(child.name))
-        else:
-            names.add(_strip_quotes(match.group(1)))
+        skill_name = _name_from_skill_dir(child)
+        if skill_name is not None:
+            names.add(skill_name)
     return names
+
+
+def _name_from_skill_dir(child: Path) -> str | None:
+    """Return the installed-skill name for ``child`` (a skill directory)."""
+    if not child.is_dir():
+        return None
+    skill_md = child / _SKILL_MD_NAME
+    if not skill_md.is_file():
+        return None
+    try:
+        text = skill_md.read_text(encoding=_TEXT_ENCODING)
+    except OSError:
+        return None
+    match = _NAME_RE.search(text)
+    if match is None:
+        return str(child.name)
+    return _strip_quotes(match.group(1))
 
 
 def get_enabled_skills(
@@ -134,13 +140,11 @@ def get_enabled_skills(
 
 __all__ = [
     "get_enabled_skills",
-    # Original helpers.
     "_parse_frontmatter",
     "_load_config",
     "_disabled_set",
     "_platform_blocked",
     "_conditional_excluded",
-    # Richer helpers.
     "_walk_installed_skill_names",
     "_find_skill_md",
     "_apply_platform_filter",
