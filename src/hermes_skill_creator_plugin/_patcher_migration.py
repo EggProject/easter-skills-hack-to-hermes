@@ -38,10 +38,15 @@ import datetime as _datetime
 import os as _os
 from pathlib import Path
 
-from hermes_skill_creator_plugin._patcher_migration_render import (
-    _render_cap_row,
+from hermes_skill_creator_plugin._patcher_migration_body import (
     _render_migration_hermes_patch,
+)
+from hermes_skill_creator_plugin._patcher_migration_index import (
     _render_migration_index,
+)
+from hermes_skill_creator_plugin._patcher_migration_render import (
+    HermesPatchContext,
+    _render_cap_row,
     _render_patch_table,
 )
 from hermes_skill_creator_plugin._patcher_migration_render import (
@@ -108,7 +113,7 @@ def _write_patch_md(worktree: Path, inputs: _PatchInputs) -> None:
     """Render + write the MIGRATION.hermes-patch.md file."""
     patch_rows = _render_patch_table(inputs.sites)
     cap_row = _render_cap_row()
-    body = _render_migration_hermes_patch(
+    ctx = HermesPatchContext(
         target=inputs.target,
         git_head=inputs.git_head,
         task_e_redirect=inputs.task_e_redirect,
@@ -117,6 +122,7 @@ def _write_patch_md(worktree: Path, inputs: _PatchInputs) -> None:
         cap_row=cap_row,
         patch_rows=patch_rows,
     )
+    body = _render_migration_hermes_patch(ctx)
     (worktree / "MIGRATION.hermes-patch.md").write_text(body, encoding="utf-8")
 
 
