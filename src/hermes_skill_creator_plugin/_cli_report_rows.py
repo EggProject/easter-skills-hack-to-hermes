@@ -28,21 +28,41 @@ def build_usage_rows(
     enabled_names: frozenset[str],
 ) -> dict[str, dict[str, Any]]:
     """Build a name -> usage-fields map. None values when not persisted."""
-    out: dict[str, dict[str, Any]] = {}
     if curator is None:
-        for name in enabled_names:
-            out[name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
-        return out
+        return _empty_usage_for_all(enabled_names)
     report = _usage_report_safe(curator, skills_dir)
+    out = _collect_persisted_entries(report, enabled_names)
+    _fill_missing_with_empty(out, enabled_names)
+    return out
+
+
+def _empty_usage_for_all(names: frozenset[str]) -> dict[str, dict[str, Any]]:
+    """Return a name -> empty-usage dict for every name in ``names``."""
+    return {name: {**EMPTY_USAGE, PERSISTED_KEY: False} for name in names}
+
+
+def _collect_persisted_entries(
+    report: list[Any],
+    enabled_names: frozenset[str],
+) -> dict[str, dict[str, Any]]:
+    """Project persisted entry fields for entries whose name is enabled."""
+    out: dict[str, dict[str, Any]] = {}
     for entry in report:
         entry_name = _entry_name(entry)
         if entry_name is None or entry_name not in enabled_names:
             continue
         out[entry_name] = _entry_fields(entry)
+    return out
+
+
+def _fill_missing_with_empty(
+    out: dict[str, dict[str, Any]],
+    enabled_names: frozenset[str],
+) -> None:
+    """Add empty-usage rows for any enabled name missing from ``out``."""
     for enabled_name in enabled_names:
         if enabled_name not in out:
             out[enabled_name] = {**EMPTY_USAGE, PERSISTED_KEY: False}
-    return out
 
 
 def _usage_report_safe(curator: Any, skills_dir: Path) -> list[Any]:

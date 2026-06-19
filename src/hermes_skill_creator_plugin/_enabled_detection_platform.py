@@ -28,6 +28,13 @@ def list_blocks(plat_value: Any) -> bool:
     return False
 
 
+def _dict_blocks(plat_value: dict[Any, Any]) -> bool:
+    """Return True iff any value in the dict-shape platforms entry blocks."""
+    if not plat_value:
+        return False
+    return any(bool(val) for val in plat_value.values())
+
+
 def plat_value_blocks(plat_value: Any) -> bool:
     """Return True iff a single ``platforms:`` value blocks the host."""
     if isinstance(plat_value, str):
@@ -35,7 +42,7 @@ def plat_value_blocks(plat_value: Any) -> bool:
     if list_blocks(plat_value):
         return True
     if isinstance(plat_value, dict):
-        return any(bool(val) for val in plat_value.values()) if plat_value else False
+        return _dict_blocks(plat_value)
     if plat_value is None:
         return False
     return bool(plat_value)
@@ -50,15 +57,20 @@ def platform_blocked(
         return False
     plats = frontmatter_dict.get(_PLATFORMS_KEY)
     if isinstance(plats, list):
-        for entry in plats:
-            if not isinstance(entry, dict):
-                continue
-            blocked = entry.get(_DISABLE_IF_PLATFORM_PRESENT_KEY, [])
-            if isinstance(blocked, list) and platform in blocked:
-                return True
-        return False
+        return _list_blocks_host(plats, platform)
     if isinstance(plats, dict):
         return plat_value_blocks(plats.get(platform))
+    return False
+
+
+def _list_blocks_host(plats: list[Any], platform: str) -> bool:
+    """Return True iff any list-entry's disable_if_platform_present blocks ``platform``."""
+    for entry in plats:
+        if not isinstance(entry, dict):
+            continue
+        blocked = entry.get(_DISABLE_IF_PLATFORM_PRESENT_KEY, [])
+        if isinstance(blocked, list) and platform in blocked:
+            return True
     return False
 
 

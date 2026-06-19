@@ -15,7 +15,9 @@ from hermes_skill_creator_plugin._cli_profiles_diff import (
 )
 
 
-def new_row(profile_path: Path) -> tuple[dict[str, Any], list[str], list[str]]:
+def new_row(
+    profile_path: Path,
+) -> tuple[dict[str, Any], list[str], list[str]]:
     """Build the initial empty row + convenience handles for actions/errors."""
     row: dict[str, Any] = empty_row(profile_path.name or "hermes")
     return row, row["actions_taken"], row["errors"]
@@ -63,6 +65,14 @@ def build_diff(
 ) -> dict[str, list[str]]:
     diff_disabled = diff_sets(disabled_now, desired_disabled)
     diff_installed = diff_sets(installed_now, desired_installed)
+    return _diff_payload(diff_disabled, diff_installed)
+
+
+def _diff_payload(
+    diff_disabled: dict[str, list[str]],
+    diff_installed: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    """Assemble the four-key diff payload from per-set diff results."""
     return {
         "added_disabled": diff_disabled["added"],
         "removed_disabled": diff_disabled["removed"],

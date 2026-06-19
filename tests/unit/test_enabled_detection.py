@@ -1003,6 +1003,13 @@ def test_platform_disables_set_value(
     assert enabled_detection._platform_disables({"darwin": set()}, "darwin") is False
 
 
+def test_platform_disables_empty_dict_value(
+    enabled_detection,
+) -> None:
+    """``_platform_disables`` covers the empty-dict branch (no values to scan)."""
+    assert enabled_detection._platform_disables({"darwin": {}}, "darwin") is False
+
+
 def test_find_skill_md_skips_non_dir_child(enabled_detection, tmp_path: Path) -> None:
     """The cross-reference loop skips non-directory children in ``skills/``."""
     skills = tmp_path / "skills"

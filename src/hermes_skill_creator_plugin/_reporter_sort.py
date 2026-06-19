@@ -72,7 +72,10 @@ def _build_row(fields: _RowFields) -> SkillRow:
     )
 
 
-def _sort_key(row: SkillRow, sort_key: str) -> tuple[int, int, str] | tuple[int, str]:
+def _sort_key(
+    row: SkillRow,
+    sort_key: str,
+) -> tuple[int, int, str] | tuple[int, str]:
     """Return a tuple sort key for `sort_key`.
 
     The key has the form `(na_marker, primary_desc, name_asc)` for keys that
@@ -80,17 +83,23 @@ def _sort_key(row: SkillRow, sort_key: str) -> tuple[int, int, str] | tuple[int,
     For `last_used_at` we cannot build a homogeneous tuple because the
     primary is a string — that case is handled separately in sort_rows().
     """
-    name = row._sort_name
-    if sort_key == "tokens":
-        return (-row.tokens, name)
     if sort_key == "use_count":
-        if row.use_count is None:
-            # n/a rows sort AFTER non-na rows (1 > 0). The 0/0 placeholders
-            # for primary+name are not consulted because na_marker dominates.
-            return (_NA_MARKER_LAST, 0, name)
-        return (_NA_MARKER_FIRST, -row.use_count, name)
-    # Unknown — fall back to tokens desc.
-    return (-row.tokens, name)
+        return _sort_key_use_count(row)
+    return _sort_key_tokens(row)
+
+
+def _sort_key_tokens(row: SkillRow) -> tuple[int, str]:
+    """Tokens desc, name asc — also the fallback for unknown sort keys."""
+    return (-row.tokens, row._sort_name)
+
+
+def _sort_key_use_count(row: SkillRow) -> tuple[int, int, str]:
+    """Use-count desc, name asc; n/a rows sort LAST."""
+    if row.use_count is None:
+        # n/a rows sort AFTER non-na rows (1 > 0). The 0/0 placeholders
+        # for primary+name are not consulted because na_marker dominates.
+        return (_NA_MARKER_LAST, 0, row._sort_name)
+    return (_NA_MARKER_FIRST, -row.use_count, row._sort_name)
 
 
 def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
