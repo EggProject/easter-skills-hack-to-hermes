@@ -32,6 +32,7 @@ TDD test cases for this module:
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +77,16 @@ def _check_hermes_home(
     return None
 
 
+@dataclass(frozen=True)
+class ProfileBuildContext:
+    """Per-profile build inputs (everything except the profile path)."""
+
+    fmt: str
+    sort: str
+    platform: str | None
+    curator: Any | None
+
+
 def _build_profile_sections(
     profile_paths: list[Path],
     *,
@@ -85,27 +96,47 @@ def _build_profile_sections(
     curator: Any | None,
 ) -> tuple[list[str], list[ProfileSection], int | None]:
     """Build text/json sections for all profiles. Error code or None."""
-    from hermes_skill_creator_plugin.i18n import messages_en as EN
-
     text_sections: list[str] = []
     json_sections: list[ProfileSection] = []
+    ctx = ProfileBuildContext(
+        fmt=fmt, sort=sort, platform=platform, curator=curator,
+    )
     for prof in profile_paths:
-        try:
-            rows, total = _build_rows_for_profile(
-                prof, platform=platform, curator=curator,
-                estimate_tokens_fn=estimate_tokens,
-                enabled_skills_fn=get_enabled_skills,
-            )
-        except EnabledDetectionUnavailable:
-            click.echo(EN.report_enabled_detection_unavailable, err=True)
-            return text_sections, json_sections, 6
-        rows = sort_rows(rows, sort)
-        section = _helpers.make_section(fmt, prof.name, rows, total)
-        if fmt == FORMAT_TEXT:
-            text_sections.append(section)  # type: ignore[arg-type]
-        else:
-            json_sections.append(section)  # type: ignore[arg-type]
+        rc = _build_one_profile_section(
+            prof, ctx=ctx,
+            text_sections=text_sections, json_sections=json_sections,
+        )
+        if rc is not None:
+            return text_sections, json_sections, rc
     return text_sections, json_sections, None
+
+
+def _build_one_profile_section(
+    prof: Path,
+    *,
+    ctx: ProfileBuildContext,
+    text_sections: list[str],
+    json_sections: list[ProfileSection],
+) -> int | None:
+    """Append one profile's section; return 6 on detection error, else None."""
+    from hermes_skill_creator_plugin.i18n import messages_en as EN
+
+    try:
+        rows, total = _build_rows_for_profile(
+            prof, platform=ctx.platform, curator=ctx.curator,
+            estimate_tokens_fn=estimate_tokens,
+            enabled_skills_fn=get_enabled_skills,
+        )
+    except EnabledDetectionUnavailable:
+        click.echo(EN.report_enabled_detection_unavailable, err=True)
+        return 6
+    rows = sort_rows(rows, ctx.sort)
+    section = _helpers.make_section(ctx.fmt, prof.name, rows, total)
+    if ctx.fmt == FORMAT_TEXT:
+        text_sections.append(section)  # type: ignore[arg-type]
+    else:
+        json_sections.append(section)  # type: ignore[arg-type]
+    return None
 
 
 def _load_context(
@@ -137,58 +168,67 @@ def _emit_sections(
     _helpers.emit_output(fmt, output, json_path)
 
 
-def run(
-    *,
-    profile: str | None = None,
-    sort: str = SORT_TOKENS,
-    fmt: str = FORMAT_TEXT,
-    json_path: Path | None = None,
-    platform: str | None = None,
-    show_help: bool = False,
-    argv: list[str] | None = None,
-) -> int:
+@dataclass(frozen=True)
+class ReportInputs:
+    """Immutable input set for the reporter's dispatch pipeline."""
+
+    profile: str | None = None
+    sort: str = SORT_TOKENS
+    fmt: str = FORMAT_TEXT
+    json_path: Path | None = None
+    platform: str | None = None
+    show_help: bool = False
+    argv: list[str] | None = None
+
+
+def run(**kwargs: Any) -> int:
     """Run the reporter. Returns the exit code (0 on success)."""
-    return _dispatch(
-        profile=profile, sort=sort, fmt=fmt,
-        json_path=json_path, platform=platform,
-        show_help=show_help, argv=argv,
-    )
+    return _dispatch(ReportInputs(**kwargs))
 
 
-def _dispatch(
-    *,
-    profile: str | None,
-    sort: str,
-    fmt: str,
-    json_path: Path | None,
-    platform: str | None,
-    show_help: bool,
-    argv: list[str] | None,
-) -> int:
+def _dispatch(inputs: ReportInputs) -> int:
     """Validate, resolve paths, build sections, emit."""
-    if show_help:
-        emit_bilingual_help()
-        return 0
-    if argv is not None:
-        rc = _helpers.reject_unwanted_flags(argv)
-        if rc is not None:
-            return rc
-    rc = _helpers.validate_sort_and_fmt(sort, fmt)
-    if rc is not None:
-        return rc
+    early_rc = _early_exit_rc(inputs)
+    if early_rc is not None:
+        return early_rc
     json_path, curator, profile_paths, err = _load_context(
-        fmt, json_path, profile,
+        inputs.fmt, inputs.json_path, inputs.profile,
     )
     if err is not None:
         return err
+    return _build_and_emit(inputs, json_path, curator, profile_paths)
+
+
+def _build_and_emit(
+    inputs: ReportInputs,
+    json_path: Path | None,
+    curator: Any | None,
+    profile_paths: list[Path],
+) -> int:
+    """Build sections for ``profile_paths`` and emit the final report."""
     text_sections, json_sections, build_err = _build_profile_sections(
-        profile_paths, fmt=fmt, sort=sort,
-        platform=platform, curator=curator,
+        profile_paths, fmt=inputs.fmt, sort=inputs.sort,
+        platform=inputs.platform, curator=curator,
     )
     if build_err is not None:
         return build_err
-    _emit_sections(fmt, json_path, text_sections, json_sections)
+    _emit_sections(inputs.fmt, json_path, text_sections, json_sections)
     return 0
+
+
+def _early_exit_rc(inputs: ReportInputs) -> int | None:
+    """Return exit code for short-circuit cases (help / invalid args), or None."""
+    if inputs.show_help:
+        emit_bilingual_help()
+        return 0
+    if inputs.argv is not None:
+        rc = _helpers.reject_unwanted_flags(inputs.argv)
+        if rc is not None:
+            return rc
+    rc = _helpers.validate_sort_and_fmt(inputs.sort, inputs.fmt)
+    if rc is not None:
+        return rc
+    return None
 
 
 def _main_entry() -> None:
