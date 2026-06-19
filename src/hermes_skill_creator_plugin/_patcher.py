@@ -77,13 +77,7 @@ from hermes_skill_creator_plugin._patcher_pipeline import (
     apply_sites as _apply_sites_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_pipeline import (
-    emit_audit_log as _emit_audit_log,
-)
-from hermes_skill_creator_plugin._patcher_pipeline import (
     fail_with_drift as _fail_with_drift_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    mutate_lines_for_site as _mutate_lines_for_site,
 )
 from hermes_skill_creator_plugin._patcher_pipeline import (
     ok_check_result as _ok_check_result_pipeline,
@@ -106,19 +100,10 @@ from hermes_skill_creator_plugin._patcher_sites import (
 )
 from hermes_skill_creator_plugin.i18n.messages_en import (
     CIRCULAR_IMPORT_PREFLIGHT,
-    CROSS_FS_WARN,
-    FORCE_AUDIT_LOG,
     FORCE_REQUIRES_I_ACCEPT,
-    IO_ERROR,
-    LINE_DRIFT,
-    OK_ALREADY_PATCHED,
-    OK_PATCHED,
-    PERMISSION_DENIED,
     TARGET_IS_HERMES_AGENT,
     TARGET_MISSING_SKILL_UTILS,
     TARGET_REQUIRED,
-    TEXT_DRIFT,
-    VALIDATION_FAILED,
 )
 
 # --- exit codes (per plans/04-script-1-patch.md §Exit code matrix) --------

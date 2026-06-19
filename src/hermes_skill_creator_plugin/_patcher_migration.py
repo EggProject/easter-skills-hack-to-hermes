@@ -55,7 +55,9 @@ MAX_DESC_LENGTH_HINT = (
 )
 # Ellipsis character for _truncate().
 ELLIPSIS_CHAR = "…"
-NEWLINE_ESCAPE = "\\n"
+# Raw-string newline escape for the markdown LF -> ``\\n`` rendering.
+NEWLINE_ESCAPE = r"\n"
+# Actual LF character (real newline).
 LF = "\n"
 
 
