@@ -40,31 +40,23 @@ import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import click
 
-# The audit helpers live in ``_cli_profiles_audit`` so this module stays
-# slim; tests grep this file's source for the canonical import lines
-# (the read-side ``agent.skill_utils.get_disabled_skill_names`` and the
-# write-side ``hermes_cli.skills_config.save_disabled_skills``), so we
-# re-state them here verbatim.
-from agent.skill_utils import get_disabled_skill_names  # noqa: F401  pylint: disable=unused-import,import-outside-toplevel,line-too-long  # test-spec: source of truth for the read-side import.
-from hermes_cli.skills_config import save_disabled_skills  # noqa: F401  pylint: disable=unused-import,import-outside-toplevel,line-too-long  # test-spec: source of truth for the write-side import.
+# Tests grep this module's source for the canonical import lines
+# (the read-side ``agent.skill_utils.get_disabled_skill_names`` and
+# the write-side ``hermes_cli.skills_config.save_disabled_skills``);
+# the audit helpers live in ``_cli_profiles_audit`` and the unused-
+# import silencer is mandated by the test contract.
+from agent.skill_utils import get_disabled_skill_names  # noqa: F401
+from hermes_cli.skills_config import save_disabled_skills  # noqa: F401
 
 from hermes_skill_creator_plugin._cli_profiles_audit import (
-    DESIRED_SKILL,
-    NEVER_DISABLE,
-    apply_clear_cache as _apply_clear_cache,
-    apply_do_install as _apply_do_install,
-    apply_save_disabled as _apply_save_disabled,
     audit_profile as _audit_profile,
     build_bilingual as _build_bilingual,
-    diff_sets as _diff,
-    load_config_or_error as _load_config_or_error,
-    new_row as _new_row,
-    populate_diff_row as _populate_diff_row,
-    read_disabled_or_empty as _read_disabled_or_empty,
-    walk_skills as _walk_skills,
+    diff_sets,
+    walk_skills,
 )
 from hermes_skill_creator_plugin._cli_profiles_cli import (
     build_help_text as _build_help_text,
@@ -74,6 +66,11 @@ from hermes_skill_creator_plugin._cli_profiles_cli import (
 from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
 from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
 from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
+
+# Re-exports for tests / external callers (do NOT remove — tests
+# import these by name from ``hermes_skill_creator_plugin.cli_profiles``).
+_walk_skills = walk_skills
+_diff = diff_sets
 
 # ---------------------------------------------------------------------------
 # Module-level constants (preserved for tests / external callers).
@@ -98,13 +95,13 @@ LIVE_HERMES_HOME = Path.home() / ".hermes"
 
 
 # ---------------------------------------------------------------------------
-# Bilingual helper.
+# Bilingual helper + per-row presentation.
 # ---------------------------------------------------------------------------
 
 
-def _bilingual(key: str, **values: object) -> str:
+def _bilingual(key: str, **format_kwargs: object) -> str:
     """Build a ``[en] ... / [hu] ...`` line for the given message key."""
-    return _build_bilingual(EN, HU, key, **values)
+    return _build_bilingual(EN, HU, key, **format_kwargs)
 
 
 def _now_iso(frozen_time: str | None) -> str:
@@ -114,110 +111,182 @@ def _now_iso(frozen_time: str | None) -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-# ---------------------------------------------------------------------------
-# Programmatic entry point.
-# ---------------------------------------------------------------------------
+# Sentinels for the per-row "value list or dash" presentation.
+_DASH = "-"
 
 
-def run_audit(
-    *,
-    apply: bool = False,
-    json_path: Path | None = None,
-    frozen_time: str | None = None,
-    skip_install: bool = False,
-    yes: bool = False,
-    profile: str | None = None,
-) -> AuditReport:
-    """Run the per-profile audit/flip.
+def _join_or_dash(names: list[str]) -> str:
+    """Join a list of names with commas, or ``-`` for empty/None."""
+    if not names:
+        return _DASH
+    return ",".join(names)
 
-    Args:
-        apply: When True, perform the writes (--apply).
-        json_path: Optional path to write the JSON report to.
-        frozen_time: Optional ISO 8601 UTC string to pin the report
-            timestamp (D7: determinism).
-        skip_install: When True, audit only (do not call do_install).
-        yes: When True, suppress the live-install refusal.
-        profile: Optional single profile NAME to restrict the run to.
 
-    Returns:
-        The ``AuditReport`` (also written to ``json_path`` if given).
-    """
-    from hermes_cli.profiles import list_profiles
+def _live_install_refused(apply: bool, yes: bool) -> bool:
+    """Return True when the run should refuse to write the LIVE install."""
+    if not apply or yes:
+        return False
+    env = os.environ.get("HERMES_HOME")
+    if env is None:
+        return False
+    return Path(env).resolve() == LIVE_HERMES_HOME.resolve()
 
-    # 0. Live-install refusal (safety contract). The refusal fires
-    #    whenever HERMES_HOME resolves to the LIVE install AND --yes is
-    #    absent — TTY or not, CI or interactive. Operators who really
-    #    want to write to the live install must pass --yes.
-    if apply and not yes:
-        env = os.environ.get("HERMES_HOME")
-        if env is not None and Path(env).resolve() == LIVE_HERMES_HOME.resolve():
-            click.echo(_bilingual("profiles_msg_refuse_no_yes"))
-            sys.exit(5)
 
-    click.echo(_bilingual("profiles_msg_scanning"))
-    all_profiles = list_profiles()
-    selected = (
-        [profile_info for profile_info in all_profiles if profile_info.name == profile]
-        if profile is not None
-        else list(all_profiles)
-    )
-    click.echo(_bilingual("profiles_msg_profile_count", n=len(selected)))
-    if not selected:
-        click.echo(_bilingual("profiles_msg_no_profiles"))
-        return AuditReport(
-            tool=TOOL_NAME,
-            version=TOOL_VERSION,
-            generated_at=_now_iso(frozen_time),
-            profiles=[],
-        )
+def _select_profiles(
+    all_profiles: list[object],
+    profile: str | None,
+) -> list[object]:
+    """Filter all_profiles to the requested NAME (or return them all)."""
+    if profile is None:
+        return list(all_profiles)
+    return [
+        profile_info
+        for profile_info in all_profiles
+        if profile_info.name == profile
+    ]
 
-    if apply:
-        click.echo(_bilingual("profiles_msg_applying"))
-    else:
-        click.echo(_bilingual("profiles_msg_audit_default"))
 
-    report = AuditReport(
+def _empty_report(frozen_time: str | None) -> AuditReport:
+    """Build the zero-profile empty report (timestamp pinned by frozen_time)."""
+    return AuditReport(
         tool=TOOL_NAME,
         version=TOOL_VERSION,
         generated_at=_now_iso(frozen_time),
         profiles=[],
     )
+
+
+def _echo_row_summary(row: dict[str, object]) -> None:
+    """Echo the per-profile audit summary + diff in bilingual form."""
+    click.echo(
+        _bilingual(
+            "profiles_msg_profile_audit",
+            name=row["profile_name"],
+            disabled=_join_or_dash(row["current_disabled"]),
+            installed=_join_or_dash(row["current_installed"]),
+        )
+    )
+    diff_row = row["diff"]
+    click.echo(
+        _bilingual(
+            "profiles_msg_diff",
+            ad=_join_or_dash(diff_row["added_disabled"]),
+            rd=_join_or_dash(diff_row["removed_disabled"]),
+            ai=_join_or_dash(diff_row["added_installed"]),
+            ri=_join_or_dash(diff_row["removed_installed"]),
+        )
+    )
+
+
+def _write_json_report(report: AuditReport, json_path: Path) -> None:
+    """Write the report JSON to json_path (creating parent dirs)."""
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_bytes(report.to_json_bytes())
+    click.echo(_bilingual("profiles_msg_json_written", path=str(json_path)))
+
+
+def _audit_and_collect_row(
+    profile_info: object,
+    *,
+    apply: bool,
+    skip_install: bool,
+    frozen_time: str | None,
+) -> dict[str, object]:
+    """Audit a single profile and backfill profile_name from ProfileInfo."""
+    row = _audit_profile(
+        profile_info.path,
+        apply=apply,
+        skip_install=skip_install,
+        frozen_time=frozen_time,
+        bilingual_fn=_bilingual,
+    )
+    # Backfill the profile_name from the ProfileInfo (in case
+    # the path-based name was "hermes" by default).
+    row["profile_name"] = profile_info.name
+    _echo_row_summary(row)
+    return row
+
+
+# ---------------------------------------------------------------------------
+# Programmatic entry point.
+# ---------------------------------------------------------------------------
+
+
+def _extract_audit_options(options: dict[str, object]) -> dict[str, object]:
+    """Pull the recognized keyword options out of the raw options dict."""
+    return {
+        "apply": bool(options.get("apply", False)),
+        "json_path": options.get("json_path"),
+        "frozen_time": options.get("frozen_time"),
+        "skip_install": bool(options.get("skip_install", False)),
+        "yes": bool(options.get("yes", False)),
+        "profile": options.get("profile"),
+    }
+
+
+def _run_audit_phase(opts: dict[str, object]) -> AuditReport:
+    """Drive the audit/flip after the live-install refusal gate."""
+    apply = bool(opts["apply"])
+    frozen_time = opts["frozen_time"]
+    skip_install = bool(opts["skip_install"])
+    profile = opts["profile"]
+
+    from hermes_cli.profiles import list_profiles
+
+    click.echo(_bilingual("profiles_msg_scanning"))
+    selected = _select_profiles(list_profiles(), profile)
+    click.echo(_bilingual("profiles_msg_profile_count", n=len(selected)))
+    if not selected:
+        click.echo(_bilingual("profiles_msg_no_profiles"))
+        return _empty_report(frozen_time)
+
+    mode_key = "profiles_msg_applying" if apply else "profiles_msg_audit_default"
+    click.echo(_bilingual(mode_key))
+
+    report = _empty_report(frozen_time)
     for profile_info in selected:
-        row = _audit_profile(
-            profile_info.path,
+        row = _audit_and_collect_row(
+            profile_info,
             apply=apply,
             skip_install=skip_install,
             frozen_time=frozen_time,
-            bilingual_fn=_bilingual,
-        )
-        # Backfill the profile_name from the ProfileInfo (in case
-        # the path-based name was "hermes" by default).
-        row["profile_name"] = profile_info.name
-        click.echo(
-            _bilingual(
-                "profiles_msg_profile_audit",
-                name=row["profile_name"],
-                disabled=",".join(row["current_disabled"]) or "-",
-                installed=",".join(row["current_installed"]) or "-",
-            )
-        )
-        click.echo(
-            _bilingual(
-                "profiles_msg_diff",
-                ad=",".join(row["diff"]["added_disabled"]) or "-",
-                rd=",".join(row["diff"]["removed_disabled"]) or "-",
-                ai=",".join(row["diff"]["added_installed"]) or "-",
-                ri=",".join(row["diff"]["removed_installed"]) or "-",
-            )
         )
         report.profiles.append(row)
 
     click.echo(_bilingual("profiles_msg_done", n=len(selected)))
+    return report
 
+
+def run_audit(**options: object) -> AuditReport:
+    """Run the per-profile audit/flip.
+
+    Accepted keyword options:
+        apply (bool): Perform the writes (--apply).
+        json_path (Path | None): Optional path to write the JSON report to.
+        frozen_time (str | None): Optional ISO 8601 UTC string to pin
+            the report timestamp (D7: determinism).
+        skip_install (bool): Audit only; do not call do_install.
+        yes (bool): Suppress the live-install refusal.
+        profile (str | None): Optional single profile NAME to restrict.
+
+    Returns:
+        The AuditReport (also written to json_path if given).
+    """
+    opts = _extract_audit_options(options)
+
+    # 0. Live-install refusal (safety contract). The refusal fires
+    #    whenever HERMES_HOME resolves to the LIVE install AND --yes is
+    #    absent — TTY or not, CI or interactive. Operators who really
+    #    want to write to the live install must pass --yes.
+    if _live_install_refused(bool(opts["apply"]), bool(opts["yes"])):
+        click.echo(_bilingual("profiles_msg_refuse_no_yes"))
+        sys.exit(5)
+
+    report = _run_audit_phase(opts)
+
+    json_path = opts["json_path"]
     if json_path is not None:
-        json_path.parent.mkdir(parents=True, exist_ok=True)
-        json_path.write_bytes(report.to_json_bytes())
-        click.echo(_bilingual("profiles_msg_json_written", path=str(json_path)))
+        _write_json_report(report, cast("Path", json_path))
 
     return report
 
