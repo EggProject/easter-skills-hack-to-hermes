@@ -202,7 +202,7 @@ def _apply_one_site(
     timestamp: str,
 ) -> "PatcherResult | None":
     """Apply one site. Return ``None`` on success, or a result on IO error."""
-    path = target_path / site.file
+    path = target_path / site.file_path
     before = path.read_bytes()
     text = before.decode("utf-8", errors="replace")
     new_lines = mutate_lines_for_site(site, text)

@@ -340,7 +340,7 @@ def _validate_one_site(
     sites_already: list[str],
 ) -> dict[str, Any] | None:
     """Validate one site; return a failure dict or ``None``."""
-    path = target_path / site.file
+    path = target_path / site.file_path
     if not path.exists():
         return _missing_file_failure(site)
     text = path.read_text(encoding="utf-8", errors="replace")

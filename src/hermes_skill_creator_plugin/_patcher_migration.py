@@ -113,7 +113,7 @@ def _render_task_e_row(site: Site) -> str:
         INSERTION_COL_WIDTH,
     )
     return (
-        f"| {site.site_id} | {site.file}:{site.line_for_state} "
+        f"| {site.site_id} | {site.file_path}:{site.line_for_state} "
         f"(L{site.line_for_state}: `{anchor_text}`; "
         "single physical line) | (preserved verbatim) | "
         f"`{insertion_text}` (additive) "

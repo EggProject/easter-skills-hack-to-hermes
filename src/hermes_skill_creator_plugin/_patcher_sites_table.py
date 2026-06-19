@@ -85,7 +85,7 @@ class Site:
     """
 
     site_id: str
-    file: Path
+    file_path: Path
     anchors: tuple[Anchor, ...]
     insertion: str
     expected_replacement: str
@@ -111,7 +111,7 @@ E7_LINE = 380
 
 S1_CAP_SITE = Site(
     site_id="S1.cap",
-    file=TOOLS_SKILL_UTILS_REL,
+    file_path=TOOLS_SKILL_UTILS_REL,
     anchors=(
         Anchor(line=S1_CAP_LINE_A, text="    if len(desc) > 60:"),
         Anchor(line=S1_CAP_LINE_B, text='        return desc[:57] + "..."'),
@@ -134,7 +134,7 @@ S1_CAP_SITE = Site(
 
 E1_SKILLS_GUIDANCE = Site(
     site_id="E1.skills_guidance",
-    file=PROMPT_BUILDER_REL,
+    file_path=PROMPT_BUILDER_REL,
     anchors=(
         Anchor(
             line=E1_LINE,
@@ -144,77 +144,77 @@ E1_SKILLS_GUIDANCE = Site(
     # E1 is appended inside a parenthesized implicit-concat; the next
     # line is ")" closing the constant. We append ONE line that begins
     # with a single leading space, concatenating to the previous literal.
-    insertion='    " " + SKILL_CREATOR_CONSULT_RULE\n',
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE' + "\n",
     # Idempotency: the site is patched iff the appended line is present
     # verbatim after the L179 anchor.
-    expected_replacement='    " " + SKILL_CREATOR_CONSULT_RULE',
+    expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE',
     kind="append",
     line_for_state=E1_LINE,
 )
 
 E2_MEMORY_GUIDANCE = Site(
     site_id="E2.memory_guidance",
-    file=PROMPT_BUILDER_REL,
+    file_path=PROMPT_BUILDER_REL,
     anchors=(
         Anchor(
             line=E2_LINE,
-            text='    "necessary later, save it as a skill with the skill tool.\\n"',
+            text=r'    "necessary later, save it as a skill with the skill tool.\n"',
         ),
     ),
-    insertion='    " " + SKILL_CREATOR_CONSULT_RULE + "\\n"\n',
-    expected_replacement='    " " + SKILL_CREATOR_CONSULT_RULE + "\\n"',
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
+    expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"',
     kind="append",
     line_for_state=E2_LINE,
 )
 
 E3_BUILD_SKILLS_PROMPT = Site(
     site_id="E3.build_skills_prompt",
-    file=PROMPT_BUILDER_REL,
+    file_path=PROMPT_BUILDER_REL,
     anchors=(
         Anchor(
             line=E3_LINE,
             text='            "After difficult/iterative tasks, offer to save as a skill. "',
         ),
     ),
-    insertion='            SKILL_CREATOR_CONSULT_RULE + "\\n"\n',
-    expected_replacement='            SKILL_CREATOR_CONSULT_RULE + "\\n"',
+    insertion=r'            SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
+    expected_replacement=r'            SKILL_CREATOR_CONSULT_RULE + "\n"',
     kind="append",
     line_for_state=E3_LINE,
 )
 
 E4_SKILL_REVIEW_PROMPT = Site(
     site_id="E4.skill_review_prompt_opt4",
-    file=BACKGROUND_REVIEW_REL,
+    file_path=BACKGROUND_REVIEW_REL,
     anchors=(
         Anchor(
             line=E4_LINE,
             text="    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"",
         ),
     ),
-    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
-    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
+    insertion="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"\n",
+    expected_replacement="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"",
     kind="append",
     line_for_state=E4_LINE,
 )
 
 E5_COMBINED_REVIEW_PROMPT = Site(
     site_id="E5.combined_review_prompt_opt4",
-    file=BACKGROUND_REVIEW_REL,
+    file_path=BACKGROUND_REVIEW_REL,
     anchors=(
         Anchor(
             line=E5_LINE,
             text='    "(2), or (3).\\n\\n"',
         ),
     ),
-    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
-    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
+    insertion="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"\n",
+    expected_replacement="    SKILL_CREATOR_CONSULT_RULE + \"\\n\\n\"",
     kind="append",
     line_for_state=E5_LINE,
 )
 
 E6_SKILL_MANAGE_SCHEMA_DESC = Site(
     site_id="E6.skill_manage_schema_desc",
-    file=SKILL_MANAGER_TOOL_REL,
+    file_path=SKILL_MANAGER_TOOL_REL,
     anchors=(
         Anchor(
             line=E6_LINE,
@@ -241,7 +241,7 @@ E6_SKILL_MANAGE_SCHEMA_DESC = Site(
 
 E7_SKILLS_DOC_SECTION = Site(
     site_id="E7.skills_doc_section",
-    file=SKILLS_DOC_REL,
+    file_path=SKILLS_DOC_REL,
     anchors=(
         Anchor(
             line=E7_LINE,
