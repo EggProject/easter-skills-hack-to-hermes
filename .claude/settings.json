@@ -17,6 +17,7 @@
       "Bash(git status *)",
       "Bash(git log *)",
       "Bash(git diff *)",
+      "Bash(git add *)",
       "Bash(gh api *)",
       "Bash(gh run *)",
       "Bash(gh pr *)",
@@ -93,13 +94,6 @@
       "Edit(~/.npmrc)",
       "Edit(~/.netrc)",
       "Edit(~/.pypirc)",
-
-      "Edit(/.claude/settings.json)",
-      "Edit(/.claude/settings.local.json)",
-      "Edit(~/.claude/settings.json)",
-
-      "Edit(.git)",
-      "Edit(**/.git/**)",
 
       "Edit(~/.zshrc)",
       "Edit(~/.zprofile)",
