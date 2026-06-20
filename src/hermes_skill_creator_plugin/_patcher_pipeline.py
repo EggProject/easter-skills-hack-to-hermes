@@ -15,24 +15,28 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hermes_skill_creator_plugin import _patcher as _patcher_mod
-from hermes_skill_creator_plugin import i18n as _i18n
-from hermes_skill_creator_plugin._patcher_apply import AUDIT_LOG
-from hermes_skill_creator_plugin._patcher_helpers import (
-    cross_filesystem as _cross_filesystem,
-)
-from hermes_skill_creator_plugin._patcher_helpers import now_iso as _now_iso
-from hermes_skill_creator_plugin._patcher_pipeline_consts import (
-    EXIT_IO,
-    EXIT_PERMISSION,
-    STATE_DRIFTED,
-    STATE_PATCHED,
-)
-from hermes_skill_creator_plugin._patcher_pipeline_emit import (
-    emit_audit_log,
-    mutate_lines_for_site,
-)
+from hermes_skill_creator_plugin import _patcher_pipeline_imports as _imps
 from hermes_skill_creator_plugin._patcher_sites import Site
+
+# Local bindings matching the previous top-level import names. The
+# actual imports live in :mod:`._patcher_pipeline_imports` to keep
+# this orchestrator under wemake WPS201 (<=12 imports per module).
+# ``_patcher_mod`` is intentionally NOT bound here: importing
+# :mod:`._patcher` at module top creates a cycle with
+# :mod:`._patcher` -> :mod:`._patcher_pipeline`. The single user
+# (``_try_atomic_write``) lazy-imports it via the runtime path.
+# ``Site`` is kept as a direct class import so mypy preserves its
+# concrete type (vs ``Site = _imps.Site`` which becomes ``Site?``).
+_i18n = _imps._i18n
+AUDIT_LOG = _imps.AUDIT_LOG
+_cross_filesystem = _imps._cross_filesystem
+_now_iso = _imps._now_iso
+EXIT_IO = _imps.EXIT_IO
+EXIT_PERMISSION = _imps.EXIT_PERMISSION
+STATE_DRIFTED = _imps.STATE_DRIFTED
+STATE_PATCHED = _imps.STATE_PATCHED
+emit_audit_log = _imps.emit_audit_log
+mutate_lines_for_site = _imps.mutate_lines_for_site
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
@@ -179,6 +183,8 @@ def _try_atomic_write(path: Path, after_bytes: bytes) -> PatcherResult | None:
     Lazy-imports ``_patcher`` so monkeypatch.setattr on the test seam
     is picked up. (See ``tests/unit/test_patcher.py::test_apply_permission_error_branch``.)
     """
+    from hermes_skill_creator_plugin import _patcher as _patcher_mod
+
     try:
         _patcher_mod._atomic_write_bytes(path, after_bytes)
     except (PermissionError, OSError) as exc:

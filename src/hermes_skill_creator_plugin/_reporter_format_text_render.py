@@ -31,10 +31,3 @@ def _compute_column_widths(headers: list[str], body: list[list[str]]) -> list[in
         for cell_index, cell_value in enumerate(body_row):
             widths[cell_index] = max(widths[cell_index], len(cell_value))
     return widths
-
-
-__all__ = [
-    "_padded_cell",
-    "_render_row",
-    "_compute_column_widths",
-]

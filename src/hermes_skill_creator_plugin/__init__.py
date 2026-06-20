@@ -9,5 +9,3 @@ skill files.
 from __future__ import annotations
 
 from hermes_skill_creator_plugin._safety import assert_hermes_agent_untouched
-
-__all__ = ["assert_hermes_agent_untouched"]

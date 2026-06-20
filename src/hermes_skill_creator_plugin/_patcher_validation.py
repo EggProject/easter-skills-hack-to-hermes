@@ -129,9 +129,3 @@ def _line_drift_failure(
         "expected": anchor.text,
         "actual_at_line_<n>": actual,
     }
-
-
-__all__ = [
-    "ValidationResult",
-    "validate_sites",
-]

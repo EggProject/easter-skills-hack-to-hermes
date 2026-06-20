@@ -87,9 +87,3 @@ def format_text(
         lines.append(_render_row(body_row, widths))
     lines.append(_render_row(_build_total_cells(columns, total_tokens), widths))
     return "\n".join(lines)
-
-
-__all__ = [
-    "format_text",
-    "_format_value_for_text",
-]

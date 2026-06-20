@@ -17,12 +17,6 @@ from __future__ import annotations
 
 from hermes_skill_creator_plugin import _enabled_detection_filter as _filter_mod
 from hermes_skill_creator_plugin import _enabled_detection_inline as _inline_mod
-from hermes_skill_creator_plugin._enabled_detection_parse import (
-    load_config as _load_config,
-)
-from hermes_skill_creator_plugin._enabled_detection_parse import (
-    parse_frontmatter as _parse_frontmatter,
-)
 
 # Filter helpers (re-bound under underscore-prefixed local names).
 _apply_conditional_exclusions = _filter_mod.apply_conditional_exclusions
@@ -38,19 +32,3 @@ _platform_disables = _filter_mod.platform_disables
 _extract_disabled_from_inline = _inline_mod.extract_disabled_from_inline
 _split_top_level_commas = _inline_mod.split_top_level_commas
 _strip_quotes = _inline_mod.strip_quotes
-
-__all__ = [
-    "_apply_conditional_exclusions",
-    "_apply_platform_filter",
-    "_conditional_excluded",
-    "_disabled_set",
-    "_drop_disabled",
-    "_extract_disabled_from_inline",
-    "_find_skill_md",
-    "_load_config",
-    "_parse_frontmatter",
-    "_platform_blocked",
-    "_platform_disables",
-    "_split_top_level_commas",
-    "_strip_quotes",
-]

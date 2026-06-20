@@ -73,7 +73,7 @@ def _encode_via_protocol(
     # __len__ — both are valid signals to fall back to chars/4.
     try:
         return len(encoded)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
@@ -127,6 +127,3 @@ def estimate_tokens(
             warning(_FALLBACK_WARNING_MESSAGE)
         return chars_div_four(rendered)
     return token_count
-
-
-__all__ = ["estimate_tokens", "MAX_DESCRIPTION_LENGTH", "reset_warning_state"]

@@ -100,6 +100,3 @@ def _restore_scope(prev_env: str | None, token: object, prev_override: object) -
     # was captured against that earlier state). Reference the name
     # to keep the binding obvious to readers.
     _ = prev_override
-
-
-__all__ = ["hermes_home_scope"]

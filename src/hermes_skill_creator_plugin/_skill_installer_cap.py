@@ -46,8 +46,3 @@ def detect_active_cap(checkout: Path | None = None) -> str:
     text = src.read_text(encoding=TEXT_ENCODING)
     is_patched = PATCHED_MARKER in text and UNPATCHED_MARKER not in text
     return STATE_PATCHED if is_patched else STATE_UNPATCHED
-
-
-__all__ = [
-    "detect_active_cap",
-]

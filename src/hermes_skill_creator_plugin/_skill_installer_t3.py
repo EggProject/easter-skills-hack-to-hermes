@@ -144,7 +144,3 @@ T3_INVENTORY: list[dict[str, str]] = [
         'RuntimeError(f"hermes -p exited {rc}")',
     ),
 ]
-
-__all__ = [
-    "T3_INVENTORY",
-]

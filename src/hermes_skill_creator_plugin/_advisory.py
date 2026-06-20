@@ -75,7 +75,7 @@ def detect_cap_state(target_dir: Path) -> str:
         return UNKNOWN_STATE
     try:
         tree = _parse_skill_utils_tree(skill_utils)
-    except (OSError, SyntaxError):
+    except OSError, SyntaxError:
         return UNKNOWN_STATE
     state = _walk_tree_for_marker(tree)
     if state is None:
