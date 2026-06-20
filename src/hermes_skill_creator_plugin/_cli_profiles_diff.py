@@ -22,12 +22,8 @@ def walk_skills(skills_dir: Path) -> set[str]:
 
     if not skills_dir.is_dir():
         return set()
-    return _collect_skill_names(sorted(skills_dir.iterdir()))
-
-
-def _collect_skill_names(children: list[Path]) -> set[str]:
     out: set[str] = set()
-    for child in children:
+    for child in sorted(skills_dir.iterdir()):
         name = _skill_name_from(child)
         if name:
             out.add(name)
@@ -77,9 +73,21 @@ def _extract_name(text: str) -> str:
     return ""
 
 
-def diff_sets(current: set[str], desired: set[str]) -> dict[str, list[str]]:
+def diff_sets(
+    current: set[str],
+    desired: set[str],
+) -> dict[str, list[str]]:
     """Compute the symmetric diff between current and desired as sorted lists."""
-    return {
-        "added": sorted(desired - current),
-        "removed": sorted(current - desired),
-    }
+    added = sorted(desired - current)
+    removed = sorted(current - desired)
+    return _build_diff(added, removed)
+
+
+def _build_diff(
+    added: list[str],
+    removed: list[str],
+) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    out["added"] = added
+    out["removed"] = removed
+    return out

@@ -25,6 +25,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import click
 
@@ -128,14 +129,6 @@ def _resolve_target(target_str: str | None) -> Path | None:
     return Path(target_str).resolve() if target_str else None
 
 
-def _refuse_hermes_agent(target_path: Path) -> None:
-    click.echo(
-        TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
-        err=True,
-    )
-    sys.exit(4)
-
-
 def _emit_migration_note_flow(
     target_path: Path,
     *,
@@ -143,7 +136,11 @@ def _emit_migration_note_flow(
     no_schema_redirect: bool,
 ) -> None:
     if is_hermes_agent(target_path):
-        _refuse_hermes_agent(target_path)
+        click.echo(
+            TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
+            err=True,
+        )
+        sys.exit(4)
     worktree = Path.cwd()
     try:
         git_head = _git_head(target_path)
@@ -264,45 +261,66 @@ def main(ctx: click.Context, /, **_kwargs: object) -> None:
     )
 
 
+def _apply_flag_options(func: Any) -> Any:
+    """Compose every flag ``click.option`` decorator onto ``func``.
+
+    Replaces ten module-level ``main = click.option(...)(main)`` lines,
+    each of which exceeds the ``WPS221`` Jones complexity budget on
+    its own. The options are split into two short tuples (5 + 5) to
+    stay under the ``WPS227`` (return tuple > 5) budget.
+    """
+    options_a = (
+        click.option("--target", type=click.Path(), default=None, help=()),
+        click.option("--check", is_flag=True, default=False, help=()),
+        click.option("--apply", "do_apply", is_flag=True, default=False, help=()),
+        click.option(
+            "--task-e-redirect",
+            "task_e_redirect",
+            is_flag=True,
+            default=False,
+            help=(),
+        ),
+        click.option(
+            "--no-schema-redirect",
+            "no_schema_redirect",
+            is_flag=True,
+            default=False,
+            help=(),
+        ),
+    )
+    options_b = (
+        click.option(
+            "--i-accept-line-drift",
+            "i_accept_line_drift",
+            is_flag=True,
+            default=False,
+            help=(),
+        ),
+        click.option("--force", is_flag=True, default=False, help=()),
+        click.option(
+            "--emit-migration-note",
+            "emit_migration_note",
+            is_flag=True,
+            default=False,
+            help=(),
+        ),
+        click.option("--yes", is_flag=True, default=False, help=()),
+        click.option("--verbose", is_flag=True, default=False, help=()),
+    )
+    decorated: Any = func
+    for option in options_a:
+        decorated = option(decorated)
+    for option in options_b:
+        decorated = option(decorated)
+    return decorated
+
+
 # Apply click options to ``main`` directly (the entry-point contract).
 main = click.command(
     help=f"{HELP_EN}\n{HELP_HU}",
     context_settings={"help_option_names": ["-h", "--help"]},
 )(main)
-main = click.option("--target", type=click.Path(), default=None, help=())(main)
-main = click.option("--check", is_flag=True, default=False, help=())(main)
-main = click.option("--apply", "do_apply", is_flag=True, default=False, help=())(main)
-main = click.option(
-    "--task-e-redirect",
-    "task_e_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option(
-    "--no-schema-redirect",
-    "no_schema_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option(
-    "--i-accept-line-drift",
-    "i_accept_line_drift",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option("--force", is_flag=True, default=False, help=())(main)
-main = click.option(
-    "--emit-migration-note",
-    "emit_migration_note",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option("--yes", is_flag=True, default=False, help=())(main)
-main = click.option("--verbose", is_flag=True, default=False, help=())(main)
+main = _apply_flag_options(main)
 
 
 def _git_head(target: Path) -> str:

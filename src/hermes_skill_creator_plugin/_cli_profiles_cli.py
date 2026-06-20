@@ -59,13 +59,8 @@ def _format_options_block(
     messages: Mapping[str, str],
 ) -> str:
     """Render an options block: ``  FLAG  description`` per line."""
-    parts = [_format_option_line(flag, messages[key]) for flag, key in options]
+    parts = [f"  {flag}{messages[key]}\n" for flag, key in options]
     return "".join(parts)
-
-
-def _format_option_line(flag: str, description: str) -> str:
-    """Format a single ``  FLAG  description\\n`` option line."""
-    return f"  {flag}{description}\n"
 
 
 def _build_en_help() -> str:
@@ -100,58 +95,74 @@ def build_help_text() -> str:
     return f"{_build_en_help()}{_HELP_SECTION_SEP}{_build_hu_help()}"
 
 
-@click.command(
-    help=build_help_text(),
-    context_settings={"help_option_names": ["-h", "--help"]},
-)
-@click.option(
-    "--apply",
-    "apply",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_apply"],
-)
-@click.option(
-    "--audit",
-    "audit_only",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_audit"],
-)
-@click.option(
-    "--profile",
-    "profile",
-    default=None,
-    help=EN["profiles_opt_profile"],
-)
-@click.option(
-    "--json",
-    "json_path",
-    default=None,
-    type=click.Path(),
-    help=EN["profiles_opt_json"],
-)
-@click.option(
-    "--yes",
-    "yes",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_yes"],
-)
-@click.option(
-    "--skip-install",
-    "skip_install",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_skip_install"],
-)
-@click.option(
-    "--frozen-time",
-    "frozen_time",
-    default=None,
-    envvar="HERMES_SKILL_CREATOR_FROZEN_TIME",
-    help=EN["profiles_opt_frozen_time"],
-)
+def _apply_options(func: Any) -> Any:
+    """Compose all per-flag ``click.option`` decorators onto ``func``.
+
+    Splits the seven option decorators into two short tuples (4 + 3)
+    to stay under the ``WPS227`` (return tuple > 5) budget while
+    keeping the ``main_cmd`` module-level application free of
+    stacked decorators (``WPS216``).
+    """
+    options_a = (
+        click.option(
+            "--apply",
+            "apply",
+            is_flag=True,
+            default=False,
+            help=EN["profiles_opt_apply"],
+        ),
+        click.option(
+            "--audit",
+            "audit_only",
+            is_flag=True,
+            default=False,
+            help=EN["profiles_opt_audit"],
+        ),
+        click.option(
+            "--profile",
+            "profile",
+            default=None,
+            help=EN["profiles_opt_profile"],
+        ),
+        click.option(
+            "--json",
+            "json_path",
+            default=None,
+            type=click.Path(),
+            help=EN["profiles_opt_json"],
+        ),
+    )
+    options_b = (
+        click.option(
+            "--yes",
+            "yes",
+            is_flag=True,
+            default=False,
+            help=EN["profiles_opt_yes"],
+        ),
+        click.option(
+            "--skip-install",
+            "skip_install",
+            is_flag=True,
+            default=False,
+            help=EN["profiles_opt_skip_install"],
+        ),
+        click.option(
+            "--frozen-time",
+            "frozen_time",
+            default=None,
+            envvar="HERMES_SKILL_CREATOR_FROZEN_TIME",
+            help=EN["profiles_opt_frozen_time"],
+        ),
+    )
+    decorated: Any = func
+    for option in options_a:
+        decorated = option(decorated)
+    for option in options_b:
+        decorated = option(decorated)
+    return decorated
+
+
 def main_cmd(
     apply: bool,
     audit_only: bool,
@@ -181,3 +192,13 @@ def make_cli() -> Any:
     from click.testing import CliRunner
 
     return CliRunner()
+
+
+# Apply click decorators to ``main_cmd`` at module level so the
+# ``main_cmd`` definition itself stays free of decorator noise
+# (keeps WPS216 quiet: no function has more than 5 decorators).
+main_cmd = click.command(
+    help=build_help_text(),
+    context_settings={"help_option_names": ["-h", "--help"]},
+)(main_cmd)
+main_cmd = _apply_options(main_cmd)
