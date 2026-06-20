@@ -34,3 +34,4 @@ dist/
 .workflow-scripts
 !.claude/settings.json
 !.claude/CLAUDE.md
+workflows
