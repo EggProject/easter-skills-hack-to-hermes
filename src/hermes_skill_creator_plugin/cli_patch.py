@@ -24,7 +24,6 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
 
 import click
 
@@ -36,13 +35,12 @@ from hermes_skill_creator_plugin._patcher import (
     is_hermes_agent,
     run_patch,
 )
+from hermes_skill_creator_plugin.cli_patch_git import _git_head
 from hermes_skill_creator_plugin.i18n.messages_en import (
     MIGRATION_REGENERATED,
     TARGET_IS_HERMES_AGENT,
     TARGET_REQUIRED,
 )
-
-_GIT_REV_PARSE_TIMEOUT_SEC = 5
 
 HELP_EN = """\
 Usage (English):
@@ -303,31 +301,3 @@ main = click.option(
 )(main)
 main = click.option("--yes", is_flag=True, default=False, help=())(main)
 main = click.option("--verbose", is_flag=True, default=False, help=())(main)
-
-
-def _git_head(target: Path) -> str:
-    """Best-effort git HEAD SHA for the target; empty on failure."""
-    import subprocess
-
-    try:
-        return _run_git_rev_parse(subprocess, target)
-    except Exception:
-        return ""
-
-
-def _run_git_rev_parse(subprocess_module: ModuleType, target: Path) -> str:
-    """Run ``git rev-parse HEAD`` in ``target``; return stripped stdout."""
-    proc = subprocess_module.run(
-        ["git", "-C", str(target), "rev-parse", "HEAD"],
-        capture_output=True,
-        check=True,
-        text=True,
-        timeout=_GIT_REV_PARSE_TIMEOUT_SEC,
-    )
-    return str(proc.stdout).strip()
-
-
-def _main_entry() -> int:
-    """Module entry point — extracted for testability."""
-    main(standalone_mode=True)
-    return 0

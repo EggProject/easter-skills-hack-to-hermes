@@ -6,20 +6,31 @@ Split from ``_cli_profiles_audit`` (WPS202 / WPS211).
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 
+from hermes_skill_creator_plugin._cli_profiles_apply_safe import (
+    _save_config_safe,
+    _save_disabled_skills_safe,
+)
 from hermes_skill_creator_plugin._cli_profiles_diff import DESIRED_SKILL, NEVER_DISABLE
 
+if TYPE_CHECKING:
+    pass
 
-def load_config_or_error(load_config: Any, errors: list[str], row: dict[str, Any]) -> Any:
+
+def load_config_or_error(load_config: Any, errors: list[str], row: dict[str, Any]) -> dict[str, Any]:
     """Call ``load_config``; on failure record the error and return the row sentinel."""
     try:
-        return load_config()
+        result = load_config()
     except Exception as exc:
         errors.append(f"load_config failed: {exc}")
         return row
+    if not isinstance(result, dict):
+        errors.append(f"load_config returned {type(result).__name__}, expected dict")
+        return row
+    return result
 
 
 def read_disabled_or_empty(get_disabled_skill_names: Any, errors: list[str]) -> set[str]:
@@ -59,29 +70,6 @@ def apply_save_disabled(args: _SaveDisabledArgs) -> None:
     if not _save_config_safe(args.save_config, args.config, args.errors):
         return
     args.actions.append("save_config")
-
-
-def _save_disabled_skills_safe(
-    save_disabled_skills: Any,
-    config: Any,
-    desired_disabled: set[str],
-    errors: list[str],
-) -> bool:
-    try:
-        save_disabled_skills(config, sorted(desired_disabled), platform=None)
-    except Exception as exc:
-        errors.append(f"save_disabled_skills failed: {exc}")
-        return False
-    return True
-
-
-def _save_config_safe(save_config: Any, config: Any, errors: list[str]) -> bool:
-    try:
-        save_config(config)
-    except Exception as exc:
-        errors.append(f"save_config failed: {exc}")
-        return False
-    return True
 
 
 def desired_disabled_after_save(disabled_now: set[str]) -> set[str]:

@@ -40,7 +40,10 @@ from typing import Any
 import click
 
 from hermes_skill_creator_plugin import cli_report_imports as _imps
-from hermes_skill_creator_plugin._enabled_detection import get_enabled_skills
+from hermes_skill_creator_plugin.cli_report_dispatch import (
+    _build_and_emit,
+    _early_exit_rc,
+)
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 
 # Local bindings for readability; source-of-truth imports live in
@@ -48,10 +51,7 @@ from hermes_skill_creator_plugin.i18n import messages_en as EN
 _helpers = _imps._helpers
 _paths = _imps._paths
 _rows = _imps._rows
-emit_bilingual_help = _imps.emit_bilingual_help
-estimate_tokens = _imps.estimate_tokens
 main = _imps.main
-sort_rows = _imps.sort_rows
 
 # ``ProfileSection`` is used in type annotations only; with
 # ``from __future__ import annotations`` the type-checker can resolve
@@ -64,15 +64,15 @@ HELP_EN_HEADER = _helpers.HELP_EN_HEADER
 HELP_HU_HEADER = _helpers.HELP_HU_HEADER
 FORMAT_TEXT = _helpers.FORMAT_TEXT
 SORT_TOKENS = _helpers.SORT_TOKENS
-EnabledDetectionUnavailable = _rows.EnabledDetectionUnavailable
-_build_rows_for_profile = _rows.build_rows_for_profile
-_build_usage_rows = _rows.build_usage_rows
 _check_json_path = _rows.check_json_path
-_load_curator = _paths.load_curator
-_load_skill_description = _paths.load_skill_description
 _now_iso = _helpers.now_iso
 _resolve_hermes_home = _paths.resolve_hermes_home
+_load_curator = _paths.load_curator
 _resolve_profiles = _paths.resolve_profiles
+_load_skill_description = _paths.load_skill_description
+_build_usage_rows = _rows.build_usage_rows
+_build_rows_for_profile = _rows.build_rows_for_profile
+estimate_tokens = _imps.estimate_tokens
 
 
 def _check_hermes_home(
@@ -86,73 +86,6 @@ def _check_hermes_home(
     ):
         click.echo(EN.report_json_path_inside_hermes_home, err=True)
         return 6
-    return None
-
-
-@dataclass(frozen=True)
-class ProfileBuildContext:
-    """Per-profile build inputs (everything except the profile path)."""
-
-    fmt: str
-    sort: str
-    platform: str | None
-    curator: Any | None
-
-
-def _build_profile_sections(
-    profile_paths: list[Path],
-    *,
-    fmt: str,
-    sort: str,
-    platform: str | None,
-    curator: Any | None,
-) -> tuple[list[str], list[ProfileSection], int | None]:
-    """Build text/json sections for all profiles. Error code or None."""
-    text_sections: list[str] = []
-    json_sections: list[ProfileSection] = []
-    ctx = ProfileBuildContext(
-        fmt=fmt,
-        sort=sort,
-        platform=platform,
-        curator=curator,
-    )
-    for prof in profile_paths:
-        rc = _build_one_profile_section(
-            prof,
-            ctx=ctx,
-            text_sections=text_sections,
-            json_sections=json_sections,
-        )
-        if rc is not None:
-            return text_sections, json_sections, rc
-    return text_sections, json_sections, None
-
-
-def _build_one_profile_section(
-    prof: Path,
-    *,
-    ctx: ProfileBuildContext,
-    text_sections: list[str],
-    json_sections: list[ProfileSection],
-) -> int | None:
-    """Append one profile's section; return 6 on detection error, else None."""
-    try:
-        rows, total = _build_rows_for_profile(
-            prof,
-            platform=ctx.platform,
-            curator=ctx.curator,
-            estimate_tokens_fn=estimate_tokens,
-            enabled_skills_fn=get_enabled_skills,
-        )
-    except EnabledDetectionUnavailable:
-        click.echo(EN.report_enabled_detection_unavailable, err=True)
-        return 6
-    rows = sort_rows(rows, ctx.sort)
-    section = _helpers.make_section(ctx.fmt, prof.name, rows, total)
-    if ctx.fmt == FORMAT_TEXT:
-        text_sections.append(section)  # type: ignore[arg-type]
-    else:
-        json_sections.append(section)  # type: ignore[arg-type]
     return None
 
 
@@ -219,41 +152,6 @@ def _dispatch(inputs: ReportInputs) -> int:
     if err is not None:
         return err
     return _build_and_emit(inputs, json_path, curator, profile_paths)
-
-
-def _build_and_emit(
-    inputs: ReportInputs,
-    json_path: Path | None,
-    curator: Any | None,
-    profile_paths: list[Path],
-) -> int:
-    """Build sections for ``profile_paths`` and emit the final report."""
-    text_sections, json_sections, build_err = _build_profile_sections(
-        profile_paths,
-        fmt=inputs.fmt,
-        sort=inputs.sort,
-        platform=inputs.platform,
-        curator=curator,
-    )
-    if build_err is not None:
-        return build_err
-    _emit_sections(inputs.fmt, json_path, text_sections, json_sections)
-    return 0
-
-
-def _early_exit_rc(inputs: ReportInputs) -> int | None:
-    """Return exit code for short-circuit cases (help / invalid args), or None."""
-    if inputs.show_help:
-        emit_bilingual_help()
-        return 0
-    if inputs.argv is not None:
-        rc = _helpers.reject_unwanted_flags(inputs.argv)
-        if rc is not None:
-            return rc
-    rc = _helpers.validate_sort_and_fmt(inputs.sort, inputs.fmt)
-    if rc is not None:
-        return rc
-    return None
 
 
 def _main_entry() -> None:

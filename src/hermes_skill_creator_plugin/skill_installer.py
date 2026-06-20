@@ -17,6 +17,7 @@ under wemake WPS202 (module members <= 7):
 - :mod:`._skill_installer_t3` — the 18-row T3 inventory.
 - :mod:`._skill_installer_note` — migration-note renderer + writer.
 - :mod:`._skill_installer_cap` — active-cap detection.
+- :mod:`.skill_installer_copy` — copy + target-prep helpers.
 
 Public API (``T3_INVENTORY``, ``InstallResult``, ``SHORT_DESC_CAP``,
 ``FULL_DESC_CAP``, ``PINNED_UPSTREAM_COMMIT``, ``detect_active_cap``,
@@ -40,7 +41,6 @@ TDD test cases for this module:
 
 from __future__ import annotations
 
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,7 +49,6 @@ from hermes_skill_creator_plugin._skill_installer_consts import (
     FULL_DESC_CAP,
     PINNED_UPSTREAM_COMMIT,
     SHORT_DESC_CAP,
-    SKILL_DEST_REL_PARTS,
     STATE_UNPATCHED,
 )
 from hermes_skill_creator_plugin._skill_installer_consts import (
@@ -59,6 +58,11 @@ from hermes_skill_creator_plugin._skill_installer_note import (
     write_migration_note as _write_migration_note,
 )
 from hermes_skill_creator_plugin._skill_installer_t3 import T3_INVENTORY
+from hermes_skill_creator_plugin.skill_installer_copy import (
+    _copy_skill_md,
+    _copy_skill_tree,
+    _prepare_target_dir,
+)
 
 
 @dataclass
@@ -76,19 +80,24 @@ def _refuse_live_install(hermes_home: Path) -> None:
     raise ValueError(message)
 
 
-def _copy_skill_tree(skill_source: Path, target_dir: Path) -> None:
-    for child in skill_source.rglob("*"):
-        rel = child.relative_to(skill_source)
-        dst = target_dir / rel
-        if child.is_dir():
-            dst.mkdir(parents=True, exist_ok=True)
-        else:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(child, dst)
+# Cap-tuple used by ``_select_skill_md`` to validate the requested cap.
+_KNOWN_CAPS: tuple[tuple[str, int], ...] = (
+    (STATE_UNPATCHED, SHORT_DESC_CAP),
+    ("patched", FULL_DESC_CAP),
+)
+
+# Migration-note pin: keep the public re-exports of PINNED_UPSTREAM_COMMIT
+# and T3_INVENTORY pinned in one place so tests + plugin.yaml can import
+# them by name from this module.
+_INVENTORY_REF = T3_INVENTORY
+_UPSTREAM_REF = PINNED_UPSTREAM_COMMIT
 
 
 def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
-    """Select SKILL.md.short (cap=unpatched) or SKILL.md (cap=patched)."""
+    """Select SKILL.md.short (cap=unpatched, <= SHORT_DESC_CAP) or SKILL.md (cap=patched, <= FULL_DESC_CAP)."""
+    if not any(cap == name for name, _ in _KNOWN_CAPS):
+        message = f"unknown cap {cap!r}; expected one of {sorted({nm for nm, _ in _KNOWN_CAPS})}"
+        raise ValueError(message)
     if cap == STATE_UNPATCHED:
         from hermes_skill_creator_plugin._skill_installer_consts import (
             SHORT_SKILL_MD_NAME,
@@ -96,7 +105,7 @@ def _select_skill_md(skill_dir: Path, *, cap: str) -> Path:
 
         short = skill_dir / SHORT_SKILL_MD_NAME
         if not short.exists():
-            message = f"SKILL.md.short not found in {skill_dir}; cannot install under 60-char cap"
+            message = f"SKILL.md.short not found in {skill_dir}; cannot install under {SHORT_DESC_CAP}-char cap"
             raise FileNotFoundError(message)
         return short
     from hermes_skill_creator_plugin._skill_installer_consts import (
@@ -115,9 +124,10 @@ def install(
 ) -> InstallResult:
     """Install the migrated skill to ``hermes_home/skills/skill-creator/``.
 
-    Emits ``MIGRATION.skill-port.md`` to ``worktree_root``. The destination
-    is the flat path under HERMES_HOME so the skill appears in
-    ``<available_skills>``. NEVER writes to the live
+    Emits ``MIGRATION.skill-port.md`` (derived from :data:`T3_INVENTORY`
+    and pinned to :data:`PINNED_UPSTREAM_COMMIT`) to ``worktree_root``.
+    The destination is the flat path under HERMES_HOME so the skill
+    appears in ``<available_skills>``. NEVER writes to the live
     ``~/.hermes/hermes-agent``.
 
     Args:
@@ -125,9 +135,9 @@ def install(
         hermes_home: Path to the destination HERMES_HOME (must NOT be
             ``~/.hermes/hermes-agent``).
         worktree_root: Where to write ``MIGRATION.skill-port.md``.
-        cap: "patched" (use SKILL.md, <= 1024) or "unpatched"
-            (use SKILL.md.short, <= 60). If None, autodetect from the
-            active checkout.
+        cap: "patched" (use SKILL.md, <= FULL_DESC_CAP) or "unpatched"
+            (use SKILL.md.short, <= SHORT_DESC_CAP). If None, autodetect
+            from the active checkout.
 
     Returns:
         InstallResult with the resolved paths.
@@ -160,27 +170,6 @@ def _guard_install_preconditions(skill_source: Path, hermes_home: Path) -> None:
         raise FileNotFoundError(message)
 
 
-def _prepare_target_dir(hermes_home: Path) -> Path:
-    target_dir = hermes_home.joinpath(*SKILL_DEST_REL_PARTS)
-    # Re-install: clear the prior copy so leftover files from a previous
-    # install (e.g. a SKILL.md.short from a prior unpatched-cap install)
-    # do not shadow the new SKILL.md.
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
-    target_dir.mkdir(parents=True)
-    return target_dir
-
-
-def _copy_skill_md(src_md: Path, target_dir: Path) -> Path:
-    from hermes_skill_creator_plugin._skill_installer_consts import (
-        FULL_SKILL_MD_NAME,
-    )
-
-    target_md = target_dir / FULL_SKILL_MD_NAME
-    shutil.copy2(src_md, target_md)
-    return target_md
-
-
 def _build_install_result(
     target_dir: Path,
     target_md: Path,
@@ -192,14 +181,3 @@ def _build_install_result(
         selected_skill_md=target_md,
         migration_note=migration_note,
     )
-
-
-__all__ = [
-    "T3_INVENTORY",
-    "InstallResult",
-    "SHORT_DESC_CAP",
-    "FULL_DESC_CAP",
-    "PINNED_UPSTREAM_COMMIT",
-    "detect_active_cap",
-    "install",
-]

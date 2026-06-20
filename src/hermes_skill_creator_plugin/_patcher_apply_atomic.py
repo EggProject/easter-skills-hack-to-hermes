@@ -7,7 +7,6 @@ wemake's WPS202 threshold. Public surface used by
 
 from __future__ import annotations
 
-import hashlib
 import os
 import stat
 import tempfile
@@ -46,14 +45,6 @@ def _cleanup_tmp(tmp_name: str) -> None:
         return
 
 
-def _restore_mode(path: Path, original_mode: int) -> None:
-    """Best-effort chmod; never raises."""
-    try:
-        os.chmod(path, stat.S_IMODE(original_mode), follow_symlinks=False)
-    except OSError:
-        return
-
-
 def _original_mode_for(target_path: Path, mode: int | None) -> int:
     """Return the mode to apply to the freshly-written ``target_path``."""
     if target_path.exists():
@@ -87,7 +78,10 @@ def _atomic_write_bytes(
     # After os.replace, ``target_path`` always exists (replace is atomic
     # on POSIX). The chmod is best-effort: if the FS rejects the chmod,
     # we don't fail the patch.
-    _restore_mode(target_path, original_mode)
+    try:
+        os.chmod(target_path, stat.S_IMODE(original_mode), follow_symlinks=False)
+    except OSError:
+        pass
 
 
 def _commit_tmp_to_target(
@@ -108,10 +102,3 @@ def _write_tmp_payload(fd: int, payload: bytes, original_mode: int) -> None:
         fh.write(payload)
         fh.flush()
         os.fchmod(fd, original_mode)
-
-
-def _diff_sha(before: bytes, after: bytes) -> str:
-    """Return the hex SHA-256 of ``HASH_SEPARATOR``-joined ``before`` and ``after``."""
-    joined = HASH_SEPARATOR.join([before, after])
-    digest = hashlib.sha256(joined).hexdigest()
-    return digest

@@ -14,6 +14,11 @@ from typing import Any
 
 import click
 
+# Re-export moved symbols (WPS202 module split) for backward-compatible imports.
+from hermes_skill_creator_plugin._cli_report_helpers_reject import (
+    _reject_for_arg,
+    reject_unwanted_flags,
+)
 from hermes_skill_creator_plugin._reporter import (
     ProfileSection,
     SkillRow,
@@ -66,29 +71,6 @@ def now_iso() -> str:
     if frozen:
         return frozen
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def reject_unwanted_flags(argv: list[str]) -> int | None:
-    """Return reject_flag code if argv contains a rejected flag, else None."""
-    sep = "="
-    for arg in argv:
-        reject_code = _reject_for_arg(arg, sep)
-        if reject_code is not None:
-            return reject_code
-    return None
-
-
-def _reject_for_arg(arg: str, sep: str) -> int | None:
-    """Return the reject flag code for ``arg`` when it matches a rejected flag."""
-    for prefix, key in REJECTED_FLAGS.items():
-        with_eq = prefix + sep
-        if arg == prefix or arg.startswith(with_eq):
-            from hermes_skill_creator_plugin._cli_report_ui import (
-                reject_flag as _reject,
-            )
-
-            return _reject(key)
-    return None
 
 
 def validate_sort_and_fmt(sort: str, fmt: str) -> int | None:
@@ -150,3 +132,29 @@ def emit_output(fmt: str, output: str, json_path: Path | None) -> None:
         click.echo(EN.report_opt_json)
     else:
         click.echo(output)
+
+
+__all__ = [
+    "REJECTED_FLAGS",
+    "HELP_EN_HEADER",
+    "HELP_HU_HEADER",
+    "EMPTY_USAGE",
+    "PERSISTED_KEY",
+    "FORMAT_TEXT",
+    "FORMAT_JSON",
+    "SORT_TOKENS",
+    "SORT_KEYS",
+    "FORMAT_KEYS",
+    "TOOL_NAME",
+    "TOOL_VERSION",
+    "DEFAULT_JSON_NAME",
+    "emit_tokenizer_warning",
+    "now_iso",
+    "validate_sort_and_fmt",
+    "resolve_json_path",
+    "make_section",
+    "render_output",
+    "emit_output",
+    "reject_unwanted_flags",
+    "_reject_for_arg",
+]
