@@ -38,26 +38,3 @@ MIGRATION_NOTE_NAME = "MIGRATION.skill-port.md"
 
 # Live Hermes install path (resolved at import time).
 LIVE_HERMES_AGENT: Path = Path(LIVE_HERMES_AGENT_SUFFIX).expanduser()
-
-__all__ = [
-    "KEY_ID",
-    "KEY_LOCATION",
-    "KEY_CLAUDE",
-    "KEY_HERMES",
-    "STATE_PATCHED",
-    "STATE_UNPATCHED",
-    "PATCHED_MARKER",
-    "UNPATCHED_MARKER",
-    "LIVE_HERMES_AGENT_SUFFIX",
-    "PINNED_UPSTREAM_COMMIT",
-    "FROZEN_TIME_ENV_KEY",
-    "TEXT_ENCODING",
-    "SKILL_UTILS_REL_PARTS",
-    "SKILL_DEST_REL_PARTS",
-    "SHORT_DESC_CAP",
-    "FULL_DESC_CAP",
-    "SHORT_SKILL_MD_NAME",
-    "FULL_SKILL_MD_NAME",
-    "MIGRATION_NOTE_NAME",
-    "LIVE_HERMES_AGENT",
-]

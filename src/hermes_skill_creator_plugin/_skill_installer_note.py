@@ -124,10 +124,3 @@ def write_migration_note(worktree_root: Path) -> Path:
         encoding=TEXT_ENCODING,
     )
     return note
-
-
-__all__ = [
-    "render_migration_skill_port",
-    "generated_at",
-    "write_migration_note",
-]

@@ -64,8 +64,3 @@ def format_json(
         ],
     }
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2)
-
-
-__all__ = [
-    "format_json",
-]

@@ -52,43 +52,46 @@ from __future__ import annotations
 import dataclasses
 from pathlib import Path
 
-from hermes_skill_creator_plugin._patcher_apply import (
-    REJECTED_SIDECAR,
-    write_rejected,
-)
-from hermes_skill_creator_plugin._patcher_apply_atomic import _atomic_write_bytes
-from hermes_skill_creator_plugin._patcher_apply_state import (
-    STATE_SIDECAR,
-    load_state,
-    write_state,
-)
-from hermes_skill_creator_plugin._patcher_consts import (
-    EXIT_DRIFT,
-    EXIT_IO,
-    EXIT_OK,
-    EXIT_PERMISSION,
-    EXIT_USER_ABORT,
-    EXIT_VALIDATION,
-)
-from hermes_skill_creator_plugin._patcher_helpers import (
-    cross_filesystem as _cross_filesystem,
-)
-from hermes_skill_creator_plugin._patcher_helpers import (
-    file_has_circular_import,
-    hermes_agent_path,
-    is_hermes_agent,
-    locate_anchor,
-    site_already_patched,
-    site_in_state,
-)
-from hermes_skill_creator_plugin._patcher_migration import (
-    generate_migration_note,
-    migration_rows_for_mode,
-)
-from hermes_skill_creator_plugin._patcher_migration_render import (
-    _render_cap_row,
-    _render_task_e_row,
-)
+from hermes_skill_creator_plugin import _patcher_imports as _imps
+
+# Local bindings matching the previous top-level import names. The
+# actual imports live in :mod:`._patcher_imports` to keep this
+# orchestrator under wemake WPS201 (<=12 imports per module).
+REJECTED_SIDECAR = _imps.REJECTED_SIDECAR
+write_rejected = _imps.write_rejected
+_atomic_write_bytes = _imps._atomic_write_bytes
+STATE_SIDECAR = _imps.STATE_SIDECAR
+load_state = _imps.load_state
+write_state = _imps.write_state
+EXIT_DRIFT = _imps.EXIT_DRIFT
+EXIT_IO = _imps.EXIT_IO
+EXIT_OK = _imps.EXIT_OK
+EXIT_PERMISSION = _imps.EXIT_PERMISSION
+EXIT_USER_ABORT = _imps.EXIT_USER_ABORT
+EXIT_VALIDATION = _imps.EXIT_VALIDATION
+_cross_filesystem = _imps._cross_filesystem
+file_has_circular_import = _imps.file_has_circular_import
+hermes_agent_path = _imps.hermes_agent_path
+is_hermes_agent = _imps.is_hermes_agent
+locate_anchor = _imps.locate_anchor
+site_already_patched = _imps.site_already_patched
+site_in_state = _imps.site_in_state
+generate_migration_note = _imps.generate_migration_note
+migration_rows_for_mode = _imps.migration_rows_for_mode
+_render_cap_row = _imps._render_cap_row
+_render_task_e_row = _imps._render_task_e_row
+ALL_TASK_E_SITES = _imps.ALL_TASK_E_SITES
+E1_SKILLS_GUIDANCE = _imps.E1_SKILLS_GUIDANCE
+E2_MEMORY_GUIDANCE = _imps.E2_MEMORY_GUIDANCE
+E3_BUILD_SKILLS_PROMPT = _imps.E3_BUILD_SKILLS_PROMPT
+E4_SKILL_REVIEW_PROMPT = _imps.E4_SKILL_REVIEW_PROMPT
+E5_COMBINED_REVIEW_PROMPT = _imps.E5_COMBINED_REVIEW_PROMPT
+E6_SKILL_MANAGE_SCHEMA_DESC = _imps.E6_SKILL_MANAGE_SCHEMA_DESC
+E7_SKILLS_DOC_SECTION = _imps.E7_SKILLS_DOC_SECTION
+S1_CAP_SITE = _imps.S1_CAP_SITE
+SKILL_CREATOR_CONSULT_RULE = _imps.SKILL_CREATOR_CONSULT_RULE
+TOOLS_SKILL_UTILS_REL = _imps.TOOLS_SKILL_UTILS_REL
+sites_for_mode = _imps.sites_for_mode
 from hermes_skill_creator_plugin._patcher_pipeline import (
     apply_sites as _apply_sites_pipeline,
 )
@@ -99,22 +102,6 @@ from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     fail_with_drift as _fail_with_drift_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
-from hermes_skill_creator_plugin._patcher_sites import (
-    ALL_TASK_E_SITES,
-    E1_SKILLS_GUIDANCE,
-    E2_MEMORY_GUIDANCE,
-    E3_BUILD_SKILLS_PROMPT,
-    E4_SKILL_REVIEW_PROMPT,
-    E5_COMBINED_REVIEW_PROMPT,
-    E6_SKILL_MANAGE_SCHEMA_DESC,
-    E7_SKILLS_DOC_SECTION,
-    S1_CAP_SITE,
-    SKILL_CREATOR_CONSULT_RULE,
-    TOOLS_SKILL_UTILS_REL,
-    Anchor,
-    Site,
-    sites_for_mode,
-)
 from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
 from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
 
@@ -307,50 +294,3 @@ def _check_circular_import(
         return None
     state.diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
     return _empty_result(state.diagnostics, EXIT_IO)
-
-
-__all__ = [
-    # exit codes (re-exported from _patcher_consts)
-    "EXIT_OK",
-    "EXIT_VALIDATION",
-    "EXIT_DRIFT",
-    "EXIT_PERMISSION",
-    "EXIT_IO",
-    "EXIT_USER_ABORT",
-    # constants
-    "SKILL_CREATOR_CONSULT_RULE",
-    "STATE_SIDECAR",
-    "REJECTED_SIDECAR",
-    # site table
-    "Anchor",
-    "Site",
-    "S1_CAP_SITE",
-    "E1_SKILLS_GUIDANCE",
-    "E2_MEMORY_GUIDANCE",
-    "E3_BUILD_SKILLS_PROMPT",
-    "E4_SKILL_REVIEW_PROMPT",
-    "E5_COMBINED_REVIEW_PROMPT",
-    "E6_SKILL_MANAGE_SCHEMA_DESC",
-    "E7_SKILLS_DOC_SECTION",
-    "ALL_TASK_E_SITES",
-    # result type
-    "PatcherResult",
-    # public API
-    "run_patch",
-    "hermes_agent_path",
-    "is_hermes_agent",
-    "file_has_circular_import",
-    "locate_anchor",
-    "site_already_patched",
-    "site_in_state",
-    "load_state",
-    "write_state",
-    "generate_migration_note",
-    "migration_rows_for_mode",
-    "write_rejected",
-    # test seam: monkeypatched in tests/unit/test_patcher.py.
-    "_atomic_write_bytes",
-    "_cross_filesystem",
-    "_render_cap_row",
-    "_render_task_e_row",
-]

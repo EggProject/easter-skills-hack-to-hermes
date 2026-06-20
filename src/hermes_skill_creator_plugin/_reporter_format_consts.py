@@ -46,21 +46,3 @@ _TIMESTAMP_COLUMNS: frozenset[str] = frozenset(
 # Public aliases for sibling-module imports.
 COUNT_COLUMNS = _COUNT_COLUMNS
 TIMESTAMP_COLUMNS = _TIMESTAMP_COLUMNS
-
-__all__ = [
-    "COL_PROFILE",
-    "COL_NAME",
-    "COL_DESCRIPTION",
-    "COL_TOKENS",
-    "COL_USE_COUNT",
-    "COL_VIEW_COUNT",
-    "COL_PATCH_COUNT",
-    "COL_LAST_USED_AT",
-    "COL_LAST_VIEWED_AT",
-    "COL_LAST_PATCHED_AT",
-    "COL_PCT_OF_CAP",
-    "NA_TEXT",
-    "DEFAULT_TEXT_COLUMNS",
-    "COUNT_COLUMNS",
-    "TIMESTAMP_COLUMNS",
-]

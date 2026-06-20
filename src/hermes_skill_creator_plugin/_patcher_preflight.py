@@ -54,8 +54,3 @@ def run_preflight(
     if force and not i_accept_line_drift:
         return (EXIT_USER_ABORT, FORCE_REQUIRES_I_ACCEPT)
     return None
-
-
-__all__ = [
-    "run_preflight",
-]

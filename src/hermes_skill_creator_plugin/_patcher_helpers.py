@@ -97,11 +97,11 @@ def cross_filesystem(target: Path) -> bool:
     """
     try:
         target_stat = os.statvfs(target)
-    except (OSError, AttributeError):
+    except OSError, AttributeError:
         return False
     try:
         tmp_stat = os.statvfs(tempfile.gettempdir())
-    except (OSError, AttributeError):
+    except OSError, AttributeError:
         return False
     return target_stat.f_fsid != tmp_stat.f_fsid
 
@@ -112,15 +112,3 @@ def now_iso() -> str:
     if frozen:
         return frozen
     return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-__all__ = [
-    "hermes_agent_path",
-    "is_hermes_agent",
-    "file_has_circular_import",
-    "locate_anchor",
-    "site_already_patched",
-    "site_in_state",
-    "cross_filesystem",
-    "now_iso",
-]

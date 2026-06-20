@@ -32,7 +32,7 @@ def _dict_blocks(plat_value: dict[Any, Any]) -> bool:
     """Return True iff any value in the dict-shape platforms entry blocks."""
     if not plat_value:
         return False
-    return any(bool(val) for val in plat_value.values())
+    return any(bool(entry_value) for entry_value in plat_value.values())
 
 
 def plat_value_blocks(plat_value: Any) -> bool:
@@ -91,12 +91,3 @@ def conditional_excluded(
         return False
     plats = rule.get(_PLATFORM_KEY, [])
     return isinstance(plats, list) and platform in plats
-
-
-__all__ = [
-    "list_blocks",
-    "plat_value_blocks",
-    "platform_blocked",
-    "platform_disables",
-    "conditional_excluded",
-]

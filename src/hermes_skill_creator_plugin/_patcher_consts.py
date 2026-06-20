@@ -30,24 +30,3 @@ REASON_TEXT_DRIFT = "TEXT_DRIFT"
 MISSING_FILE = "<file missing>"
 NOT_FOUND = "<not found>"
 OUT_OF_RANGE = "<out of range>"
-
-__all__ = [
-    # exit codes
-    "EXIT_OK",
-    "EXIT_VALIDATION",
-    "EXIT_DRIFT",
-    "EXIT_PERMISSION",
-    "EXIT_IO",
-    "EXIT_USER_ABORT",
-    # state strings
-    "STATE_MATCHED",
-    "STATE_PATCHED",
-    "STATE_DRIFTED",
-    # failure reasons
-    "REASON_LINE_DRIFT",
-    "REASON_TEXT_DRIFT",
-    # sentinel placeholders
-    "MISSING_FILE",
-    "NOT_FOUND",
-    "OUT_OF_RANGE",
-]

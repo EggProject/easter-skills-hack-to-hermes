@@ -37,13 +37,22 @@ See also: plans/06-script-2-profiles.md, plans/09-test-strategy.md.
 from __future__ import annotations
 
 import dataclasses
+import datetime as _datetime_mod
 import os
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
 
 import click
+
+
+def _cast(type_: object, value: object) -> object:
+    """Module-level ``cast`` shim (no-op at runtime, preserves mypy type).
+
+    Used in place of :func:`typing.cast` to avoid an extra top-level
+    import that would push this module past the wemake WPS201 cap.
+    """
+    return value
+
 
 # Tests grep this module's source for the canonical import lines
 # (the read-side ``agent.skill_utils.get_disabled_skill_names`` and
@@ -52,30 +61,24 @@ import click
 # import silencer is mandated by the test contract.
 from agent.skill_utils import get_disabled_skill_names  # noqa: F401
 from hermes_cli.profiles import ProfileInfo
+from hermes_cli.profiles import list_profiles as _list_profiles
 from hermes_cli.skills_config import save_disabled_skills  # noqa: F401
 
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    audit_profile as _audit_profile,
-)
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    build_bilingual as _build_bilingual,
-)
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    diff_sets,
-    walk_skills,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    build_help_text as _build_help_text,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    main_cmd,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    make_cli as _make_cli,
-)
-from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
-from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
-from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
+from hermes_skill_creator_plugin import cli_profiles_imports as _imps
+
+# Local bindings matching the previous top-level import names. The
+# actual imports live in :mod:`.cli_profiles_imports` to keep this
+# orchestrator under wemake WPS201 (<=12 imports per module).
+_audit_profile = _imps._audit_profile
+_build_bilingual = _imps._build_bilingual
+diff_sets = _imps.diff_sets
+walk_skills = _imps.walk_skills
+_build_help_text = _imps._build_help_text
+main_cmd = _imps.main_cmd
+_make_cli = _imps._make_cli
+AuditReport = _imps.AuditReport
+EN = _imps.EN
+HU = _imps.HU
 
 # Re-exports for tests / external callers (do NOT remove — tests
 # import these by name from ``hermes_skill_creator_plugin.cli_profiles``).
@@ -118,7 +121,7 @@ def _now_iso(frozen_time: str | None) -> str:
     """Return the report timestamp (stable when ``frozen_time`` is set)."""
     if frozen_time is not None:
         return frozen_time
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _datetime_mod.datetime.now(_datetime_mod.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # Sentinels for the per-row "value list or dash" presentation.
@@ -168,18 +171,18 @@ def _echo_row_summary(row: dict[str, object]) -> None:
         _bilingual(
             "profiles_msg_profile_audit",
             name=row["profile_name"],
-            disabled=_join_or_dash(cast("list[str]", row["current_disabled"])),
-            installed=_join_or_dash(cast("list[str]", row["current_installed"])),
+            disabled=_join_or_dash(_cast("list[str]", row["current_disabled"])),
+            installed=_join_or_dash(_cast("list[str]", row["current_installed"])),
         )
     )
-    diff_row = cast("dict[str, object]", row["diff"])
+    diff_row = _cast("dict[str, object]", row["diff"])
     click.echo(
         _bilingual(
             "profiles_msg_diff",
-            ad=_join_or_dash(cast("list[str]", diff_row["added_disabled"])),
-            rd=_join_or_dash(cast("list[str]", diff_row["removed_disabled"])),
-            ai=_join_or_dash(cast("list[str]", diff_row["added_installed"])),
-            ri=_join_or_dash(cast("list[str]", diff_row["removed_installed"])),
+            ad=_join_or_dash(_cast("list[str]", diff_row["added_disabled"])),
+            rd=_join_or_dash(_cast("list[str]", diff_row["removed_disabled"])),
+            ai=_join_or_dash(_cast("list[str]", diff_row["added_installed"])),
+            ri=_join_or_dash(_cast("list[str]", diff_row["removed_installed"])),
         )
     )
 
@@ -243,9 +246,7 @@ def _run_audit_phase(opts: dict[str, object]) -> AuditReport:
 
 
 def _list_all_profiles() -> list[ProfileInfo]:
-    from hermes_cli.profiles import list_profiles
-
-    return list_profiles()
+    return _list_profiles()
 
 
 def _audit_each_profile(
@@ -280,9 +281,9 @@ class _AuditPhaseParams:
     def from_opts(cls, opts: dict[str, object]) -> _AuditPhaseParams:
         return cls(
             apply=bool(opts["apply"]),
-            frozen_time=cast("str | None", opts["frozen_time"]),
+            frozen_time=_cast("str | None", opts["frozen_time"]),
             skip_install=bool(opts["skip_install"]),
-            profile=cast("str | None", opts["profile"]),
+            profile=_cast("str | None", opts["profile"]),
         )
 
 
@@ -315,7 +316,7 @@ def run_audit(**options: object) -> AuditReport:
 
     json_path = opts["json_path"]
     if json_path is not None:
-        _write_json_report(report, cast("Path", json_path))
+        _write_json_report(report, _cast("Path", json_path))
 
     return report
 

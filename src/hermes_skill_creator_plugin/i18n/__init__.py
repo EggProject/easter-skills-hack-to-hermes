@@ -1,35 +1,8 @@
-"""Re-export the English i18n strings used by the patcher pipeline.
+"""English + Hungarian i18n message constants for the patcher pipeline.
 
-The patcher pipeline and several other modules import many message
-strings from ``i18n.messages_en``. Importing them as ``_i18n.X`` keeps
-the wemake WPS235 "too many imported names" cap from triggering
-without losing type-checker visibility.
-
-This module re-exports a curated subset (the strings the patcher
-pipeline touches most often). Pipeline modules prefer importing from
-here so that the strict WPS235 limit (<=8) is met for this hub.
-For strings NOT exposed here (e.g. ``VALIDATION_FAILED``),
-import directly from :mod:`hermes_skill_creator_plugin.i18n.messages_en`.
+The re-export hub previously declared here was removed to satisfy
+wemake WPS412 (no logic in ``__init__.py``). The patcher pipeline and
+its helpers now import their strings directly from
+:mod:`hermes_skill_creator_plugin.i18n.messages_en` (and
+``messages_hu`` for bilingual consumers).
 """
-
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    CROSS_FS_WARN,
-    FORCE_AUDIT_LOG,
-    IO_ERROR,
-    LINE_DRIFT,
-    OK_ALREADY_PATCHED,
-    OK_PATCHED,
-    PERMISSION_DENIED,
-    TEXT_DRIFT,
-)
-
-__all__ = [
-    "CROSS_FS_WARN",
-    "FORCE_AUDIT_LOG",
-    "IO_ERROR",
-    "LINE_DRIFT",
-    "OK_ALREADY_PATCHED",
-    "OK_PATCHED",
-    "PERMISSION_DENIED",
-    "TEXT_DRIFT",
-]

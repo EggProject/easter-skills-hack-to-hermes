@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hermes_skill_creator_plugin import assert_hermes_agent_untouched
+from hermes_skill_creator_plugin._safety import assert_hermes_agent_untouched
 from hermes_skill_creator_plugin.skill_installer import (
     PINNED_UPSTREAM_COMMIT,
     T3_INVENTORY,

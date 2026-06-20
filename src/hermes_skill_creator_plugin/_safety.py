@@ -70,6 +70,3 @@ def assert_hermes_agent_untouched(
         return func(*args, **kwargs)
 
     return wrapper
-
-
-__all__ = ["assert_hermes_agent_untouched", "HERMES_HOME"]

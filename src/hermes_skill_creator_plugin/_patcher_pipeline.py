@@ -15,24 +15,35 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hermes_skill_creator_plugin import _patcher as _patcher_mod
-from hermes_skill_creator_plugin import i18n as _i18n
-from hermes_skill_creator_plugin._patcher_apply import AUDIT_LOG
-from hermes_skill_creator_plugin._patcher_helpers import (
-    cross_filesystem as _cross_filesystem,
-)
-from hermes_skill_creator_plugin._patcher_helpers import now_iso as _now_iso
-from hermes_skill_creator_plugin._patcher_pipeline_consts import (
-    EXIT_IO,
-    EXIT_PERMISSION,
-    STATE_DRIFTED,
-    STATE_PATCHED,
-)
-from hermes_skill_creator_plugin._patcher_pipeline_emit import (
-    emit_audit_log,
-    mutate_lines_for_site,
-)
+from hermes_skill_creator_plugin import _patcher_pipeline_imports as _imps
 from hermes_skill_creator_plugin._patcher_sites import Site
+from hermes_skill_creator_plugin.i18n.messages_en import (
+    CROSS_FS_WARN,
+    IO_ERROR,
+    OK_ALREADY_PATCHED,
+    OK_PATCHED,
+    PERMISSION_DENIED,
+)
+
+# Local bindings matching the previous top-level import names. The
+# actual imports live in :mod:`._patcher_pipeline_imports` to keep
+# this orchestrator under wemake WPS201 (<=12 imports per module).
+# ``_patcher_mod`` is intentionally NOT bound here: importing
+# :mod:`._patcher` at module top creates a cycle with
+# :mod:`._patcher` -> :mod:`._patcher_pipeline`. The single user
+# (``_try_atomic_write``) lazy-imports it via the runtime path.
+# ``Site`` is kept as a direct class import so mypy preserves its
+# concrete type (vs ``Site = _imps.Site`` which becomes ``Site?``).
+_i18n = _imps._i18n
+AUDIT_LOG = _imps.AUDIT_LOG
+_cross_filesystem = _imps._cross_filesystem
+_now_iso = _imps._now_iso
+EXIT_IO = _imps.EXIT_IO
+EXIT_PERMISSION = _imps.EXIT_PERMISSION
+STATE_DRIFTED = _imps.STATE_DRIFTED
+STATE_PATCHED = _imps.STATE_PATCHED
+emit_audit_log = _imps.emit_audit_log
+mutate_lines_for_site = _imps.mutate_lines_for_site
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
@@ -53,9 +64,9 @@ def ok_check_result(
     """Build the EXIT_OK result for ``--check`` (or non-apply runs)."""
     for site in sites:
         if site.site_id in sites_already:
-            diagnostics.append(_i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(OK_ALREADY_PATCHED.format(site_id=site.site_id))
         else:
-            diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
     write_state_fn(target_path, state)
     return _build_result(
         exit_code=exit_ok_code,
@@ -83,7 +94,7 @@ def apply_sites(
     timestamp = _now_iso()
     for site in sorted(sites, key=lambda site: site.line_for_state, reverse=True):
         if site.site_id in sites_already:
-            diagnostics.append(_i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(OK_ALREADY_PATCHED.format(site_id=site.site_id))
             continue
         outcome = _apply_one_site(
             site=site,
@@ -98,9 +109,9 @@ def apply_sites(
             return outcome
         sites_patched.append(site.site_id)
         state[site.site_id] = STATE_PATCHED
-        diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
+        diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
     if _cross_filesystem(target_path):
-        diagnostics.append(_i18n.CROSS_FS_WARN)
+        diagnostics.append(CROSS_FS_WARN)
     write_state_fn(target_path, state)
     return _build_result(
         exit_code=exit_ok_code,
@@ -179,6 +190,8 @@ def _try_atomic_write(path: Path, after_bytes: bytes) -> PatcherResult | None:
     Lazy-imports ``_patcher`` so monkeypatch.setattr on the test seam
     is picked up. (See ``tests/unit/test_patcher.py::test_apply_permission_error_branch``.)
     """
+    from hermes_skill_creator_plugin import _patcher as _patcher_mod
+
     try:
         _patcher_mod._atomic_write_bytes(path, after_bytes)
     except (PermissionError, OSError) as exc:
@@ -192,10 +205,10 @@ def _io_error_result(
 ) -> PatcherResult:
     """Build the IO-error PatcherResult for the given exception."""
     if isinstance(exc, PermissionError):
-        diag = _i18n.PERMISSION_DENIED.format(path=str(path))
+        diag = PERMISSION_DENIED.format(path=str(path))
         exit_code = EXIT_PERMISSION
     else:
-        diag = _i18n.IO_ERROR.format(path=str(path), error=str(exc))
+        diag = IO_ERROR.format(path=str(path), error=str(exc))
         exit_code = EXIT_IO
     return _build_result(
         exit_code=exit_code,

@@ -35,9 +35,3 @@ def disabled_set(config: dict[str, Any], platform: str | None) -> set[str]:
 def drop_disabled(installed: set[str], disabled: set[str]) -> set[str]:
     """Return the subset of ``installed`` that is not in ``disabled``."""
     return {name for name in installed if name not in disabled}
-
-
-__all__ = [
-    "disabled_set",
-    "drop_disabled",
-]

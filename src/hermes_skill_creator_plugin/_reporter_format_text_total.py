@@ -34,8 +34,3 @@ def _build_total_cells(
         else:
             total_cells[idx] = ""
     return total_cells
-
-
-__all__ = [
-    "_build_total_cells",
-]

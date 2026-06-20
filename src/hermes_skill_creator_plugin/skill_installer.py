@@ -46,19 +46,15 @@ from pathlib import Path
 
 from hermes_skill_creator_plugin._skill_installer_cap import detect_active_cap
 from hermes_skill_creator_plugin._skill_installer_consts import (
-    FULL_DESC_CAP,
-    PINNED_UPSTREAM_COMMIT,
-    SHORT_DESC_CAP,
-    SKILL_DEST_REL_PARTS,
-    STATE_UNPATCHED,
+    LIVE_HERMES_AGENT as _LIVE_HERMES_AGENT,
 )
 from hermes_skill_creator_plugin._skill_installer_consts import (
-    LIVE_HERMES_AGENT as _LIVE_HERMES_AGENT,
+    SKILL_DEST_REL_PARTS,
+    STATE_UNPATCHED,
 )
 from hermes_skill_creator_plugin._skill_installer_note import (
     write_migration_note as _write_migration_note,
 )
-from hermes_skill_creator_plugin._skill_installer_t3 import T3_INVENTORY
 
 
 @dataclass
@@ -192,14 +188,3 @@ def _build_install_result(
         selected_skill_md=target_md,
         migration_note=migration_note,
     )
-
-
-__all__ = [
-    "T3_INVENTORY",
-    "InstallResult",
-    "SHORT_DESC_CAP",
-    "FULL_DESC_CAP",
-    "PINNED_UPSTREAM_COMMIT",
-    "detect_active_cap",
-    "install",
-]
