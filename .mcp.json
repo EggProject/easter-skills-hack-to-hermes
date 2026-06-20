@@ -3,7 +3,12 @@
     "minimax-mcp-server": {
       "command": "uvx",
       "args": ["minimax-coding-plan-mcp", "-y"]
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {}
     }
   }
 }
-
