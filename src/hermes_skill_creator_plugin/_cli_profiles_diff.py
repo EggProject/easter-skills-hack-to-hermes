@@ -11,6 +11,8 @@ from pathlib import Path
 DESIRED_SKILL = "skill-creator"
 NEVER_DISABLE: frozenset[str] = frozenset(("openai", "skills"))
 
+_DiffReport = dict[str, list[str]]
+
 
 def walk_skills(skills_dir: Path) -> set[str]:
     """Return the set of installed skill NAMES under ``skills_dir``.
@@ -77,9 +79,8 @@ def _extract_name(text: str) -> str:
     return ""
 
 
-def diff_sets(current: set[str], desired: set[str]) -> dict[str, list[str]]:
+def diff_sets(current: set[str], desired: set[str]) -> _DiffReport:
     """Compute the symmetric diff between current and desired as sorted lists."""
-    return {
-        "added": sorted(desired - current),
-        "removed": sorted(current - desired),
-    }
+    added = sorted(desired - current)
+    removed = sorted(current - desired)
+    return {"added": added, "removed": removed}

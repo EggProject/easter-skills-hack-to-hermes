@@ -31,7 +31,6 @@ import click
 from hermes_skill_creator_plugin._patcher import (
     EXIT_OK,
     PatcherResult,
-    PatchRunInputs,
     generate_migration_note,
     is_hermes_agent,
     run_patch,
@@ -224,18 +223,16 @@ def _patch_impl(args: PatchArgs) -> int:
 
     git_head = _git_head(target_path) if target_path else ""
     patcher_result = run_patch(
-        PatchRunInputs(
-            target=target_path,
-            check=check,
-            apply=args.do_apply,
-            force=args.force,
-            i_accept_line_drift=args.i_accept_line_drift,
-            task_e_redirect=args.task_e_redirect,
-            no_schema_redirect=args.no_schema_redirect,
-            yes=args.yes,
-            verbose=args.verbose,
-            git_head=git_head,
-        ),
+        target=target_path,
+        check=check,
+        apply=args.do_apply,
+        force=args.force,
+        i_accept_line_drift=args.i_accept_line_drift,
+        task_e_redirect=args.task_e_redirect,
+        no_schema_redirect=args.no_schema_redirect,
+        yes=args.yes,
+        verbose=args.verbose,
+        git_head=git_head,
     )
 
     _emit_diagnostics(patcher_result, verbose=args.verbose)
@@ -269,40 +266,31 @@ main = click.command(
     help=f"{HELP_EN}\n{HELP_HU}",
     context_settings={"help_option_names": ["-h", "--help"]},
 )(main)
-main = click.option("--target", type=click.Path(), default=None, help=())(main)
-main = click.option("--check", is_flag=True, default=False, help=())(main)
-main = click.option("--apply", "do_apply", is_flag=True, default=False, help=())(main)
-main = click.option(
-    "--task-e-redirect",
-    "task_e_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option(
-    "--no-schema-redirect",
-    "no_schema_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option(
-    "--i-accept-line-drift",
-    "i_accept_line_drift",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option("--force", is_flag=True, default=False, help=())(main)
-main = click.option(
-    "--emit-migration-note",
-    "emit_migration_note",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option("--yes", is_flag=True, default=False, help=())(main)
-main = click.option("--verbose", is_flag=True, default=False, help=())(main)
+
+
+def _flag(main_cmd: click.Command, name: str, var_name: str | None = None) -> click.Command:
+    """Apply a boolean click flag option to ``main_cmd`` (WPS221 helper)."""
+    if var_name is None:
+        return click.option(name, is_flag=True, default=False, help=())(main_cmd)
+    return click.option(name, var_name, is_flag=True, default=False, help=())(main_cmd)
+
+
+def _target_option(main_cmd: click.Command) -> click.Command:
+    """Apply the --target click option to ``main_cmd`` (WPS221 helper)."""
+    decorator = click.option("--target", type=click.Path(), default=None, help=())
+    return decorator(main_cmd)
+
+
+main = _target_option(main)
+main = _flag(main, "--check")
+main = _flag(main, "--apply", "do_apply")
+main = _flag(main, "--task-e-redirect", "task_e_redirect")
+main = _flag(main, "--no-schema-redirect", "no_schema_redirect")
+main = _flag(main, "--i-accept-line-drift", "i_accept_line_drift")
+main = _flag(main, "--force")
+main = _flag(main, "--emit-migration-note", "emit_migration_note")
+main = _flag(main, "--yes")
+main = _flag(main, "--verbose")
 
 
 def _git_head(target: Path) -> str:

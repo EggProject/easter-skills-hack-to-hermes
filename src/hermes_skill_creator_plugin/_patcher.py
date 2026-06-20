@@ -96,6 +96,9 @@ from hermes_skill_creator_plugin._patcher_pipeline import (
     ok_check_result as _ok_check_result_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    _FailDriftInputs,
+)
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     fail_with_drift as _fail_with_drift_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
@@ -255,13 +258,15 @@ def _drive_pipeline(
     validation = _validate_sites(sites, target_path, persisted, state.sites_already)
     if validation.failures:
         return _fail_with_drift_pipeline(
-            target_path,
-            validation.failures,
-            persisted,
-            state.sites_already,
-            state.diagnostics,
-            inputs.git_head,
-            exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+            _FailDriftInputs(
+                target_path=target_path,
+                failures=validation.failures,
+                state=persisted,
+                sites_already=state.sites_already,
+                diagnostics=state.diagnostics,
+                git_head=inputs.git_head,
+                exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+            ),
         )
     if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(

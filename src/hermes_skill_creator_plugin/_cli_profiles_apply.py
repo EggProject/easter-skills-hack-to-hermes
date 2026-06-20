@@ -13,13 +13,17 @@ import click
 from hermes_skill_creator_plugin._cli_profiles_diff import DESIRED_SKILL, NEVER_DISABLE
 
 
-def load_config_or_error(load_config: Any, errors: list[str], row: dict[str, Any]) -> Any:
+def load_config_or_error(load_config: Any, errors: list[str], row: dict[str, Any]) -> dict[str, Any]:
     """Call ``load_config``; on failure record the error and return the row sentinel."""
     try:
-        return load_config()
+        result = load_config()
     except Exception as exc:
         errors.append(f"load_config failed: {exc}")
         return row
+    if not isinstance(result, dict):
+        errors.append(f"load_config returned {type(result).__name__}, expected dict")
+        return row
+    return result
 
 
 def read_disabled_or_empty(get_disabled_skill_names: Any, errors: list[str]) -> set[str]:

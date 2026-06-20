@@ -29,6 +29,7 @@ from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     STATE_PATCHED,
 )
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    _AuditLogInputs,
     emit_audit_log,
     mutate_lines_for_site,
 )
@@ -163,12 +164,14 @@ def _emit_site_audit(
     after_bytes: bytes,
 ) -> None:
     emit_audit_log(
-        audit_path,
-        timestamp,
-        site.site_id,
-        before,
-        after_bytes,
-        target_path,
+        _AuditLogInputs(
+            audit_path=audit_path,
+            timestamp=timestamp,
+            site_id=site.site_id,
+            before=before,
+            after_bytes=after_bytes,
+            target_path=target_path,
+        ),
     )
 
 

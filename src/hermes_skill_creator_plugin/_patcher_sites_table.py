@@ -50,6 +50,12 @@ SKILL_CREATOR_CONSULT_RULE = (
     "not from the background review)."
 )
 
+# --- shared inserted-line templates (WPS336/WPS226) -----------------------
+# Used by E4 + E5; the appended line text, with and without trailing newline.
+# Two separate constants avoid explicit '+' concatenation (WPS336).
+_INSERT_LINE_PROMPT_TAIL = '    SKILL_CREATOR_CONSULT_RULE + "\n\n"'
+_INSERT_LINE_PROMPT_TAIL_NL = '    SKILL_CREATOR_CONSULT_RULE + "\n\n"\n'
+
 # --- site ``kind`` constants (WPS226 — reused > 3 times) -------------------
 KIND_APPEND = "append"
 KIND_CAP = "cap"
@@ -147,7 +153,7 @@ E1_SKILLS_GUIDANCE = Site(
     # E1 is appended inside a parenthesized implicit-concat; the next
     # line is ")" closing the constant. We append ONE line that begins
     # with a single leading space, concatenating to the previous literal.
-    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE' + "\n",
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE' "\n",
     # Idempotency: the site is patched iff the appended line is present
     # verbatim after the L179 anchor.
     expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE',
@@ -164,7 +170,7 @@ E2_MEMORY_GUIDANCE = Site(
             text=r'    "necessary later, save it as a skill with the skill tool.\n"',
         ),
     ),
-    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' "\n",
     expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"',
     kind=KIND_APPEND,
     line_for_state=E2_LINE,
@@ -179,7 +185,7 @@ E3_BUILD_SKILLS_PROMPT = Site(
             text='            "After difficult/iterative tasks, offer to save as a skill. "',
         ),
     ),
-    insertion=r'            SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
+    insertion=r'            SKILL_CREATOR_CONSULT_RULE + "\n"' "\n",
     expected_replacement=r'            SKILL_CREATOR_CONSULT_RULE + "\n"',
     kind=KIND_APPEND,
     line_for_state=E3_LINE,
@@ -194,8 +200,8 @@ E4_SKILL_REVIEW_PROMPT = Site(
             text="    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"",
         ),
     ),
-    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
-    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
+    insertion=_INSERT_LINE_PROMPT_TAIL_NL,
+    expected_replacement=_INSERT_LINE_PROMPT_TAIL,
     kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
@@ -209,8 +215,8 @@ E5_COMBINED_REVIEW_PROMPT = Site(
             text='    "(2), or (3).\\n\\n"',
         ),
     ),
-    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
-    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
+    insertion=_INSERT_LINE_PROMPT_TAIL_NL,
+    expected_replacement=_INSERT_LINE_PROMPT_TAIL,
     kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )

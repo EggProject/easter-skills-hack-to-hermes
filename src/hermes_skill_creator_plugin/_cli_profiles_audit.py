@@ -83,7 +83,7 @@ def audit_profile(
     return row
 
 
-def _audit_load_or_error(profile_path: Path, errors: list[str], row: dict[str, Any]) -> Any:
+def _audit_load_or_error(profile_path: Path, errors: list[str], row: dict[str, Any]) -> dict[str, Any]:
     """Load the scoped HERMES_HOME config; append error and return ``row`` sentinel on failure."""
     from hermes_cli.config import load_config
 

@@ -123,6 +123,8 @@ def _now_iso(frozen_time: str | None) -> str:
 
 # Sentinels for the per-row "value list or dash" presentation.
 _DASH = "-"
+# WPS226: ``apply`` is reused > 3 times in the audit-options dict flow.
+_KEY_APPLY = "apply"
 
 
 def _join_or_dash(names: list[str]) -> str:
@@ -130,6 +132,11 @@ def _join_or_dash(names: list[str]) -> str:
     if not names:
         return _DASH
     return ",".join(names)
+
+
+def _join_or_dash_obj(value: object) -> str:
+    """Cast ``value`` to ``list[str]`` then delegate to ``_join_or_dash``."""
+    return _join_or_dash(cast("list[str]", value))
 
 
 def _live_install_refused(apply: bool, yes: bool) -> bool:
@@ -168,18 +175,18 @@ def _echo_row_summary(row: dict[str, object]) -> None:
         _bilingual(
             "profiles_msg_profile_audit",
             name=row["profile_name"],
-            disabled=_join_or_dash(cast("list[str]", row["current_disabled"])),
-            installed=_join_or_dash(cast("list[str]", row["current_installed"])),
+            disabled=_join_or_dash_obj(row["current_disabled"]),
+            installed=_join_or_dash_obj(row["current_installed"]),
         )
     )
     diff_row = cast("dict[str, object]", row["diff"])
     click.echo(
         _bilingual(
             "profiles_msg_diff",
-            ad=_join_or_dash(cast("list[str]", diff_row["added_disabled"])),
-            rd=_join_or_dash(cast("list[str]", diff_row["removed_disabled"])),
-            ai=_join_or_dash(cast("list[str]", diff_row["added_installed"])),
-            ri=_join_or_dash(cast("list[str]", diff_row["removed_installed"])),
+            ad=_join_or_dash_obj(diff_row["added_disabled"]),
+            rd=_join_or_dash_obj(diff_row["removed_disabled"]),
+            ai=_join_or_dash_obj(diff_row["added_installed"]),
+            ri=_join_or_dash_obj(diff_row["removed_installed"]),
         )
     )
 
@@ -221,7 +228,7 @@ def _audit_and_collect_row(
 def _extract_audit_options(options: dict[str, object]) -> dict[str, object]:
     """Pull the recognized keyword options out of the raw options dict."""
     return {
-        "apply": bool(options.get("apply", False)),
+        _KEY_APPLY: bool(options.get(_KEY_APPLY, False)),
         "json_path": options.get("json_path"),
         "frozen_time": options.get("frozen_time"),
         "skip_install": bool(options.get("skip_install", False)),
@@ -279,7 +286,7 @@ class _AuditPhaseParams:
     @classmethod
     def from_opts(cls, opts: dict[str, object]) -> _AuditPhaseParams:
         return cls(
-            apply=bool(opts["apply"]),
+            apply=bool(opts[_KEY_APPLY]),
             frozen_time=cast("str | None", opts["frozen_time"]),
             skip_install=bool(opts["skip_install"]),
             profile=cast("str | None", opts["profile"]),
@@ -307,7 +314,7 @@ def run_audit(**options: object) -> AuditReport:
     #    whenever HERMES_HOME resolves to the LIVE install AND --yes is
     #    absent — TTY or not, CI or interactive. Operators who really
     #    want to write to the live install must pass --yes.
-    if _live_install_refused(bool(opts["apply"]), bool(opts["yes"])):
+    if _live_install_refused(bool(opts[_KEY_APPLY]), bool(opts["yes"])):
         click.echo(_bilingual("profiles_msg_refuse_no_yes"))
         sys.exit(5)
 

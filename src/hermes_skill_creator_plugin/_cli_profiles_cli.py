@@ -64,7 +64,7 @@ def _format_options_block(
 
 
 def _format_option_line(flag: str, description: str) -> str:
-    """Format a single ``  FLAG  description\\n`` option line."""
+    r"""Format a single ``  FLAG  description\n`` option line."""
     return f"  {flag}{description}\n"
 
 
