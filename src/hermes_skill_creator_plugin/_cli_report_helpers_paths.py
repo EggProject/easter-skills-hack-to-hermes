@@ -65,7 +65,8 @@ def _strip_frontmatter(text: str, skill_name: str) -> str:
     if end <= 0:
         return text.strip()
     frontmatter = text[3:end]
-    body = text[end + 4 :].strip()
+    body_start = end + 4
+    body = text[body_start:].strip()
     desc = _description_from_frontmatter(frontmatter)
     if desc is not None:
         return desc
