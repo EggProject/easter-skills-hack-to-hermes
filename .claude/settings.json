@@ -2,7 +2,19 @@
   "permissions": {
     "defaultMode": "auto",
     "disableBypassPermissionsMode": "disable",
-    "allow": ["AskUserQuestion"],
+    "allow": ["AskUserQuestion",  "Bash(uv run *)",
+      "Bash(.venv/bin/uv run *)",
+      "Bash(.venv/bin/flake8 *)",
+      "Bash(pre-commit run *)",
+      "Bash(pre-commit clean *)",
+      "Bash(.venv/bin/pre-commit run *)",
+      "Bash(.venv/bin/ruff check *)",
+      "Bash(uvx ruff *)",
+      "Bash(uvx wemake-python-styleguide *)",
+      "Bash(uvx --from wemake-python-styleguide wps *)",
+      "Bash(.venv/bin/mypy *)",
+      "mcp__minimax-mcp-server__web_search"
+    ],
     "ask": [
       "Bash(git push *)",
       "Bash(git reset --hard *)",
@@ -100,6 +112,7 @@
       "Edit(/.claude/hooks/**)"
     ],
     "deny": [
+      "WebSearch",
       "Bash(sudo *)",
       "Bash(doas *)",
       "Bash(pkexec *)",
