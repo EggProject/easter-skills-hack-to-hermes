@@ -20,22 +20,39 @@ Functions:
 - :func:`cross_filesystem` — best-effort cross-FS detector (POSIX
   ``statvfs``; returns ``False`` on platforms without it).
 - :func:`now_iso` — ISO-8601 UTC timestamp; honors
-  ``HERMES_SKILL_CREATOR_FROZEN_TIME`` for deterministic tests.
+  ``HERMES_SKILL_CREATOR_FROZEN_TIME`` for deterministic tests
+  (re-exported from :mod:`._patcher_helpers_iso`).
 
 See also: plans/04-script-1-patch.md, plans/10-toolchain-and-conventions.md.
 """
 
 from __future__ import annotations
 
-import datetime
 import os
 import tempfile
 from pathlib import Path
 
+# Re-export moved symbol (WPS202 module split) for backward-compatible imports.
+from hermes_skill_creator_plugin._patcher_helpers_iso import now_iso
 from hermes_skill_creator_plugin._patcher_sites import Anchor, Site
 
+__all__ = [
+    "now_iso",
+    "Anchor",
+    "Site",
+    "DEFAULT_CYCLE_MARKER",
+    "HOME_DIR_PARTS",
+    "hermes_agent_path",
+    "is_hermes_agent",
+    "file_has_circular_import",
+    "locate_anchor",
+    "site_already_patched",
+    "site_in_state",
+    "_cross_filesystem",
+    "cross_filesystem",
+]
+
 DEFAULT_CYCLE_MARKER = "from tools.skills_tool import"
-FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
 HOME_DIR_PARTS = (".hermes", "hermes-agent")
 
 
@@ -90,7 +107,7 @@ def site_in_state(state: dict[str, str], site_id: str, *, status: str) -> bool:
     return state.get(site_id) == status
 
 
-def cross_filesystem(target: Path) -> bool:
+def _cross_filesystem(target: Path) -> bool:
     """Best-effort cross-filesystem detector.
 
     Returns False on platforms that do not support ``os.statvfs``.
@@ -106,21 +123,5 @@ def cross_filesystem(target: Path) -> bool:
     return target_stat.f_fsid != tmp_stat.f_fsid
 
 
-def now_iso() -> str:
-    """ISO-8601 UTC timestamp; honors HERMES_SKILL_CREATOR_FROZEN_TIME."""
-    frozen = os.environ.get(FROZEN_TIME_ENV_KEY)
-    if frozen:
-        return frozen
-    return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-__all__ = [
-    "hermes_agent_path",
-    "is_hermes_agent",
-    "file_has_circular_import",
-    "locate_anchor",
-    "site_already_patched",
-    "site_in_state",
-    "cross_filesystem",
-    "now_iso",
-]
+# Backward-compatible alias (legacy name without underscore).
+cross_filesystem = _cross_filesystem

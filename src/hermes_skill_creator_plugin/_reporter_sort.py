@@ -1,24 +1,31 @@
-"""Row-builder + sort helpers for the hermes-skill-creator reporter.
+"""Row-builder + sort dispatchers for the hermes-skill-creator reporter.
 
 TDD tests reference ``hermes_skill_creator_plugin._reporter.make_row`` /
-``sort_rows`` / ``_truncate_for_display`` / ``_sort_key``; ``_reporter.py``
-re-exports them so existing imports continue to work.
+``sort_rows`` / ``_truncate_for_display`` / ``_sort_key`` /
+``_sort_by_last_used_at``; ``_reporter.py`` re-exports them so existing
+imports continue to work.
+
+Per-sort-key builders live in :mod:`._reporter_sort_keys`; the
+last-used-at bucketing lives in :mod:`._reporter_sort_last_used`
+(both split off to keep this module's surface under WPS202).
 """
 
 from __future__ import annotations
 
 import dataclasses
-from collections import OrderedDict
 
 from hermes_skill_creator_plugin._reporter_models import SkillRow
+from hermes_skill_creator_plugin._reporter_sort_keys import (
+    _sort_key_tokens,
+    _sort_key_use_count,
+)
+from hermes_skill_creator_plugin._reporter_sort_last_used import (
+    _sort_by_last_used_at,
+)
 from hermes_skill_creator_plugin._tokenizer import MAX_DESCRIPTION_LENGTH
 
 # Default ellipsis suffix for truncated descriptions (3 chars).
 ELLIPSIS = "..."
-
-# Markers used to push n/a rows AFTER populated rows in the sort tuple.
-_NA_MARKER_LAST = 1
-_NA_MARKER_FIRST = 0
 
 
 def _truncate_for_display(description: str, *, width: int = 60) -> str:
@@ -50,11 +57,6 @@ class _RowFields:
 
 def make_row(fields: _RowFields) -> SkillRow:
     """Build a SkillRow with derived display + pct_of_cap fields."""
-    return _build_row(fields)
-
-
-def _build_row(fields: _RowFields) -> SkillRow:
-    """Compose a SkillRow from a :class:`_RowFields` bundle."""
     pct = round((fields.tokens / MAX_DESCRIPTION_LENGTH) * 100, 1)
     return SkillRow(
         profile=fields.profile,
@@ -88,20 +90,6 @@ def _sort_key(
     return _sort_key_tokens(row)
 
 
-def _sort_key_tokens(row: SkillRow) -> tuple[int, str]:
-    """Tokens desc, name asc — also the fallback for unknown sort keys."""
-    return (-row.tokens, row._sort_name)
-
-
-def _sort_key_use_count(row: SkillRow) -> tuple[int, int, str]:
-    """Use-count desc, name asc; n/a rows sort LAST."""
-    if row.use_count is None:
-        # n/a rows sort AFTER non-na rows (1 > 0). The 0/0 placeholders
-        # for primary+name are not consulted because na_marker dominates.
-        return (_NA_MARKER_LAST, 0, row._sort_name)
-    return (_NA_MARKER_FIRST, -row.use_count, row._sort_name)
-
-
 def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
     """Return a NEW list of rows sorted by `sort_key` (desc on the primary key).
 
@@ -111,32 +99,3 @@ def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
     if sort_key == "last_used_at":
         return _sort_by_last_used_at(rows)
     return sorted(rows, key=lambda row: _sort_key(row, sort_key))
-
-
-def _sort_by_last_used_at(rows: list[SkillRow]) -> list[SkillRow]:
-    """Sort by ``last_used_at`` desc with name-asc tiebreaker and n/a LAST."""
-    na_rows = _sorted_na_rows(rows)
-    groups = _group_dated_rows(rows)
-    for bucket in groups.values():
-        bucket.sort(key=lambda bucket_row: bucket_row.name)
-    out: list[SkillRow] = []
-    for ts in reversed(list(groups.keys())):
-        out.extend(groups[ts])
-    return out + na_rows
-
-
-def _sorted_na_rows(rows: list[SkillRow]) -> list[SkillRow]:
-    """Return ``rows`` with ``last_used_at is None`` sorted by name asc."""
-    return sorted(
-        (na_row for na_row in rows if na_row.last_used_at is None),
-        key=lambda na_row: na_row.name,
-    )
-
-
-def _group_dated_rows(rows: list[SkillRow]) -> OrderedDict[str, list[SkillRow]]:
-    """Bucket ``rows`` whose ``last_used_at`` is non-None by their timestamp."""
-    groups: OrderedDict[str, list[SkillRow]] = OrderedDict()
-    for dated_row in rows:
-        if dated_row.last_used_at is not None:
-            groups.setdefault(dated_row.last_used_at, []).append(dated_row)
-    return groups

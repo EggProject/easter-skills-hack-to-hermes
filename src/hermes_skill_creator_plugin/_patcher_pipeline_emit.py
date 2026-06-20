@@ -15,7 +15,7 @@ from hermes_skill_creator_plugin._patcher_apply import (
     _append_audit_log,
     write_rejected,
 )
-from hermes_skill_creator_plugin._patcher_apply_atomic import _diff_sha
+from hermes_skill_creator_plugin._patcher_apply_diff import _diff_sha
 from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     REASON_LINE_DRIFT,
     REMEDIATION_EN,
@@ -71,10 +71,11 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
     )
     for failure in inputs.failures:
         _append_drift_diagnostic(failure, inputs.diagnostics)
-    from hermes_skill_creator_plugin._patcher_pipeline import _build_result, _ResultInputs
+    from hermes_skill_creator_plugin._patcher_pipeline import _build_result
+    from hermes_skill_creator_plugin._patcher_pipeline_args import _BuildResultArgs
 
     return _build_result(
-        _ResultInputs(
+        _BuildResultArgs(
             exit_code=exit_drift_code,
             sites_patched=(),
             sites_already=tuple(inputs.sites_already),
@@ -126,6 +127,8 @@ def mutate_lines_for_site(site: Site, text: str) -> list[str]:
     idx = site.primary_anchor().line - 1
     if site.kind == "cap":
         new_pair_lines = site.insertion.splitlines(keepends=True)
-        return lines[:idx] + new_pair_lines + lines[idx + 2:]
+        tail_start = idx + 2
+        tail = lines[tail_start:]
+        return lines[:idx] + new_pair_lines + tail
     lines.insert(idx + 1, site.insertion)
     return lines

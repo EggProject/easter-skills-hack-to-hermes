@@ -37,9 +37,7 @@ See also: plans/06-script-2-profiles.md, plans/09-test-strategy.md.
 from __future__ import annotations
 
 import dataclasses
-import os
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
@@ -54,19 +52,6 @@ from agent.skill_utils import get_disabled_skill_names  # noqa: F401
 from hermes_cli.profiles import ProfileInfo
 from hermes_cli.skills_config import save_disabled_skills  # noqa: F401
 
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    audit_profile as _audit_profile,
-)
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    build_bilingual as _build_bilingual,
-)
-from hermes_skill_creator_plugin._cli_profiles_audit import (
-    diff_sets,
-    walk_skills,
-)
-from hermes_skill_creator_plugin._cli_profiles_cli import (
-    build_help_text as _build_help_text,
-)
 from hermes_skill_creator_plugin._cli_profiles_cli import (
     main_cmd,
 )
@@ -74,13 +59,15 @@ from hermes_skill_creator_plugin._cli_profiles_cli import (
     make_cli as _make_cli,
 )
 from hermes_skill_creator_plugin._cli_profiles_report import AuditReport
-from hermes_skill_creator_plugin.i18n.messages_en import EN_MESSAGES as EN
-from hermes_skill_creator_plugin.i18n.messages_hu import HU_MESSAGES as HU
-
-# Re-exports for tests / external callers (do NOT remove — tests
-# import these by name from ``hermes_skill_creator_plugin.cli_profiles``).
-_walk_skills = walk_skills
-_diff = diff_sets
+from hermes_skill_creator_plugin.cli_profiles_row import (
+    _audit_and_collect_row,
+    _bilingual,
+    _empty_report,
+)
+from hermes_skill_creator_plugin.cli_profiles_select import (
+    _live_install_refused,
+    _select_profiles,
+)
 
 # ---------------------------------------------------------------------------
 # Module-level constants (preserved for tests / external callers).
@@ -100,117 +87,6 @@ PROFILE_DIRS: tuple[str, ...] = (
     "cron",
     "home",
 )
-# Live install refusal (per the safety contract).
-LIVE_HERMES_HOME = Path.home() / ".hermes"
-
-
-# ---------------------------------------------------------------------------
-# Bilingual helper + per-row presentation.
-# ---------------------------------------------------------------------------
-
-
-def _bilingual(key: str, **format_kwargs: object) -> str:
-    """Build a ``[en] ... / [hu] ...`` line for the given message key."""
-    return _build_bilingual(EN, HU, key, **format_kwargs)
-
-
-def _now_iso(frozen_time: str | None) -> str:
-    """Return the report timestamp (stable when ``frozen_time`` is set)."""
-    if frozen_time is not None:
-        return frozen_time
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-# Sentinels for the per-row "value list or dash" presentation.
-_DASH = "-"
-
-
-def _join_or_dash(names: list[str]) -> str:
-    """Join a list of names with commas, or ``-`` for empty/None."""
-    if not names:
-        return _DASH
-    return ",".join(names)
-
-
-def _live_install_refused(apply: bool, yes: bool) -> bool:
-    """Return True when the run should refuse to write the LIVE install."""
-    if not apply or yes:
-        return False
-    env = os.environ.get("HERMES_HOME")
-    if env is None:
-        return False
-    return Path(env).resolve() == LIVE_HERMES_HOME.resolve()
-
-
-def _select_profiles(
-    all_profiles: list[ProfileInfo],
-    profile: str | None,
-) -> list[ProfileInfo]:
-    """Filter all_profiles to the requested NAME (or return them all)."""
-    if profile is None:
-        return list(all_profiles)
-    return [profile_info for profile_info in all_profiles if profile_info.name == profile]
-
-
-def _empty_report(frozen_time: str | None) -> AuditReport:
-    """Build the zero-profile empty report (timestamp pinned by frozen_time)."""
-    return AuditReport(
-        tool=TOOL_NAME,
-        version=TOOL_VERSION,
-        generated_at=_now_iso(frozen_time),
-        profiles=[],
-    )
-
-
-def _echo_row_summary(row: dict[str, object]) -> None:
-    """Echo the per-profile audit summary + diff in bilingual form."""
-    click.echo(
-        _bilingual(
-            "profiles_msg_profile_audit",
-            name=row["profile_name"],
-            disabled=_join_or_dash(cast("list[str]", row["current_disabled"])),
-            installed=_join_or_dash(cast("list[str]", row["current_installed"])),
-        )
-    )
-    diff_row = cast("dict[str, object]", row["diff"])
-    click.echo(
-        _bilingual(
-            "profiles_msg_diff",
-            ad=_join_or_dash(cast("list[str]", diff_row["added_disabled"])),
-            rd=_join_or_dash(cast("list[str]", diff_row["removed_disabled"])),
-            ai=_join_or_dash(cast("list[str]", diff_row["added_installed"])),
-            ri=_join_or_dash(cast("list[str]", diff_row["removed_installed"])),
-        )
-    )
-
-
-def _write_json_report(report: AuditReport, json_path: Path) -> None:
-    """Write the report JSON to json_path (creating parent dirs)."""
-    json_path.parent.mkdir(parents=True, exist_ok=True)
-    json_path.write_bytes(report.to_json_bytes())
-    click.echo(_bilingual("profiles_msg_json_written", path=str(json_path)))
-
-
-def _audit_and_collect_row(
-    profile_info: ProfileInfo,
-    *,
-    apply: bool,
-    skip_install: bool,
-    frozen_time: str | None,
-) -> dict[str, object]:
-    """Audit a single profile and backfill profile_name from ProfileInfo."""
-    row = _audit_profile(
-        profile_info.path,
-        apply=apply,
-        skip_install=skip_install,
-        frozen_time=frozen_time,
-        bilingual_fn=_bilingual,
-    )
-    # Backfill the profile_name from the ProfileInfo (in case
-    # the path-based name was "hermes" by default).
-    row["profile_name"] = profile_info.name
-    _echo_row_summary(row)
-    return row
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +191,10 @@ def run_audit(**options: object) -> AuditReport:
 
     json_path = opts["json_path"]
     if json_path is not None:
+        from hermes_skill_creator_plugin.cli_profiles_row import (
+            _write_json_report,
+        )
+
         _write_json_report(report, cast("Path", json_path))
 
     return report
@@ -331,4 +211,3 @@ def run_audit(**options: object) -> AuditReport:
 app = main_cmd
 main = main_cmd
 make_cli = _make_cli
-_build_help_text = _build_help_text  # noqa: F841 - re-export for tests
