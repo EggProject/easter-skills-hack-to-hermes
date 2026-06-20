@@ -223,12 +223,15 @@ def _audit_and_collect_row(
 
 def _extract_audit_options(options: dict[str, object]) -> dict[str, object]:
     """Pull the recognized keyword options out of the raw options dict."""
+    apply_val = bool(options.get("apply", False))
+    skip_install_val = bool(options.get("skip_install", False))
+    yes_val = bool(options.get("yes", False))
     return {
-        "apply": bool(options.get("apply", False)),
+        "apply": apply_val,
         "json_path": options.get("json_path"),
         "frozen_time": options.get("frozen_time"),
-        "skip_install": bool(options.get("skip_install", False)),
-        "yes": bool(options.get("yes", False)),
+        "skip_install": skip_install_val,
+        "yes": yes_val,
         "profile": options.get("profile"),
     }
 
