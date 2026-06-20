@@ -10,7 +10,6 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hermes_skill_creator_plugin import i18n as _i18n
 from hermes_skill_creator_plugin._patcher_apply import (
     _append_audit_log,
     write_rejected,
@@ -22,7 +21,12 @@ from hermes_skill_creator_plugin._patcher_pipeline_consts import (
     REMEDIATION_HU,
 )
 from hermes_skill_creator_plugin._patcher_sites import Site
-from hermes_skill_creator_plugin.i18n.messages_en import VALIDATION_FAILED
+from hermes_skill_creator_plugin.i18n.messages_en import (
+    FORCE_AUDIT_LOG,
+    LINE_DRIFT,
+    TEXT_DRIFT,
+    VALIDATION_FAILED,
+)
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
@@ -92,14 +96,14 @@ def _append_drift_diagnostic(
     """Append the right i18n diagnostic for one failure entry."""
     if failure.get("reason") == REASON_LINE_DRIFT:
         diagnostics.append(
-            _i18n.LINE_DRIFT.format(
+            LINE_DRIFT.format(
                 site_id=failure["site_id"],
                 line=failure["anchor_line"],
             )
         )
     else:
         diagnostics.append(
-            _i18n.TEXT_DRIFT.format(
+            TEXT_DRIFT.format(
                 site_id=failure["site_id"],
                 expected=failure.get("expected", ""),
                 actual=failure.get("actual_at_line_<missing>", ""),
@@ -111,7 +115,7 @@ def _append_drift_diagnostic(
 def emit_audit_log(inputs: _AuditLogInputs) -> None:
     """Append one FORCE_AUDIT_LOG line for a successful ``--force`` site."""
     diff_sha = _diff_sha(inputs.before, inputs.after_bytes)
-    audit_line = _i18n.FORCE_AUDIT_LOG.format(
+    audit_line = FORCE_AUDIT_LOG.format(
         timestamp=inputs.timestamp,
         site_id=inputs.site_id,
         diff_sha=diff_sha,
@@ -126,6 +130,6 @@ def mutate_lines_for_site(site: Site, text: str) -> list[str]:
     idx = site.primary_anchor().line - 1
     if site.kind == "cap":
         new_pair_lines = site.insertion.splitlines(keepends=True)
-        return lines[:idx] + new_pair_lines + lines[idx + 2:]
+        return lines[:idx] + new_pair_lines + lines[idx + 2 :]
     lines.insert(idx + 1, site.insertion)
     return lines

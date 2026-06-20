@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hermes_skill_creator_plugin import _patcher as _patcher_mod
-from hermes_skill_creator_plugin import i18n as _i18n
 from hermes_skill_creator_plugin._patcher_apply import AUDIT_LOG
 from hermes_skill_creator_plugin._patcher_helpers import (
     cross_filesystem as _cross_filesystem,
@@ -33,6 +32,13 @@ from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     mutate_lines_for_site,
 )
 from hermes_skill_creator_plugin._patcher_sites import Site
+from hermes_skill_creator_plugin.i18n.messages_en import (
+    CROSS_FS_WARN,
+    IO_ERROR,
+    OK_ALREADY_PATCHED,
+    OK_PATCHED,
+    PERMISSION_DENIED,
+)
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
@@ -53,9 +59,9 @@ def ok_check_result(
     """Build the EXIT_OK result for ``--check`` (or non-apply runs)."""
     for site in sites:
         if site.site_id in sites_already:
-            diagnostics.append(_i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(OK_ALREADY_PATCHED.format(site_id=site.site_id))
         else:
-            diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
     write_state_fn(target_path, state)
     return _build_result(
         exit_code=exit_ok_code,
@@ -83,7 +89,7 @@ def apply_sites(
     timestamp = _now_iso()
     for site in sorted(sites, key=lambda site: site.line_for_state, reverse=True):
         if site.site_id in sites_already:
-            diagnostics.append(_i18n.OK_ALREADY_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(OK_ALREADY_PATCHED.format(site_id=site.site_id))
             continue
         outcome = _apply_one_site(
             site=site,
@@ -98,9 +104,9 @@ def apply_sites(
             return outcome
         sites_patched.append(site.site_id)
         state[site.site_id] = STATE_PATCHED
-        diagnostics.append(_i18n.OK_PATCHED.format(site_id=site.site_id))
+        diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
     if _cross_filesystem(target_path):
-        diagnostics.append(_i18n.CROSS_FS_WARN)
+        diagnostics.append(CROSS_FS_WARN)
     write_state_fn(target_path, state)
     return _build_result(
         exit_code=exit_ok_code,
@@ -192,10 +198,10 @@ def _io_error_result(
 ) -> PatcherResult:
     """Build the IO-error PatcherResult for the given exception."""
     if isinstance(exc, PermissionError):
-        diag = _i18n.PERMISSION_DENIED.format(path=str(path))
+        diag = PERMISSION_DENIED.format(path=str(path))
         exit_code = EXIT_PERMISSION
     else:
-        diag = _i18n.IO_ERROR.format(path=str(path), error=str(exc))
+        diag = IO_ERROR.format(path=str(path), error=str(exc))
         exit_code = EXIT_IO
     return _build_result(
         exit_code=exit_code,

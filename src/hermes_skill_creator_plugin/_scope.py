@@ -49,12 +49,12 @@ def _restore_env(prev_value: str | None) -> None:
 def hermes_home_scope(path: Path) -> Iterator[None]:
     """Mirror ``HERMES_HOME`` in both the override token AND ``os.environ``.
 
-    Restores BOTH on exit, even on exception. The previous override
-    token is captured via ``get_hermes_home_override()`` (which returns
-    ``None`` when no override is set); the previous
-    ``os.environ['HERMES_HOME']`` is captured via ``os.environ.get``.
-    On exit the env var is restored first (cheap), then the override
-    token is reset.
+    Restores BOTH on exit, even on exception. The override token is
+    obtained from :func:`set_hermes_home_override` (which returns it
+    so the caller can pass it to :func:`reset_hermes_home_override`
+    later); the previous ``os.environ['HERMES_HOME']`` is captured via
+    ``os.environ.get``. On exit the env var is restored first (cheap),
+    then the override token is reset.
 
     Args:
         path: The scoped ``HERMES_HOME`` for the duration of the block.
@@ -69,37 +69,34 @@ def hermes_home_scope(path: Path) -> Iterator[None]:
     """
     # Imports are local so that tests can monkeypatch ``hermes_constants``
     # in ``sys.modules`` before the call site runs.
-    from hermes_constants import (
-        get_hermes_home_override,
-        set_hermes_home_override,
-    )
+    from hermes_constants import set_hermes_home_override
 
-    prev_override = get_hermes_home_override()
     prev_env = os.environ.get(HERMES_HOME_ENV_KEY)
     token = set_hermes_home_override(str(path))
     os.environ[HERMES_HOME_ENV_KEY] = str(path)
     try:
         yield
     finally:
-        _restore_scope(prev_env, token, prev_override)
+        _restore_scope(prev_env, token)
 
 
-def _restore_scope(prev_env: str | None, token: object, prev_override: object) -> None:
+def _restore_scope(prev_env: str | None, token: object) -> None:
     """Restore both env var and override token (extracted from finally).
 
     ``reset_hermes_home_override`` is imported locally here (not in
     ``hermes_home_scope``) so that callers who monkeypatch the symbol
     between the call site and the ``finally`` block see the patch.
+
+    ``prev_override`` is intentionally NOT a parameter here: the live
+    state is already restored by ``reset_hermes_home_override`` (the
+    token was captured against that earlier state), so the captured
+    value is never read. Keeping it as a positional arg would only
+    trigger wemake WPS122 ("all unused variables definition").
     """
     from hermes_constants import reset_hermes_home_override
 
     _restore_env(prev_env)
     reset_hermes_home_override(token)
-    # ``prev_override`` is captured for symmetry; the live state is
-    # already restored by ``reset_hermes_home_override`` (the token
-    # was captured against that earlier state). Reference the name
-    # to keep the binding obvious to readers.
-    _ = prev_override
 
 
 __all__ = ["hermes_home_scope"]
