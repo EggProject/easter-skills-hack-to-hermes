@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "auto",
     "disableBypassPermissionsMode": "disable",
     "allow": ["AskUserQuestion",  "Bash(uv run *)",
       "Bash(.venv/bin/uv run *)",
