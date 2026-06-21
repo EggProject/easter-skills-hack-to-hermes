@@ -7,7 +7,7 @@ Re-exports helpers from the split sub-modules so existing
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from hermes_skill_creator_plugin import _cli_profiles_audit_bindings as _bindings
 from hermes_skill_creator_plugin import _cli_profiles_audit_types as _types
@@ -77,15 +77,25 @@ def audit_profile(
     return row
 
 
-def _audit_load_or_error(profile_path: Path, errors: list[str], row: dict[str, Any]) -> Any:
-    """Load the scoped HERMES_HOME config; append error and return ``row`` sentinel on failure."""
+def _audit_load_or_error(
+    profile_path: Path,
+    errors: list[str],
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    """Load the scoped HERMES_HOME config; append error and return ``row`` sentinel on failure.
+
+    Returns either the loaded config dict or the ``row`` sentinel (both
+    ``dict[str, Any]``). ``load_config_or_error`` is typed ``Any`` for
+    monkeypatch flexibility; the union of its two return paths is
+    statically known to be ``dict[str, Any]``.
+    """
     from hermes_cli.config import load_config
 
     config = load_config_or_error(load_config, errors, row)
     # Look up the mutator at call time so monkeypatch.setattr on
     # the module works. The top-of-function import caches a
     # reference; the test infrastructure may rebind it.
-    return config
+    return cast("dict[str, Any]", config)
 
 
 def _audit_disabled_now(errors: list[str]) -> set[str]:
