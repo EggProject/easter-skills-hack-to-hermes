@@ -55,6 +55,10 @@ from pathlib import Path
 from hermes_skill_creator_plugin import _patcher_imports as _imps
 from hermes_skill_creator_plugin import _patcher_sites as _sites
 from hermes_skill_creator_plugin._patcher_pipeline import (
+    ApplySitesInputs,
+    OkCheckInputs,
+)
+from hermes_skill_creator_plugin._patcher_pipeline import (
     apply_sites as _apply_sites_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_pipeline import (
@@ -236,26 +240,30 @@ def _drive_pipeline(
         )
     if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(
-            sites,
-            persisted,
-            state.sites_patched,
-            state.sites_already,
-            target_path,
-            state.diagnostics,
-            exit_ok_code=EXIT_OK,
-            write_state_fn=write_state,
+            OkCheckInputs(
+                sites=sites,
+                state=persisted,
+                sites_patched=state.sites_patched,
+                sites_already=state.sites_already,
+                target_path=target_path,
+                diagnostics=state.diagnostics,
+                exit_ok_code=EXIT_OK,
+                write_state_fn=write_state,
+            ),
         )
     return _apply_sites_pipeline(
-        sites,
-        target_path,
-        persisted,
-        state.sites_patched,
-        state.sites_already,
-        state.diagnostics,
-        inputs.force,
-        inputs.audit_log_path,
-        exit_ok_code=EXIT_OK,
-        write_state_fn=write_state,
+        ApplySitesInputs(
+            sites=sites,
+            target_path=target_path,
+            state=persisted,
+            sites_patched=state.sites_patched,
+            sites_already=state.sites_already,
+            diagnostics=state.diagnostics,
+            force=inputs.force,
+            audit_log_path=inputs.audit_log_path,
+            exit_ok_code=EXIT_OK,
+            write_state_fn=write_state,
+        ),
     )
 
 

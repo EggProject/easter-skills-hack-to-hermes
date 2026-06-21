@@ -77,9 +77,11 @@ def _extract_name(text: str) -> str:
     return ""
 
 
-def diff_sets(current: set[str], desired: set[str]) -> dict[str, list[str]]:
+DiffResult = dict[str, list[str]]
+
+
+def diff_sets(current: set[str], desired: set[str]) -> DiffResult:
     """Compute the symmetric diff between current and desired as sorted lists."""
-    return {
-        "added": sorted(desired - current),
-        "removed": sorted(current - desired),
-    }
+    added = sorted(desired - current)
+    removed = sorted(current - desired)
+    return {"added": added, "removed": removed}

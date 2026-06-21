@@ -212,8 +212,7 @@ def _patch_impl(args: PatchArgs) -> int:
         # _emit_migration_note_flow raises SystemExit(EXIT_OK); the
         # line below is unreachable but keeps mypy happy.
 
-    check = args.check
-    apply_mode = args.do_apply
+    check, apply_mode = args.check, args.do_apply
     if not check and not apply_mode:
         # default: --check when neither --check nor --apply is given.
         check = True
@@ -222,20 +221,20 @@ def _patch_impl(args: PatchArgs) -> int:
     # run_patch (which returns EXIT_USER_ABORT). No click-level guard
     # is needed here.
 
-    git_head = _git_head(target_path) if target_path else ""
-    run_inputs = PatchRunInputs(
-        target=target_path,
-        check=check,
-        apply=args.do_apply,
-        force=args.force,
-        i_accept_line_drift=args.i_accept_line_drift,
-        task_e_redirect=args.task_e_redirect,
-        no_schema_redirect=args.no_schema_redirect,
-        yes=args.yes,
-        verbose=args.verbose,
-        git_head=git_head,
+    patcher_result = run_patch(
+        PatchRunInputs(
+            target=target_path,
+            check=check,
+            apply=args.do_apply,
+            force=args.force,
+            i_accept_line_drift=args.i_accept_line_drift,
+            task_e_redirect=args.task_e_redirect,
+            no_schema_redirect=args.no_schema_redirect,
+            yes=args.yes,
+            verbose=args.verbose,
+            git_head=_git_head(target_path) if target_path else "",
+        ),
     )
-    patcher_result = run_patch(run_inputs)
 
     _emit_diagnostics(patcher_result, verbose=args.verbose)
     return patcher_result.exit_code
@@ -268,23 +267,57 @@ main = click.command(
     help=f"{HELP_EN}\n{HELP_HU}",
     context_settings={"help_option_names": ["-h", "--help"]},
 )(main)
-main = click.option("--target", type=click.Path(), default=None, help=())(main)
-main = click.option("--check", is_flag=True, default=False, help=())(main)
-main = click.option("--apply", "do_apply", is_flag=True, default=False, help=())(main)
-main = click.option(
+
+
+def _add_click_option(
+    cmd: click.Command,
+    flag: str,
+    dest: str | None = None,
+    is_flag_val: bool = False,
+    default_val: object = None,
+) -> click.Command:
+    """Apply one ``click.option`` decorator to ``cmd`` and return the result."""
+    help_text: tuple[str, ...] = ()
+    if dest is None:
+        return click.option(
+            flag,
+            type=click.Path() if default_val is None else None,
+            default=default_val,
+            is_flag=is_flag_val,
+            help=help_text,
+        )(cmd)
+    return click.option(
+        flag,
+        dest,
+        is_flag=is_flag_val,
+        default=default_val,
+        help=help_text,
+    )(cmd)
+
+
+main = _add_click_option(main, "--target", default_val=None)
+main = _add_click_option(main, "--check", is_flag_val=True, default_val=False)
+main = _add_click_option(
+    main,
+    "--apply",
+    dest="do_apply",
+    is_flag_val=True,
+    default_val=False,
+)
+main = _add_click_option(
+    main,
     "--task-e-redirect",
-    "task_e_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option(
+    dest="task_e_redirect",
+    is_flag_val=True,
+    default_val=False,
+)
+main = _add_click_option(
+    main,
     "--no-schema-redirect",
-    "no_schema_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
+    dest="no_schema_redirect",
+    is_flag_val=True,
+    default_val=False,
+)
 main = click.option(
     "--i-accept-line-drift",
     "i_accept_line_drift",

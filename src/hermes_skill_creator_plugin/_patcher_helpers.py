@@ -29,10 +29,14 @@ from __future__ import annotations
 
 import datetime
 import os
-import tempfile
 from pathlib import Path
 
+from hermes_skill_creator_plugin._patcher_helpers_fs import cross_filesystem as _cross_filesystem
 from hermes_skill_creator_plugin._patcher_sites import Anchor, Site
+
+# Re-export so existing ``from _patcher_helpers import cross_filesystem``
+# keeps working after the WPS202 split.
+cross_filesystem = _cross_filesystem
 
 DEFAULT_CYCLE_MARKER = "from tools.skills_tool import"
 FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
@@ -88,22 +92,6 @@ def site_already_patched(text: str, site: Site) -> bool:
 def site_in_state(state: dict[str, str], site_id: str, *, status: str) -> bool:
     """True iff the state sidecar records ``site_id`` as ``status``."""
     return state.get(site_id) == status
-
-
-def cross_filesystem(target: Path) -> bool:
-    """Best-effort cross-filesystem detector.
-
-    Returns False on platforms that do not support ``os.statvfs``.
-    """
-    try:
-        target_stat = os.statvfs(target)
-    except OSError, AttributeError:
-        return False
-    try:
-        tmp_stat = os.statvfs(tempfile.gettempdir())
-    except OSError, AttributeError:
-        return False
-    return target_stat.f_fsid != tmp_stat.f_fsid
 
 
 def now_iso() -> str:

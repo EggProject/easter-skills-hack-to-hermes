@@ -64,7 +64,7 @@ def _format_options_block(
 
 
 def _format_option_line(flag: str, description: str) -> str:
-    """Format a single ``  FLAG  description\\n`` option line."""
+    r"""Format a single ``  FLAG  description\n`` option line."""
     return f"  {flag}{description}\n"
 
 
@@ -100,80 +100,79 @@ def build_help_text() -> str:
     return f"{_build_en_help()}{_HELP_SECTION_SEP}{_build_hu_help()}"
 
 
+def _bool_flag(cmd: click.Command, flag: str, dest: str, help_key: str) -> click.Command:
+    """Apply one boolean ``click.option``."""
+    help_text = EN[help_key]
+    return click.option(flag, dest, is_flag=True, default=False, help=help_text)(cmd)
+
+
+def _value_flag(cmd: click.Command, flag: str, dest: str, help_key: str, **extras: object) -> click.Command:
+    """Apply one value-bearing ``click.option``."""
+    help_text = EN[help_key]
+    type_arg = extras.pop("type", None)
+    envvar = extras.pop("envvar", None)
+    return click.option(
+        flag,
+        dest,
+        default=None,
+        type=type_arg,
+        envvar=envvar,
+        help=help_text,
+    )(cmd)
+
+
+def _with_misc_flags(cmd: click.Command) -> click.Command:
+    """Apply the four boolean flags: --apply / --audit / --yes / --skip-install."""
+    cmd = _bool_flag(cmd, "--apply", "apply", "profiles_opt_apply")
+    cmd = _bool_flag(cmd, "--audit", "audit_only", "profiles_opt_audit")
+    cmd = _bool_flag(cmd, "--yes", "yes", "profiles_opt_yes")
+    cmd = _bool_flag(cmd, "--skip-install", "skip_install", "profiles_opt_skip_install")
+    return cmd
+
+
+def _with_path_and_time_flags(cmd: click.Command) -> click.Command:
+    """Apply the three value flags: --profile / --json / --frozen-time."""
+    cmd = _value_flag(cmd, "--profile", "profile", "profiles_opt_profile")
+    cmd = _value_flag(cmd, "--json", "json_path", "profiles_opt_json", type=click.Path())
+    cmd = _value_flag(
+        cmd,
+        "--frozen-time",
+        "frozen_time",
+        "profiles_opt_frozen_time",
+        envvar="HERMES_SKILL_CREATOR_FROZEN_TIME",
+    )
+    return cmd
+
+
 @click.command(
     help=build_help_text(),
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.option(
-    "--apply",
-    "apply",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_apply"],
-)
-@click.option(
-    "--audit",
-    "audit_only",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_audit"],
-)
-@click.option(
-    "--profile",
-    "profile",
-    default=None,
-    help=EN["profiles_opt_profile"],
-)
-@click.option(
-    "--json",
-    "json_path",
-    default=None,
-    type=click.Path(),
-    help=EN["profiles_opt_json"],
-)
-@click.option(
-    "--yes",
-    "yes",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_yes"],
-)
-@click.option(
-    "--skip-install",
-    "skip_install",
-    is_flag=True,
-    default=False,
-    help=EN["profiles_opt_skip_install"],
-)
-@click.option(
-    "--frozen-time",
-    "frozen_time",
-    default=None,
-    envvar="HERMES_SKILL_CREATOR_FROZEN_TIME",
-    help=EN["profiles_opt_frozen_time"],
-)
-def main_cmd(
-    apply: bool,
-    audit_only: bool,
-    profile: str | None,
-    json_path: str | None,
-    yes: bool,
-    skip_install: bool,
-    frozen_time: str | None,
-) -> None:
+@click.pass_context
+def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
     """Per-profile audit/flip for the migrated skill-creator skill (Script #2)."""
     from hermes_skill_creator_plugin.cli_profiles import run_audit
 
-    effective_apply = apply and not audit_only
-    resolved_json: Path | None = Path(json_path) if json_path else None
+    apply_flag = bool(kwargs.get("apply", False))
+    audit_only = bool(kwargs.get("audit_only", False))
+    effective_apply = apply_flag and not audit_only
+    json_path = kwargs.get("json_path")
+    resolved_json: Path | None = Path(json_path) if isinstance(json_path, str) else None
     run_audit(
         apply=effective_apply,
         json_path=resolved_json,
-        frozen_time=frozen_time,
-        skip_install=skip_install,
-        yes=yes,
-        profile=profile,
+        frozen_time=kwargs.get("frozen_time"),
+        skip_install=bool(kwargs.get("skip_install", False)),
+        yes=bool(kwargs.get("yes", False)),
+        profile=kwargs.get("profile"),
     )
+
+
+# Apply the seven ``click.option`` decorators via wrapper helpers
+# so the function itself only has two decorators (``@click.command`` +
+# ``@click.pass_context``) — keeps the WPS216 cap of 5 happy.
+main_cmd = _with_misc_flags(main_cmd)
+main_cmd = _with_path_and_time_flags(main_cmd)
 
 
 def make_cli() -> Any:

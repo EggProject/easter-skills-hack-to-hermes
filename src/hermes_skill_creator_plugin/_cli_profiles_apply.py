@@ -8,9 +8,18 @@ from __future__ import annotations
 import dataclasses
 from typing import Any
 
-import click
+from hermes_skill_creator_plugin._cli_profiles_apply_io import (
+    apply_clear_cache as _apply_clear_cache,
+)
+from hermes_skill_creator_plugin._cli_profiles_apply_io import (
+    apply_do_install as _apply_do_install,
+)
+from hermes_skill_creator_plugin._cli_profiles_diff import NEVER_DISABLE
 
-from hermes_skill_creator_plugin._cli_profiles_diff import DESIRED_SKILL, NEVER_DISABLE
+# Re-export so existing ``from _cli_profiles_apply import apply_clear_cache``
+# keeps working after the WPS202 split.
+apply_clear_cache = _apply_clear_cache
+apply_do_install = _apply_do_install
 
 
 def load_config_or_error(load_config: Any, errors: list[str], row: dict[str, Any]) -> Any:
@@ -87,55 +96,3 @@ def _save_config_safe(save_config: Any, config: Any, errors: list[str]) -> bool:
 def desired_disabled_after_save(disabled_now: set[str]) -> set[str]:
     """Return the desired-disabled set computed from the current snapshot."""
     return set(disabled_now) - NEVER_DISABLE
-
-
-def apply_do_install(
-    do_install: Any,
-    row: dict[str, Any],
-    actions: list[str],
-    errors: list[str],
-    bilingual_fn: Any,
-) -> None:
-    """Install (or refresh) the migrated skill-creator via the hub."""
-    try:
-        do_install(
-            DESIRED_SKILL,
-            category="",
-            force=True,
-            console=None,
-            skip_confirm=True,
-            invalidate_cache=True,
-            name_override="",
-        )
-    except Exception as exc:
-        msg = bilingual_fn(
-            "profiles_msg_hub_error",
-            name=row["profile_name"],
-            err=exc,
-        )
-        click.echo(msg)
-        errors.append(f"hub install failed: {exc}")
-        return
-    actions.append("do_install")
-
-
-def apply_clear_cache(
-    clear_skills_system_prompt_cache: Any,
-    row: dict[str, Any],
-    actions: list[str],
-    errors: list[str],
-    bilingual_fn: Any,
-) -> None:
-    """Clear the system-prompt cache (warn-and-continue on failure)."""
-    try:
-        clear_skills_system_prompt_cache(clear_snapshot=True)
-    except Exception as exc:
-        msg = bilingual_fn(
-            "profiles_msg_cache_warn",
-            name=row["profile_name"],
-            err=exc,
-        )
-        click.echo(msg)
-        errors.append(f"cache clear failed: {exc}")
-        return
-    actions.append("clear_skills_system_prompt_cache")
