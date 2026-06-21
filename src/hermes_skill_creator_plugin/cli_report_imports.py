@@ -18,3 +18,23 @@ itself — tests grep the source for that exact literal string (the
 """
 
 from __future__ import annotations
+
+from hermes_skill_creator_plugin import _cli_report_cmd as _cmd_mod
+from hermes_skill_creator_plugin import _cli_report_helpers as _helpers_mod
+from hermes_skill_creator_plugin import (
+    _cli_report_helpers_paths as _paths_mod,
+)
+from hermes_skill_creator_plugin import _cli_report_rows as _rows_mod
+from hermes_skill_creator_plugin import _cli_report_ui as _ui_mod
+from hermes_skill_creator_plugin._reporter_models import ProfileSection as ProfileSection
+from hermes_skill_creator_plugin._reporter_sort import sort_rows as sort_rows
+from hermes_skill_creator_plugin._tokenizer import estimate_tokens as estimate_tokens
+
+# Sub-module re-bindings.
+_helpers = _helpers_mod
+_paths = _paths_mod
+_rows = _rows_mod
+
+# Function re-bindings.
+emit_bilingual_help = _ui_mod.emit_bilingual_help
+main = _cmd_mod.main
