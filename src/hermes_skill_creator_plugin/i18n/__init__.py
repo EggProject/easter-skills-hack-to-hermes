@@ -15,12 +15,8 @@ mypy --strict. The constants themselves are defined in
 
 from __future__ import annotations
 
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    FORCE_AUDIT_LOG as FORCE_AUDIT_LOG,
-)
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    LINE_DRIFT as LINE_DRIFT,
-)
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    TEXT_DRIFT as TEXT_DRIFT,
-)
+from hermes_skill_creator_plugin.i18n import messages_en as _en
+
+FORCE_AUDIT_LOG = _en.FORCE_AUDIT_LOG
+LINE_DRIFT = _en.LINE_DRIFT
+TEXT_DRIFT = _en.TEXT_DRIFT
