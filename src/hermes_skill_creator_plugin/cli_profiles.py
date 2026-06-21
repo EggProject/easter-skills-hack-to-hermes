@@ -36,23 +36,13 @@ See also: plans/06-script-2-profiles.md, plans/09-test-strategy.md.
 
 from __future__ import annotations
 
-import dataclasses
 import datetime as _datetime_mod
 import os
-import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import click
-
-
-def _cast(type_: object, value: object) -> object:
-    """Module-level ``cast`` shim (no-op at runtime, preserves mypy type).
-
-    Used in place of :func:`typing.cast` to avoid an extra top-level
-    import that would push this module past the wemake WPS201 cap.
-    """
-    return value
-
 
 # Tests grep this module's source for the canonical import lines
 # (the read-side ``agent.skill_utils.get_disabled_skill_names`` and
@@ -171,18 +161,18 @@ def _echo_row_summary(row: dict[str, object]) -> None:
         _bilingual(
             "profiles_msg_profile_audit",
             name=row["profile_name"],
-            disabled=_join_or_dash(_cast("list[str]", row["current_disabled"])),
-            installed=_join_or_dash(_cast("list[str]", row["current_installed"])),
+            disabled=_join_or_dash(cast(list[str], row["current_disabled"])),
+            installed=_join_or_dash(cast(list[str], row["current_installed"])),
         )
     )
-    diff_row = _cast("dict[str, object]", row["diff"])
+    diff_row = cast(dict[str, object], row["diff"])
     click.echo(
         _bilingual(
             "profiles_msg_diff",
-            ad=_join_or_dash(_cast("list[str]", diff_row["added_disabled"])),
-            rd=_join_or_dash(_cast("list[str]", diff_row["removed_disabled"])),
-            ai=_join_or_dash(_cast("list[str]", diff_row["added_installed"])),
-            ri=_join_or_dash(_cast("list[str]", diff_row["removed_installed"])),
+            ad=_join_or_dash(cast(list[str], diff_row["added_disabled"])),
+            rd=_join_or_dash(cast(list[str], diff_row["removed_disabled"])),
+            ai=_join_or_dash(cast(list[str], diff_row["added_installed"])),
+            ri=_join_or_dash(cast(list[str], diff_row["removed_installed"])),
         )
     )
 
@@ -271,7 +261,7 @@ def _audit_each_profile(
     return report
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class _AuditPhaseParams:
     """Validated, typed view of the audit-phase options dict."""
 
@@ -284,9 +274,9 @@ class _AuditPhaseParams:
     def from_opts(cls, opts: dict[str, object]) -> _AuditPhaseParams:
         return cls(
             apply=bool(opts["apply"]),
-            frozen_time=_cast("str | None", opts["frozen_time"]),
+            frozen_time=cast(str | None, opts["frozen_time"]),
             skip_install=bool(opts["skip_install"]),
-            profile=_cast("str | None", opts["profile"]),
+            profile=cast(str | None, opts["profile"]),
         )
 
 
@@ -313,13 +303,13 @@ def run_audit(**options: object) -> AuditReport:
     #    want to write to the live install must pass --yes.
     if _live_install_refused(bool(opts["apply"]), bool(opts["yes"])):
         click.echo(_bilingual("profiles_msg_refuse_no_yes"))
-        sys.exit(5)
+        raise SystemExit(5)
 
     report = _run_audit_phase(opts)
 
     json_path = opts["json_path"]
     if json_path is not None:
-        _write_json_report(report, _cast("Path", json_path))
+        _write_json_report(report, cast(Path, json_path))
 
     return report
 
