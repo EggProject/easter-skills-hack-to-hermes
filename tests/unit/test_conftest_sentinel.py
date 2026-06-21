@@ -94,6 +94,32 @@ def test_real_hermes_agent_sentinel_no_install_branch(tmp_path, monkeypatch) -> 
     assert finalizers == []
 
 
+def test_real_hermes_agent_sentinel_install_present_branch(tmp_path, monkeypatch) -> None:
+    """Cover the live-install branch (lines 331-333) by directly invoking the
+    implementation with a path that has a real sentinel file.
+
+    On CI hosts WITHOUT a live Hermes install the fixture always takes
+    the early-return path; this unit test creates a fake sentinel file
+    so the post-hash / finalizer / return-sentinel-ok lines are exercised
+    regardless of host.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    sentinel_dir = tmp_path / ".hermes" / "hermes-agent" / "agent"
+    sentinel_dir.mkdir(parents=True)
+    sentinel_file = sentinel_dir / "skill_utils.py"
+    sentinel_file.write_text("# sentinel content", encoding="utf-8")
+    finalizers: list[Callable[[], None]] = []
+
+    class StubRequest:
+        def addfinalizer(self, fn: Callable[[], None]) -> None:
+            finalizers.append(fn)
+
+    result = conftest._real_hermes_agent_sentinel_impl(request=StubRequest())
+    assert result == "sentinel-ok"
+    # Finalizer MUST be registered on the live-install path.
+    assert len(finalizers) == 1
+
+
 def test_ensure_hermes_cli_profiles_stub_idempotent_when_present(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -385,3 +385,27 @@ def test_append_json_section_raises_when_section_is_str() -> None:
 
     with pytest.raises(TypeError, match="json-format section must be ProfileSection"):
         crp._append_json_section([], "i-am-a-str")
+
+
+# --- cli_patch_git.py line 34: run_git_rev_parse success path ---
+
+
+def test_run_git_rev_parse_success_returns_stripped_stdout(tmp_path: Path) -> None:
+    """``run_git_rev_parse`` MUST return ``proc.stdout.strip()`` on success.
+
+    Exercises the ``return str(proc.stdout).strip()`` line directly so
+    CI environments without a real ``.git`` directory (which never
+    trigger the success path via the live CLI) still reach 100% coverage.
+    """
+    import types
+
+    from hermes_skill_creator_plugin import cli_patch_git
+
+    fake_proc = types.SimpleNamespace(stdout="abc123def\n")
+
+    def fake_run(*_args: object, **_kwargs: object):
+        return fake_proc
+
+    fake_subprocess = types.SimpleNamespace(run=fake_run)
+    out = cli_patch_git.run_git_rev_parse(fake_subprocess, tmp_path)
+    assert out == "abc123def"
