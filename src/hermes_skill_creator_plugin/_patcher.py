@@ -100,11 +100,12 @@ from hermes_skill_creator_plugin._patcher_pipeline import (
 )
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     _FailDriftInputs,
+)
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
     fail_with_drift as _fail_with_drift_pipeline,
 )
 from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
 from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
-from hermes_skill_creator_plugin._patcher_sites import Anchor, Site
 from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
 
 # --- result type ---------------------------------------------------------

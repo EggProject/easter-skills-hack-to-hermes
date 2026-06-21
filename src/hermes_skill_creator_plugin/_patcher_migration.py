@@ -48,6 +48,8 @@ from hermes_skill_creator_plugin._patcher_migration_render import (
     HermesPatchContext,
     _render_cap_row,
     _render_patch_table,
+)
+from hermes_skill_creator_plugin._patcher_migration_task_e import (
     _render_task_e_row,
 )
 from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, Site, sites_for_mode
