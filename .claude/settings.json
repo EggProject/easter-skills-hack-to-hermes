@@ -23,12 +23,13 @@
       "Bash(gh api *)",
       "Bash(gh run *)",
       "Bash(gh pr *)",
-      "Read(//tmp/**)",
+      "Read(/tmp/**)",
       "mcp__minimax-mcp-server__web_search",
       "mcp__plugin_honcho_honcho__chat",
       "mcp__plugin_honcho_honcho__list_conclusions",
       "mcp__plugin_honcho_honcho__create_conclusion",
-      "mcp__plugin_honcho_honcho__delete_conclusion"
+      "mcp__plugin_honcho_honcho__delete_conclusion",
+      "Bash(* --no-verify *)"
     ],
     "ask": [
       "Bash(git push *)",
@@ -36,6 +37,7 @@
       "Bash(git commit --amend *)",
       "Bash(git checkout -- *)",
       "Bash(git reset --hard *)",
+      "Bash(git remote --hard *)",
       "Bash(git clean *)",
       "Bash(git stash drop *)",
       "Bash(git stash clear *)",
@@ -49,8 +51,7 @@
       "Bash(pulumi up *)",
       "Bash(helm uninstall *)",
       "Bash(docker push *)",
-      "Bash(brew install *)",
-      "Bash(* --no-verify *)"
+      "Bash(brew install *)"
     ],
     "deny": [
       "WebSearch",
