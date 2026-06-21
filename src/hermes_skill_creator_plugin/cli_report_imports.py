@@ -18,3 +18,47 @@ itself — tests grep the source for that exact literal string (the
 """
 
 from __future__ import annotations
+
+from hermes_skill_creator_plugin import _cli_report_cmd as _cmd_mod
+from hermes_skill_creator_plugin import _cli_report_helpers_consts as _helpers_consts
+from hermes_skill_creator_plugin import _cli_report_helpers_emit as _helpers_emit
+from hermes_skill_creator_plugin import _cli_report_helpers_parse as _helpers_parse
+from hermes_skill_creator_plugin import (
+    _cli_report_helpers_paths as _paths_mod,
+)
+from hermes_skill_creator_plugin import _cli_report_rows as _rows_mod
+from hermes_skill_creator_plugin import _cli_report_ui as _ui_mod
+from hermes_skill_creator_plugin import _enabled_detection as _enabled_mod
+from hermes_skill_creator_plugin import _reporter_models as _models_mod
+from hermes_skill_creator_plugin import _reporter_sort as _sort_mod
+from hermes_skill_creator_plugin import _tokenizer as _tokenizer_mod
+
+# Sub-module re-bindings (kept for legacy access; new code should use
+# ``_helpers_emit`` / ``_helpers_parse`` directly).
+_helpers = _helpers_emit
+_paths = _paths_mod
+_rows = _rows_mod
+
+# Function re-bindings.
+emit_bilingual_help = _ui_mod.emit_bilingual_help
+get_enabled_skills = _enabled_mod.get_enabled_skills
+make_section = _helpers_emit.make_section
+now_iso = _helpers_parse.now_iso
+emit_output = _helpers_emit.emit_output
+render_output = _helpers_emit.render_output
+reject_unwanted_flags = _helpers_parse.reject_unwanted_flags
+resolve_json_path = _helpers_emit.resolve_json_path
+validate_sort_and_fmt = _helpers_parse.validate_sort_and_fmt
+main = _cmd_mod.main
+ProfileSection = _models_mod.ProfileSection
+sort_rows = _sort_mod.sort_rows
+estimate_tokens = _tokenizer_mod.estimate_tokens
+
+# Constant re-bindings (kept here so cli_report.py can stay under WPS201).
+SORT_TOKENS = _helpers_consts.SORT_TOKENS
+FORMAT_TEXT = _helpers_consts.FORMAT_TEXT
+
+# Row builder re-bindings.
+_build_rows_for_profile = _rows_mod.build_rows_for_profile
+_check_json_path = _rows_mod.check_json_path
+EnabledDetectionUnavailable = _rows_mod.EnabledDetectionUnavailable

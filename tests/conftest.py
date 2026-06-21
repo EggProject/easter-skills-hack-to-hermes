@@ -57,45 +57,81 @@ sys.path.insert(0, str(_SRC))
 
 
 def _ensure_hermes_cli_profiles_stub() -> None:
-    """Register a minimal ``hermes_cli.profiles`` module if absent.
+    """Register a minimal ``hermes_cli`` package + ``hermes_cli.profiles``
+    + ``hermes_cli.skills_config`` modules if absent.
 
     The hermes_cli package is not installed in the test environment; tests
     that need it install fakes via the ``installed`` fixture. However,
     ``cli_profiles.py`` performs ``from hermes_cli.profiles import
-    ProfileInfo`` at module load (so the type is bound for ``TYPE_CHECKING``
-    and runtime annotations), which happens at test collection — before any
-    fixture can run. We pre-register a stub here that exposes ``ProfileInfo``
-    as a permissive ``object`` subclass with the three fields the source
-    code references (name, path, is_default).
+    ProfileInfo`` and ``from hermes_cli.skills_config import
+    save_disabled_skills`` at module load (so the types are bound for
+    ``TYPE_CHECKING`` and runtime annotations), which happens at test
+    collection — before any fixture can run. We pre-register stubs here
+    that expose ``ProfileInfo`` as a permissive ``object`` subclass with
+    the three fields the source code references (name, path, is_default)
+    and ``save_disabled_skills`` as a no-op.
     """
     import types
 
-    if "hermes_cli.profiles" in sys.modules:
-        return
-    hermes_cli_mod = sys.modules.get("hermes_cli")
-    if hermes_cli_mod is None:
+    if "hermes_cli" not in sys.modules:
         hermes_cli_mod = types.ModuleType("hermes_cli")
+        hermes_cli_mod.__path__ = []  # mark as package
         sys.modules["hermes_cli"] = hermes_cli_mod
 
-    class _StubProfileInfo:
-        """Minimal stand-in for ``hermes_cli.profiles.ProfileInfo``.
+    hermes_cli_mod = sys.modules["hermes_cli"]
 
-        Real ``ProfileInfo`` is a NamedTuple; tests may substitute either a
-        NamedTuple or a dataclass instance. We accept any kwargs and expose
-        the three attributes ``cli_profiles.py`` reads (``name``, ``path``,
-        ``is_default``).
-        """
+    if "hermes_cli.profiles" not in sys.modules:
 
-        __slots__ = ("name", "path", "is_default")
+        class _StubProfileInfo:
+            """Minimal stand-in for ``hermes_cli.profiles.ProfileInfo``."""
 
-    stub = types.ModuleType("hermes_cli.profiles")
-    stub.ProfileInfo = _StubProfileInfo
-    stub.list_profiles = lambda: []
-    sys.modules["hermes_cli.profiles"] = stub
-    hermes_cli_mod.profiles = stub
+            __slots__ = ("name", "path", "is_default")
+
+        profiles_stub = types.ModuleType("hermes_cli.profiles")
+        profiles_stub.ProfileInfo = _StubProfileInfo
+        profiles_stub.list_profiles = lambda: []
+        sys.modules["hermes_cli.profiles"] = profiles_stub
+        hermes_cli_mod.profiles = profiles_stub
+
+    if "hermes_cli.skills_config" not in sys.modules:
+        skills_config_stub = types.ModuleType("hermes_cli.skills_config")
+        skills_config_stub.save_disabled_skills = lambda *_a, **_kw: None
+        sys.modules["hermes_cli.skills_config"] = skills_config_stub
+        hermes_cli_mod.skills_config = skills_config_stub
 
 
 _ensure_hermes_cli_profiles_stub()
+
+
+def _ensure_agent_stub() -> None:
+    """Register a minimal ``agent`` + ``agent.skill_utils`` module if absent.
+
+    ``cli_profiles.py`` performs ``from agent.skill_utils import
+    get_disabled_skill_names`` at module load (the unused-import silencer
+    is mandated by the test contract which greps the source). Without
+    this stub the import fails at test collection time, before any
+    per-test fixture can run.
+    """
+    import types
+
+    if "agent.skill_utils" in sys.modules:
+        return
+    agent_mod = sys.modules.get("agent")
+    if agent_mod is None:
+        agent_mod = types.ModuleType("agent")
+        sys.modules["agent"] = agent_mod
+
+    skill_utils = types.ModuleType("agent.skill_utils")
+
+    def get_disabled_skill_names(*_args: object, **_kwargs: object) -> list[str]:
+        return []
+
+    skill_utils.get_disabled_skill_names = get_disabled_skill_names
+    sys.modules["agent.skill_utils"] = skill_utils
+    agent_mod.skill_utils = skill_utils
+
+
+_ensure_agent_stub()
 
 
 # --- branch (workstream-C) padded anchor constants ------------------------
@@ -169,10 +205,14 @@ def _build_background_review_padded() -> str:
     lines: list[str] = []
     for i in range(1, 105):
         lines.append(f"# padding {i}\n")
-    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"\n")
+    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n")
+    lines.append("\n")
+    lines.append('"\n')
     for i in range(106, 192):
         lines.append(f"# padding {i}\n")
-    lines.append('    "(2), or (3).\\n\\n"\n')
+    lines.append('    "(2), or (3).\n')
+    lines.append("\n")
+    lines.append('"\n')
     for i in range(193, 220):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
@@ -309,9 +349,11 @@ def _install_sentinel_finalizer(
         if not sentinel_path.is_file():
             return
         post_hash = hashlib.sha256(sentinel_path.read_bytes()).hexdigest()
+        # fmt: off
         assert (
             post_hash == pre_hash
         ), f"{sentinel_path} was modified by the test (pre={pre_hash[:12]}, post={post_hash[:12]})"
+        # fmt: on
 
     request.addfinalizer(_check)
     return "sentinel-ok"

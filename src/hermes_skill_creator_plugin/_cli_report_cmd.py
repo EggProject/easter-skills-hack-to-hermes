@@ -16,6 +16,39 @@ from hermes_skill_creator_plugin.i18n import messages_en as EN
 _HELP_PARAGRAPH_SEP = "\n\n"
 
 
+def _with_report_options(cmd: click.Command) -> click.Command:
+    """Apply the five reporter ``click.option`` decorators as one wrapper."""
+    cmd = click.option("--profile", default=None, help=EN.report_opt_profile)(cmd)
+    cmd = click.option(
+        "--sort",
+        type=click.Choice(["tokens", "use_count", "last_used_at"]),
+        default="tokens",
+        help=EN.report_opt_sort,
+    )(cmd)
+    cmd = click.option(
+        "--format",
+        "fmt",
+        type=click.Choice(["text", "json"]),
+        default="text",
+        help=EN.report_opt_format,
+    )(cmd)
+    cmd = click.option(
+        "--json",
+        "json_path",
+        type=click.Path(),
+        default=None,
+        help=EN.report_opt_json,
+    )(cmd)
+    cmd = click.option(
+        "--help",
+        "show_help",
+        is_flag=True,
+        default=False,
+        help=EN.report_opt_help,
+    )(cmd)
+    return cmd
+
+
 @click.command(
     help=f"{EN.report_help_short}{_HELP_PARAGRAPH_SEP}{EN.report_help_long}",
     context_settings={
@@ -23,35 +56,7 @@ _HELP_PARAGRAPH_SEP = "\n\n"
         "ignore_unknown_options": True,
     },
 )
-@click.option("--profile", default=None, help=EN.report_opt_profile)
-@click.option(
-    "--sort",
-    type=click.Choice(["tokens", "use_count", "last_used_at"]),
-    default="tokens",
-    help=EN.report_opt_sort,
-)
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    help=EN.report_opt_format,
-)
-@click.option(
-    "--json",
-    "json_path",
-    type=click.Path(),
-    default=None,
-    help=EN.report_opt_json,
-)
-@click.option(
-    "--help",
-    "show_help",
-    is_flag=True,
-    default=False,
-    help=EN.report_opt_help,
-)
-def main(
+def _bare_main(
     profile: str | None,
     sort: str,
     fmt: str,
@@ -75,3 +80,8 @@ def main(
             argv=argv,
         ),
     )
+
+
+# Apply the five ``click.option`` decorators via a wrapper helper so the
+# function itself only has one decorator (WPS216 cap of 5).
+main = _with_report_options(_bare_main)

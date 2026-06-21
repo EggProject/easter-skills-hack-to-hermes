@@ -929,13 +929,22 @@ def test_apply_refuses_real_hermes_home_without_yes(installed, tmp_path: Path, m
     We exercise the run_audit() refusal path directly (not the click
     runner) so the test does not depend on Click's TTY auto-detection
     heuristics. The live install is NEVER touched.
+
+    Host-independent: rebinds ``LIVE_HERMES_HOME`` (in both the
+    source module AND the pipeline's captured reference) to a
+    tmp_path-based fake ``.hermes`` dir, then sets HERMES_HOME to the
+    same path so ``_live_install_refused`` fires regardless of host.
     """
-    real = Path.home() / ".hermes"
-    if not real.exists():
-        pytest.skip("~/.hermes not present on this host")
-    monkeypatch.setenv("HERMES_HOME", str(real))
+    from hermes_skill_creator_plugin import _cli_profiles_pipeline as _pipeline_mod
+    from hermes_skill_creator_plugin import _cli_profiles_profiles as _profiles_mod
+
+    fake_live = tmp_path / ".hermes"
+    fake_live.mkdir()
+    monkeypatch.setattr(_profiles_mod, "LIVE_HERMES_HOME", fake_live)
+    monkeypatch.setattr(_pipeline_mod, "LIVE_HERMES_HOME", fake_live)
+    monkeypatch.setenv("HERMES_HOME", str(fake_live))
     monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    log, cli = installed(profile_paths=[real], profile_names=["hermes"], config_data={})
+    log, cli = installed(profile_paths=[fake_live], profile_names=["hermes"], config_data={})
     with pytest.raises(SystemExit) as exc_info:
         cli.run_audit(
             apply=True,
@@ -1215,13 +1224,21 @@ def test_audit_save_disabled_skills_succeeds(installed, tmp_path: Path) -> None:
 
 
 def test_run_audit_refuses_live_home(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """run_audit() with apply=True, yes=False, and HERMES_HOME=live exits 5."""
-    real = Path.home() / ".hermes"
-    if not real.exists():
-        pytest.skip("~/.hermes not present on this host")
-    monkeypatch.setenv("HERMES_HOME", str(real))
+    """run_audit() with apply=True, yes=False, and HERMES_HOME=live exits 5.
+
+    Same host-independent LIVE_HERMES_HOME rebinding as the apply
+    counterpart above.
+    """
+    from hermes_skill_creator_plugin import _cli_profiles_pipeline as _pipeline_mod
+    from hermes_skill_creator_plugin import _cli_profiles_profiles as _profiles_mod
+
+    fake_live = tmp_path / ".hermes"
+    fake_live.mkdir()
+    monkeypatch.setattr(_profiles_mod, "LIVE_HERMES_HOME", fake_live)
+    monkeypatch.setattr(_pipeline_mod, "LIVE_HERMES_HOME", fake_live)
+    monkeypatch.setenv("HERMES_HOME", str(fake_live))
     monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    log, cli = installed(profile_paths=[real], profile_names=["hermes"], config_data={})
+    log, cli = installed(profile_paths=[fake_live], profile_names=["hermes"], config_data={})
     with pytest.raises(SystemExit) as exc_info:
         cli.run_audit(
             apply=True,

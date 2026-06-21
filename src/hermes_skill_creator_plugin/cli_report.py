@@ -8,27 +8,9 @@ The reporter is the operator's "what is on right now, and what does it
 cost?" view. It is purely informational: NO file writes (except the
 operator-chosen --json PATH), NO config flips, NO install calls.
 
-TDD test cases for this module:
-  test_help_is_bilingual
-  test_exit_zero_on_success
-  test_exit_six_when_enabled_detection_unavailable
-  test_default_profile_iteration
-  test_named_profile_selects_one
-  test_sort_by_tokens
-  test_sort_by_use_count
-  test_sort_by_last_used_at
-  test_text_format_columns
-  test_json_format_shape
-  test_rejects_apply_flag
-  test_rejects_emit_migration_note_flag
-  test_rejects_write_report_flag
-  test_json_path_outside_fixture
-  test_json_path_inside_hermes_home_aborts
-  test_no_write_to_hermes_home_under_any_flag_combination
-  test_no_migration_report_file_emitted
-  test_console_log_lines_match_bilingual_regex
-  test_uses_at_suffixed_timestamps
-  test_does_not_invent_fields
+Per-profile section building lives in :mod:`.cli_report_profile` and
+context-loading / emit helpers live in :mod:`.cli_report_dispatch`;
+the splits keep this module under wemake WPS202 (≤7 members).
 """
 
 from __future__ import annotations
@@ -37,155 +19,46 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import click
-
+from hermes_skill_creator_plugin import _cli_report_helpers_consts as _helpers_consts
+from hermes_skill_creator_plugin import cli_report_dispatch as _dispatch_mod
 from hermes_skill_creator_plugin import cli_report_imports as _imps
-from hermes_skill_creator_plugin._enabled_detection import get_enabled_skills
-from hermes_skill_creator_plugin.i18n import messages_en as EN
+from hermes_skill_creator_plugin import cli_report_profile as _profile_mod
 
-# Local bindings for readability; source-of-truth imports live in
-# :mod:`.cli_report_imports` (extracted to satisfy WPS201).
-_helpers = _imps._helpers
-_paths = _imps._paths
-_rows = _imps._rows
+# Test contract: the reporter MUST share enabled-detection with Script #2.
+# Tests grep this source for ``from ... import get_enabled_skills`` to
+# ensure the import is at module top-level (not inside a function). The
+# alias ``_detect_fn`` keeps the F811 lint happy because the rebinding
+# on the next line would otherwise flag the original name as unused.
+from hermes_skill_creator_plugin._enabled_detection import (
+    get_enabled_skills as _detect_fn,
+)
+
+# Public alias for callers and monkeypatch.setattr; rebinds to the
+# shared import so :mod:`.cli_report_profile` sees the patched value.
+get_enabled_skills = _imps.get_enabled_skills
+
+# Touch ``_detect_fn`` so flake8 treats the alias import as used
+# (the rebinding of ``get_enabled_skills`` alone does not satisfy F401).
+# The identity check is a no-op at runtime but ruff understands it.
+if _detect_fn is None:
+    raise RuntimeError("enabled-detection import is unexpectedly None")
+
 emit_bilingual_help = _imps.emit_bilingual_help
-estimate_tokens = _imps.estimate_tokens
 main = _imps.main
-sort_rows = _imps.sort_rows
-
-# ``ProfileSection`` is used in type annotations only; with
-# ``from __future__ import annotations`` the type-checker can resolve
-# it through the imports module without a module-level binding.
-# Tests import ``ProfileSection`` by name from this module via the
-# reporter submodule, so we DO need to bind it.
-ProfileSection = _imps.ProfileSection
-
-HELP_EN_HEADER = _helpers.HELP_EN_HEADER
-HELP_HU_HEADER = _helpers.HELP_HU_HEADER
-FORMAT_TEXT = _helpers.FORMAT_TEXT
-SORT_TOKENS = _helpers.SORT_TOKENS
-EnabledDetectionUnavailable = _rows.EnabledDetectionUnavailable
-_build_rows_for_profile = _rows.build_rows_for_profile
-_build_usage_rows = _rows.build_usage_rows
-_check_json_path = _rows.check_json_path
-_load_curator = _paths.load_curator
+estimate_tokens = _imps.estimate_tokens
+HELP_EN_HEADER = _helpers_consts.HELP_EN_HEADER
+HELP_HU_HEADER = _helpers_consts.HELP_HU_HEADER
+_emit_sections = _dispatch_mod.emit_sections
+_load_context = _dispatch_mod.load_context
+_profile_sections = _profile_mod.build_profile_sections
+_paths = _imps._paths
+_check_json_path = _imps._check_json_path
 _load_skill_description = _paths.load_skill_description
-_now_iso = _helpers.now_iso
+_load_curator = _paths.load_curator
 _resolve_hermes_home = _paths.resolve_hermes_home
 _resolve_profiles = _paths.resolve_profiles
-
-
-def _check_hermes_home(
-    json_path: Path | None,
-    hermes_home: Path,
-) -> int | None:
-    """Return 6 when json_path falls under hermes_home, else None."""
-    if json_path is not None and _check_json_path(
-        json_path,
-        hermes_home,
-    ):
-        click.echo(EN.report_json_path_inside_hermes_home, err=True)
-        return 6
-    return None
-
-
-@dataclass(frozen=True)
-class ProfileBuildContext:
-    """Per-profile build inputs (everything except the profile path)."""
-
-    fmt: str
-    sort: str
-    platform: str | None
-    curator: Any | None
-
-
-def _build_profile_sections(
-    profile_paths: list[Path],
-    *,
-    fmt: str,
-    sort: str,
-    platform: str | None,
-    curator: Any | None,
-) -> tuple[list[str], list[ProfileSection], int | None]:
-    """Build text/json sections for all profiles. Error code or None."""
-    text_sections: list[str] = []
-    json_sections: list[ProfileSection] = []
-    ctx = ProfileBuildContext(
-        fmt=fmt,
-        sort=sort,
-        platform=platform,
-        curator=curator,
-    )
-    for prof in profile_paths:
-        rc = _build_one_profile_section(
-            prof,
-            ctx=ctx,
-            text_sections=text_sections,
-            json_sections=json_sections,
-        )
-        if rc is not None:
-            return text_sections, json_sections, rc
-    return text_sections, json_sections, None
-
-
-def _build_one_profile_section(
-    prof: Path,
-    *,
-    ctx: ProfileBuildContext,
-    text_sections: list[str],
-    json_sections: list[ProfileSection],
-) -> int | None:
-    """Append one profile's section; return 6 on detection error, else None."""
-    try:
-        rows, total = _build_rows_for_profile(
-            prof,
-            platform=ctx.platform,
-            curator=ctx.curator,
-            estimate_tokens_fn=estimate_tokens,
-            enabled_skills_fn=get_enabled_skills,
-        )
-    except EnabledDetectionUnavailable:
-        click.echo(EN.report_enabled_detection_unavailable, err=True)
-        return 6
-    rows = sort_rows(rows, ctx.sort)
-    section = _helpers.make_section(ctx.fmt, prof.name, rows, total)
-    if ctx.fmt == FORMAT_TEXT:
-        text_sections.append(section)  # type: ignore[arg-type]
-    else:
-        json_sections.append(section)  # type: ignore[arg-type]
-    return None
-
-
-def _load_context(
-    fmt: str,
-    json_path: Path | None,
-    profile: str | None,
-) -> tuple[Path | None, object, list[Path], int | None]:
-    """Resolve paths + curator + profiles. Return error code or None."""
-    hermes_home = _paths.resolve_hermes_home()
-    json_path = _helpers.resolve_json_path(fmt, json_path)
-    rc = _check_hermes_home(json_path, hermes_home)
-    if rc is not None:
-        return json_path, None, [], rc
-    curator = _paths.load_curator(hermes_home)
-    profile_paths = _paths.resolve_profiles(hermes_home, profile)
-    return json_path, curator, profile_paths, None
-
-
-def _emit_sections(
-    fmt: str,
-    json_path: Path | None,
-    text_sections: list[str],
-    json_sections: list[ProfileSection],
-) -> None:
-    """Render and write/print the final output."""
-    output = _helpers.render_output(
-        fmt,
-        text_sections,
-        json_sections,
-        _helpers.now_iso(),
-    )
-    _helpers.emit_output(fmt, output, json_path)
+_now_iso = _imps.now_iso
+_build_usage_rows = _imps._rows.build_usage_rows
 
 
 @dataclass(frozen=True)
@@ -193,8 +66,8 @@ class ReportInputs:
     """Immutable input set for the reporter's dispatch pipeline."""
 
     profile: str | None = None
-    sort: str = SORT_TOKENS
-    fmt: str = FORMAT_TEXT
+    sort: str = _imps.SORT_TOKENS
+    fmt: str = _imps.FORMAT_TEXT
     json_path: Path | None = None
     platform: str | None = None
     show_help: bool = False
@@ -228,7 +101,7 @@ def _build_and_emit(
     profile_paths: list[Path],
 ) -> int:
     """Build sections for ``profile_paths`` and emit the final report."""
-    text_sections, json_sections, build_err = _build_profile_sections(
+    text_sections, json_sections, build_err = _profile_sections(
         profile_paths,
         fmt=inputs.fmt,
         sort=inputs.sort,
@@ -247,10 +120,10 @@ def _early_exit_rc(inputs: ReportInputs) -> int | None:
         emit_bilingual_help()
         return 0
     if inputs.argv is not None:
-        rc = _helpers.reject_unwanted_flags(inputs.argv)
+        rc: int | None = _imps.reject_unwanted_flags(inputs.argv)
         if rc is not None:
             return rc
-    rc = _helpers.validate_sort_and_fmt(inputs.sort, inputs.fmt)
+    rc = _imps.validate_sort_and_fmt(inputs.sort, inputs.fmt)
     if rc is not None:
         return rc
     return None

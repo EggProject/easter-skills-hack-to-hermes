@@ -43,6 +43,7 @@ def test_detect_cap_state_patched(tmp_path: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
+        # fmt: off
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
@@ -52,6 +53,7 @@ def test_detect_cap_state_patched(tmp_path: Path) -> None:
                 return desc
             """
         ),
+        # fmt: on
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "patched"
@@ -63,6 +65,7 @@ def test_detect_cap_state_unpatched(tmp_path: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
+        # fmt: off
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
@@ -71,6 +74,7 @@ def test_detect_cap_state_unpatched(tmp_path: Path) -> None:
                 return desc
             """
         ),
+        # fmt: on
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unpatched"
@@ -108,6 +112,7 @@ def test_detect_cap_state_other_function_with_60_is_unpatched(tmp_path: Path) ->
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
+        # fmt: off
         textwrap.dedent(
             """\
             def helper(x):
@@ -116,6 +121,7 @@ def test_detect_cap_state_other_function_with_60_is_unpatched(tmp_path: Path) ->
                 return None
             """
         ),
+        # fmt: on
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -129,6 +135,7 @@ def test_detect_cap_state_extract_fn_no_compare_with_cap(tmp_path: Path) -> None
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
+        # fmt: off
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
@@ -137,6 +144,7 @@ def test_detect_cap_state_extract_fn_no_compare_with_cap(tmp_path: Path) -> None
                 return desc
             """
         ),
+        # fmt: on
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -150,6 +158,7 @@ def test_detect_cap_state_extract_fn_with_unrelated_name(tmp_path: Path) -> None
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
+        # fmt: off
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
@@ -159,6 +168,7 @@ def test_detect_cap_state_extract_fn_with_unrelated_name(tmp_path: Path) -> None
                 return desc
             """
         ),
+        # fmt: on
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"
@@ -175,6 +185,7 @@ def test_detect_cap_state_extract_fn_with_unrelated_constant(tmp_path: Path) -> 
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
+        # fmt: off
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
@@ -184,6 +195,7 @@ def test_detect_cap_state_extract_fn_with_unrelated_constant(tmp_path: Path) -> 
                 return desc
             """
         ),
+        # fmt: on
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unknown"

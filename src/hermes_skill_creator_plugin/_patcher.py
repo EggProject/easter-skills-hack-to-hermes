@@ -53,6 +53,23 @@ import dataclasses
 from pathlib import Path
 
 from hermes_skill_creator_plugin import _patcher_imports as _imps
+from hermes_skill_creator_plugin import _patcher_internals as _patcher_internals
+from hermes_skill_creator_plugin import _patcher_sites as _sites
+from hermes_skill_creator_plugin._patcher_pipeline import (
+    ApplySitesInputs,
+    OkCheckInputs,
+)
+from hermes_skill_creator_plugin._patcher_pipeline import (
+    apply_sites as _apply_sites_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_pipeline import (
+    ok_check_result as _ok_check_result_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_pipeline_emit import _FailDriftInputs
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    fail_with_drift as _fail_with_drift_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
 
 # Local bindings matching the previous top-level import names. The
 # actual imports live in :mod:`._patcher_imports` to keep this
@@ -92,18 +109,8 @@ S1_CAP_SITE = _imps.S1_CAP_SITE
 SKILL_CREATOR_CONSULT_RULE = _imps.SKILL_CREATOR_CONSULT_RULE
 TOOLS_SKILL_UTILS_REL = _imps.TOOLS_SKILL_UTILS_REL
 sites_for_mode = _imps.sites_for_mode
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    apply_sites as _apply_sites_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    ok_check_result as _ok_check_result_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline_emit import (
-    fail_with_drift as _fail_with_drift_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
-from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
-from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
+Anchor = _sites.Anchor
+Site = _sites.Site
 
 # --- result type ---------------------------------------------------------
 
@@ -129,52 +136,19 @@ class PatcherResult:
     rejected_path: Path | None = None
 
 
-def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
-    """Build a PatcherResult with no sites touched and the given diagnostics."""
-    return PatcherResult(
-        exit_code=exit_code,
-        sites_patched=(),
-        sites_already=(),
-        state={},
-        diagnostics=tuple(diagnostics),
-    )
-
-
-def run_patch(
-    *,
-    target: Path | None,
-    check: bool,
-    apply: bool,
-    force: bool,
-    i_accept_line_drift: bool,
-    task_e_redirect: bool,
-    no_schema_redirect: bool,
-    yes: bool = False,
-    verbose: bool = False,
-    audit_log_path: Path | None = None,
-    git_head: str = "",
-) -> PatcherResult:
+def run_patch(inputs: PatchRunInputs) -> PatcherResult:
     """Run the patcher.
+
+    Accepts a single :class:`PatchRunInputs` struct (WPS211-bundled)
+    whose fields are the operational parameters plus optional
+    side-effects (yes/verbose/audit_log_path/git_head) that carry safe
+    defaults (False/False/None/'').
 
     Returns a :class:`PatcherResult`; the caller (CLI) is responsible
     for translating ``exit_code`` into a ``SystemExit``. This function
     never raises SystemExit; it returns a result.
     """
-    return _run_patch_with_inputs(
-        PatchRunInputs(
-            target=target,
-            check=check,
-            apply=apply,
-            force=force,
-            i_accept_line_drift=i_accept_line_drift,
-            task_e_redirect=task_e_redirect,
-            no_schema_redirect=no_schema_redirect,
-            yes=yes,
-            verbose=verbose,
-            audit_log_path=audit_log_path,
-            git_head=git_head,
-        )
-    )
+    return _run_patch_with_inputs(inputs)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -199,18 +173,13 @@ class PatchRunInputs:
     git_head: str = ""
 
 
-def _run_patch_with_inputs(inputs: PatchRunInputs) -> PatcherResult:
-    """Run the patcher using a prebuilt ``PatchRunInputs`` struct."""
-    return _run_patch_body(inputs)
+# --- internal pipeline state (re-exported for tests) --------------------
 
-
-@dataclasses.dataclass
-class _PatchBodyState:
-    """Mutable per-run state passed between pipeline helpers."""
-
-    diagnostics: list[str] = dataclasses.field(default_factory=list)
-    sites_patched: list[str] = dataclasses.field(default_factory=list)
-    sites_already: list[str] = dataclasses.field(default_factory=list)
+_PatchBodyState = _patcher_internals._PatchBodyState
+_empty_result = _patcher_internals._empty_result
+_check_preflight = _patcher_internals._check_preflight
+_check_circular_import = _patcher_internals._check_circular_import
+_run_patch_with_inputs = _patcher_internals._run_patch_with_inputs
 
 
 def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
@@ -242,55 +211,40 @@ def _drive_pipeline(
     validation = _validate_sites(sites, target_path, persisted, state.sites_already)
     if validation.failures:
         return _fail_with_drift_pipeline(
-            target_path,
-            validation.failures,
-            persisted,
-            state.sites_already,
-            state.diagnostics,
-            inputs.git_head,
-            exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+            _FailDriftInputs(
+                target_path=target_path,
+                failures=validation.failures,
+                state=persisted,
+                sites_already=list(state.sites_already),
+                diagnostics=list(state.diagnostics),
+                git_head=inputs.git_head,
+                exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+            ),
         )
     if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(
-            sites,
-            persisted,
-            state.sites_patched,
-            state.sites_already,
-            target_path,
-            state.diagnostics,
-            exit_ok_code=EXIT_OK,
-            write_state_fn=write_state,
+            OkCheckInputs(
+                sites=sites,
+                state=persisted,
+                sites_patched=state.sites_patched,
+                sites_already=state.sites_already,
+                target_path=target_path,
+                diagnostics=state.diagnostics,
+                exit_ok_code=EXIT_OK,
+                write_state_fn=write_state,
+            ),
         )
     return _apply_sites_pipeline(
-        sites,
-        target_path,
-        persisted,
-        state.sites_patched,
-        state.sites_already,
-        state.diagnostics,
-        inputs.force,
-        inputs.audit_log_path,
-        exit_ok_code=EXIT_OK,
-        write_state_fn=write_state,
+        ApplySitesInputs(
+            sites=sites,
+            target_path=target_path,
+            state=persisted,
+            sites_patched=state.sites_patched,
+            sites_already=state.sites_already,
+            diagnostics=state.diagnostics,
+            force=inputs.force,
+            audit_log_path=inputs.audit_log_path,
+            exit_ok_code=EXIT_OK,
+            write_state_fn=write_state,
+        ),
     )
-
-
-def _check_preflight(
-    inputs: PatchRunInputs,
-    state: _PatchBodyState,
-) -> PatcherResult | None:
-    preflight = _run_preflight(inputs.target, inputs.force, inputs.i_accept_line_drift)
-    if preflight is None:
-        return None
-    return _empty_result([*state.diagnostics, preflight[1]], preflight[0])
-
-
-def _check_circular_import(
-    target_path: Path,
-    state: _PatchBodyState,
-) -> PatcherResult | None:
-    skill_utils = target_path / TOOLS_SKILL_UTILS_REL
-    if not file_has_circular_import(skill_utils):
-        return None
-    state.diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
-    return _empty_result(state.diagnostics, EXIT_IO)

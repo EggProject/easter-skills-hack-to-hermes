@@ -6,40 +6,36 @@ Re-exports helpers from the split sub-modules so existing
 
 from __future__ import annotations
 
-import dataclasses
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from hermes_skill_creator_plugin import _cli_profiles_audit_imports as _imps
+from hermes_skill_creator_plugin import _cli_profiles_audit_bindings as _bindings
+from hermes_skill_creator_plugin import _cli_profiles_audit_types as _types
 
-# Local bindings matching the previous top-level import names. The
-# actual imports live in :mod:`._cli_profiles_audit_imports` to keep
-# this orchestrator under wemake WPS201 (<=12 imports per module).
-_SaveDisabledArgs = _imps._SaveDisabledArgs
-apply_clear_cache = _imps.apply_clear_cache
-apply_do_install = _imps.apply_do_install
-apply_save_disabled = _imps.apply_save_disabled
-desired_disabled_after_save = _imps.desired_disabled_after_save
-load_config_or_error = _imps.load_config_or_error
-read_disabled_or_empty = _imps.read_disabled_or_empty
-build_bilingual = _imps.build_bilingual
-diff_sets = _imps.diff_sets
-walk_skills = _imps.walk_skills
-AuditReport = _imps.AuditReport
-new_row = _imps.new_row
-populate_diff_row = _imps.populate_diff_row
-hermes_home_scope = _imps.hermes_home_scope
+# Pull in the centralized rebindings from the sibling
+# ``_cli_profiles_*`` modules via the bindings module — keeps this
+# orchestrator under wemake WPS201 (<=12 imports per module) and
+# WPS202 (<=7 module members).
+_SaveDisabledArgs = _bindings._SaveDisabledArgs
+apply_clear_cache = _bindings.apply_clear_cache
+apply_do_install = _bindings.apply_do_install
+apply_save_disabled = _bindings.apply_save_disabled
+desired_disabled_after_save = _bindings.desired_disabled_after_save
+load_config_or_error = _bindings.load_config_or_error
+read_disabled_or_empty = _bindings.read_disabled_or_empty
+build_bilingual = _bindings.build_bilingual
+diff_sets = _bindings.diff_sets
+walk_skills = _bindings.walk_skills
+AuditReport = _bindings.AuditReport
+new_row = _bindings.new_row
+populate_diff_row = _bindings.populate_diff_row
+hermes_home_scope = _bindings.hermes_home_scope
 
-
-@dataclasses.dataclass(frozen=True)
-class _ApplyDeps:
-    """Lazily-bound callables captured inside ``hermes_home_scope``."""
-
-    save_disabled_skills: Any
-    save_config: Any
-    do_install: Any
-    clear_skills_system_prompt_cache: Any
-    bilingual_fn: Any
+# Re-bind the apply types for callers that import them from
+# ``hermes_skill_creator_plugin._cli_profiles_audit``.
+_ApplyDeps = _types._ApplyDeps
+_ApplyCallArgs = _types._ApplyCallArgs
+_ApplySlot = _types._ApplySlot
 
 
 def audit_profile(
@@ -81,15 +77,25 @@ def audit_profile(
     return row
 
 
-def _audit_load_or_error(profile_path: Path, errors: list[str], row: dict[str, Any]) -> Any:
-    """Load the scoped HERMES_HOME config; append error and return ``row`` sentinel on failure."""
+def _audit_load_or_error(
+    profile_path: Path,
+    errors: list[str],
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    """Load the scoped HERMES_HOME config; append error and return ``row`` sentinel on failure.
+
+    Returns either the loaded config dict or the ``row`` sentinel (both
+    ``dict[str, Any]``). ``load_config_or_error`` is typed ``Any`` for
+    monkeypatch flexibility; the union of its two return paths is
+    statically known to be ``dict[str, Any]``.
+    """
     from hermes_cli.config import load_config
 
     config = load_config_or_error(load_config, errors, row)
     # Look up the mutator at call time so monkeypatch.setattr on
     # the module works. The top-of-function import caches a
     # reference; the test infrastructure may rebind it.
-    return config
+    return cast("dict[str, Any]", config)
 
 
 def _audit_disabled_now(errors: list[str]) -> set[str]:
@@ -107,20 +113,6 @@ def _audit_diff_row(
     """Walk installed skills and populate the diff columns on ``row``."""
     installed_now: set[str] = walk_skills(profile_path / "skills")
     populate_diff_row(row, disabled_now, installed_now)
-
-
-@dataclasses.dataclass(frozen=True)
-class _ApplyCallArgs:
-    """Per-profile args for the apply pipeline (bundled to stay under WPS211)."""
-
-    config: Any
-    disabled_now: set[str]
-    row: dict[str, Any]
-    actions: list[str]
-    errors: list[str]
-    profile_path: Path
-    skip_install: bool
-    bilingual_fn: Any
 
 
 def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
@@ -147,15 +139,6 @@ def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
     )
 
     return args.row
-
-
-@dataclasses.dataclass(frozen=True)
-class _ApplySlot:
-    """Per-profile mutable row + action log + error log (bundled for WPS211)."""
-
-    row: dict[str, Any]
-    actions: list[str]
-    errors: list[str]
 
 
 def _run_apply(

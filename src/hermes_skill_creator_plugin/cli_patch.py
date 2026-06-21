@@ -24,21 +24,23 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
 
 import click
 
 from hermes_skill_creator_plugin._patcher import (
-    EXIT_OK,
     PatcherResult,
     PatchRunInputs,
-    generate_migration_note,
-    is_hermes_agent,
     run_patch,
 )
+from hermes_skill_creator_plugin.cli_patch_flow import (
+    emit_migration_note_flow as _emit_migration_note_flow,
+)
+from hermes_skill_creator_plugin.cli_patch_flow import (
+    resolve_target as _resolve_target,
+)
+from hermes_skill_creator_plugin.cli_patch_git import git_head as _git_head
+from hermes_skill_creator_plugin.cli_patch_options import _add_click_option
 from hermes_skill_creator_plugin.i18n.messages_en import (
-    MIGRATION_REGENERATED,
-    TARGET_IS_HERMES_AGENT,
     TARGET_REQUIRED,
 )
 
@@ -124,45 +126,6 @@ Kilepesi kodok: 0 OK / 1 validacio / 2 drift / 3 jogosultsag / 4 I/O /
 # --- the click command ----------------------------------------------------
 
 
-def _resolve_target(target_str: str | None) -> Path | None:
-    return Path(target_str).resolve() if target_str else None
-
-
-def _refuse_hermes_agent(target_path: Path) -> None:
-    click.echo(
-        TARGET_IS_HERMES_AGENT.format(resolved=str(target_path)),
-        err=True,
-    )
-    sys.exit(4)
-
-
-def _emit_migration_note_flow(
-    target_path: Path,
-    *,
-    task_e_redirect: bool,
-    no_schema_redirect: bool,
-) -> None:
-    if is_hermes_agent(target_path):
-        _refuse_hermes_agent(target_path)
-    worktree = Path.cwd()
-    try:
-        git_head = _git_head(target_path)
-    except Exception:
-        # _git_head swallows its own exceptions, but a future change
-        # might let one slip through; the migration note must still be
-        # emitted.
-        git_head = ""
-    path = generate_migration_note(
-        target=target_path,
-        worktree=worktree,
-        task_e_redirect=task_e_redirect,
-        no_schema_redirect=no_schema_redirect,
-        git_head=git_head,
-    )
-    click.echo(MIGRATION_REGENERATED.format(path=str(path)))
-    sys.exit(EXIT_OK)
-
-
 def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
     for diagnostic in patcher_result.diagnostics:
         if verbose:
@@ -212,8 +175,7 @@ def _patch_impl(args: PatchArgs) -> int:
         # _emit_migration_note_flow raises SystemExit(EXIT_OK); the
         # line below is unreachable but keeps mypy happy.
 
-    check = args.check
-    apply_mode = args.do_apply
+    check, apply_mode = args.check, args.do_apply
     if not check and not apply_mode:
         # default: --check when neither --check nor --apply is given.
         check = True
@@ -222,7 +184,6 @@ def _patch_impl(args: PatchArgs) -> int:
     # run_patch (which returns EXIT_USER_ABORT). No click-level guard
     # is needed here.
 
-    git_head = _git_head(target_path) if target_path else ""
     patcher_result = run_patch(
         PatchRunInputs(
             target=target_path,
@@ -234,7 +195,7 @@ def _patch_impl(args: PatchArgs) -> int:
             no_schema_redirect=args.no_schema_redirect,
             yes=args.yes,
             verbose=args.verbose,
-            git_head=git_head,
+            git_head=_git_head(target_path) if target_path else "",
         ),
     )
 
@@ -269,23 +230,31 @@ main = click.command(
     help=f"{HELP_EN}\n{HELP_HU}",
     context_settings={"help_option_names": ["-h", "--help"]},
 )(main)
-main = click.option("--target", type=click.Path(), default=None, help=())(main)
-main = click.option("--check", is_flag=True, default=False, help=())(main)
-main = click.option("--apply", "do_apply", is_flag=True, default=False, help=())(main)
-main = click.option(
+
+
+main = _add_click_option(main, "--target", default_val=None)
+main = _add_click_option(main, "--check", is_flag_val=True, default_val=False)
+main = _add_click_option(
+    main,
+    "--apply",
+    dest="do_apply",
+    is_flag_val=True,
+    default_val=False,
+)
+main = _add_click_option(
+    main,
     "--task-e-redirect",
-    "task_e_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option(
+    dest="task_e_redirect",
+    is_flag_val=True,
+    default_val=False,
+)
+main = _add_click_option(
+    main,
     "--no-schema-redirect",
-    "no_schema_redirect",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
+    dest="no_schema_redirect",
+    is_flag_val=True,
+    default_val=False,
+)
 main = click.option(
     "--i-accept-line-drift",
     "i_accept_line_drift",
@@ -303,28 +272,6 @@ main = click.option(
 )(main)
 main = click.option("--yes", is_flag=True, default=False, help=())(main)
 main = click.option("--verbose", is_flag=True, default=False, help=())(main)
-
-
-def _git_head(target: Path) -> str:
-    """Best-effort git HEAD SHA for the target; empty on failure."""
-    import subprocess
-
-    try:
-        return _run_git_rev_parse(subprocess, target)
-    except Exception:
-        return ""
-
-
-def _run_git_rev_parse(subprocess_module: ModuleType, target: Path) -> str:
-    """Run ``git rev-parse HEAD`` in ``target``; return stripped stdout."""
-    proc = subprocess_module.run(
-        ["git", "-C", str(target), "rev-parse", "HEAD"],
-        capture_output=True,
-        check=True,
-        text=True,
-        timeout=_GIT_REV_PARSE_TIMEOUT_SEC,
-    )
-    return str(proc.stdout).strip()
 
 
 def _main_entry() -> int:

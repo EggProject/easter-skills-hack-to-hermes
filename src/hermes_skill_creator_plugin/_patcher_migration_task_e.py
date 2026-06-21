@@ -19,12 +19,16 @@ from hermes_skill_creator_plugin._patcher_sites import Site
 def _render_task_e_row(site: Site) -> str:
     """Render one Task E table row (5 columns including ``anchor``).
 
-    The ``anchor`` column carries the byte-exact single-line locator
-    for the site (plans/05 D5: single physical line, NOT a joined
-    implicit-concat string). The locator is the primary anchor's
-    text, truncated to 60 chars (whitespace / quotes preserved).
+    The ``anchor`` column carries the byte-exact locator for the site.
+    For single-line anchors (plans/05 D5) the locator is one physical
+    line; for multi-line anchors (e.g. E4/E5 after the WPS342 fix) only
+    the FIRST physical line is shown in the table cell to keep the
+    markdown row on a single line. Truncated to 60 chars (whitespace /
+    quotes preserved).
     """
-    anchor_text = _truncate(site.primary_anchor().text, ANCHOR_COL_WIDTH)
+    raw_text = site.primary_anchor().text
+    first_line = raw_text.splitlines()[0] if raw_text else ""
+    anchor_text = _truncate(first_line, ANCHOR_COL_WIDTH)
     insertion_text = _truncate(site.insertion.rstrip(LF), INSERTION_COL_WIDTH)
     return _compose_task_e_row(site, anchor_text, insertion_text)
 

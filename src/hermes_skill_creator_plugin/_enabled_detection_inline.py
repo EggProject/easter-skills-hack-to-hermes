@@ -60,7 +60,8 @@ def _extract_name(part: str, out: set[str]) -> None:
     kv = part.strip()
     if not kv.startswith(_DISABLED_PREFIX):
         return
-    payload = kv[len(_DISABLED_PREFIX) :].strip()
+    prefix_len = len(_DISABLED_PREFIX)
+    payload = kv[prefix_len:].strip()
     if not (payload.startswith("[") and payload.endswith("]")):
         return
     for raw in split_top_level_commas(payload[1:-1].strip()):

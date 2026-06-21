@@ -75,17 +75,15 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
     )
     for failure in inputs.failures:
         _append_drift_diagnostic(failure, inputs.diagnostics)
-    from hermes_skill_creator_plugin._patcher_pipeline import _build_result, _ResultInputs
+    from hermes_skill_creator_plugin._patcher_pipeline_apply import (
+        build_result_with_rejected as _build_result_with_rejected,
+    )
 
-    return _build_result(
-        _ResultInputs(
-            exit_code=exit_drift_code,
-            sites_patched=(),
-            sites_already=tuple(inputs.sites_already),
-            state=inputs.state,
-            diagnostics=tuple(inputs.diagnostics),
-            rejected_path=rejected_path,
-        ),
+    return _build_result_with_rejected(
+        exit_code=exit_drift_code,
+        diagnostics=tuple(inputs.diagnostics),
+        state=inputs.state,
+        rejected_path=rejected_path,
     )
 
 
@@ -130,6 +128,7 @@ def mutate_lines_for_site(site: Site, text: str) -> list[str]:
     idx = site.primary_anchor().line - 1
     if site.kind == "cap":
         new_pair_lines = site.insertion.splitlines(keepends=True)
-        return lines[:idx] + new_pair_lines + lines[idx + 2 :]
+        tail_offset = idx + 2
+        return lines[:idx] + new_pair_lines + lines[tail_offset:]
     lines.insert(idx + 1, site.insertion)
     return lines

@@ -6,6 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from hermes_skill_creator_plugin import _enabled_detection, _reporter, _tokenizer, cli_report
 from hermes_skill_creator_plugin import _enabled_detection_parse as _ed_parse
 from tests.report._fixtures import make_row_factory
@@ -224,3 +226,186 @@ def test_run_no_profiles_echoes_no_profiles_message(hermes_home: Path) -> None:
     with _mock.patch.object(cr, "_resolve_profiles", return_value=[]):
         rc = cr.run(profile="anything", sort="tokens", fmt="text", json_path=None)
     assert rc == 0
+
+
+# --- _advisory.py: trampolines (lines 105, 110) ---
+
+
+def test_advisory_walk_tree_trampoline_delegates() -> None:
+    """The module-level trampoline MUST delegate to the AST impl."""
+    import ast as _ast
+
+    from hermes_skill_creator_plugin import _advisory
+
+    tree = _ast.parse("def x(): pass")
+    # Trampoline returns the same value as the AST impl.
+    assert _advisory._walk_tree_for_marker(tree) == _advisory._walk_tree_for_marker_ast(tree)
+
+
+def test_advisory_scan_func_trampoline_delegates() -> None:
+    """The per-function trampoline MUST delegate to the AST impl."""
+    import ast as _ast
+
+    from hermes_skill_creator_plugin import _advisory
+
+    func = _ast.parse("def x(): pass").body[0]
+    # Trampoline returns the same value as the AST impl.
+    assert _advisory._scan_func_for_marker(func) == _advisory._scan_func_for_marker_ast(func)
+
+
+# --- _reporter_format.py: re-export hub (lines 18-50) ---
+
+
+def test_reporter_format_module_exposes_all_re_exports() -> None:
+    """The re-export hub MUST expose every column constant + format entry point."""
+    from hermes_skill_creator_plugin import _reporter_format
+
+    expected_constants = (
+        "COL_DESCRIPTION",
+        "COL_LAST_PATCHED_AT",
+        "COL_LAST_USED_AT",
+        "COL_LAST_VIEWED_AT",
+        "COL_NAME",
+        "COL_PATCH_COUNT",
+        "COL_PCT_OF_CAP",
+        "COL_PROFILE",
+        "COL_TOKENS",
+        "COL_USE_COUNT",
+        "COL_VIEW_COUNT",
+        "COUNT_COLUMNS",
+        "DEFAULT_TEXT_COLUMNS",
+        "NA_TEXT",
+        "TIMESTAMP_COLUMNS",
+    )
+    for name in expected_constants:
+        assert hasattr(_reporter_format, name), f"missing re-export: {name}"
+    # Entry points and value renderers.
+    assert callable(_reporter_format.format_text)
+    assert callable(_reporter_format.format_json)
+    assert callable(_reporter_format._format_value_for_text)
+    assert callable(_reporter_format._skill_to_dict)
+
+
+# --- _reporter_format_text.py: stub module (line 12) ---
+
+
+def test_reporter_format_text_module_importable() -> None:
+    """The text-format re-export stub MUST import cleanly (line 12 future-annotations)."""
+    import importlib
+
+    mod = importlib.import_module("hermes_skill_creator_plugin._reporter_format_text")
+    assert mod is not None
+
+
+# --- _cli_profiles_audit_imports.py: re-export module (lines 16-24) ---
+
+
+def test_cli_profiles_audit_imports_module_exposes_re_exports() -> None:
+    """The audit import-hub MUST re-bind bilingual/diff/report helpers."""
+    from hermes_skill_creator_plugin import _cli_profiles_audit_imports
+
+    assert callable(_cli_profiles_audit_imports.build_bilingual)
+    assert callable(_cli_profiles_audit_imports.diff_sets)
+    assert _cli_profiles_audit_imports.AuditReport is not None
+
+
+# --- cli_profiles_imports.py: stub module (line 22) ---
+
+
+def test_cli_profiles_imports_module_importable() -> None:
+    """The cli_profiles import-hub stub MUST import cleanly (line 22 future-annotations)."""
+    import importlib
+
+    mod = importlib.import_module("hermes_skill_creator_plugin.cli_profiles_imports")
+    assert mod is not None
+
+
+# --- _cli_report_helpers.py: backward-compat stub (line 18) ---
+
+
+def test_cli_report_helpers_stub_module_importable() -> None:
+    """The backward-compat stub MUST import cleanly (line 18 future-annotations)."""
+    import importlib
+
+    mod = importlib.import_module("hermes_skill_creator_plugin._cli_report_helpers")
+    assert mod is not None
+
+
+# --- cli_report.py line 44: RuntimeError when _detect_fn is None ---
+
+
+def test_cli_report_raises_when_detect_fn_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The module-top ``if _detect_fn is None: raise RuntimeError`` MUST trip on None.
+
+    Achieved by stubbing ``_enabled_detection.get_enabled_skills`` to
+    ``None`` in ``sys.modules`` BEFORE reloading cli_report. The
+    ``from _enabled_detection import get_enabled_skills as _detect_fn``
+    binds ``_detect_fn = None`` at module-top, which then trips the
+    ``if _detect_fn is None`` guard.
+    """
+    import importlib
+    import sys
+    import types
+
+    from hermes_skill_creator_plugin import cli_report as cr_mod
+
+    # Save the original module so we can restore it after the test.
+    saved_det = sys.modules.get("hermes_skill_creator_plugin._enabled_detection")
+    try:
+        # Stub the enabled-detection module with ``get_enabled_skills = None``.
+        stub_det = types.ModuleType("hermes_skill_creator_plugin._enabled_detection")
+        stub_det.get_enabled_skills = None  # type: ignore[attr-defined]
+        sys.modules["hermes_skill_creator_plugin._enabled_detection"] = stub_det
+
+        with pytest.raises(RuntimeError, match="enabled-detection import is unexpectedly None"):
+            importlib.reload(cr_mod)
+    finally:
+        # Restore the real module and reload cli_report so other tests see the original.
+        if saved_det is not None:
+            sys.modules["hermes_skill_creator_plugin._enabled_detection"] = saved_det
+            importlib.reload(cr_mod)
+        else:
+            sys.modules.pop("hermes_skill_creator_plugin._enabled_detection", None)
+
+
+# --- cli_report_profile.py lines 110/116: TypeError branches ---
+
+
+def test_append_text_section_raises_when_section_not_str() -> None:
+    """_append_text_section MUST TypeError when section is not a str."""
+    from hermes_skill_creator_plugin import cli_report_profile as crp
+
+    with pytest.raises(TypeError, match="text-format section must be str"):
+        crp._append_text_section([], object())
+
+
+def test_append_json_section_raises_when_section_is_str() -> None:
+    """_append_json_section MUST TypeError when section is a str."""
+    from hermes_skill_creator_plugin import cli_report_profile as crp
+
+    with pytest.raises(TypeError, match="json-format section must be ProfileSection"):
+        crp._append_json_section([], "i-am-a-str")
+
+
+# --- cli_patch_git.py line 34: run_git_rev_parse success path ---
+
+
+def test_run_git_rev_parse_success_returns_stripped_stdout(tmp_path: Path) -> None:
+    """``run_git_rev_parse`` MUST return ``proc.stdout.strip()`` on success.
+
+    Exercises the ``return str(proc.stdout).strip()`` line directly so
+    CI environments without a real ``.git`` directory (which never
+    trigger the success path via the live CLI) still reach 100% coverage.
+    """
+    import types
+
+    from hermes_skill_creator_plugin import cli_patch_git
+
+    fake_proc = types.SimpleNamespace(stdout="abc123def\n")
+
+    def fake_run(*_args: object, **_kwargs: object):
+        return fake_proc
+
+    fake_subprocess = types.SimpleNamespace(run=fake_run)
+    out = cli_patch_git.run_git_rev_parse(fake_subprocess, tmp_path)
+    assert out == "abc123def"

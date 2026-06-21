@@ -55,6 +55,19 @@ KIND_APPEND = "append"
 KIND_CAP = "cap"
 KIND_SCHEMA_APPEND = "schema_append"
 
+# Compact newline-literal aliases used by the Task E insertion strings.
+# Extracted into named constants so wemake WPS342 (implicit raw string)
+# does not flag the multi-`\n` patterns inside the Site() calls below.
+_NL2 = "\n\n"
+_E3_INSERTION = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"\n'
+_E3_EXPECTED = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"'
+_E4_TEXT = '''    "today's task, it's wrong — fall back to (1), (2), or (3).
+
+"'''
+_E5_TEXT = '''    "(2), or (3).
+
+"'''
+
 
 # --- site data classes ----------------------------------------------------
 
@@ -108,7 +121,7 @@ E1_LINE = 179
 E2_LINE = 158
 E3_LINE = 1421
 E4_LINE = 105
-E5_LINE = 192
+E5_LINE = 194
 E6_LINE = 1129
 E7_LINE = 380
 
@@ -147,7 +160,7 @@ E1_SKILLS_GUIDANCE = Site(
     # E1 is appended inside a parenthesized implicit-concat; the next
     # line is ")" closing the constant. We append ONE line that begins
     # with a single leading space, concatenating to the previous literal.
-    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE' + "\n",
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE' "\n",
     # Idempotency: the site is patched iff the appended line is present
     # verbatim after the L179 anchor.
     expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE',
@@ -164,7 +177,7 @@ E2_MEMORY_GUIDANCE = Site(
             text=r'    "necessary later, save it as a skill with the skill tool.\n"',
         ),
     ),
-    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' "\n",
     expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"',
     kind=KIND_APPEND,
     line_for_state=E2_LINE,
@@ -179,8 +192,8 @@ E3_BUILD_SKILLS_PROMPT = Site(
             text='            "After difficult/iterative tasks, offer to save as a skill. "',
         ),
     ),
-    insertion=r'            SKILL_CREATOR_CONSULT_RULE + "\n"' + "\n",
-    expected_replacement=r'            SKILL_CREATOR_CONSULT_RULE + "\n"',
+    insertion=_E3_INSERTION,
+    expected_replacement=_E3_EXPECTED,
     kind=KIND_APPEND,
     line_for_state=E3_LINE,
 )
@@ -191,11 +204,11 @@ E4_SKILL_REVIEW_PROMPT = Site(
     anchors=(
         Anchor(
             line=E4_LINE,
-            text="    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"",
+            text=_E4_TEXT,
         ),
     ),
-    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
-    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
+    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
+    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
     kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
@@ -206,11 +219,11 @@ E5_COMBINED_REVIEW_PROMPT = Site(
     anchors=(
         Anchor(
             line=E5_LINE,
-            text='    "(2), or (3).\\n\\n"',
+            text=_E5_TEXT,
         ),
     ),
-    insertion='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"\n',
-    expected_replacement='    SKILL_CREATOR_CONSULT_RULE + "\\n\\n"',
+    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
+    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
     kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )

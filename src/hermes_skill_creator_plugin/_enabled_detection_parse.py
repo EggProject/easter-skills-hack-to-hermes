@@ -77,3 +77,10 @@ def add_list_entries(source: Any, target: set[str]) -> None:
             target.add(str(entry))
     elif isinstance(source, str) and _BAREWORD_RE.fullmatch(source):
         target.add(source)
+
+
+# Underscored aliases retained for legacy callers (Script #3 reporter path
+# and tests under ``tests/report/``). Both names have identical semantics
+# to the public ``load_config`` / ``parse_frontmatter``.
+_load_config = load_config
+_parse_frontmatter = parse_frontmatter
