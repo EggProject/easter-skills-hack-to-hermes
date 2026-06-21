@@ -53,6 +53,20 @@ import dataclasses
 from pathlib import Path
 
 from hermes_skill_creator_plugin import _patcher_imports as _imps
+from hermes_skill_creator_plugin import _patcher_sites as _sites
+from hermes_skill_creator_plugin._patcher_pipeline import (
+    apply_sites as _apply_sites_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_pipeline import (
+    ok_check_result as _ok_check_result_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_pipeline_emit import _FailDriftInputs
+from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+    fail_with_drift as _fail_with_drift_pipeline,
+)
+from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
+from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
+from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
 
 # Local bindings matching the previous top-level import names. The
 # actual imports live in :mod:`._patcher_imports` to keep this
@@ -92,21 +106,8 @@ S1_CAP_SITE = _imps.S1_CAP_SITE
 SKILL_CREATOR_CONSULT_RULE = _imps.SKILL_CREATOR_CONSULT_RULE
 TOOLS_SKILL_UTILS_REL = _imps.TOOLS_SKILL_UTILS_REL
 sites_for_mode = _imps.sites_for_mode
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    apply_sites as _apply_sites_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    ok_check_result as _ok_check_result_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline_emit import (
-    _FailDriftInputs,
-)
-from hermes_skill_creator_plugin._patcher_pipeline_emit import (
-    fail_with_drift as _fail_with_drift_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
-from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
-from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
+Anchor = _sites.Anchor
+Site = _sites.Site
 
 # --- result type ---------------------------------------------------------
 
