@@ -1695,12 +1695,14 @@ def test_task_e_current_text_is_unique_in_source() -> None:
         # physical line — no implicit-concat joining, no
         # whitespace normalization.
         anchor = site.primary_anchor()
+        # fmt: off
         assert (
             "\n" not in anchor.text
         ), f"site {site.site_id} anchor must be a single physical line, got {anchor.text!r}"
         assert (
             len(anchor.text) >= 8
         ), f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
+        # fmt: on
         # The insertion is a single NEW line (additive-only).
         assert site.insertion.endswith("\n")
 
@@ -1880,9 +1882,11 @@ def test_migration_note_anchors_match_inventory(hermes_checkout: Path, worktree:
         for line in text.splitlines():
             if line.startswith(f"| {site_id} "):
                 # The replacement cell must reference the consult rule.
+                # fmt: off
                 assert (
                     "SKILL_CREATOR_CONSULT_RULE" in line
                 ), f"site {site_id} row missing SKILL_CREATOR_CONSULT_RULE: {line!r}"
+                # fmt: on
 
 
 def test_emit_migration_note_idempotent_no_clobber(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
@@ -1972,9 +1976,11 @@ def test_migration_task_e_rows_have_site_specific_anchor(
         # At least the first 10 chars of the primary anchor are present.
         # For sites whose anchor is short we just check exact containment.
         if len(primary) <= 60:
+            # fmt: off
             assert (
                 primary in anchor_cell
             ), f"anchor cell for {site_id} missing primary anchor: {primary!r} not in {anchor_cell!r}"
+            # fmt: on
         else:
             # Truncated: first 59 chars + ellipsis.
             truncated = primary[:59] + "…"

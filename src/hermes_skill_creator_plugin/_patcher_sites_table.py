@@ -61,8 +61,8 @@ KIND_SCHEMA_APPEND = "schema_append"
 _NL2 = "\n\n"
 _E3_INSERTION = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"\n'
 _E3_EXPECTED = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"'
-_E4_TEXT = f"    \"today's task, it's wrong — fall back to (1), (2), or (3).{_NL2}\""
-_E5_TEXT = f'    "(2), or (3).{_NL2}"'
+_E4_TEXT = "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
+_E5_TEXT = '    "(2), or (3).\\n\\n"'
 
 
 # --- site data classes ----------------------------------------------------

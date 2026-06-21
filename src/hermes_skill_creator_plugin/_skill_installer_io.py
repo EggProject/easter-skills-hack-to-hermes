@@ -29,8 +29,8 @@ def refuse_live_install(hermes_home: Path) -> None:
     raise ValueError(message)
 
 
-def guard_install_preconditions(skill_source: Path, hermes_home: Path) -> None:
-    if hermes_home.resolve() == _LIVE_HERMES_AGENT.resolve():
+def guard_install_preconditions(skill_source: Path, hermes_home: Path, live_agent: Path = _LIVE_HERMES_AGENT) -> None:
+    if hermes_home.resolve() == live_agent.resolve():
         refuse_live_install(hermes_home)
     if not skill_source.exists():
         message = f"skill source not found: {skill_source}"

@@ -48,6 +48,8 @@ def _build_hu_help() -> str:
     """Build the Hungarian --help text body."""
     return (
         f"{HU['profiles_help_short']}\n\n"
+        f"{_opts_mod.HELP_HU_HEADER}\n"
+        f"{_opts_mod.HU_USAGE_BAR}\n\n"
         f"{HU['profiles_help_long']}\n\n"
         f"{_opts_mod.HU_SECTION}\n"
         f"{_format_options_block(_flags_mod._HU_OPTIONS, HU)}"

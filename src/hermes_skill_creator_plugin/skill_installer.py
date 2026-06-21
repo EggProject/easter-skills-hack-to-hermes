@@ -25,12 +25,25 @@ from pathlib import Path
 
 from hermes_skill_creator_plugin import _skill_installer_io as _io_mod
 from hermes_skill_creator_plugin._skill_installer_cap import detect_active_cap
+from hermes_skill_creator_plugin._skill_installer_consts import (
+    FULL_DESC_CAP,
+    LIVE_HERMES_AGENT,
+    PINNED_UPSTREAM_COMMIT,
+    SHORT_DESC_CAP,
+)
 from hermes_skill_creator_plugin._skill_installer_note import (
     write_migration_note as _write_migration_note,
 )
+from hermes_skill_creator_plugin._skill_installer_t3 import T3_INVENTORY
 
 _copy_skill_md = _io_mod.copy_skill_md
 _copy_skill_tree = _io_mod.copy_skill_tree
+_detect_active_cap = detect_active_cap
+_FULL_DESC_CAP = FULL_DESC_CAP
+_LIVE_HERMES_AGENT = LIVE_HERMES_AGENT
+_PINNED_UPSTREAM_COMMIT = PINNED_UPSTREAM_COMMIT
+_SHORT_DESC_CAP = SHORT_DESC_CAP
+_T3_INVENTORY = T3_INVENTORY
 _guard_install_preconditions = _io_mod.guard_install_preconditions
 _prepare_target_dir = _io_mod.prepare_target_dir
 _select_skill_md = _io_mod.select_skill_md
@@ -73,7 +86,7 @@ def install(
         FileNotFoundError: if the source skill is missing.
         ValueError: if hermes_home resolves to the live install.
     """
-    _guard_install_preconditions(skill_source, hermes_home)
+    _guard_install_preconditions(skill_source, hermes_home, _LIVE_HERMES_AGENT)
     target_dir = _prepare_target_dir(hermes_home)
     _copy_skill_tree(skill_source, target_dir)
     chosen_cap = _resolve_cap(cap)

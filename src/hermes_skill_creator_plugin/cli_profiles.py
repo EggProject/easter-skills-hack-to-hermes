@@ -45,20 +45,29 @@ from agent.skill_utils import get_disabled_skill_names  # noqa: F401
 from hermes_cli.skills_config import save_disabled_skills  # noqa: F401
 
 from hermes_skill_creator_plugin import _cli_profiles_bindings as _bindings
+from hermes_skill_creator_plugin import _cli_profiles_profiles as _profiles_mod
 from hermes_skill_creator_plugin import _cli_profiles_run as _run
 
 # Re-bindings matching the previous top-level names exposed by this
 # orchestrator (kept for backward compat with tests + external callers).
 _audit_profile = _bindings._audit_profile
 _build_bilingual = _bindings._build_bilingual
+EN = _bindings.EN
+HU = _bindings.HU
+
+
+def _bilingual(key: str, **format_values: object) -> str:
+    """Bilingual ``[en] ... / [hu] ...`` helper using EN/HU tables."""
+    return _build_bilingual(EN, HU, key, **format_values)
+
+
 diff_sets = _bindings.diff_sets
 walk_skills = _bindings.walk_skills
 _build_help_text = _bindings._build_help_text
 main_cmd = _bindings.main_cmd
 _make_cli = _bindings._make_cli
+_now_iso = _profiles_mod._now_iso
 AuditReport = _bindings.AuditReport
-EN = _bindings.EN
-HU = _bindings.HU
 
 # Re-exports for tests / external callers (do NOT remove — tests
 # import these by name from ``hermes_skill_creator_plugin.cli_profiles``).

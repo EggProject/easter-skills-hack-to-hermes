@@ -122,7 +122,9 @@ def test_helper_is_single_source_of_truth(hermes_home: Path) -> None:
                 target = node.target
             if target is not None and target.id == "NESTING_GUARD_VAR":
                 assignments.append((py, node.lineno, target.id))
+    # fmt: off
     assert (
         len(assignments) == 1
     ), f"NESTING_GUARD_VAR must be assigned exactly once (got {len(assignments)}: {assignments})"
+    # fmt: on
     assert assignments[0][0].name == "_subprocess.py"
