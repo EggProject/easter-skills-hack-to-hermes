@@ -26,9 +26,9 @@ from hermes_skill_creator_plugin import (
 )
 from hermes_skill_creator_plugin import _cli_report_rows as _rows_mod
 from hermes_skill_creator_plugin import _cli_report_ui as _ui_mod
-from hermes_skill_creator_plugin._reporter_models import ProfileSection as ProfileSection
-from hermes_skill_creator_plugin._reporter_sort import sort_rows as sort_rows
-from hermes_skill_creator_plugin._tokenizer import estimate_tokens as estimate_tokens
+from hermes_skill_creator_plugin import _reporter_models as _models_mod
+from hermes_skill_creator_plugin import _reporter_sort as _sort_mod
+from hermes_skill_creator_plugin import _tokenizer as _tokenizer_mod
 
 # Sub-module re-bindings.
 _helpers = _helpers_mod
@@ -38,3 +38,6 @@ _rows = _rows_mod
 # Function re-bindings.
 emit_bilingual_help = _ui_mod.emit_bilingual_help
 main = _cmd_mod.main
+ProfileSection = _models_mod.ProfileSection
+sort_rows = _sort_mod.sort_rows
+estimate_tokens = _tokenizer_mod.estimate_tokens

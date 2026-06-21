@@ -15,12 +15,10 @@ via ``_imps`` so its own import block stays under WPS201.
 
 from __future__ import annotations
 
-from hermes_skill_creator_plugin._cli_profiles_bilingual import (
-    build_bilingual as build_bilingual,
-)
-from hermes_skill_creator_plugin._cli_profiles_diff import (
-    diff_sets as diff_sets,
-)
-from hermes_skill_creator_plugin._cli_profiles_report import (
-    AuditReport as AuditReport,
-)
+from hermes_skill_creator_plugin import _cli_profiles_bilingual as _bilingual_mod
+from hermes_skill_creator_plugin import _cli_profiles_diff as _diff_mod
+from hermes_skill_creator_plugin import _cli_profiles_report as _report_mod
+
+build_bilingual = _bilingual_mod.build_bilingual
+diff_sets = _diff_mod.diff_sets
+AuditReport = _report_mod.AuditReport

@@ -23,7 +23,7 @@ _DISABLE_IF_PLATFORM_PRESENT_KEY = "disable_if_platform_present"
 
 def list_blocks(plat_value: Any) -> bool:
     """Return True when the list-shape platforms entry blocks the host."""
-    if isinstance(plat_value, (list, tuple, set)):
+    if isinstance(plat_value, list | tuple | set):
         return any(bool(entry) for entry in plat_value)
     return False
 
