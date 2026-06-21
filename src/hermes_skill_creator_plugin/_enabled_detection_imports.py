@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from hermes_skill_creator_plugin import _enabled_detection_filter as _filter_mod
 from hermes_skill_creator_plugin import _enabled_detection_inline as _inline_mod
+from hermes_skill_creator_plugin import _enabled_detection_parse as _parse_mod
 
 # Filter helpers (re-bound under underscore-prefixed local names).
 _apply_conditional_exclusions = _filter_mod.apply_conditional_exclusions
@@ -32,3 +33,7 @@ _platform_disables = _filter_mod.platform_disables
 _extract_disabled_from_inline = _inline_mod.extract_disabled_from_inline
 _split_top_level_commas = _inline_mod.split_top_level_commas
 _strip_quotes = _inline_mod.strip_quotes
+
+# Parse helpers (underscored legacy aliases for Script #3 reporter path).
+_load_config = _parse_mod._load_config
+_parse_frontmatter = _parse_mod._parse_frontmatter
