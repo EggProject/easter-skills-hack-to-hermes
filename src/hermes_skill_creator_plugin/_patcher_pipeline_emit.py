@@ -75,17 +75,15 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
     )
     for failure in inputs.failures:
         _append_drift_diagnostic(failure, inputs.diagnostics)
-    from hermes_skill_creator_plugin._patcher_pipeline import _build_result, _ResultInputs
+    from hermes_skill_creator_plugin._patcher_pipeline import _build_result
 
     return _build_result(
-        _ResultInputs(
-            exit_code=exit_drift_code,
-            sites_patched=(),
-            sites_already=tuple(inputs.sites_already),
-            state=inputs.state,
-            diagnostics=tuple(inputs.diagnostics),
-            rejected_path=rejected_path,
-        ),
+        exit_code=exit_drift_code,
+        sites_patched=(),
+        sites_already=tuple(inputs.sites_already),
+        state=inputs.state,
+        diagnostics=tuple(inputs.diagnostics),
+        rejected_path=rejected_path,
     )
 
 

@@ -223,19 +223,29 @@ def _patch_impl(args: PatchArgs) -> int:
     # is needed here.
 
     git_head = _git_head(target_path) if target_path else ""
+    run_inputs = PatchRunInputs(
+        target=target_path,
+        check=check,
+        apply=args.do_apply,
+        force=args.force,
+        i_accept_line_drift=args.i_accept_line_drift,
+        task_e_redirect=args.task_e_redirect,
+        no_schema_redirect=args.no_schema_redirect,
+        yes=args.yes,
+        verbose=args.verbose,
+        git_head=git_head,
+    )
     patcher_result = run_patch(
-        PatchRunInputs(
-            target=target_path,
-            check=check,
-            apply=args.do_apply,
-            force=args.force,
-            i_accept_line_drift=args.i_accept_line_drift,
-            task_e_redirect=args.task_e_redirect,
-            no_schema_redirect=args.no_schema_redirect,
-            yes=args.yes,
-            verbose=args.verbose,
-            git_head=git_head,
-        ),
+        target=run_inputs.target,
+        check=run_inputs.check,
+        apply=run_inputs.apply,
+        force=run_inputs.force,
+        i_accept_line_drift=run_inputs.i_accept_line_drift,
+        task_e_redirect=run_inputs.task_e_redirect,
+        no_schema_redirect=run_inputs.no_schema_redirect,
+        yes=run_inputs.yes,
+        verbose=run_inputs.verbose,
+        git_head=run_inputs.git_head,
     )
 
     _emit_diagnostics(patcher_result, verbose=args.verbose)

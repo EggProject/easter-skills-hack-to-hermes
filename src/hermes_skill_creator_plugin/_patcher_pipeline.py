@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hermes_skill_creator_plugin import _patcher_pipeline_imports as _imps
+from hermes_skill_creator_plugin._patcher_pipeline_emit import _AuditLogInputs
 from hermes_skill_creator_plugin._patcher_sites import Site
 from hermes_skill_creator_plugin.i18n.messages_en import (
     CROSS_FS_WARN,
@@ -34,7 +35,6 @@ from hermes_skill_creator_plugin.i18n.messages_en import (
 # (``_try_atomic_write``) lazy-imports it via the runtime path.
 # ``Site`` is kept as a direct class import so mypy preserves its
 # concrete type (vs ``Site = _imps.Site`` which becomes ``Site?``).
-_i18n = _imps._i18n
 AUDIT_LOG = _imps.AUDIT_LOG
 _cross_filesystem = _imps._cross_filesystem
 _now_iso = _imps._now_iso
@@ -174,12 +174,14 @@ def _emit_site_audit(
     after_bytes: bytes,
 ) -> None:
     emit_audit_log(
-        audit_path,
-        timestamp,
-        site.site_id,
-        before,
-        after_bytes,
-        target_path,
+        _AuditLogInputs(
+            audit_path=audit_path,
+            timestamp=timestamp,
+            site_id=site.site_id,
+            before=before,
+            after_bytes=after_bytes,
+            target_path=target_path,
+        ),
     )
 
 

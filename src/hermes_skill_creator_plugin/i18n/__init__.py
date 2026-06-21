@@ -5,4 +5,22 @@ wemake WPS412 (no logic in ``__init__.py``). The patcher pipeline and
 its helpers now import their strings directly from
 :mod:`hermes_skill_creator_plugin.i18n.messages_en` (and
 ``messages_hu`` for bilingual consumers).
+
+This module re-exports three pipeline-audit constants (FORCE_AUDIT_LOG,
+LINE_DRIFT, TEXT_DRIFT) so cross-module attribute lookups (e.g. via
+``hermes_skill_creator_plugin.i18n.FORCE_AUDIT_LOG``) resolve under
+mypy --strict. The constants themselves are defined in
+:mod:`messages_en`.
 """
+
+from __future__ import annotations
+
+from hermes_skill_creator_plugin.i18n.messages_en import (
+    FORCE_AUDIT_LOG as FORCE_AUDIT_LOG,
+)
+from hermes_skill_creator_plugin.i18n.messages_en import (
+    LINE_DRIFT as LINE_DRIFT,
+)
+from hermes_skill_creator_plugin.i18n.messages_en import (
+    TEXT_DRIFT as TEXT_DRIFT,
+)
