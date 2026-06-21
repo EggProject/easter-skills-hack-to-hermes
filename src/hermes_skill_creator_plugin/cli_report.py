@@ -150,7 +150,7 @@ def _build_one_profile_section(
     rows = sort_rows(rows, ctx.sort)
     section = _helpers.make_section(ctx.fmt, prof.name, rows, total)
     if ctx.fmt == FORMAT_TEXT:
-        text_sections.append(section)
+        text_sections.append(section)  # type: ignore[arg-type]
     else:
         json_sections.append(section)  # type: ignore[arg-type]
     return None

@@ -235,18 +235,7 @@ def _patch_impl(args: PatchArgs) -> int:
         verbose=args.verbose,
         git_head=git_head,
     )
-    patcher_result = run_patch(
-        target=run_inputs.target,
-        check=run_inputs.check,
-        apply=run_inputs.apply,
-        force=run_inputs.force,
-        i_accept_line_drift=run_inputs.i_accept_line_drift,
-        task_e_redirect=run_inputs.task_e_redirect,
-        no_schema_redirect=run_inputs.no_schema_redirect,
-        yes=run_inputs.yes,
-        verbose=run_inputs.verbose,
-        git_head=run_inputs.git_head,
-    )
+    patcher_result = run_patch(run_inputs)
 
     _emit_diagnostics(patcher_result, verbose=args.verbose)
     return patcher_result.exit_code

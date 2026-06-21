@@ -104,6 +104,7 @@ from hermes_skill_creator_plugin._patcher_pipeline_emit import (
 )
 from hermes_skill_creator_plugin._patcher_preflight import run_preflight as _run_preflight
 from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
+from hermes_skill_creator_plugin._patcher_sites import Anchor, Site
 from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
 
 # --- result type ---------------------------------------------------------
@@ -141,41 +142,19 @@ def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
     )
 
 
-def run_patch(
-    *,
-    target: Path | None,
-    check: bool,
-    apply: bool,
-    force: bool,
-    i_accept_line_drift: bool,
-    task_e_redirect: bool,
-    no_schema_redirect: bool,
-    yes: bool = False,
-    verbose: bool = False,
-    audit_log_path: Path | None = None,
-    git_head: str = "",
-) -> PatcherResult:
+def run_patch(inputs: PatchRunInputs) -> PatcherResult:
     """Run the patcher.
+
+    Accepts a single :class:`PatchRunInputs` struct (WPS211-bundled)
+    whose fields are the operational parameters plus optional
+    side-effects (yes/verbose/audit_log_path/git_head) that carry safe
+    defaults (False/False/None/'').
 
     Returns a :class:`PatcherResult`; the caller (CLI) is responsible
     for translating ``exit_code`` into a ``SystemExit``. This function
     never raises SystemExit; it returns a result.
     """
-    return _run_patch_with_inputs(
-        PatchRunInputs(
-            target=target,
-            check=check,
-            apply=apply,
-            force=force,
-            i_accept_line_drift=i_accept_line_drift,
-            task_e_redirect=task_e_redirect,
-            no_schema_redirect=no_schema_redirect,
-            yes=yes,
-            verbose=verbose,
-            audit_log_path=audit_log_path,
-            git_head=git_head,
-        )
-    )
+    return _run_patch_with_inputs(inputs)
 
 
 @dataclasses.dataclass(frozen=True)

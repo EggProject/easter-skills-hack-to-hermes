@@ -15,6 +15,7 @@ from hermes_skill_creator_plugin._cli_report_helpers import (
 )
 from hermes_skill_creator_plugin._cli_report_helpers_paths import load_skill_description
 from hermes_skill_creator_plugin._reporter import SkillRow, make_row
+from hermes_skill_creator_plugin._reporter_sort import _RowFields
 
 
 class EnabledDetectionUnavailable(Exception):
@@ -178,16 +179,18 @@ def _make_one_row(
     tokens = estimate_tokens_fn(name, description, warning=emit_tokenizer_warning)
     usage_for = usage.get(name, EMPTY_USAGE)
     row = make_row(
-        profile=profile.name,
-        name=name,
-        description=description,
-        tokens=tokens,
-        use_count=usage_for["use_count"],
-        view_count=usage_for["view_count"],
-        patch_count=usage_for["patch_count"],
-        last_used_at=usage_for["last_used_at"],
-        last_viewed_at=usage_for["last_viewed_at"],
-        last_patched_at=usage_for["last_patched_at"],
+        _RowFields(
+            profile=profile.name,
+            name=name,
+            description=description,
+            tokens=tokens,
+            use_count=usage_for["use_count"],
+            view_count=usage_for["view_count"],
+            patch_count=usage_for["patch_count"],
+            last_used_at=usage_for["last_used_at"],
+            last_viewed_at=usage_for["last_viewed_at"],
+            last_patched_at=usage_for["last_patched_at"],
+        ),
     )
     return row, tokens
 
