@@ -75,7 +75,9 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
     )
     for failure in inputs.failures:
         _append_drift_diagnostic(failure, inputs.diagnostics)
-    from hermes_skill_creator_plugin._patcher_pipeline import _build_result_with_rejected
+    from hermes_skill_creator_plugin._patcher_pipeline_apply import (
+        build_result_with_rejected as _build_result_with_rejected,
+    )
 
     return _build_result_with_rejected(
         exit_code=exit_drift_code,

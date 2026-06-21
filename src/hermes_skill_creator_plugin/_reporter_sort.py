@@ -1,60 +1,64 @@
-"""Row-builder + sort helpers for the hermes-skill-creator reporter.
+"""Row sorting for the reporter output.
 
-TDD tests reference ``hermes_skill_creator_plugin._reporter.make_row`` /
-``sort_rows`` / ``_truncate_for_display`` / ``_sort_key``; ``_reporter.py``
-re-exports them so existing imports continue to work.
+Extracted from ``_reporter.py`` to keep the reporter module under wemake
+WPS202 (≤7 module members). The per-sort-key implementations live in
+``_reporter_sort_keys`` for the same reason; this module owns the
+``_RowFields`` dataclass, the ``make_row`` / ``_build_row`` helpers, and
+the public ``sort_rows`` orchestrator.
 """
 
 from __future__ import annotations
 
-import dataclasses
-from collections import OrderedDict
+from dataclasses import dataclass
 
-from hermes_skill_creator_plugin._reporter_models import SkillRow
-from hermes_skill_creator_plugin._tokenizer import MAX_DESCRIPTION_LENGTH
+from hermes_skill_creator_plugin import _reporter_models as _models_mod
+from hermes_skill_creator_plugin import _reporter_sort_keys as _keys_mod
 
-# Default ellipsis suffix for truncated descriptions (3 chars).
-ELLIPSIS = "..."
+SkillRow = _models_mod.SkillRow
 
-# Markers used to push n/a rows AFTER populated rows in the sort tuple.
-_NA_MARKER_LAST = 1
-_NA_MARKER_FIRST = 0
+_NA_MARKER_FIRST = _keys_mod._NA_MARKER_FIRST
+_NA_MARKER_LAST = _keys_mod._NA_MARKER_LAST
+MAX_DESCRIPTION_LENGTH = 1024
 
 
 def _truncate_for_display(description: str, *, width: int = 60) -> str:
-    """Truncate `description` to `width` chars with a trailing ellipsis when over.
-
-    Mirrors `extract_skill_description` in agent/skill_utils.py:688-689:
-    `desc[:57] + "..."` when `len(desc) > 60`, otherwise the full description.
-    """
-    if len(description) > width:
-        return description[: width - len(ELLIPSIS)] + ELLIPSIS
-    return description
+    """Truncate ``description`` to ``width`` chars + ellipsis if longer."""
+    if len(description) <= width:
+        return description
+    truncated = description[: width - 3]
+    return f"{truncated}..."
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class _RowFields:
-    """Group of keyword-only inputs for :func:`make_row`."""
+    """All fields required to build a :class:`SkillRow`.
+
+    Bundled so ``make_row`` / ``_build_row`` keep WPS211 in check.
+    """
 
     profile: str
     name: str
     description: str
     tokens: int
     use_count: int | None
-    view_count: int | None
-    patch_count: int | None
-    last_used_at: str | None
-    last_viewed_at: str | None
-    last_patched_at: str | None
+    view_count: int | None = None
+    patch_count: int | None = None
+    last_used_at: str | None = None
+    last_viewed_at: str | None = None
+    last_patched_at: str | None = None
 
 
 def make_row(fields: _RowFields) -> SkillRow:
-    """Build a SkillRow with derived display + pct_of_cap fields."""
+    """Build a :class:`SkillRow` from a :class:`_RowFields`."""
     return _build_row(fields)
 
 
 def _build_row(fields: _RowFields) -> SkillRow:
-    """Compose a SkillRow from a :class:`_RowFields` bundle."""
+    """Build a :class:`SkillRow` from a :class:`_RowFields`.
+
+    ``description`` is truncated to 60 chars for display; the original
+    is preserved by callers that need it.
+    """
     pct = round((fields.tokens / MAX_DESCRIPTION_LENGTH) * 100, 1)
     return SkillRow(
         profile=fields.profile,
@@ -84,22 +88,8 @@ def _sort_key(
     primary is a string — that case is handled separately in sort_rows().
     """
     if sort_key == "use_count":
-        return _sort_key_use_count(row)
-    return _sort_key_tokens(row)
-
-
-def _sort_key_tokens(row: SkillRow) -> tuple[int, str]:
-    """Tokens desc, name asc — also the fallback for unknown sort keys."""
-    return (-row.tokens, row._sort_name)
-
-
-def _sort_key_use_count(row: SkillRow) -> tuple[int, int, str]:
-    """Use-count desc, name asc; n/a rows sort LAST."""
-    if row.use_count is None:
-        # n/a rows sort AFTER non-na rows (1 > 0). The 0/0 placeholders
-        # for primary+name are not consulted because na_marker dominates.
-        return (_NA_MARKER_LAST, 0, row._sort_name)
-    return (_NA_MARKER_FIRST, -row.use_count, row._sort_name)
+        return _keys_mod._sort_key_use_count(row)
+    return _keys_mod._sort_key_tokens(row)
 
 
 def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
@@ -109,34 +99,5 @@ def sort_rows(rows: list[SkillRow], sort_key: str) -> list[SkillRow]:
     Rows with `n/a` on the primary sort column sort LAST.
     """
     if sort_key == "last_used_at":
-        return _sort_by_last_used_at(rows)
+        return _keys_mod._sort_by_last_used_at(rows)
     return sorted(rows, key=lambda row: _sort_key(row, sort_key))
-
-
-def _sort_by_last_used_at(rows: list[SkillRow]) -> list[SkillRow]:
-    """Sort by ``last_used_at`` desc with name-asc tiebreaker and n/a LAST."""
-    na_rows = _sorted_na_rows(rows)
-    groups = _group_dated_rows(rows)
-    for bucket in groups.values():
-        bucket.sort(key=lambda bucket_row: bucket_row.name)
-    out: list[SkillRow] = []
-    for ts in reversed(list(groups.keys())):
-        out.extend(groups[ts])
-    return out + na_rows
-
-
-def _sorted_na_rows(rows: list[SkillRow]) -> list[SkillRow]:
-    """Return ``rows`` with ``last_used_at is None`` sorted by name asc."""
-    return sorted(
-        (na_row for na_row in rows if na_row.last_used_at is None),
-        key=lambda na_row: na_row.name,
-    )
-
-
-def _group_dated_rows(rows: list[SkillRow]) -> OrderedDict[str, list[SkillRow]]:
-    """Bucket ``rows`` whose ``last_used_at`` is non-None by their timestamp."""
-    groups: OrderedDict[str, list[SkillRow]] = OrderedDict()
-    for dated_row in rows:
-        if dated_row.last_used_at is not None:
-            groups.setdefault(dated_row.last_used_at, []).append(dated_row)
-    return groups
