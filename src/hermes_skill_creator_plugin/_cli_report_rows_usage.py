@@ -27,16 +27,6 @@ def filled_usage_map(
     skills_dir: Path,
     enabled_names: frozenset[str],
 ) -> dict[str, dict[str, Any]]:
-    out = filled_usage_map_for_report(curator, skills_dir, enabled_names)
-    out = backfill_missing_usage(out, enabled_names)
-    return out
-
-
-def filled_usage_map_for_report(
-    curator: Any,
-    skills_dir: Path,
-    enabled_names: frozenset[str],
-) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     report = usage_report_safe(curator, skills_dir)
     for entry in report:
@@ -44,13 +34,6 @@ def filled_usage_map_for_report(
         if entry_name_value is None or entry_name_value not in enabled_names:
             continue
         out[entry_name_value] = entry_fields(entry)
-    return out
-
-
-def backfill_missing_usage(
-    out: dict[str, dict[str, Any]],
-    enabled_names: frozenset[str],
-) -> dict[str, dict[str, Any]]:
     for enabled_name in enabled_names:
         if enabled_name not in out:
             out[enabled_name] = {**EMPTY_USAGE, PERSISTED_KEY: False}

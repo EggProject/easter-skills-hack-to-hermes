@@ -37,15 +37,14 @@ def load_context(
     profile: str | None,
 ) -> tuple[Path | None, object, list[Path], int | None]:
     """Resolve paths + curator + profiles. Return error code or None."""
-    _paths = _imps._paths
-    hermes_home = _paths.resolve_hermes_home()
-    json_path = _imps._helpers.resolve_json_path(fmt, json_path)
-    rc = check_hermes_home(json_path, hermes_home)
+    hermes_home = _imps._paths.resolve_hermes_home()
+    resolved_json = _imps._helpers.resolve_json_path(fmt, json_path)
+    rc = check_hermes_home(resolved_json, hermes_home)
     if rc is not None:
-        return json_path, None, [], rc
-    curator = _paths.load_curator(hermes_home)
-    profile_paths = _paths.resolve_profiles(hermes_home, profile)
-    return json_path, curator, profile_paths, None
+        return resolved_json, None, [], rc
+    curator = _imps._paths.load_curator(hermes_home)
+    profile_paths = _imps._paths.resolve_profiles(hermes_home, profile)
+    return resolved_json, curator, profile_paths, None
 
 
 def emit_sections(

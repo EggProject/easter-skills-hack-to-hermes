@@ -14,11 +14,9 @@ from datetime import UTC, datetime
 import click
 
 from hermes_skill_creator_plugin._cli_report_helpers_consts import (
+    FORMAT_KEYS,
     REJECTED_FLAGS,
     SORT_KEYS,
-    FORMAT_KEYS,
-    FORMAT_JSON,
-    DEFAULT_JSON_NAME,
 )
 from hermes_skill_creator_plugin.i18n import messages_en as EN
 

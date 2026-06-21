@@ -107,7 +107,6 @@ def _build_and_emit(
         sort=inputs.sort,
         platform=inputs.platform,
         curator=curator,
-        make_section_fn=_imps.make_section,
     )
     if build_err is not None:
         return build_err

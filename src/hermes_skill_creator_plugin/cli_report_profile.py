@@ -19,6 +19,7 @@ from hermes_skill_creator_plugin.i18n import messages_en as EN
 
 _ENABLED_DETECTION_RC = 6
 
+
 # Lookup helper — reads through ``cli_report`` at call time so
 # ``monkeypatch.setattr(cli_report, "get_enabled_skills", ...)`` reaches
 # the same callable used here.
@@ -36,6 +37,14 @@ class ProfileBuildContext:
     curator: Any | None
 
 
+@dataclass(frozen=True)
+class _SectionSinks:
+    """Mutable text/json section sinks accumulated across profile iterations."""
+
+    text_sections: list[str]
+    json_sections: list[Any]
+
+
 def build_profile_sections(
     profile_paths: list[Path],
     *,
@@ -43,11 +52,9 @@ def build_profile_sections(
     sort: str,
     platform: str | None,
     curator: Any | None,
-    make_section_fn: Any,
 ) -> tuple[list[str], list[Any], int | None]:
     """Build text/json sections for all profiles. Error code or None."""
-    text_sections: list[str] = []
-    json_sections: list[Any] = []
+    sinks = _SectionSinks(text_sections=[], json_sections=[])
     ctx = ProfileBuildContext(
         fmt=fmt,
         sort=sort,
@@ -58,22 +65,18 @@ def build_profile_sections(
         rc = build_one_profile_section(
             prof,
             ctx=ctx,
-            text_sections=text_sections,
-            json_sections=json_sections,
-            make_section_fn=make_section_fn,
+            sinks=sinks,
         )
         if rc is not None:
-            return text_sections, json_sections, rc
-    return text_sections, json_sections, None
+            return sinks.text_sections, sinks.json_sections, rc
+    return sinks.text_sections, sinks.json_sections, None
 
 
 def build_one_profile_section(
     prof: Path,
     *,
     ctx: ProfileBuildContext,
-    text_sections: list[str],
-    json_sections: list[Any],
-    make_section_fn: Any,
+    sinks: _SectionSinks,
 ) -> int | None:
     """Append one profile's section; return 6 on detection error, else None."""
     try:
@@ -88,9 +91,28 @@ def build_one_profile_section(
         click.echo(EN.report_enabled_detection_unavailable, err=True)
         return _ENABLED_DETECTION_RC
     rows = _imps.sort_rows(rows, ctx.sort)
-    section = make_section_fn(ctx.fmt, prof.name, rows, total)
+    section = _imps.make_section(ctx.fmt, prof.name, rows, total)
     if ctx.fmt == _imps.FORMAT_TEXT:
-        text_sections.append(section)
+        _append_text_section(sinks.text_sections, section)
     else:
-        json_sections.append(section)
+        _append_json_section(sinks.json_sections, section)
     return None
+
+
+def _append_text_section(sinks_list: list[str], section: str | object) -> None:
+    """Append ``section`` to the text-section list after narrowing its type."""
+    if isinstance(section, str):
+        sinks_list.append(section)
+    else:
+        # ``make_section`` returns ``str | ProfileSection``; the
+        # ``_imps.FORMAT_TEXT`` branch guarantees a ``str`` here, so this
+        # branch is unreachable at runtime but keeps mypy strict.
+        raise TypeError("text-format section must be str")
+
+
+def _append_json_section(sinks_list: list[Any], section: str | object) -> None:
+    """Append ``section`` to the json-section list after narrowing its type."""
+    if not isinstance(section, str):
+        sinks_list.append(section)
+    else:
+        raise TypeError("json-format section must be ProfileSection")

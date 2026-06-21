@@ -13,9 +13,11 @@ from pathlib import Path
 
 from hermes_skill_creator_plugin._skill_installer_consts import (
     FULL_SKILL_MD_NAME,
-    LIVE_HERMES_AGENT as _LIVE_HERMES_AGENT,
     SKILL_DEST_REL_PARTS,
     STATE_UNPATCHED,
+)
+from hermes_skill_creator_plugin._skill_installer_consts import (
+    LIVE_HERMES_AGENT as _LIVE_HERMES_AGENT,
 )
 
 

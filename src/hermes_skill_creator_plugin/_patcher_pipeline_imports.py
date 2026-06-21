@@ -24,6 +24,7 @@ from hermes_skill_creator_plugin import _patcher_helpers as _helpers_mod
 from hermes_skill_creator_plugin import _patcher_migration as _migration_mod
 from hermes_skill_creator_plugin import _patcher_pipeline_consts as _consts_mod
 from hermes_skill_creator_plugin import _patcher_pipeline_emit as _emit_mod
+from hermes_skill_creator_plugin.i18n import messages_en as _i18n_en
 
 # Constants and helpers re-bound under the names ``_patcher_pipeline``
 # already uses locally.
@@ -36,3 +37,5 @@ STATE_DRIFTED = _consts_mod.STATE_DRIFTED
 STATE_PATCHED = _consts_mod.STATE_PATCHED
 emit_audit_log = _emit_mod.emit_audit_log
 mutate_lines_for_site = _emit_mod.mutate_lines_for_site
+IO_ERROR = _i18n_en.IO_ERROR
+PERMISSION_DENIED = _i18n_en.PERMISSION_DENIED
