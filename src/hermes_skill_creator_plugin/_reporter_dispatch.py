@@ -10,7 +10,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from types import MappingProxyType
 
-from hermes_skill_creator_plugin._reporter_format import (
+# Import column-name constants directly from the consts module to avoid
+# a circular import: the ``_reporter_format`` HUB re-exports from
+# ``_reporter_format_text_value`` which in turn imports this dispatch
+# table for ``VALUE_DISPATCH``.
+from hermes_skill_creator_plugin._reporter_format_consts import (
     COL_DESCRIPTION,
     COL_NAME,
     COL_PCT_OF_CAP,
