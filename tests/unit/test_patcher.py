@@ -1608,8 +1608,10 @@ def test_e4_appends_only(hermes_checkout: Path) -> None:
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
-    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
+    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3)."
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
+    assert lines[anchor_idx + 2] == ""
+    assert lines[anchor_idx + 3] == '"'
 
 
 def test_e5_appends_only(hermes_checkout: Path) -> None:
@@ -1629,11 +1631,13 @@ def test_e5_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    # E5's anchor `(2), or (3).\n\n` is a substring of E4's anchor; find
+    # E5's anchor `(2), or (3).` is a substring of E4's anchor; find
     # the EXACT line (E5's anchor text).
-    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).\\n\\n"')
-    assert lines[anchor_idx] == '    "(2), or (3).\\n\\n"'
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).')
+    assert lines[anchor_idx] == '    "(2), or (3).'
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
+    assert lines[anchor_idx + 2] == ""
+    assert lines[anchor_idx + 3] == '"'
 
 
 def test_e6_appends_only(hermes_checkout: Path) -> None:
@@ -1688,17 +1692,16 @@ def test_e7_appends_only(hermes_checkout: Path) -> None:
 
 
 def test_task_e_current_text_is_unique_in_source() -> None:
-    """05 §Anchor-hygiene — each Task E primary anchor is a single
-    physical line and yields exactly 1 hit in its site table."""
+    """05 §Anchor-hygiene — each Task E primary anchor is one or more
+    physical lines and yields exactly 1 hit in its site table."""
     for site in ALL_TASK_E_SITES:
-        # The primary anchor is exactly the bytes of a single
-        # physical line — no implicit-concat joining, no
-        # whitespace normalization.
+        # The primary anchor is exactly the bytes of one or more
+        # consecutive physical lines — no implicit-concat joining,
+        # no whitespace normalization. Multi-line anchors (carrying
+        # real newline characters) are matched against consecutive
+        # file lines by ``locate_anchor``.
         anchor = site.primary_anchor()
         # fmt: off
-        assert (
-            "\n" not in anchor.text
-        ), f"site {site.site_id} anchor must be a single physical line, got {anchor.text!r}"
         assert (
             len(anchor.text) >= 8
         ), f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
@@ -1968,22 +1971,24 @@ def test_migration_task_e_rows_have_site_specific_anchor(
         site_id = cells[0]
         anchor_cell = cells[4]
         # The anchor cell must contain a recognizable substring of the
-        # primary anchor (the truncation logic preserves the leading
-        # bytes up to 60 chars).
+        # primary anchor. For multi-line anchors (carrying real newline
+        # characters) only the first physical line is shown in the
+        # markdown row, so we check the first line specifically.
         primary = expected[site_id]
+        primary_first_line = primary.splitlines()[0] if primary else ""
         # The anchor cell wraps the truncated text in backticks.
         assert "`" in anchor_cell, f"anchor cell for {site_id} missing backticks: {anchor_cell!r}"
         # At least the first 10 chars of the primary anchor are present.
         # For sites whose anchor is short we just check exact containment.
-        if len(primary) <= 60:
+        if len(primary_first_line) <= 60:
             # fmt: off
             assert (
-                primary in anchor_cell
-            ), f"anchor cell for {site_id} missing primary anchor: {primary!r} not in {anchor_cell!r}"
+                primary_first_line in anchor_cell
+            ), f"anchor cell for {site_id} missing primary anchor: {primary_first_line!r} not in {anchor_cell!r}"
             # fmt: on
         else:
             # Truncated: first 59 chars + ellipsis.
-            truncated = primary[:59] + "…"
+            truncated = primary_first_line[:59] + "…"
             assert truncated in anchor_cell, f"anchor cell for {site_id} missing truncated anchor: {truncated!r}"
 
 

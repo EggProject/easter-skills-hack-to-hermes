@@ -205,10 +205,14 @@ def _build_background_review_padded() -> str:
     lines: list[str] = []
     for i in range(1, 105):
         lines.append(f"# padding {i}\n")
-    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\"\n")
+    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n")
+    lines.append("\n")
+    lines.append('"\n')
     for i in range(106, 192):
         lines.append(f"# padding {i}\n")
-    lines.append('    "(2), or (3).\\n\\n"\n')
+    lines.append('    "(2), or (3).\n')
+    lines.append("\n")
+    lines.append('"\n')
     for i in range(193, 220):
         lines.append(f"# padding {i}\n")
     return "".join(lines)

@@ -32,11 +32,16 @@ import os
 from pathlib import Path
 
 from hermes_skill_creator_plugin._patcher_helpers_fs import cross_filesystem as _cross_filesystem
-from hermes_skill_creator_plugin._patcher_sites import Anchor, Site
+from hermes_skill_creator_plugin._patcher_helpers_locate import locate_anchor as _locate_anchor
+from hermes_skill_creator_plugin._patcher_sites import Site
 
 # Re-export so existing ``from _patcher_helpers import cross_filesystem``
 # keeps working after the WPS202 split.
 cross_filesystem = _cross_filesystem
+
+# Re-export so existing ``from _patcher_helpers import locate_anchor``
+# keeps working after the multi-line anchor split.
+locate_anchor = _locate_anchor
 
 DEFAULT_CYCLE_MARKER = "from tools.skills_tool import"
 FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
@@ -69,19 +74,6 @@ def file_has_circular_import(
         return False
     text = skill_utils_path.read_text(encoding="utf-8", errors="replace")
     return cycle_marker in text
-
-
-def locate_anchor(text: str, anchor: Anchor) -> int:
-    """Return the 1-based line number where ``anchor.text`` appears.
-
-    Returns 0 when the anchor is not found. Matches the FULL line bytes
-    (no implicit-concat normalization).
-    """
-    lines = text.splitlines()
-    for idx, line in enumerate(lines, start=1):
-        if line == anchor.text:
-            return idx
-    return 0
 
 
 def site_already_patched(text: str, site: Site) -> bool:

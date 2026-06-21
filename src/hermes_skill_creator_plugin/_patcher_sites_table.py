@@ -61,8 +61,12 @@ KIND_SCHEMA_APPEND = "schema_append"
 _NL2 = "\n\n"
 _E3_INSERTION = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"\n'
 _E3_EXPECTED = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"'
-_E4_TEXT = "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
-_E5_TEXT = '    "(2), or (3).\\n\\n"'
+_E4_TEXT = '''    "today's task, it's wrong — fall back to (1), (2), or (3).
+
+"'''
+_E5_TEXT = '''    "(2), or (3).
+
+"'''
 
 
 # --- site data classes ----------------------------------------------------
@@ -117,7 +121,7 @@ E1_LINE = 179
 E2_LINE = 158
 E3_LINE = 1421
 E4_LINE = 105
-E5_LINE = 192
+E5_LINE = 194
 E6_LINE = 1129
 E7_LINE = 380
 
