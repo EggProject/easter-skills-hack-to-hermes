@@ -103,16 +103,15 @@ def _append_text_section(sinks_list: list[str], section: str | object) -> None:
     """Append ``section`` to the text-section list after narrowing its type."""
     if isinstance(section, str):
         sinks_list.append(section)
-    else:
-        # ``make_section`` returns ``str | ProfileSection``; the
-        # ``_imps.FORMAT_TEXT`` branch guarantees a ``str`` here, so this
-        # branch is unreachable at runtime but keeps mypy strict.
-        raise TypeError("text-format section must be str")
+        return
+    # ``make_section`` returns ``str | ProfileSection``; the
+    # ``_imps.FORMAT_TEXT`` branch guarantees a ``str`` here, so this
+    # branch is unreachable at runtime but keeps mypy strict.
+    raise TypeError("text-format section must be str")
 
 
 def _append_json_section(sinks_list: list[Any], section: str | object) -> None:
     """Append ``section`` to the json-section list after narrowing its type."""
-    if not isinstance(section, str):
-        sinks_list.append(section)
-    else:
+    if isinstance(section, str):
         raise TypeError("json-format section must be ProfileSection")
+    sinks_list.append(section)
