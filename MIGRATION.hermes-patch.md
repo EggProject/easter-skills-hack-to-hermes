@@ -4,14 +4,38 @@
 
 | Field | Value |
 | --- | --- |
-| Target | /private/tmp/hermes_checkout_test/dummy_dir |
-| Target git head |  |
-| --task-e-redirect | no |
+| Source repo | https://github.com/anthropics/claude-plugins-official |
+| Source skillId | skill-creator |
+| Pinned upstream commit | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
+| Target | /private/tmp/hermes-fake-target |
+| Target git head | 5e01a5db |
+| --task-e-redirect | yes |
 | --no-schema-redirect | no |
-| Generated at | 2026-06-18T20:14:22Z |
+| Generated at | 2026-06-22T10:00:00Z |
 
 ## Cap-raise site (always applied)
 
 | site_id | location | current | replacement | anchor |
 | --- | --- | --- | --- | --- |
 | S1.cap | agent/skill_utils.py \| extract_skill_description | `if len(desc) > 60:` and `return desc[:57] + "..."` | `if len(desc) > MAX_DESCRIPTION_LENGTH:` and `return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."` (with `MAX_DESCRIPTION_LENGTH` defined locally, e.g. `MAX_DESCRIPTION_LENGTH = 1024`, to avoid a circular import from `tools.skills_tool`) | `if len(desc) > 60:` |
+
+## Task E sites (only if --task-e-redirect)
+
+| site_id | location | current | replacement | anchor |
+| --- | --- | --- | --- | --- |
+| E0.consult_rule_def | agent/prompt_builder.py:1 (L1: `"""Prompt builder (test fixture stand-in for agent/prompt_b…`; single physical line) | (preserved verbatim) | `\nSKILL_CREATOR_CONSULT_RULE = (\n    "When creating a new skill — or substanti…` (additive) | `"""Prompt builder (test fixture stand-in for agent/prompt_b…` |
+| E1.skills_guidance | agent/prompt_builder.py:179 (L179: `    "Skills that aren't maintained become liabilities."`; single physical line) | (preserved verbatim) | `    " " + SKILL_CREATOR_CONSULT_RULE` (additive) | `    "Skills that aren't maintained become liabilities."` |
+| E2.memory_guidance | agent/prompt_builder.py:158 (L158: `    "necessary later, save it as a skill with the skill too…`; single physical line) | (preserved verbatim) | `    " " + SKILL_CREATOR_CONSULT_RULE + "\n"` (additive) | `    "necessary later, save it as a skill with the skill too…` |
+| E3.build_skills_prompt | agent/prompt_builder.py:1421 (L1421: `            "After difficult/iterative tasks, offer to save…`; single physical line) | (preserved verbatim) | `            SKILL_CREATOR_CONSULT_RULE + "\n\n"` (additive) | `            "After difficult/iterative tasks, offer to save…` |
+| E4b.consult_rule_import | agent/background_review.py:1 (L1: `"""Background review (test fixture stand-in for agent/backg…`; single physical line) | (preserved verbatim) | `from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE` (additive) | `"""Background review (test fixture stand-in for agent/backg…` |
+| E4.skill_review_prompt_opt4 | agent/background_review.py:105 (L105: `    "today's task, it's wrong — fall back to (1), (2), or (…`; single physical line) | (preserved verbatim) | `    SKILL_CREATOR_CONSULT_RULE + '\n\n'` (additive) | `    "today's task, it's wrong — fall back to (1), (2), or (…` |
+| E5.combined_review_prompt_opt4 | agent/background_review.py:194 (L194: `    "(2), or (3).`; single physical line) | (preserved verbatim) | `    SKILL_CREATOR_CONSULT_RULE + '\n\n'` (additive) | `    "(2), or (3).` |
+| E6.skill_manage_schema_desc | tools/skill_manager_tool.py:1129 (L1129: `        "pitfalls come up; pin only guards against irrecove…`; single physical line) | (preserved verbatim) | `        " skill-creator, when installed, supplies authoring/validation guidance…` (additive) | `        "pitfalls come up; pin only guards against irrecove…` |
+| E7.skills_doc_section | website/docs/user-guide/features/skills.md:380 (L380: `The agent can create, update, and delete its own skills via…`; single physical line) | (preserved verbatim) | `\n> Note: `skill-creator` is an optional, hub-installed authoring/validation sk…` (additive) | `The agent can create, update, and delete its own skills via…` |
+
+## Decisions
+
+**D1. MIGRATION is a 3-file split** — top-level index + Script #1 patches + migrated-skill T3 inventory; each file serves a different audience (see 08-migration-note-format.md §Decisions).
+**D2. Pinned upstream commit `2a40fd2e...` is read from the vendored `UPSTREAM_COMMIT.txt`** — the generator emits the SHA verbatim into all three MIGRATION*.md files; the manifest sha is recomputed on each regeneration, so any drift between the MIGRATION file content and the manifest entry fails `check-migration-note` (see 08-migration-note-format.md §Decisions).
+**D5. Row counts are computed at runtime from the sites table** — 1 (default), 1+7=8 with `--task-e-redirect`, 1+6=7 with `--task-e-redirect --no-schema-redirect`; T3 row count == 18 (see 08-migration-note-format.md §Decisions).
+**D6. Determinism: frozen timestamp + LF endings + no trailing whitespace** — `HERMES_SKILL_CREATOR_FROZEN_TIME` makes `Generated at` stable across runs (CI always sets it); tables sorted by `site_id` (see 08-migration-note-format.md §Decisions).

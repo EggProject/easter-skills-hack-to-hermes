@@ -17,12 +17,10 @@ from typing import TYPE_CHECKING
 
 from hermes_skill_creator_plugin import _patcher_pipeline_imports as _imps
 from hermes_skill_creator_plugin import _patcher_pipeline_results as _results_mod
-from hermes_skill_creator_plugin._patcher_pipeline_emit import _AuditLogInputs
 from hermes_skill_creator_plugin._patcher_sites import Site
 
 EXIT_IO = _imps.EXIT_IO
 EXIT_PERMISSION = _imps.EXIT_PERMISSION
-emit_audit_log = _imps.emit_audit_log
 IO_ERROR_TEXT = _imps.IO_ERROR
 PERMISSION_DENIED_TEXT = _imps.PERMISSION_DENIED
 
@@ -48,18 +46,6 @@ class _ApplyOneSiteInputs:
 
 
 @dataclasses.dataclass(frozen=True)
-class _EmitSiteAuditInputs:
-    """Inputs for :func:`emit_site_audit` (bundled to keep the function small)."""
-
-    site: Site
-    target_path: Path
-    audit_path: Path
-    timestamp: str
-    before: bytes
-    after_bytes: bytes
-
-
-@dataclasses.dataclass(frozen=True)
 class _SitePayload:
     """Before/after byte pair for one site's atomic write."""
 
@@ -75,17 +61,10 @@ def build_site_payload(path: Path, site: Site) -> _SitePayload:
     return _SitePayload(before=before, after_bytes="".join(new_lines).encode("utf-8"))
 
 
-def emit_site_audit(inputs: _EmitSiteAuditInputs) -> None:
-    emit_audit_log(
-        _AuditLogInputs(
-            audit_path=inputs.audit_path,
-            timestamp=inputs.timestamp,
-            site_id=inputs.site.site_id,
-            before=inputs.before,
-            after_bytes=inputs.after_bytes,
-            target_path=inputs.target_path,
-        ),
-    )
+def build_site_bytes(path: Path, site: Site) -> tuple[bytes, bytes]:
+    """Read ``path`` and return the (before, after) byte tuple for ``site``."""
+    payload = build_site_payload(path, site)
+    return payload.before, payload.after_bytes
 
 
 def apply_one_site(inputs: _ApplyOneSiteInputs) -> PatcherResult | None:
@@ -97,17 +76,6 @@ def apply_one_site(inputs: _ApplyOneSiteInputs) -> PatcherResult | None:
     io_result = try_atomic_write(path, payload.after_bytes)
     if io_result is not None:
         return io_result
-    if inputs.force:
-        emit_site_audit(
-            _EmitSiteAuditInputs(
-                site=site,
-                target_path=target_path,
-                audit_path=inputs.audit_path,
-                timestamp=inputs.timestamp,
-                before=payload.before,
-                after_bytes=payload.after_bytes,
-            ),
-        )
     return None
 
 
@@ -120,3 +88,12 @@ def try_atomic_write(path: Path, after_bytes: bytes) -> PatcherResult | None:
     except (PermissionError, OSError) as exc:
         return io_error_result(path, exc)
     return None
+
+
+def emit_site_audit_stub(*_args: object, **_kwargs: object) -> None:
+    """No-op stub: per-site audit emit was replaced by per-invocation.
+
+    External callers / test monkeypatches that import this name should
+    still resolve to a callable; the per-site line is now part of the
+    per-invocation line emitted at the end of ``apply_sites``.
+    """

@@ -10,23 +10,18 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hermes_skill_creator_plugin import _patcher_pipeline_emit_helpers as _helpers
 from hermes_skill_creator_plugin._patcher_apply import (
     _append_audit_log,
     write_rejected,
 )
 from hermes_skill_creator_plugin._patcher_apply_atomic import _diff_sha
 from hermes_skill_creator_plugin._patcher_pipeline_consts import (
-    REASON_LINE_DRIFT,
     REMEDIATION_EN,
     REMEDIATION_HU,
 )
 from hermes_skill_creator_plugin._patcher_sites import Site
-from hermes_skill_creator_plugin.i18n.messages_en import (
-    FORCE_AUDIT_LOG,
-    LINE_DRIFT,
-    TEXT_DRIFT,
-    VALIDATION_FAILED,
-)
+from hermes_skill_creator_plugin.i18n.messages_en import FORCE_AUDIT_LOG
 
 if TYPE_CHECKING:
     from hermes_skill_creator_plugin._patcher import PatcherResult
@@ -46,15 +41,22 @@ class _FailDriftInputs:
 
 
 @dataclasses.dataclass(frozen=True)
+class _SiteDiff:
+    """Per-site diff bundle accumulated by the audit-log emit pipeline."""
+
+    site_id: str
+    before: bytes
+    after_bytes: bytes
+
+
+@dataclasses.dataclass(frozen=True)
 class _AuditLogInputs:
     """Inputs for :func:`emit_audit_log` (bundled for WPS211)."""
 
     audit_path: Path
     timestamp: str
-    site_id: str
-    before: bytes
-    after_bytes: bytes
     target_path: Path
+    site_diffs: tuple[_SiteDiff, ...] = ()
 
 
 def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
@@ -74,7 +76,7 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
         git_head=inputs.git_head,
     )
     for failure in inputs.failures:
-        _append_drift_diagnostic(failure, inputs.diagnostics)
+        _helpers.append_drift_diagnostic(failure, inputs.diagnostics)
     from hermes_skill_creator_plugin._patcher_pipeline_apply import (
         build_result_with_rejected as _build_result_with_rejected,
     )
@@ -87,36 +89,24 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
     )
 
 
-def _append_drift_diagnostic(
-    failure: dict[str, Any],
-    diagnostics: list[str],
-) -> None:
-    """Append the right i18n diagnostic for one failure entry."""
-    if failure.get("reason") == REASON_LINE_DRIFT:
-        diagnostics.append(
-            LINE_DRIFT.format(
-                site_id=failure["site_id"],
-                line=failure["anchor_line"],
-            )
-        )
-    else:
-        diagnostics.append(
-            TEXT_DRIFT.format(
-                site_id=failure["site_id"],
-                expected=failure.get("expected", ""),
-                actual=failure.get("actual_at_line_<missing>", ""),
-            )
-        )
-    diagnostics.append(VALIDATION_FAILED.format(site_id=failure["site_id"]))
-
-
 def emit_audit_log(inputs: _AuditLogInputs) -> None:
-    """Append one FORCE_AUDIT_LOG line for a successful ``--force`` site."""
-    diff_sha = _diff_sha(inputs.before, inputs.after_bytes)
+    """Append one FORCE_AUDIT_LOG line per ``--force`` invocation.
+
+    Per AC-2.5.1 the audit log records ONE line per invocation
+    (timestamp + combined diff sha256) at ``~/.hermes/patch-audit.log``.
+    The combined diff is the sha256 of the empty-bytes separator joined
+    per-site ``HASH_SEPARATOR`` diff shas (so the audit log records the
+    set of sites touched by THIS invocation in a deterministic order).
+    """
+    parts: list[str] = []
+    for site_diff in inputs.site_diffs:
+        parts.append(_diff_sha(site_diff.before, site_diff.after_bytes))
+    combined_diff_sha = _helpers.combined_sha(parts)
+    site_ids = ",".join(sd.site_id for sd in inputs.site_diffs)
     audit_line = FORCE_AUDIT_LOG.format(
         timestamp=inputs.timestamp,
-        site_id=inputs.site_id,
-        diff_sha=diff_sha,
+        site_id=site_ids,
+        diff_sha=combined_diff_sha,
         target=str(inputs.target_path),
     )
     _append_audit_log(inputs.audit_path, audit_line)

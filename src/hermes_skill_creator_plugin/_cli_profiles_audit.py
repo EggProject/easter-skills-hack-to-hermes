@@ -26,9 +26,13 @@ read_disabled_or_empty = _bindings.read_disabled_or_empty
 build_bilingual = _bindings.build_bilingual
 diff_sets = _bindings.diff_sets
 walk_skills = _bindings.walk_skills
+walk_profile_subdirs = _bindings.walk_profile_subdirs
+read_gateway_pid_stat = _bindings.read_gateway_pid_stat
+PROFILE_DIRS = _bindings.PROFILE_DIRS
 AuditReport = _bindings.AuditReport
 new_row = _bindings.new_row
 populate_diff_row = _bindings.populate_diff_row
+populate_walk_row = _bindings.populate_walk_row
 hermes_home_scope = _bindings.hermes_home_scope
 
 # Re-bind the apply types for callers that import them from
@@ -110,9 +114,14 @@ def _audit_diff_row(
     profile_path: Path,
     disabled_now: set[str],
 ) -> None:
-    """Walk installed skills and populate the diff columns on ``row``."""
+    """Walk installed skills, the PROFILE_DIRS subdirs, and ``gateway.pid``.
+
+    Populates the diff columns (installed vs. desired) and the AC-3.10
+    walk fields (``subdirs``, ``gateway_pid``).
+    """
     installed_now: set[str] = walk_skills(profile_path / "skills")
     populate_diff_row(row, disabled_now, installed_now)
+    populate_walk_row(row, profile_path)
 
 
 def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:

@@ -109,6 +109,19 @@ FORCE_AUDIT_LOG = (
 )
 TEXT_DRIFT = "[hu] szöveg-eltérés a {site_id} helyen / [en] text drift detected at site {site_id}"
 MIGRATION_REGENERATED = "[hu] migrációs jegyzet újragenerálva itt: {path} / [en] migration note regenerated at {path}"
+FORCE_CONFIRM_PROMPT = (
+    "[hu] --force --i-accept-line-drift: írd be a 'yes'-t a fenti diff "
+    "alkalmazásához (0 kilépés), bármi más megszakít (5 kilépés). / "
+    "[en] --force --i-accept-line-drift: type 'yes' to apply the diff above "
+    "and exit 0, anything else to abort (exit 5)."
+)
+FORCE_CONFIRM_REFUSED = (
+    "[hu] --force megerősítés megtagadva a kezelő által (5 kilépés, felhasználói megszakítás). / "
+    "[en] --force confirmation refused by operator (exit 5 user abort)."
+)
+FORCE_CONFIRM_DIFF_HEADER = (
+    "[hu] --force: tervezett diff (unified) ehhez: {sites} / [en] --force: planned diff (unified) for {sites}"
+)
 
 # Column headers (Hungarian half).
 COL_PROFILE = "profil"

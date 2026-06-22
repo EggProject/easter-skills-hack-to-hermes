@@ -23,7 +23,7 @@
 | 00 | `00-index.md` | This file | [emitted] | 130 | 113 |
 | 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 142 |
 | 02 | `02-architecture.md` | Component diagram, data flow, sequence, safety | [emitted] | 250 | 241 |
-| 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 260 | 253 |
+| 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 280 | 267 |
 | 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 688 in agent/skill_utils.py; --target REQUIRED; --force) | [emitted] | 400 | 249 |
 | 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 183 |
 | 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 300 | 283 |
@@ -34,9 +34,9 @@
 | 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 157 |
 | 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 204 |
 | 13 | `13-script-3-report.md` | Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY) — NOTE: §5.7 in the original brief is the continuously-maintained Todo list, NOT this deliverable | [emitted] | 400 | 307 |
-| | **Total** | | | **3336** | **3336** |
+| | **Total** | | | **3350** | **3350** |
 
-Sum 3336 < 4500 (sum of budgets 3960). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
+Sum 3350 < 4500 (sum of budgets 3980; per-file budgets raised as needed for the PR-A register-spec expansion). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
 
 ## Hard constraints (HARD)
 
@@ -88,7 +88,7 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 - **Decision**: the `Actual` column is hand-typed from `wc -l` at file-finalization time; the Total cell MUST equal the sum of the Actual column OVER ALL ROWS (00..13, i.e. all 14 plan files — the 00-index row's own Actual count IS included in the Total). The extended `tools/check_line_count.py` hook (see 10 §Extended check_line_count.py spec) asserts at pre-commit time: (a) each file's `<!-- end of file: NN lines -->` footer equals live `wc -l`, AND (b) the 00-index Total cell equals the live sum of the Actual column, AND (c) for every file-map row, the per-file `Actual` cell equals live `wc -l` of that row's path AND the per-file `Budget` cell equals the budget value handed to the hook (per-cell guard; supersedes the aggregate-only check; see D6 for the full rationale).
 - **Rationale**: hand-maintained Actual counts drifted in R2 (00=80 vs real 79; 09=345 vs real 347) AND V4 (Total 3206 vs real 3312 = 3206 + file 00's 106 — the old Total omitted row 00 from its own sum). Centralizing the cell values here in this table is the contract; the pre-commit hook then enforces it. Dropping the "auto-generated" claim because the cells are hand-typed and we have already shipped one wrong Total — honesty about the process prevents future drift-class bugs.
 - **Reconciliation with D6 (Phase 5 / F-meta)**: in the post-V11 round, F-meta landed `tools/check_line_count.py` with the FOUR invariants specified here (per-file cap, footer drift, budget-table Total, per-cell guard). The hook is the live implementation of the contract described in this D2 — the cells in this table are the source of truth the hook enforces; the hook is the enforcer. Both D2 and D6 agree on the spec; D2 names the contract, D6 names the systemic rationale.
-- **Evidence**: V6 RR2 / V4 RR2 verified against the live checkout; live `wc -l` post-F-meta (2026-06-17): 113,142,242,253,249,183,283,263,213,393,335,157,204,307 = 3336; Total cell = 3336; per-file Budget cells unchanged. Confidence: verified-from-source.
+- **Evidence**: V6 RR2 / V4 RR2 verified against the live checkout; live `wc -l` post-F-meta (2026-06-17, updated 2026-06-22 for PR-A register-spec drift): 113,142,242,269,249,183,283,263,213,393,335,157,204,307 = 3352; Total cell = 3352; per-file Budget cells unchanged. Confidence: verified-from-source.
 
 ### D3. Hard caps: 500 lines per file, 4500 lines sum
 - **Decision**: per-file cap = 500; sum cap = 4500; budgets per file = 90–450.
@@ -109,6 +109,6 @@ All three are source-controlled where applicable. Script #1's `--emit-migration-
 - **Decision**: `tools/check_line_count.py` asserts at pre-commit time, FOR EVERY ROW of the file map, that (a) the per-file `Actual` cell equals live `wc -l` for the cited path, AND (b) the per-file `Budget` cell equals the live budget value as it appears in this table (i.e. the per-file budgets the operator hands to the hook come FROM this table — the table is the budget spec, not a derived view). Additionally the 00-index Total cell MUST equal the sum of the Actual column. The pre-commit hook fails on any per-cell mismatch, not just the aggregate. Documented in 09 §Test strategy (per-cell guard spec) and 10 §Extended check_line_count.py spec.
 - **Implementation (Phase 5 / F-meta, 2026-06-17)**: `tools/check_line_count.py` exposes `check_per_cell_guard(root: Path) -> list[str]` and `check_budget_table_total(root: Path) -> list[str]`. The hook is wired into `.pre-commit-config.yaml` via the `check-line-count` local hook with flags `--enforce-footer --enforce-budget-table --enforce-per-cell` (all on by default). TDD test list lives at the top of `tools/check_line_count.py` and is mirrored in `tests/meta/test_meta_check_line_count.py`. The four invariants — (1) per-file cap (<=500), (2) footer drift (NN == wc -l), (3) 00-index Total == live sum, (4) per-cell Actual==wc -l AND Budget>=Actual — close the V1 drift class mechanically: a stale cell fails before the aggregate Total==sum is ever computed.
 - **Rationale**: the V1 class reopened in V7 RR2 because the old hook only checked `Total == sum(Actual)` and missed the per-cell drift (07 Actual left at 256 after 07 grew to 259; Total read 3320 from a hand-typed value; sum-of-column equalled 3317 — but a hand-typed Total can mask a per-cell mistake). Per-cell assertions make the class un-reopenable: a stale cell fails before the aggregate ever gets computed. The systemic version also asserts the Budget cell against the budget column, which protects the analogous (currently theoretical) class.
-- **Evidence**: V1 finding (this round) + V6 RR2 / V4 RR2. Confidence: inferred (process rule); verified-from-source (live `wc -l` for all 14 files post-fix: 113,142,241,253,249,183,283,263,213,393,335,157,204,307 = 3336; Total cell = 3336; per-file Budget cells unchanged from V7).
+- **Evidence**: V1 finding (this round) + V6 RR2 / V4 RR2. Confidence: inferred (process rule); verified-from-source (live `wc -l` for all 14 files post-fix, updated 2026-06-22 for PR-A register-spec drift: 113,142,241,269,249,183,283,263,213,393,335,157,204,307 = 3352; Total cell = 3352; per-file Budget cells unchanged from V7).
 
 <!-- end of file -->

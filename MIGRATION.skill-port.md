@@ -7,7 +7,7 @@
 | Source skill | skill-creator |
 | Pinned upstream commit | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
 | Hermes nesting-guard var | HERMES_SESSION |
-| Generated at | 2026-06-21T23:12:41Z |
+| Generated at | 2026-06-22T10:08:13Z |
 
 ## Per-binding replacements (T3)
 
@@ -39,3 +39,10 @@
 | Subagent split | agents/{grader,analyzer,comparator}.md | delegate_task + agent_name | T3.012-T3.014 |
 | Eval pipeline | scripts/{run_eval, aggregate_benchmark, generate_report, ...}.py | same scripts, Hermes CLI, event-shape adapter | T3.003, T3.011, T3.006 |
 | Eval viewer | eval-viewer/{generate_review.py, viewer.html} | generate_review.py --static, file:// URL | T3.015 |
+
+## Decisions
+
+**D1. MIGRATION is a 3-file split** — top-level index + Script #1 patches + migrated-skill T3 inventory; each file serves a different audience (see 08-migration-note-format.md §Decisions).
+**D2. Pinned upstream commit `2a40fd2e...` is read from the vendored `UPSTREAM_COMMIT.txt`** — the generator emits the SHA verbatim into the `Pinned upstream commit` row; the manifest sha is recomputed on each regeneration (see 08-migration-note-format.md §Decisions).
+**D5. Row counts are computed at runtime from the sites table** — T3 row count == 18 (the number of rows in 07-skill-creator-migration.md's T3 inventory), enforced by `test_migration_note_exhaustive_skill_port` (see 08-migration-note-format.md §Decisions).
+**D6. Determinism: frozen timestamp + LF endings + no trailing whitespace** — `HERMES_SKILL_CREATOR_FROZEN_TIME` makes `Generated at` stable across runs (CI always sets it); tables sorted by row number (see 08-migration-note-format.md §Decisions).

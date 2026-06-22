@@ -23,12 +23,18 @@ from hermes_skill_creator_plugin._enabled_detection_platform import (
 )
 
 
-def test_plugin_subprocess_module_exposes_vendored_marker() -> None:
-    """Plugin ``_subprocess`` exposes the vendored-helper marker."""
+def test_plugin_subprocess_module_exposes_canonical_helper_path() -> None:
+    """Plugin ``_subprocess`` exposes the canonical helper's import path.
+
+    The plugin ``_subprocess`` module is a non-empty marker for plugin
+    discovery (AC-4.6 + AC-4.15). It points at the canonical helper's
+    import path (``skills.skill_creator._subprocess``) so operators can
+    grep from the plugin marker to the single source of truth.
+    """
     module = importlib.import_module(
         "hermes_skill_creator_plugin._subprocess",
     )
-    assert module._VENDORED_HELPERS_MODULE == "tools.subprocess_env"
+    assert module._CANONICAL_HELPER_MODULE == "skills.skill_creator._subprocess"
 
 
 def test_fallback_description_with_empty_body() -> None:

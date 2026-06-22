@@ -16,12 +16,19 @@ Each :class:`Site` carries a ``line_for_state`` (the primary anchor's
 length and the 1-based line number are the multi-signal targeting that
 prevents accidental matches (plans/04 D5).
 
-The shared ``SKILL_CREATOR_CONSULT_RULE`` constant lives in this module
-so that all 5 Task E prompt sites import the SAME text (plans/05 D2).
-E4 and E5 (in ``agent/background_review.py``) MUST import this constant
-from ``agent.prompt_builder`` at runtime; the patcher only writes the
-LITERAL of the constant next to the anchor — drift is prevented by the
-shared definition here.
+AC-2.8: the ``SKILL_CREATOR_CONSULT_RULE`` constant is no longer
+defined in this plugin module. The canonical definition is written by
+the E0 site into ``agent/prompt_builder.py`` (so the name is in scope
+at module level for E1–E3 sites in the same file). E4 and E5 sites
+(in ``agent/background_review.py``) reference the literal name and
+rely on the E4b site, which writes a top-of-file
+``from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE``
+import line so the name resolves at runtime.
+
+The text of the constant lives in :data:`_CONSULT_RULE_TEXT` and is
+referenced by E0's ``insertion`` / ``expected_replacement`` so the
+unit tests can still assert substring invariants against the patcher's
+view of the value.
 
 See also: plans/04-script-1-patch.md, plans/05-script-1-task-e-toggle.md,
 plans/10-toolchain-and-conventions.md.
@@ -39,8 +46,13 @@ BACKGROUND_REVIEW_REL = Path("agent") / "background_review.py"
 SKILL_MANAGER_TOOL_REL = Path("tools") / "skill_manager_tool.py"
 SKILLS_DOC_REL = Path("website") / "docs" / "user-guide" / "features" / "skills.md"
 
-# --- shared Task E constant (the inserted consult rule) -------------------
-SKILL_CREATOR_CONSULT_RULE = (
+# --- shared Task E constant text (written into agent/prompt_builder.py by E0).
+# The plugin does NOT define a Python-level ``SKILL_CREATOR_CONSULT_RULE``
+# binding: the constant lives in the TARGET file (per plans/05 §D2). The
+# text below is the canonical wording that E0 inserts verbatim at the top
+# of ``agent/prompt_builder.py``. AC-2.8 unit tests assert substring
+# invariants against this string.
+_CONSULT_RULE_TEXT = (
     "When creating a new skill — or substantially editing or validating "
     "one — first check installed skills; if `skill-creator` is installed, "
     "load it via skill_view(name='skill-creator') and follow its "
@@ -49,6 +61,11 @@ SKILL_CREATOR_CONSULT_RULE = (
     "use the built-in skill rules and never auto-install it (especially "
     "not from the background review)."
 )
+
+# Top-of-file insertion (constant definition) for the E0 site. E0 anchors
+# on the L1 docstring of ``agent/prompt_builder.py`` and appends this
+# block immediately after, so the constant is at module level.
+_CONSULT_RULE_DEFINITION = f"\nSKILL_CREATOR_CONSULT_RULE = (\n    {_CONSULT_RULE_TEXT!r}\n)\n"
 
 # --- site ``kind`` constants (WPS226 — reused > 3 times) -------------------
 KIND_APPEND = "append"
@@ -59,8 +76,9 @@ KIND_SCHEMA_APPEND = "schema_append"
 # Extracted into named constants so wemake WPS342 (implicit raw string)
 # does not flag the multi-`\n` patterns inside the Site() calls below.
 _NL2 = "\n\n"
-_E3_INSERTION = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"\n'
-_E3_EXPECTED = f'            SKILL_CREATOR_CONSULT_RULE + "{_NL2}"'
+_E3_INSERTION = r"""            SKILL_CREATOR_CONSULT_RULE + "\n\n"
+"""
+_E3_EXPECTED = r'            SKILL_CREATOR_CONSULT_RULE + "\n\n"'
 _E4_TEXT = '''    "today's task, it's wrong — fall back to (1), (2), or (3).
 
 "'''
@@ -117,13 +135,32 @@ class Site:
 # --- canonical line-number constants (plans/04 §Multi-signal) -------------
 S1_CAP_LINE_A = 688
 S1_CAP_LINE_B = 689
+E0_LINE = 1
+# AC-2.8: E1/E2/E3 anchor lines are unchanged from plans/05 §B1.2
+# because E0's insertion (constant definition) is applied LAST (the
+# patcher sorts sites in DESCENDING line_for_state order), so the
+# original anchors at L158/L179/L1421 are still valid against the
+# pre-E0 file state. Real Hermes's prompt_builder.py and the test
+# fixture mirror each other: both have a docstring at L1 + blank at
+# L2 + the E1/E2/E3 anchors at L179/L158/L1421.
 E1_LINE = 179
 E2_LINE = 158
 E3_LINE = 1421
+E4B_LINE = 1
+# Same descending-order logic for E4/E5 in ``agent/background_review.py``
+# (E4b applies last, so L105/L192 anchors remain valid).
 E4_LINE = 105
 E5_LINE = 194
 E6_LINE = 1129
 E7_LINE = 380
+
+# Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
+# (agent/background_review.py). The patcher matches these against the
+# target's L1 docstring; the canonical text below mirrors the test
+# fixtures in ``tests/conftest.py``. In production, the docstring text
+# may differ; the site TEXT_DRIFTs and aborts so the operator can review.
+_E0_ANCHOR_TEXT = '"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""'
+_E4B_ANCHOR_TEXT = '"""Background review (test fixture stand-in for agent/background_review.py)."""'
 
 # --- the S1.cap site (two-anchor atomic pair) -----------------------------
 
@@ -145,8 +182,70 @@ S1_CAP_SITE = Site(
     line_for_state=S1_CAP_LINE_A,
 )
 
+# AC-2.11 fallback: when ``tools.skills_tool`` cannot be imported in
+# the target checkout (potential circular import), the patcher swaps
+# S1.cap for S1.cap_fallback, which uses a LOCAL constant
+# ``_MAX_DESCRIPTION_LENGTH = 1024`` instead of the cross-module
+# ``MAX_DESCRIPTION_LENGTH``. The anchors are identical to S1.cap so
+# the multi-signal targeting lines up; only the replacement text
+# differs (it prepends a local-definition line).
+_FALLBACK_MAX_DESCRIPTION_LENGTH = 1024
+S1_CAP_SITE_FALLBACK = Site(
+    site_id="S1.cap_fallback",
+    file_path=TOOLS_SKILL_UTILS_REL,
+    anchors=(
+        Anchor(line=S1_CAP_LINE_A, text="    if len(desc) > 60:"),
+        Anchor(line=S1_CAP_LINE_B, text='        return desc[:57] + "..."'),
+    ),
+    insertion=(
+        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
+        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
+        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+    ),
+    expected_replacement=(
+        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
+        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
+        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+    ),
+    kind=KIND_CAP,
+    line_for_state=S1_CAP_LINE_A,
+)
 
-# --- the 7 Task E sites ---------------------------------------------------
+
+# --- the 8 Task E sites ---------------------------------------------------
+
+# E0 inserts the SKILL_CREATOR_CONSULT_RULE constant definition at the
+# top of agent/prompt_builder.py (immediately after the L1 docstring).
+# This is the single source of truth for the constant's wording; E1-E3
+# reference the literal name SKILL_CREATOR_CONSULT_RULE which resolves
+# at module level once E0 has been applied. The patcher applies sites
+# in DESCENDING line order so E0 (L1) runs last and its insertion
+# doesn't shift higher-line anchors.
+E0_CONSULT_RULE_DEF = Site(
+    site_id="E0.consult_rule_def",
+    file_path=PROMPT_BUILDER_REL,
+    anchors=(Anchor(line=E0_LINE, text=_E0_ANCHOR_TEXT),),
+    insertion=_CONSULT_RULE_DEFINITION,
+    # Idempotency: the constant definition is present iff the marker
+    # assignment line appears verbatim after the L1 anchor.
+    expected_replacement="SKILL_CREATOR_CONSULT_RULE = (",
+    kind=KIND_APPEND,
+    line_for_state=E0_LINE,
+)
+
+# E4b inserts the top-of-file import of SKILL_CREATOR_CONSULT_RULE
+# from agent.prompt_builder into agent/background_review.py so the
+# E4 and E5 sites can use the constant name (the name resolves via
+# the import at runtime).
+E4B_CONSULT_RULE_IMPORT = Site(
+    site_id="E4b.consult_rule_import",
+    file_path=BACKGROUND_REVIEW_REL,
+    anchors=(Anchor(line=E4B_LINE, text=_E4B_ANCHOR_TEXT),),
+    insertion="from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE\n",
+    expected_replacement="from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE",
+    kind=KIND_APPEND,
+    line_for_state=E4B_LINE,
+)
 
 E1_SKILLS_GUIDANCE = Site(
     site_id="E1.skills_guidance",
@@ -295,9 +394,11 @@ E7_SKILLS_DOC_SECTION = Site(
 )
 
 ALL_TASK_E_SITES: tuple[Site, ...] = (
+    E0_CONSULT_RULE_DEF,
     E1_SKILLS_GUIDANCE,
     E2_MEMORY_GUIDANCE,
     E3_BUILD_SKILLS_PROMPT,
+    E4B_CONSULT_RULE_IMPORT,
     E4_SKILL_REVIEW_PROMPT,
     E5_COMBINED_REVIEW_PROMPT,
     E6_SKILL_MANAGE_SCHEMA_DESC,

@@ -179,7 +179,15 @@ MEMORY_GUIDANCE = (
 
 def _build_prompt_builder_padded() -> str:
     lines: list[str] = []
-    for i in range(1, 158):
+    # AC-2.8: L1 docstring anchors E0 (which inserts the
+    # ``SKILL_CREATOR_CONSULT_RULE`` definition immediately after).
+    # Real Hermes's ``prompt_builder.py`` already has a docstring at L1
+    # and the E1/E2/E3 anchors at L179/L158/L1421, so the padding
+    # below preserves those line numbers (the fixture mirrors the
+    # real layout: docstring + blank + padding + anchors).
+    lines.append('"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""\n')
+    lines.append("\n")
+    for i in range(1, 156):
         lines.append(f"# padding {i}\n")
     lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
     for i in range(159, 179):
@@ -203,7 +211,14 @@ BACKGROUND_REVIEW_BODY = '''\
 
 def _build_background_review_padded() -> str:
     lines: list[str] = []
-    for i in range(1, 105):
+    # AC-2.8: L1 docstring anchors E4b. Real Hermes's
+    # ``background_review.py`` already has a docstring at L1 and the
+    # E4/E5 anchors at L105/L192, so the padding below preserves those
+    # line numbers (mirrors the real layout: docstring + blank +
+    # padding + anchors).
+    lines.append('"""Background review (test fixture stand-in for agent/background_review.py)."""\n')
+    lines.append("\n")
+    for i in range(1, 103):
         lines.append(f"# padding {i}\n")
     lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n")
     lines.append("\n")

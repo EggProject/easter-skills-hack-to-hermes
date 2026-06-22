@@ -101,6 +101,12 @@ def test_helper_is_single_source_of_truth(hermes_home: Path) -> None:
 
     The test walks the AST for `ast.Assign` targets named `NESTING_GUARD_VAR`
     and asserts exactly one such assignment exists, located in `_subprocess.py`.
+
+    It also greps the plugin marker at
+    `src/hermes_skill_creator_plugin/_subprocess.py` to confirm there is
+    NO competing `HERMES_SESSION` literal there (AC-4.15 single source
+    of truth — the plugin marker must reference the canonical helper but
+    must not redeclare the var name).
     """
     import ast
 
@@ -128,3 +134,28 @@ def test_helper_is_single_source_of_truth(hermes_home: Path) -> None:
     ), f"NESTING_GUARD_VAR must be assigned exactly once (got {len(assignments)}: {assignments})"
     # fmt: on
     assert assignments[0][0].name == "_subprocess.py"
+
+    # AC-4.15: the plugin marker must reference the canonical helper
+    # but must NOT redeclare the guard constant or the helper itself.
+    # We check the AST for binding assignments (NOT the source text —
+    # the marker may mention these names in its docstring as provenance).
+    plugin_marker = Path(__file__).resolve().parents[2] / "src" / "hermes_skill_creator_plugin" / "_subprocess.py"
+    plugin_source = plugin_marker.read_text(encoding="utf-8")
+    plugin_tree = ast.parse(plugin_source)
+    plugin_assignments: list[str] = []
+    for node in ast.walk(plugin_tree):
+        target: ast.expr | None = None
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if isinstance(t, ast.Name):
+                    target = t
+                    break
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            target = node.target
+        if target is not None and target.id == "NESTING_GUARD_VAR":
+            plugin_assignments.append(target.id)
+    assert plugin_assignments == [], (
+        f"plugin marker {plugin_marker} must not assign NESTING_GUARD_VAR "
+        f"(got {plugin_assignments}); single source of truth lives in "
+        "skills/skill-creator/_subprocess.py (AC-4.15)"
+    )

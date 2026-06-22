@@ -9,7 +9,7 @@
 ### Q1 — Hermes nesting-guard env var name
 
 - **Question**: what is the canonical name of the env var Hermes's CLI checks to refuse nesting?
-- **Proposed default**: `HERMES_SESSION` (single source of truth in `src/hermes_skill_creator_plugin/_subprocess.py:NESTING_GUARD_VAR`).
+- **Proposed default**: `HERMES_SESSION` (single source of truth in `skills/skill-creator/_subprocess.py:NESTING_GUARD_VAR`).
 - **Alternatives**: `HERMES_AGENT`, `HERMES_PARENT`.
 - **Resolution path**: read `~/.hermes/hermes-agent/hermes_cli/` (or equivalent) to confirm. If the var is undocumented, the default stands and the test asserts the helper un-nests a documented stub.
 - **Escalation**: if HITL disagrees with the default, rename the constant + re-run the TDD list in 07 §Nesting-guard helper.
@@ -153,7 +153,7 @@
 
 | # | Date | Question | Default | HITL decision | Action taken |
 | --- | --- | --- | --- | --- | --- |
-| E1 | 2026-06-17 | (Q1) nesting-guard var name | HERMES_SESSION | **HERMES_SESSION** (confirmed) | `src/hermes_skill_creator_plugin/_subprocess.py:NESTING_GUARD_VAR` set; tests assert un-nest behaviour. |
+| E1 | 2026-06-17 | (Q1) nesting-guard var name | HERMES_SESSION | **HERMES_SESSION** (confirmed) | `skills/skill-creator/_subprocess.py:NESTING_GUARD_VAR` set; tests assert un-nest behaviour. |
 | E2 | 2026-06-17 | (Q2) Hermes event shape | adapter-based, single canonical | default accepted | Adapter in `07 §Nesting-guard helper`; re-verify shape at Phase 5 by reading `~/.hermes/hermes-agent/hermes_cli/streaming/`. |
 | E3 | 2026-06-17 | (Q3) per-profile dir set | `_PROFILE_DIRS = {memories, sessions, skills, skins, logs, plans, workspace, cron, home}` per `hermes_cli/profiles.py:_PROFILE_DIRS` | default accepted | Script #2 re-reads `hermes_cli/profiles.py:_PROFILE_DIRS` at Phase 5 implementation; if the list changed, 06 is updated. |
 | E4 | 2026-06-17 | (Q4) cap-raise safety contract | --target REQUIRED, no runtime monkey-patch | **accepted** (--target REQUIRED + advisory-only) | Runtime monkey-patch removed from the plan; plugin is purely advisory (static AST read of user-owned checkout); Script #1 refuses to run if `--target == ~/.hermes/hermes-agent`. |

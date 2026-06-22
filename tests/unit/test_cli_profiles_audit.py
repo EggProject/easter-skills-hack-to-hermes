@@ -34,6 +34,7 @@ import json
 import os
 import sys
 import types
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -808,7 +809,8 @@ def test_save_disabled_skills_signature_is_positional(installed) -> None:
 
 
 def test_walks_profile_dirs_set(installed, tmp_path: Path) -> None:
-    """The audit reads the canonical ``_PROFILE_DIRS`` set per profile."""
+    """The audit walks the canonical ``PROFILE_DIRS`` set per profile and
+    records per-subdir presence/size on the row (AC-3.10)."""
     profile = tmp_path / "default"
     (profile / "memories").mkdir(parents=True)
     (profile / "sessions").mkdir(parents=True)
@@ -819,24 +821,68 @@ def test_walks_profile_dirs_set(installed, tmp_path: Path) -> None:
     (profile / "workspace").mkdir(parents=True)
     (profile / "cron").mkdir(parents=True)
     (profile / "home").mkdir(parents=True)
+    # Drop a file under one of the subdirs so size > 0.
+    (profile / "memories" / "memory.md").write_text("hello")
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
     report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
-    # The audit walked the profile (no exception) and produced a row.
-    assert len(report["profiles"]) == 1
+    row = report["profiles"][0]
+    subdirs = row["subdirs"]
+    # Every PROFILE_DIRS entry must be present on the row.
+    expected = {"memories", "sessions", "skills", "skins", "logs", "plans", "workspace", "cron", "home"}
+    assert set(subdirs.keys()) == expected
+    # Each entry records present=True (the dir exists) and a size/file_count.
+    for name, info in subdirs.items():
+        assert info["present"] is True, name
+        assert info["size"] >= 0
+        assert info["file_count"] >= 0
+    # The memories subdir has at least one file (memory.md) -> size > 0.
+    assert subdirs["memories"]["size"] > 0
+    assert subdirs["memories"]["file_count"] >= 1
+
+
+def test_walks_profile_dirs_set_marks_missing(installed, tmp_path: Path) -> None:
+    """Subdirs that are absent from the profile are marked present=False."""
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
+
+    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    subdirs = report["profiles"][0]["subdirs"]
+    assert subdirs["skills"]["present"] is True
+    assert subdirs["memories"]["present"] is False
+    assert subdirs["memories"]["size"] == 0
 
 
 def test_gateway_pid_read_as_flat_file(installed, tmp_path: Path) -> None:
-    """A ``gateway.pid`` flat file in the profile root is read stat-only."""
+    """A ``gateway.pid`` flat file in the profile root is read stat-only (AC-3.10)."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     (profile / "gateway.pid").write_text("12345\n")
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
     report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
-    assert len(report["profiles"]) == 1
-    # No errors parsing the pid file.
-    assert report["profiles"][0]["errors"] == []
+    row = report["profiles"][0]
+    # No errors parsing the pid file (stat-only).
+    assert row["errors"] == []
+    # Stat-only entry on the row: size + mtime; NO 'content' key.
+    pid_info = row["gateway_pid"]
+    assert pid_info["present"] is True
+    assert pid_info["size"] > 0
+    assert "mtime" in pid_info
+    assert "content" not in pid_info
+
+
+def test_gateway_pid_absent_when_missing(installed, tmp_path: Path) -> None:
+    """No ``gateway.pid`` file → present=False, no error."""
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
+
+    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    pid_info = report["profiles"][0]["gateway_pid"]
+    assert pid_info["present"] is False
+    assert pid_info["size"] == 0
 
 
 def test_walks_skills_dir_for_skill_md(installed, tmp_path: Path) -> None:
@@ -852,6 +898,87 @@ def test_walks_skills_dir_for_skill_md(installed, tmp_path: Path) -> None:
     report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
     installed_now = set(report["profiles"][0]["current_installed"])
     assert installed_now == {"alpha", "beta"}
+
+
+def test_read_gateway_pid_stat_handles_oserror(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``read_gateway_pid_stat`` survives OSError on ``.stat()``."""
+    import hermes_skill_creator_plugin._cli_profiles_walk as walk_mod
+
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    pid = profile / "gateway.pid"
+    pid.write_text("12345\n")
+    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
+
+    real_stat = Path.stat
+
+    def fake_stat(self: Path, *args: object, **kwargs: object) -> object:
+        if self == pid:
+            raise OSError("simulated stat failure")
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(walk_mod.Path, "stat", fake_stat)
+    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    pid_info = report["profiles"][0]["gateway_pid"]
+    assert pid_info["present"] is False
+    assert pid_info["size"] == 0
+
+
+def test_walk_profile_subdirs_handles_oserror(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``walk_profile_subdirs`` survives OSError on ``.rglob()``/``.stat()``."""
+    import hermes_skill_creator_plugin._cli_profiles_walk as walk_mod
+
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
+
+    real_rglob = Path.rglob
+
+    def fake_rglob(
+        self: Path,
+        pattern: str,
+        *,
+        case_sensitive: bool | None = None,
+        recurse_symlinks: bool = False,
+    ) -> Iterator[Path]:
+        if self == profile / "skills":
+            raise OSError("simulated rglob failure")
+        yield from real_rglob(self, pattern, case_sensitive=case_sensitive, recurse_symlinks=recurse_symlinks)
+
+    monkeypatch.setattr(walk_mod.Path, "rglob", fake_rglob)
+    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    subdirs = report["profiles"][0]["subdirs"]
+    # skills subdir was walked but rglob failed -> size/count zero, present True.
+    assert subdirs["skills"]["present"] is True
+    assert subdirs["skills"]["size"] == 0
+
+
+def test_walk_profile_subdirs_handles_stat_oserror(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``_dir_size_bytes`` survives OSError on individual child ``.stat()``."""
+    import hermes_skill_creator_plugin._cli_profiles_walk as walk_mod
+
+    profile = tmp_path / "default"
+    skills = profile / "skills"
+    skills.mkdir(parents=True)
+    (skills / "alpha").mkdir()
+    (skills / "alpha" / "SKILL.md").write_text("a")
+    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
+
+    real_stat = Path.stat
+    broken = skills / "alpha" / "SKILL.md"
+
+    def fake_stat(self: Path, *args: object, **kwargs: object) -> object:
+        if self == broken:
+            raise OSError("simulated child stat failure")
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(walk_mod.Path, "stat", fake_stat)
+    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    subdirs = report["profiles"][0]["subdirs"]
+    # The skills subdir's per-child stat failed, so size=0 but file_count>=1
+    # (file_count uses is_file() which goes through .stat -> also raises -> 0).
+    assert subdirs["skills"]["present"] is True
+    assert subdirs["skills"]["size"] == 0
 
 
 # ---------------------------------------------------------------------------

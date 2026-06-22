@@ -33,6 +33,7 @@ REJECTED_SIDECAR = _apply_mod.REJECTED_SIDECAR
 write_rejected = _apply_mod.write_rejected
 _atomic_write_bytes = _atomic_mod._atomic_write_bytes
 STATE_SIDECAR = _state_mod.STATE_SIDECAR
+STATE_DRIFTED = _consts_mod.STATE_DRIFTED
 load_state = _state_mod.load_state
 write_state = _state_mod.write_state
 EXIT_DRIFT = _consts_mod.EXIT_DRIFT
@@ -57,16 +58,21 @@ _render_task_e_row = _task_e_mod._render_task_e_row
 
 # Site-table re-exports (each bound to the local name to keep
 # ``_patcher.py`` readable without exceeding WPS235 on _patcher_sites).
+# AC-2.8: ``SKILL_CREATOR_CONSULT_RULE`` is no longer re-exported —
+# the constant lives in the target's ``agent/prompt_builder.py`` after
+# the E0 site is applied.
 ALL_TASK_E_SITES = _sites.ALL_TASK_E_SITES
+E0_CONSULT_RULE_DEF = _sites.E0_CONSULT_RULE_DEF
 E1_SKILLS_GUIDANCE = _sites.E1_SKILLS_GUIDANCE
 E2_MEMORY_GUIDANCE = _sites.E2_MEMORY_GUIDANCE
 E3_BUILD_SKILLS_PROMPT = _sites.E3_BUILD_SKILLS_PROMPT
+E4B_CONSULT_RULE_IMPORT = _sites.E4B_CONSULT_RULE_IMPORT
 E4_SKILL_REVIEW_PROMPT = _sites.E4_SKILL_REVIEW_PROMPT
 E5_COMBINED_REVIEW_PROMPT = _sites.E5_COMBINED_REVIEW_PROMPT
 E6_SKILL_MANAGE_SCHEMA_DESC = _sites.E6_SKILL_MANAGE_SCHEMA_DESC
 E7_SKILLS_DOC_SECTION = _sites.E7_SKILLS_DOC_SECTION
 S1_CAP_SITE = _sites.S1_CAP_SITE
-SKILL_CREATOR_CONSULT_RULE = _sites.SKILL_CREATOR_CONSULT_RULE
+S1_CAP_SITE_FALLBACK = _sites.S1_CAP_SITE_FALLBACK
 TOOLS_SKILL_UTILS_REL = _sites.TOOLS_SKILL_UTILS_REL
 Anchor = _sites.Anchor
 Site = _sites.Site

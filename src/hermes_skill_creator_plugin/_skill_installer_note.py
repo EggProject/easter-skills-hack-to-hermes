@@ -13,6 +13,9 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
+from hermes_skill_creator_plugin._patcher_migration_decisions import (
+    skill_port_decisions_lines,
+)
 from hermes_skill_creator_plugin._skill_installer_consts import (
     FROZEN_TIME_ENV_KEY,
     KEY_CLAUDE,
@@ -67,7 +70,13 @@ def render_migration_skill_port(
     for index, row in enumerate(T3_INVENTORY, start=1):
         lines.append(_format_t3_row(index, row))
     lines.extend(_render_strength_rows())
+    lines.extend(_render_decisions_section())
     return "\n".join(lines)
+
+
+def _render_decisions_section() -> list[str]:
+    """Render the Decisions section as markdown lines."""
+    return skill_port_decisions_lines()
 
 
 def generated_at() -> str:
@@ -86,4 +95,26 @@ def write_migration_note(worktree_root: Path) -> Path:
         ),
         encoding=TEXT_ENCODING,
     )
+    refresh_migration_manifest(worktree_root)
     return note
+
+
+def refresh_migration_manifest(worktree_root: Path) -> None:
+    """Recompute ``.migration_manifest.json`` for every MIGRATION*.md in root.
+
+    Both regeneration paths (Script #1 ``--emit-migration-note`` via
+    :func:`hermes_skill_creator_plugin._patcher_migration.generate_migration_note`
+    and the migrated-skill installer via :func:`write_migration_note`)
+    call this helper so the manifest entry tracks the just-written files
+    byte-for-byte. Required by :mod:`tools.check_migration_note` (the
+    ``check-migration-note`` pre-commit hook).
+    """
+    from tools._migration_manifest import dump_manifest
+    from tools._migration_paths import GLOB_PATTERNS, sha256_of
+
+    entries: list[tuple[str, str]] = []
+    for pattern in GLOB_PATTERNS:
+        candidate = worktree_root / pattern
+        if candidate.exists():
+            entries.append((pattern, sha256_of(candidate)))
+    dump_manifest(worktree_root / ".migration_manifest.json", entries)
