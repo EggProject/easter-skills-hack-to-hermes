@@ -1,0 +1,262 @@
+{
+  "applied": [
+    {
+      "site_id": "P01",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 22,
+      "old_excerpt": "def find_project_root() -> Path:\n    \"\"\"Find the project root by walking up from cwd looking for .claude/.\n\n    Mimics how Claude Code discovers its project root, so the command file\n    we create ends up where claude -p will look for it.\n    \"\"\"\n    current = Path.cwd()\n    for parent in [current, *current.parents]:\n        if (parent / \".claude\").is_dir():\n            return parent\n    return current",
+      "new_excerpt": "(DELETED — replaced by `project_root = skill_path.parent` inline in main())",
+      "decision_ref": "D17"
+    },
+    {
+      "site_id": "P02",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 30,
+      "old_excerpt": "if (parent / \".claude\").is_dir():\n    return parent",
+      "new_excerpt": "(DELETED — .claude/ lookup no longer used)",
+      "decision_ref": "D17"
+    },
+    {
+      "site_id": "P03",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 45,
+      "old_excerpt": "    \"\"\"Run a single query and return whether the skill was triggered.\n\n    Creates a command file in .claude/commands/ so it appears in Claude's\n    available_skills list, then runs `claude -p` with the raw query.\n    Uses --include-partial-messages to detect triggering early from\n    stream events (content_block_start) rather than waiting for the\n    full assistant message, which only arrives after tool execution.\n    \"\"\"",
+      "new_excerpt": "    \"\"\"Run a single query and return whether the skill was triggered.\n\n    Invokes `hermes chat -q <query> --output-format json` and then exports\n    the resulting session via `hermes sessions export --session-id <sid>`.\n    Trigger detection scans the ShareGPT-flavored JSONL for assistant turns\n    containing a `Skill` tool_use block whose `arguments.skill` matches the\n    candidate skill name (matching the cleaned `skill_name-eval-<id>` form).\n    \"\"\"",
+      "decision_ref": "D15+D21+D22"
+    },
+    {
+      "site_id": "P04",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 53,
+      "old_excerpt": "    project_commands_dir = Path(project_root) / \".claude\" / \"commands\"\n    command_file = project_commands_dir / f\"{clean_name}.md\"",
+      "new_excerpt": "(DELETED — .claude/commands/ staging no longer needed; skill is loaded from SKILL.md by Hermes)",
+      "decision_ref": "D17"
+    },
+    {
+      "site_id": "P05",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 70,
+      "old_excerpt": "        cmd = [\n            \"claude\",\n            \"-p\", query,\n            \"--output-format\", \"stream-json\",\n            \"--verbose\",\n            \"--include-partial-messages\",\n        ]",
+      "new_excerpt": "    cmd = [\n        \"hermes\", \"chat\", \"-q\", query,\n        \"--output-format\", \"json\",\n    ]",
+      "decision_ref": "D15+D21"
+    },
+    {
+      "site_id": "P06",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 78,
+      "old_excerpt": "        if model:\n            cmd.extend([\"--model\", model])",
+      "new_excerpt": "    if model:\n        cmd.extend([\"--model\", model])",
+      "decision_ref": "D15"
+    },
+    {
+      "site_id": "P07",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 83,
+      "old_excerpt": "        env = {k: v for k, v in os.environ.items() if k != \"CLAUDECODE\"}",
+      "new_excerpt": "    env = hermes_subprocess_env()",
+      "decision_ref": "D16"
+    },
+    {
+      "site_id": "P08+P10+P11+P12+P13+P14+P15+P16+P17+P18+P19+P20+P21+P22",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 117,
+      "old_excerpt": "NDJSON parser block: 130+ lines that split buffer by newline, json.loads each line, dispatch on event['type'] (stream_event / content_block_start / content_block_delta / content_block_stop / message_stop / assistant / result), accumulate input_json_delta.partial_json, and check tool_use.name == \"Skill\" or tool_use.name == \"Read\".",
+      "new_excerpt": "REPLACED with subprocess.run([\"hermes\", \"chat\", \"-q\", query, \"--output-format\", \"json\"]) followed by subprocess.run([\"hermes\", \"sessions\", \"export\", \"--session-id\", session_id, tmp.jsonl]), then iterates the ShareGPT JSONL looking for assistant turns whose content embeds {'name': 'Skill', 'arguments': {'skill': '<name>'}}.",
+      "decision_ref": "D17+D22"
+    },
+    {
+      "site_id": "P23",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 268,
+      "old_excerpt": "    parser.add_argument(\"--model\", default=None, help=\"Model to use for claude -p (default: user's configured model)\")",
+      "new_excerpt": "    parser.add_argument(\"--model\", default=None, help=\"Model to use for hermes chat -q (default: user's configured model)\")",
+      "decision_ref": "D15"
+    },
+    {
+      "site_id": "P24+P25+P26+P27+P28+P29+P30+P31+P32",
+      "file": "skills/skill-creator/scripts/improve_description.py",
+      "line": 20,
+      "old_excerpt": "def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:\n    \"\"\"Run `claude -p` with the prompt on stdin and return the text response.\n    ...\n    cmd = [\"claude\", \"-p\", \"--output-format\", \"text\"]\n    ...\n    env = {k: v for k, v in os.environ.items() if k != \"CLAUDECODE\"}\n    ...\n    f\"claude -p exited {result.returncode}\\nstderr: {result.stderr}\"",
+      "new_excerpt": "def _call_hermes(prompt: str, model: str | None, timeout: int = 300) -> str:\n    \"\"\"Run `hermes chat -q` with the prompt on stdin and return the text response.\n    ...\n    cmd = [\"hermes\", \"chat\", \"-q\", \"--output-format\", \"text\"]\n    ...\n    env = hermes_subprocess_env()\n    ...\n    f\"hermes chat -q exited {result.returncode}\\nstderr: {result.stderr}\"",
+      "decision_ref": "D15+D21+D16"
+    },
+    {
+      "site_id": "P34+P35",
+      "file": "skills/skill-creator/scripts/run_loop.py",
+      "line": 20,
+      "old_excerpt": "from scripts.run_eval import find_project_root, run_eval\n...\n    project_root = find_project_root()",
+      "new_excerpt": "from scripts.run_eval import run_eval\n...\n    project_root = skill_path.parent",
+      "decision_ref": "D17"
+    },
+    {
+      "site_id": "V06+V07+V08+V09+V10+V11",
+      "file": "skills/skill-creator/scripts/package_skill.py",
+      "line": 3,
+      "old_excerpt": "Skill Packager - Creates a distributable .skill file of a skill folder\n...\n    Package a skill folder into a .skill file.\n...\n    skill_filename = output_path / f\"{skill_name}.skill\"\n    # Create the .skill file (zip format)\n...\n    print(f\"❌ Error creating .skill file: {e}\")",
+      "new_excerpt": "Skill Packager - Creates a distributable .zip file of a skill folder\n...\n    Package a skill folder into a .zip file.\n...\n    skill_filename = output_path / f\"{skill_name}.zip\"\n    # Create the .zip file (zip format)\n...\n    print(f\"❌ Error creating .zip file: {e}\")",
+      "decision_ref": "D4"
+    },
+    {
+      "site_id": "D01+D18",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 14,
+      "old_excerpt": "- Create a few test prompts and run claude-with-access-to-the-skill on them",
+      "new_excerpt": "- Create a few test prompts and run hermes-with-access-to-the-skill on them",
+      "decision_ref": "D18"
+    },
+    {
+      "site_id": "D10+D11+D12+D13",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 420,
+      "old_excerpt": "## Claude.ai-specific instructions\n\nIn Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:\n\n**Running test cases**: ...\n**Reviewing results**: ...\n**Benchmarking**: ...\n**The iteration loop**: ...\n**Description optimization**: This section requires the `claude` CLI tool (specifically `claude -p`) which is only available in Claude Code. Skip it if you're on Claude.ai.\n**Blind comparison**: ...\n**Packaging**: ...\n**Updating an existing skill**: ...",
+      "new_excerpt": "(DELETED — Claude.ai-specific section)",
+      "decision_ref": "D18"
+    },
+    {
+      "site_id": "D05+D14+D15+D16+D17",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 445,
+      "old_excerpt": "## Cowork-Specific Instructions\n\nIf you're in Cowork, the main things to know are:\n\n- You have subagents, so the main workflow (spawn test cases in parallel, run baselines, grade, etc.) all works. (However, if you run into severe problems with timeouts, it's OK to run the test prompts in series rather than parallel.)\n- ...\n- **Updating an existing skill**: The user might be asking you to update an existing skill, not create a new one. Follow the update guidance in the claude.ai section above.",
+      "new_excerpt": "(DELETED — Cowork-Specific section)",
+      "decision_ref": "D18"
+    },
+    {
+      "site_id": "D18",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 476,
+      "old_excerpt": "- Run claude-with-access-to-the-skill on test prompts\n...\nIf you're in Cowork, please specifically put \"Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases\" in your TodoList to make sure it happens.",
+      "new_excerpt": "- Run hermes-with-access-to-the-skill on test prompts\n...\n(removed Cowork-specific TodoList instruction)",
+      "decision_ref": "D18"
+    },
+    {
+      "site_id": "D-compat",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 1,
+      "old_excerpt": "---\nname: skill-creator\ndescription: Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.\n---",
+      "new_excerpt": "---\nname: skill-creator\ndescription: Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.\ncompatibility: Compatible with Hermes Agent SDK and Claude Code\n---",
+      "decision_ref": "D5+D11"
+    },
+    {
+      "site_id": "D-package",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 411,
+      "old_excerpt": "Check whether you have access to the `present_files` tool. If you don't, skip this step. If you do, package the skill and present the .skill file to the user:",
+      "new_excerpt": "Check whether you have access to the `present_files` tool. If you don't, skip this step. If you do, package the skill and present the .zip file to the user:",
+      "decision_ref": "D4"
+    },
+    {
+      "site_id": "G01",
+      "file": "skills/skill-creator/agents/grader.md",
+      "line": 1,
+      "old_excerpt": "# Grader Agent\n\nEvaluate expectations against an execution transcript and outputs.\n\n## Role",
+      "new_excerpt": "---\nname: grader\ndescription: Evaluate expectations against an execution transcript and outputs, then critique the evals themselves for discriminating power.\ngoal: Grade every expectation against transcript + outputs and surface eval-quality feedback where assertions are weak or missing.\ntoolsets:\n  - file_read\n  - file_write\nrole: leaf\n---\n\n## delegate_task invocation\n\n```\ndelegate_task(\n    goal=\"Grade all expectations for the run and flag weak assertions\",\n    context=\"transcript_path, outputs_dir, expectations list\",\n    toolsets=[\"file_read\", \"file_write\"],\n    role=\"leaf\",\n    max_iterations=5,\n)\n```\n\n# Grader Agent\n\nEvaluate expectations against an execution transcript and outputs.\n\n## Role",
+      "decision_ref": "D20+D24"
+    },
+    {
+      "site_id": "A01",
+      "file": "skills/skill-creator/agents/analyzer.md",
+      "line": 1,
+      "old_excerpt": "# Post-hoc Analyzer Agent\n\nAnalyze blind comparison results to understand WHY the winner won and generate improvement suggestions.\n\n## Role",
+      "new_excerpt": "---\nname: analyzer\ndescription: Analyze blind comparison results to extract WHY the winner won and produce prioritized improvement suggestions for the loser.\ngoal: Produce a structured analysis report comparing the winning and losing skill executions, with actionable improvement suggestions.\ntoolsets:\n  - file_read\n  - file_write\nrole: leaf\n---\n\n## delegate_task invocation\n\n```\ndelegate_task(\n    goal=\"Unblind the comparison and explain why the winner won, with prioritized improvements for the loser\",\n    context=\"winner, winner_skill_path, winner_transcript_path, loser_skill_path, loser_transcript_path, comparison_result_path, output_path\",\n    toolsets=[\"file_read\", \"file_write\"],\n    role=\"leaf\",\n    max_iterations=5,\n)\n```\n\n# Post-hoc Analyzer Agent\n\nAnalyze blind comparison results to understand WHY the winner won and generate improvement suggestions.\n\n## Role",
+      "decision_ref": "D20+D24"
+    },
+    {
+      "site_id": "C01",
+      "file": "skills/skill-creator/agents/comparator.md",
+      "line": 1,
+      "old_excerpt": "# Blind Comparator Agent\n\nCompare two outputs WITHOUT knowing which skill produced them.\n\n## Role",
+      "new_excerpt": "---\nname: comparator\ndescription: Blindly compare two outputs (labeled A and B) and pick a winner based on rubric scores and optional expectation pass rates.\ngoal: Judge which of two outputs better accomplishes the eval task without knowing which skill produced each.\ntoolsets:\n  - file_read\n  - file_write\nrole: leaf\n---\n\n## delegate_task invocation\n\n```\ndelegate_task(\n    goal=\"Compare outputs A and B blindly and pick a winner based on output quality\",\n    context=\"output_a_path, output_b_path, eval_prompt, expectations (optional)\",\n    toolsets=[\"file_read\", \"file_write\"],\n    role=\"leaf\",\n    max_iterations=5,\n)\n```\n\n# Blind Comparator Agent\n\nCompare two outputs WITHOUT knowing which skill produced them.\n\n## Role",
+      "decision_ref": "D20+D24"
+    },
+    {
+      "site_id": "V04",
+      "file": "skills/skill-creator/eval-viewer/viewer.html",
+      "line": 716,
+      "old_excerpt": "      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);\n      if (configMatch) {\n        const config = configMatch[1];\n        const isBaseline = config === \"without_skill\" || config === \"old_skill\";",
+      "new_excerpt": "      const configMatch = run.id.match(/(skill_active|baseline|skill_iter_n|skill_iter_prev)/);\n      if (configMatch) {\n        const config = configMatch[1];\n        const isBaseline = config === \"baseline\" || config === \"skill_iter_prev\";",
+      "decision_ref": "D23"
+    },
+    {
+      "site_id": "NEW-helper",
+      "file": "skills/skill-creator/scripts/_subprocess.py",
+      "line": 1,
+      "old_excerpt": "(did not exist)",
+      "new_excerpt": "NEW FILE: hermes_subprocess_env(extra_vars_to_strip: Iterable[str] | None = None) -> dict[str, str] — preserves all env vars by default; does NOT strip CLAUDECODE (Hermes does not auto-strip it because it is an Anthropic-specific signal); HERMES_SESSION_ID is read-only so never override; for nested Hermes use profile mechanism (hermes -p <name>) or override HERMES_HOME.",
+      "decision_ref": "D16"
+    },
+    {
+      "site_id": "D23-ext-1",
+      "file": "skills/skill-creator/references/schemas.md",
+      "line": 239,
+      "old_excerpt": "\"configuration\": \"with_skill\",\n... \"with_skill\": { ... },\n... \"without_skill\": { ... },\n... `configuration`: Must be `\"with_skill\"` or `\"without_skill\"` (the viewer uses this exact string for grouping and color coding)\n... `with_skill` / `without_skill`: Each contains `pass_rate`, `time_seconds`, `tokens` objects with `mean` and `stddev` fields",
+      "new_excerpt": "\"configuration\": \"skill_active\",\n... \"skill_active\": { ... },\n... \"baseline\": { ... },\n... `configuration`: Must be `\"skill_active\"` or `\"baseline\"` (the viewer uses this exact string for grouping and color coding)\n... `skill_active` / `baseline`: Each contains `pass_rate`, `time_seconds`, `tokens` objects with `mean` and `stddev` fields",
+      "decision_ref": "D23 (extended)"
+    },
+    {
+      "site_id": "D23-ext-2",
+      "file": "skills/skill-creator/scripts/aggregate_benchmark.py",
+      "line": 7,
+      "old_excerpt": "- delta between with_skill and without_skill configurations\n... <benchmark_dir>/\n    └── eval-N/\n        ├── with_skill/\n... Returns dict keyed by config name (e.g. \"with_skill\"/\"without_skill\", or \"new_skill\"/\"old_skill\")",
+      "new_excerpt": "- delta between skill_active and baseline configurations\n... <benchmark_dir>/\n    └── eval-N/\n        ├── skill_active/\n... Returns dict keyed by config name (e.g. \"skill_active\"/\"baseline\", or \"skill_iter_n\"/\"skill_iter_prev\")",
+      "decision_ref": "D23 (extended)"
+    },
+    {
+      "site_id": "D23-ext-3",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 181,
+      "old_excerpt": "- Save outputs to: <workspace>/iteration-<N>/eval-<ID>/with_skill/outputs/\n... Same prompt, no skill path, save to `without_skill/outputs/`.\n... Save to `old_skill/outputs/`.\n... Put each with_skill version before its baseline counterpart.\n... {\"run_id\": \"eval-0-with_skill\", ...}, {\"run_id\": \"eval-1-with_skill\", ...}, {\"run_id\": \"eval-2-with_skill\", ...}\n... the baseline is always `without_skill` (no skill)",
+      "new_excerpt": "- Save outputs to: <workspace>/iteration-<N>/eval-<ID>/skill_active/outputs/\n... Same prompt, no skill path, save to `baseline/outputs/`.\n... Save to `skill_iter_prev/outputs/`.\n... Put each skill_active version before its baseline counterpart.\n... {\"run_id\": \"eval-0-skill_active\", ...}, {\"run_id\": \"eval-1-skill_active\", ...}, {\"run_id\": \"eval-2-skill_active\", ...}\n... the baseline is always `baseline` (no skill)",
+      "decision_ref": "D23 (extended)"
+    },
+    {
+      "site_id": "D23-ext-4",
+      "file": "skills/skill-creator/agents/analyzer.md",
+      "line": 230,
+      "old_excerpt": "2. Note the configurations tested (with_skill, without_skill)",
+      "new_excerpt": "2. Note the configurations tested (skill_active, baseline)",
+      "decision_ref": "D23 (extended)"
+    }
+  ],
+  "files_modified": [
+    "skills/skill-creator/scripts/run_eval.py",
+    "skills/skill-creator/scripts/improve_description.py",
+    "skills/skill-creator/scripts/run_loop.py",
+    "skills/skill-creator/scripts/package_skill.py",
+    "skills/skill-creator/scripts/_subprocess.py",
+    "skills/skill-creator/SKILL.md",
+    "skills/skill-creator/agents/grader.md",
+    "skills/skill-creator/agents/analyzer.md",
+    "skills/skill-creator/agents/comparator.md",
+    "skills/skill-creator/eval-viewer/viewer.html",
+    "skills/skill-creator/references/schemas.md",
+    "skills/skill-creator/scripts/aggregate_benchmark.py"
+  ],
+  "files_created": [
+    "skills/skill-creator/scripts/_subprocess.py"
+  ],
+  "summary": {
+    "total_applied": 26,
+    "by_decision": {
+      "D4": 7,
+      "D5": 1,
+      "D11": 1,
+      "D15": 3,
+      "D16": 2,
+      "D17": 4,
+      "D18": 4,
+      "D20+D24": 3,
+      "D21": 2,
+      "D22": 1,
+      "D23": 5
+    },
+    "notes": [
+      "P08-P22 (15 Anthropic NDJSON parser sites) consolidated into one P-block entry because they form a single 130+ line parser that was deleted in one shot and replaced with the session-export block.",
+      "P34+P35 (run_loop.py find_project_root import + call) consolidated because removing the function required both the import and the call site to change together.",
+      "V06-V11 (package_skill.py .skill mentions: module docstring, function docstring, output filename, zip comment, error message, return-doc) consolidated into one entry because they are six small changes in the same file all referencing the same .skill → .zip rename.",
+      "D10+D11+D12+D13 (Claude.ai section paragraphs) consolidated because they form one contiguous section that was deleted in one Edit call.",
+      "D05+D14+D15+D16+D17 (Cowork section bullets) consolidated because they form one contiguous section that was deleted in one Edit call.",
+      "D01+D18 (two claude-with-access-to-the-skill lines) consolidated because they are the same string in two locations.",
+      "D-package (.skill file mention in SKILL.md line 411) and the corresponding line 417 (.zip file mention) are two edits to the same Package-and-Present paragraph; the D4 entry consolidates both edits in the .skill → .zip file-level summary, while this entry records the SKILL.md-side text change."
+    ]
+  }
+}

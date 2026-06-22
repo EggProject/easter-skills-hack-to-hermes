@@ -1,0 +1,123 @@
+{
+  "scope": "validation+packaging",
+  "binding_sites": [
+    {
+      "site_id": "V01",
+      "file": "scripts/quick_validate.py",
+      "line": 42,
+      "match": "ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'}",
+      "context_5lines": "    # Define allowed properties\n    ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'}\n\n    # Check for unexpected properties (excluding nested keys under metadata)\n    unexpected_keys = set(frontmatter.keys()) - ALLOWED_PROPERTIES\n    if unexpected_keys:",
+      "type": "anthropic_frontmatter_constraint",
+      "severity": "warning"
+    },
+    {
+      "site_id": "V02",
+      "file": "scripts/quick_validate.py",
+      "line": 70,
+      "match": "if len(name) > 64:",
+      "context_5lines": "        if name.startswith('-') or name.endswith('-') or '--' in name:\n            return False, f\"Name '{name}' cannot start/end with hyphen or contain consecutive hyphens\"\n        # Check name length (max 64 characters per spec)\n        if len(name) > 64:\n            return False, f\"Name is too long ({len(name)} characters). Maximum is 64 characters.\"",
+      "type": "anthropic_frontmatter_constraint",
+      "severity": "warning"
+    },
+    {
+      "site_id": "V03",
+      "file": "scripts/quick_validate.py",
+      "line": 80,
+      "match": "if '<' in description or '>' in description:",
+      "context_5lines": "    description = description.strip()\n    if description:\n        # Check for angle brackets\n        if '<' in description or '>' in description:\n            return False, \"Description cannot contain angle brackets (< or >)\"\n        # Check description length (max 1024 characters per spec)",
+      "type": "anthropic_frontmatter_constraint",
+      "severity": "warning"
+    },
+    {
+      "site_id": "V04",
+      "file": "scripts/quick_validate.py",
+      "line": 83,
+      "match": "if len(description) > 1024:",
+      "context_5lines": "        # Check for angle brackets\n        if '<' in description or '>' in description:\n            return False, \"Description cannot contain angle brackets (< or >)\"\n        # Check description length (max 1024 characters per spec)\n        if len(description) > 1024:\n            return False, f\"Description is too long ({len(description)} characters). Maximum is 1024 characters.\"",
+      "type": "anthropic_frontmatter_constraint",
+      "severity": "warning"
+    },
+    {
+      "site_id": "V05",
+      "file": "scripts/quick_validate.py",
+      "line": 91,
+      "match": "if len(compatibility) > 500:",
+      "context_5lines": "    compatibility = frontmatter.get('compatibility', '')\n    if compatibility:\n        if not isinstance(compatibility, str):\n            return False, f\"Compatibility must be a string, got {type(compatibility).__name__}\"\n        if len(compatibility) > 500:\n            return False, f\"Compatibility is too long ({len(compatibility)} characters). Maximum is 500 characters.\"",
+      "type": "anthropic_frontmatter_constraint",
+      "severity": "info"
+    },
+    {
+      "site_id": "V06",
+      "file": "scripts/package_skill.py",
+      "line": 3,
+      "match": "Skill Packager - Creates a distributable .skill file of a skill folder",
+      "context_5lines": "#!/usr/bin/env python3\n\"\"\"\nSkill Packager - Creates a distributable .skill file of a skill folder\n\nUsage:\n    python utils/package_skill.py <path/to/skill-folder> [output-directory]",
+      "type": "anthropic_skill_extension",
+      "severity": "info"
+    },
+    {
+      "site_id": "V07",
+      "file": "scripts/package_skill.py",
+      "line": 44,
+      "match": "Package a skill folder into a .skill file.",
+      "context_5lines": "def package_skill(skill_path, output_dir=None):\n    \"\"\"\n    Package a skill folder into a .skill file.\n\n    Args:\n        skill_path: Path to the skill folder\n        output_dir: Optional output directory for the .skill file (defaults to current directory)",
+      "type": "anthropic_skill_extension",
+      "severity": "info"
+    },
+    {
+      "site_id": "V08",
+      "file": "scripts/package_skill.py",
+      "line": 87,
+      "match": "skill_filename = output_path / f\"{skill_name}.skill\"",
+      "context_5lines": "    else:\n        output_path = Path.cwd()\n\n    skill_filename = output_path / f\"{skill_name}.skill\"\n\n    # Create the .skill file (zip format)\n    try:",
+      "type": "anthropic_skill_extension",
+      "severity": "info"
+    },
+    {
+      "site_id": "V09",
+      "file": "scripts/package_skill.py",
+      "line": 89,
+      "match": "# Create the .skill file (zip format)",
+      "context_5lines": "    skill_filename = output_path / f\"{skill_name}.skill\"\n\n    # Create the .skill file (zip format)\n    try:\n        with zipfile.ZipFile(skill_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:",
+      "type": "anthropic_skill_extension",
+      "severity": "info"
+    },
+    {
+      "site_id": "V10",
+      "file": "scripts/package_skill.py",
+      "line": 107,
+      "match": "Error creating .skill file: {e}",
+      "context_5lines": "    except Exception as e:\n        print(f\"\\u274c Error creating .skill file: {e}\")\n        return None\n\n\ndef main():",
+      "type": "anthropic_skill_extension",
+      "severity": "info"
+    },
+    {
+      "site_id": "V11",
+      "file": "scripts/package_skill.py",
+      "line": 51,
+      "match": "Path to the created .skill file, or None if error",
+      "context_5lines": "    Returns:\n        Path to the created .skill file, or None if error\n    \"\"\"\n    skill_path = Path(skill_path).resolve()\n\n    # Validate skill folder exists",
+      "type": "anthropic_skill_extension",
+      "severity": "info"
+    }
+  ],
+  "summary": {
+    "total_sites": 11,
+    "by_type": {
+      "anthropic_frontmatter_constraint": 5,
+      "anthropic_skill_extension": 6
+    },
+    "by_severity": {
+      "warning": 4,
+      "info": 7
+    },
+    "key_findings": [
+      "ALLOWED_PROPERTIES includes 'compatibility' which is NOT in agentskills.io spec - this is an Anthropic-specific extension",
+      "Char limits (name=64, description=1024, compatibility=500) match Anthropic Claude Skills spec",
+      "Angle bracket restriction on description matches Anthropic spec",
+      "Packager produces .skill extension at line 87 - D4 will rename to .zip",
+      "Allowed property 'license' matches Anthropic spec (not in agentskills.io)",
+      "Allowed property 'allowed-tools' matches Anthropic spec"
+    ]
+  }
+}

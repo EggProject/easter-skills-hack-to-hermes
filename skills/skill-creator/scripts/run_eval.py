@@ -1,167 +1,260 @@
-"""scripts/run_eval.py — invoke hermes -p per eval case.
+#!/usr/bin/env python3
+"""Run trigger evaluation for a skill description.
 
-Hermes-native port. The migration provenance for the per-binding
-replacements is captured in `MIGRATION.skill-port.md` (see docs/plans/07
-§T3 inventory). The Hermes event-shape adapter is local; the rest of the
-pipeline consumes the Anthropic-shaped dict the adapter produces.
-
-TDD test cases for this module:
-  test_run_eval_unnests_hermes_guard
-  test_run_eval_restores_hermes_guard_on_exit
-  test_run_eval_no_op_when_guard_unset
-  test_run_eval_event_shape_adapter_normalizes_hermes_shape
-  test_run_eval_uses_hermes_subprocess_env
-  test_run_eval_writes_skill_md_to_hermes_home_not_dot_claude
-  test_event_shape_adapter_handles_known_shapes
-  test_eval_pipeline_end_to_end
-  test_help_is_bilingual (parametrized over this script)
-  test_console_log_lines_match_bilingual_regex
+Tests whether a skill's description causes Hermes to trigger (read the skill)
+for a set of queries. Outputs results as JSON.
 """
-
-from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
+import tempfile
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent))  # so `_subprocess` is importable
-
-from _subprocess import hermes_subprocess_env  # noqa: E402
-from scripts.utils import emit  # noqa: E402
-
-# Path to the migrated skill body that becomes the eval target SKILL.md.
-EVAL_TARGET_TEMPLATE = "{hermes_home}/skills/{category}/{target}/SKILL.md"
+from scripts._subprocess import hermes_subprocess_env
+from scripts.utils import parse_skill_md
 
 
-def _hermes_event_to_anthropic(event: dict) -> dict:
-    """Adapter: Hermes event shape -> Anthropic-shaped dict (T3.011).
+def run_single_query(
+    query: str,
+    skill_name: str,
+    skill_description: str,
+    timeout: int,
+    project_root: str,
+    model: str | None = None,
+) -> bool:
+    """Run a single query and return whether the skill was triggered.
 
-    Hermes shape:  {"event": "...", "role": "...", "content": ...}
-    Anthropic shape:  {"type": "...", "message": {"content": [...]}}
-
-    The adapter is the single point of translation; the rest of the pipeline
-    sees only Anthropic-shaped dicts.
+    Invokes `hermes chat -q <query> --output-format json` and then exports
+    the resulting session via `hermes sessions export --session-id <sid>`.
+    Trigger detection scans the ShareGPT-flavored JSONL for assistant turns
+    containing a `Skill` tool_use block whose `arguments.skill` matches the
+    candidate skill name (matching the cleaned `skill_name-eval-<id>` form).
     """
-    etype = event.get("event", event.get("type", "message"))
-    role = event.get("role", "assistant")
-    content = event.get("content", "")
-    if not isinstance(content, list):
-        content = [{"type": "text", "text": str(content)}]
-    return {
-        "type": etype,
-        "message": {"role": role, "content": content},
-    }
-
-
-def _invoke_hermes(prompt: str, model: str | None) -> str:
-    """Invoke `hermes -p` with the stripped env; return stdout.
-
-    NEVER pops HERMES_SESSION from the parent. Uses hermes_subprocess_env()
-    to construct the child env.
-    """
-    cmd = ["hermes", "-p", "--output-format", "stream-json", "--verbose"]
+    cmd = [
+        "hermes", "chat", "-q", query,
+        "--output-format", "json",
+    ]
     if model:
         cmd.extend(["--model", model])
-    cmd.append(prompt)
-    proc = subprocess.run(
+
+    env = hermes_subprocess_env()
+
+    result = subprocess.run(
         cmd,
         capture_output=True,
         text=True,
-        env=hermes_subprocess_env(),
-        check=False,
+        env=env,
+        timeout=timeout,
+        cwd=project_root,
     )
-    if proc.returncode != 0:
-        raise RuntimeError(f"hermes -p exited {proc.returncode}\n{proc.stderr}")
-    return proc.stdout
+    try:
+        chat_result = json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"hermes chat -q did not return a session_id — cannot export session for "
+            f"trigger detection. Check that --output-format json is supported in your "
+            f"hermes version. JSONDecodeError: {e}. "
+            f"returncode={result.returncode}, stderr={result.stderr[:500]!r}, "
+            f"stdout={result.stdout[:500]!r}"
+        ) from e
 
+    session_id = chat_result.get("session_id") if isinstance(chat_result, dict) else None
+    if not session_id:
+        raise RuntimeError(
+            "hermes chat -q did not return a session_id — cannot export session for "
+            "trigger detection. Check that --output-format json is supported in your "
+            f"hermes version. returncode={result.returncode}, "
+            f"stderr={result.stderr[:500]!r}, stdout={result.stdout[:500]!r}"
+        )
 
-def _ensure_eval_target(hermes_home: Path, category: str, target: str, body: str) -> Path:
-    """Write the eval target SKILL.md to the flat path under HERMES_HOME.
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".jsonl", delete=False
+    ) as tmp:
+        tmp_path = tmp.name
 
-    The eval target is registered by writing the skill body to
-    `<hermes_home>/skills/<cat>/<target>/SKILL.md` (the Hermes flat path).
-    """
-    target_dir = hermes_home / "skills" / category / target
-    target_dir.mkdir(parents=True, exist_ok=True)
-    target_skill = target_dir / "SKILL.md"
-    target_skill.write_text(body, encoding="utf-8")
-    return target_skill
+    try:
+        export = subprocess.run(
+            ["hermes", "sessions", "export", "--session-id", session_id, tmp_path],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=timeout,
+        )
+        if export.returncode != 0:
+            print(
+                f"Warning: hermes sessions export exited {export.returncode}",
+                file=sys.stderr,
+            )
+            return False
+
+        for line in Path(tmp_path).read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                turn = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            # ShareGPT-flavored JSONL: each line is a single turn with role + content.
+            # Assistant turns may include embedded ```{'name': ..., 'arguments': {...}}```
+            # tool_use blocks. Iterate the structured content blocks (D22) — do NOT
+            # match by substring in the joined text.
+            if not isinstance(turn, dict) or turn.get("role") != "assistant":
+                continue
+            content = turn.get("content", "")
+            blocks: list[dict[str, Any]]
+            if isinstance(content, list):
+                blocks = [b for b in content if isinstance(b, dict)]
+            elif isinstance(content, str):
+                # Defensive fallback: some exporters may serialize the content array
+                # as a JSON-encoded string. Try to parse it as structured data.
+                try:
+                    parsed = json.loads(content)
+                except json.JSONDecodeError:
+                    blocks = []
+                else:
+                    blocks = [b for b in parsed if isinstance(b, dict)] if isinstance(parsed, list) else []
+            else:
+                blocks = []
+            if any(
+                b.get("name") == "Skill"
+                and (b.get("arguments") or {}).get("skill", "") == skill_name
+                for b in blocks
+            ):
+                return True
+        return False
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
 
 def run_eval(
-    cases: list[dict],
-    *,
-    hermes_home: Path,
-    category: str,
-    target: str,
+    eval_set: list[dict[str, Any]],
+    skill_name: str,
+    description: str,
+    num_workers: int,
+    timeout: int,
+    project_root: Path,
+    runs_per_query: int = 1,
+    trigger_threshold: float = 0.5,
     model: str | None = None,
-) -> list[dict]:
-    """Run a list of eval cases against the eval target SKILL.md.
+) -> dict[str, Any]:
+    """Run the full eval set and return results."""
+    results = []
 
-    Returns a list of per-case result dicts with the Anthropic-shaped events
-    translated by the adapter.
-    """
-    body = f"---\nname: {target}\ndescription: eval target\n---\n# {target}\n"
-    ensure_target = os.environ.get("HERMES_SKILL_CREATOR_FROZEN_TIME") is None
-    if ensure_target:
-        _ensure_eval_target(hermes_home, category, target, body)
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        future_to_info = {}
+        for item in eval_set:
+            for run_idx in range(runs_per_query):
+                future = executor.submit(
+                    run_single_query,
+                    item["query"],
+                    skill_name,
+                    description,
+                    timeout,
+                    str(project_root),
+                    model,
+                )
+                future_to_info[future] = (item, run_idx)
 
-    results: list[dict] = []
-    for case in cases:
-        prompt = json.dumps(case)
-        stdout = _invoke_hermes(prompt, model)
-        # Each line of stdout is a Hermes NDJSON event.
-        events = [json.loads(line) for line in stdout.splitlines() if line.strip()]
-        anthropic_events = [_hermes_event_to_anthropic(e) for e in events]
-        results.append({"case": case, "events": anthropic_events})
+        query_triggers: dict[str, list[bool]] = {}
+        query_items: dict[str, dict[str, Any]] = {}
+        for future in as_completed(future_to_info):
+            item, _ = future_to_info[future]
+            query = item["query"]
+            query_items[query] = item
+            if query not in query_triggers:
+                query_triggers[query] = []
+            try:
+                query_triggers[query].append(future.result())
+            except Exception as e:
+                print(f"Warning: query failed: {e}", file=sys.stderr)
+                query_triggers[query].append(False)
 
-    emit(
-        f"Eval pipeline complete: {len(cases)} case(s)",
-        f"Eval folyamat kész: {len(cases)} eset",
-    )
-    return results
+    for query, triggers in query_triggers.items():
+        item = query_items[query]
+        trigger_rate = sum(triggers) / len(triggers)
+        should_trigger = item["should_trigger"]
+        if should_trigger:
+            did_pass = trigger_rate >= trigger_threshold
+        else:
+            did_pass = trigger_rate < trigger_threshold
+        results.append({
+            "query": query,
+            "should_trigger": should_trigger,
+            "trigger_rate": trigger_rate,
+            "triggers": sum(triggers),
+            "runs": len(triggers),
+            "pass": did_pass,
+        })
+
+    passed = sum(1 for r in results if r["pass"])
+    total = len(results)
+
+    return {
+        "skill_name": skill_name,
+        "description": description,
+        "results": results,
+        "summary": {
+            "total": total,
+            "passed": passed,
+            "failed": total - passed,
+        },
+    }
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        prog="run_eval.py",
-        description=(
-            "Run a benchmark of eval cases against a candidate skill.\n"
-            "Use when: you have written/edited a skill and want to measure its "
-            "correctness + completeness against a held-out test set.\n"
-            "Hasznalat: van egy frissen irt/szerkesztett skill, es merni "
-            "szeretned a pontossagat + teljesseget egy tesztkeszleten."
-        ),
-    )
-    p.add_argument("--cases", required=True, help="Path to JSON file with eval cases.")
-    p.add_argument("--hermes-home", required=True, help="HERMES_HOME root.")
-    p.add_argument("--category", default="default", help="Skill category.")
-    p.add_argument("--target", required=True, help="Eval target skill name.")
-    p.add_argument("--model", default=None, help="Hermes model id (or omit).")
-    return p
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run trigger evaluation for a skill description")
+    parser.add_argument("--eval-set", required=True, help="Path to eval set JSON file")
+    parser.add_argument("--skill-path", required=True, help="Path to skill directory")
+    parser.add_argument("--description", default=None, help="Override description to test")
+    parser.add_argument("--num-workers", type=int, default=10, help="Number of parallel workers")
+    parser.add_argument("--timeout", type=int, default=30, help="Timeout per query in seconds")
+    parser.add_argument("--runs-per-query", type=int, default=3, help="Number of runs per query")
+    parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
+    parser.add_argument("--model", default=None, help="Model for hermes chat -q (default: user's configured model)")
+    parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
+    args = parser.parse_args()
 
+    eval_set = json.loads(Path(args.eval_set).read_text())
+    skill_path = Path(args.skill_path)
 
-def main(argv: list[str] | None = None) -> int:
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-    cases = json.loads(Path(args.cases).read_text(encoding="utf-8"))
-    if not isinstance(cases, list):
-        cases = [cases]
-    results = run_eval(
-        cases,
-        hermes_home=Path(args.hermes_home),
-        category=args.category,
-        target=args.target,
+    if not (skill_path / "SKILL.md").exists():
+        print(f"Error: No SKILL.md found at {skill_path}", file=sys.stderr)
+        sys.exit(1)
+
+    name, original_description, _ = parse_skill_md(skill_path)
+    description = args.description or original_description
+    project_root = skill_path.parent
+
+    if args.verbose:
+        print(f"Evaluating: {description}", file=sys.stderr)
+
+    output = run_eval(
+        eval_set=eval_set,
+        skill_name=name,
+        description=description,
+        num_workers=args.num_workers,
+        timeout=args.timeout,
+        project_root=project_root,
+        runs_per_query=args.runs_per_query,
+        trigger_threshold=args.trigger_threshold,
         model=args.model,
     )
-    json.dump(results, sys.stdout, indent=2, sort_keys=True)
-    sys.stdout.write("\n")
-    return 0
+
+    if args.verbose:
+        summary = output["summary"]
+        print(f"Results: {summary['passed']}/{summary['total']} passed", file=sys.stderr)
+        for r in output["results"]:
+            status = "PASS" if r["pass"] else "FAIL"
+            rate_str = f"{r['triggers']}/{r['runs']}"
+            print(f"  [{status}] rate={rate_str} expected={r['should_trigger']}: {r['query'][:70]}", file=sys.stderr)
+
+    print(json.dumps(output, indent=2))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

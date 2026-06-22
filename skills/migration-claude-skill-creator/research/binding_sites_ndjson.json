@@ -1,0 +1,234 @@
+{
+  "scope": "ndjson+viewer",
+  "binding_sites": [
+    {
+      "site_id": "N01",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 70,
+      "match": "cmd = [\"claude\", \"-p\", query, \"--output-format\", \"stream-json\", \"--verbose\", \"--include-partial-messages\"]",
+      "context_5lines": "        cmd = [\n            \"claude\",\n            \"-p\", query,\n            \"--output-format\", \"stream-json\",\n            \"--verbose\",\n            \"--include-partial-messages\",\n        ]\n        if model:\n            cmd.extend([\"--model\", model])",
+      "type": "cli_invocation_with_streaming",
+      "severity": "critical"
+    },
+    {
+      "site_id": "N02",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 117,
+      "match": "while \"\\n\" in buffer:\n    line, buffer = buffer.split(\"\\n\", 1)\n    line = line.strip()\n    if not line:\n        continue\n    try:\n        event = json.loads(line)\n    except json.JSONDecodeError:\n        continue",
+      "context_5lines": "                while \"\\n\" in buffer:\n                    line, buffer = buffer.split(\"\\n\", 1)\n                    line = line.strip()\n                    if not line:\n                        continue\n                    try:\n                        event = json.loads(line)\n                    except json.JSONDecodeError:\n                        continue",
+      "type": "ndjson_line_splitter",
+      "severity": "critical"
+    },
+    {
+      "site_id": "N03",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 129,
+      "match": "if event.get(\"type\") == \"stream_event\":\n    se = event.get(\"event\", {})\n    se_type = se.get(\"type\", \"\")",
+      "context_5lines": "                    # Early detection via stream events\n                    if event.get(\"type\") == \"stream_event\":\n                        se = event.get(\"event\", {})\n                        se_type = se.get(\"type\", \"\")\n\n                        if se_type == \"content_block_start\":\n                            cb = se.get(\"content_block\", {})",
+      "type": "anthropic_event_type_dispatch",
+      "severity": "critical"
+    },
+    {
+      "site_id": "N04",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 133,
+      "match": "if se_type == \"content_block_start\":\n    cb = se.get(\"content_block\", {})\n    if cb.get(\"type\") == \"tool_use\":\n        tool_name = cb.get(\"name\", \"\")\n        if tool_name in (\"Skill\", \"Read\"):\n            pending_tool_name = tool_name\n            accumulated_json = \"\"\n        else:\n            return False",
+      "context_5lines": "                        if se_type == \"content_block_start\":\n                            cb = se.get(\"content_block\", {})\n                            if cb.get(\"type\") == \"tool_use\":\n                                tool_name = cb.get(\"name\", \"\")\n                                if tool_name in (\"Skill\", \"Read\"):\n                                    pending_tool_name = tool_name\n                                    accumulated_json = \"\"",
+      "type": "anthropic_stream_event_content_block_start",
+      "severity": "critical"
+    },
+    {
+      "site_id": "N05",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 143,
+      "match": "elif se_type == \"content_block_delta\" and pending_tool_name:\n    delta = se.get(\"delta\", {})\n    if delta.get(\"type\") == \"input_json_delta\":\n        accumulated_json += delta.get(\"partial_json\", \"\")\n        if clean_name in accumulated_json:\n            return True",
+      "context_5lines": "                        elif se_type == \"content_block_delta\" and pending_tool_name:\n                            delta = se.get(\"delta\", {})\n                            if delta.get(\"type\") == \"input_json_delta\":\n                                accumulated_json += delta.get(\"partial_json\", \"\")\n                                if clean_name in accumulated_json:\n                                    return True\n\n                        elif se_type in (\"content_block_stop\", \"message_stop\"):",
+      "type": "anthropic_stream_event_partial_json_accumulation",
+      "severity": "critical"
+    },
+    {
+      "site_id": "N06",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 150,
+      "match": "elif se_type in (\"content_block_stop\", \"message_stop\"):\n    if pending_tool_name:\n        return clean_name in accumulated_json\n    if se_type == \"message_stop\":\n        return False",
+      "context_5lines": "                        elif se_type in (\"content_block_stop\", \"message_stop\"):\n                            if pending_tool_name:\n                                return clean_name in accumulated_json\n                            if se_type == \"message_stop\":\n                                return False\n\n                    # Fallback: full assistant message",
+      "type": "anthropic_stream_event_termination",
+      "severity": "high"
+    },
+    {
+      "site_id": "N07",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 157,
+      "match": "elif event.get(\"type\") == \"assistant\":\n    message = event.get(\"message\", {})\n    for content_item in message.get(\"content\", []):\n        if content_item.get(\"type\") != \"tool_use\":\n            continue\n        tool_name = content_item.get(\"name\", \"\")\n        tool_input = content_item.get(\"input\", {})\n        if tool_name == \"Skill\" and clean_name in tool_input.get(\"skill\", \"\"):\n            triggered = True\n        elif tool_name == \"Read\" and clean_name in tool_input.get(\"file_path\", \"\"):\n            triggered = True\n        return triggered",
+      "context_5lines": "                    # Fallback: full assistant message\n                    elif event.get(\"type\") == \"assistant\":\n                        message = event.get(\"message\", {})\n                        for content_item in message.get(\"content\", []):\n                            if content_item.get(\"type\") != \"tool_use\":\n                                continue\n                            tool_name = content_item.get(\"name\", \"\")\n                            tool_input = content_item.get(\"input\", {})",
+      "type": "anthropic_assistant_message_tool_use_parse",
+      "severity": "critical"
+    },
+    {
+      "site_id": "N08",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 170,
+      "match": "elif event.get(\"type\") == \"result\":\n    return triggered",
+      "context_5lines": "                            if tool_name == \"Read\" and clean_name in tool_input.get(\"file_path\", \"\"):\n                                triggered = True\n                            return triggered\n\n                    elif event.get(\"type\") == \"result\":\n                        return triggered\n        finally:",
+      "type": "anthropic_top_level_result_event",
+      "severity": "high"
+    },
+    {
+      "site_id": "N09",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 97,
+      "match": "pending_tool_name = None\naccumulated_json = \"\"",
+      "context_5lines": "        triggered = False\n        start_time = time.time()\n        buffer = \"\"\n        # Track state for stream event detection\n        pending_tool_name = None\n        accumulated_json = \"\"\n\n        try:\n            while time.time() - start_time < timeout:",
+      "type": "stream_parser_state_variables",
+      "severity": "high"
+    },
+    {
+      "site_id": "N10",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 85,
+      "match": "process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=project_root, env=env)",
+      "context_5lines": "        env = {k: v for k, v in os.environ.items() if k != \"CLAUDECODE\"}\n\n        process = subprocess.Popen(\n            cmd,\n            stdout=subprocess.PIPE,\n            stderr=subprocess.DEVNULL,\n            cwd=project_root,\n            env=env,\n        )",
+      "type": "subprocess_pipe_stdout_reader",
+      "severity": "high"
+    },
+    {
+      "site_id": "N11",
+      "file": "skills/skill-creator/scripts/run_eval.py",
+      "line": 108,
+      "match": "ready, _, _ = select.select([process.stdout], [], [], 1.0)\nif not ready:\n    continue\n\nchunk = os.read(process.stdout.fileno(), 8192)",
+      "context_5lines": "                ready, _, _ = select.select([process.stdout], [], [], 1.0)\n                if not ready:\n                    continue\n\n                chunk = os.read(process.stdout.fileno(), 8192)\n                if not chunk:\n                    break\n                buffer += chunk.decode(\"utf-8\", errors=\"replace\")",
+      "type": "nonblocking_stdout_chunk_read",
+      "severity": "high"
+    },
+    {
+      "site_id": "V01",
+      "file": "skills/skill-creator/eval-viewer/generate_review.py",
+      "line": 461,
+      "match": "webbrowser.open(url)",
+      "context_5lines": "    print(f\"\\n  Press Ctrl+C to stop.\\n\")\n\n    webbrowser.open(url)\n\n    try:\n        server.serve_forever()\n    except KeyboardInterrupt:",
+      "type": "browser_auto_open_on_server_start",
+      "severity": "low"
+    },
+    {
+      "site_id": "V02",
+      "file": "skills/skill-creator/eval-viewer/generate_review.py",
+      "line": 25,
+      "match": "import webbrowser",
+      "context_5lines": "import time\nimport webbrowser\nfrom functools import partial\nfrom http.server import HTTPServer, BaseHTTPRequestHandler\nfrom pathlib import Path",
+      "type": "browser_import",
+      "severity": "low"
+    },
+    {
+      "site_id": "V03",
+      "file": "skills/skill-creator/eval-viewer/generate_review.py",
+      "line": 443,
+      "match": "server = HTTPServer((\"127.0.0.1\", port), handler)",
+      "context_5lines": "    handler = partial(ReviewHandler, workspace, skill_name, feedback_path, previous, benchmark_path)\n    try:\n        server = HTTPServer((\"127.0.0.1\", port), handler)\n    except OSError:\n        # Port still in use after kill attempt — find a free one\n        server = HTTPServer((\"127.0.0.1\", 0), handler)",
+      "type": "http_server_local_host",
+      "severity": "low"
+    },
+    {
+      "site_id": "V04",
+      "file": "skills/skill-creator/eval-viewer/viewer.html",
+      "line": 716,
+      "match": "const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);\nif (configMatch) {\n  const config = configMatch[1];\n  const isBaseline = config === \"without_skill\" || config === \"old_skill\";\n  badge.textContent = config.replace(/_/g, \" \");\n  badge.className = \"config-badge \" + (isBaseline ? \"config-baseline\" : \"config-primary\");\n  badge.style.display = \"inline-block\";\n} else {\n  badge.style.display = \"none\";\n}",
+      "context_5lines": "      // Config badge\n      const badge = document.getElementById(\"config-badge\");\n      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);\n      if (configMatch) {\n        const config = configMatch[1];\n        const isBaseline = config === \"without_skill\" || config === \"old_skill\";\n        badge.textContent = config.replace(/_/g, \" \");",
+      "type": "anthropic_config_badge_regex_with_skill_without_skill_new_skill_old_skill",
+      "severity": "high"
+    },
+    {
+      "site_id": "V05",
+      "file": "skills/skill-creator/eval-viewer/viewer.html",
+      "line": 1157,
+      "match": "const configs = Object.keys(summary).filter(k => k !== \"delta\");\nconst configA = configs[0] || \"config_a\";\nconst configB = configs[1] || \"config_b\";\nconst labelA = configA.replace(/_/g, \" \").replace(/\\b\\w/g, c => c.toUpperCase());\nconst labelB = configB.replace(/_/g, \" \").replace(/\\b\\w/g, c => c.toUpperCase());",
+      "context_5lines": "      // Discover config names dynamically (everything except \"delta\")\n      const configs = Object.keys(summary).filter(k => k !== \"delta\");\n      const configA = configs[0] || \"config_a\";\n      const configB = configs[1] || \"config_b\";\n      const labelA = configA.replace(/_/g, \" \").replace(/\\b\\w/g, c => c.toUpperCase());\n      const labelB = configB.replace(/_/g, \" \").replace(/\\b\\w/g, c => c.toUpperCase());",
+      "type": "config_label_dynamic_from_benchmark_keys",
+      "severity": "low"
+    },
+    {
+      "site_id": "V06",
+      "file": "skills/skill-creator/eval-viewer/viewer.html",
+      "line": 1215,
+      "match": "const configGroups = [...new Set(evalRuns.map(r => r.configuration))];\nfor (let ci = 0; ci < configGroups.length; ci++) {\n  const config = configGroups[ci];\n  const configRuns = evalRuns.filter(r => r.configuration === config);\n  if (configRuns.length === 0) continue;\n\n  const rowClass = ci === 0 ? \"benchmark-row-with\" : \"benchmark-row-without\";",
+      "context_5lines": "          // Group by config and render with average rows\n          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];\n          for (let ci = 0; ci < configGroups.length; ci++) {\n            const config = configGroups[ci];\n            const configRuns = evalRuns.filter(r => r.configuration === config);\n            if (configRuns.length === 0) continue;\n\n            const rowClass = ci === 0 ? \"benchmark-row-with\" : \"benchmark-row-without\";",
+      "type": "config_css_class_with_vs_without_index_based",
+      "severity": "low"
+    },
+    {
+      "site_id": "V07",
+      "file": "skills/skill-creator/eval-viewer/viewer.html",
+      "line": 111,
+      "match": ".config-badge.config-primary {\n  background: rgba(33, 150, 243, 0.12);\n  color: #1976d2;\n}\n.config-badge.config-baseline {\n  background: rgba(255, 193, 7, 0.15);\n  color: #f57f17;\n}",
+      "context_5lines": "    .config-badge.config-primary {\n      background: rgba(33, 150, 243, 0.12);\n      color: #1976d2;\n    }\n    .config-badge.config-baseline {\n      background: rgba(255, 193, 7, 0.15);\n      color: #f57f17;\n    }",
+      "type": "config_badge_css_primary_vs_baseline",
+      "severity": "low"
+    },
+    {
+      "site_id": "A01",
+      "file": "skills/skill-creator/scripts/aggregate_benchmark.py",
+      "line": 86,
+      "match": "for eval_idx, eval_dir in enumerate(sorted(search_dir.glob(\"eval-*\"))):",
+      "context_5lines": "    results: dict[str, list] = {}\n\n    for eval_idx, eval_dir in enumerate(sorted(search_dir.glob(\"eval-*\"))):\n        metadata_path = eval_dir / \"eval_metadata.json\"\n        if metadata_path.exists():\n            try:\n                with open(metadata_path) as mf:\n                    eval_id = json.load(mf).get(\"eval_id\", eval_idx)",
+      "type": "eval_directory_layout_assumption",
+      "severity": "low"
+    },
+    {
+      "site_id": "A02",
+      "file": "skills/skill-creator/scripts/aggregate_benchmark.py",
+      "line": 101,
+      "match": "# Discover config directories dynamically rather than hardcoding names\nfor config_dir in sorted(eval_dir.iterdir()):\n    if not config_dir.is_dir():\n        continue\n    # Skip non-config directories (inputs, outputs, etc.)\n    if not list(config_dir.glob(\"run-*\")):\n        continue\n    config = config_dir.name",
+      "context_5lines": "        # Discover config directories dynamically rather than hardcoding names\n        for config_dir in sorted(eval_dir.iterdir()):\n            if not config_dir.is_dir():\n                continue\n            # Skip non-config directories (inputs, outputs, etc.)\n            if not list(config_dir.glob(\"run-*\")):\n                continue\n            config = config_dir.name",
+      "type": "config_directory_discovery",
+      "severity": "low"
+    },
+    {
+      "site_id": "R01",
+      "file": "skills/skill-creator/scripts/generate_report.py",
+      "line": 304,
+      "match": "parser.add_argument(\"input\", help=\"Path to JSON output from run_loop.py (or - for stdin)\")",
+      "context_5lines": "def main():\n    parser = argparse.ArgumentParser(description=\"Generate HTML report from run_loop output\")\n    parser.add_argument(\"input\", help=\"Path to JSON output from run_loop.py (or - for stdin)\")\n    parser.add_argument(\"-o\", \"--output\", default=None, help=\"Output HTML file (default: stdout)\")\n    parser.add_argument(\"--skill-name\", default=\"\", help=\"Skill name to include in the report title\")\n    args = parser.parse_args()",
+      "type": "consumes_run_loop_json_not_ndjson",
+      "severity": "informational"
+    }
+  ],
+  "summary": {
+    "total_sites": 21,
+    "by_type": {
+      "cli_invocation_with_streaming": 1,
+      "ndjson_line_splitter": 1,
+      "anthropic_event_type_dispatch": 1,
+      "anthropic_stream_event_content_block_start": 1,
+      "anthropic_stream_event_partial_json_accumulation": 1,
+      "anthropic_stream_event_termination": 1,
+      "anthropic_assistant_message_tool_use_parse": 1,
+      "anthropic_top_level_result_event": 1,
+      "stream_parser_state_variables": 1,
+      "subprocess_pipe_stdout_reader": 1,
+      "nonblocking_stdout_chunk_read": 1,
+      "browser_auto_open_on_server_start": 1,
+      "browser_import": 1,
+      "http_server_local_host": 1,
+      "anthropic_config_badge_regex_with_skill_without_skill_new_skill_old_skill": 1,
+      "config_label_dynamic_from_benchmark_keys": 1,
+      "config_css_class_with_vs_without_index_based": 1,
+      "config_badge_css_primary_vs_baseline": 1,
+      "eval_directory_layout_assumption": 1,
+      "config_directory_discovery": 1,
+      "consumes_run_loop_json_not_ndjson": 1
+    },
+    "by_severity": {
+      "critical": 6,
+      "high": 5,
+      "low": 9,
+      "informational": 1
+    },
+    "parser_block_line_range": "117-171",
+    "parser_block_file": "skills/skill-creator/scripts/run_eval.py",
+    "parser_block_summary": "NDJSON event loop in run_single_query: split buffer by newline, json.loads each line, dispatch on event['type'] (stream_event / assistant / result). Stream branch parses Anthropic content_block_start/tool_use, accumulates input_json_delta/partial_json, resolves on content_block_stop or message_stop.",
+    "key_decision_inputs": {
+      "D2_a6_session_inspection_replacement": "Sites N01-N11 in scripts/run_eval.py — whole NDJSON parser block (lines 117-171) and the streaming CLI invocation (lines 70-78) become unnecessary if triggering is detected via session inspection.",
+      "D6_plain_text_regex_fallback": "Same sites N01-N11; if kept, fall back to parsing the assistant text/content rather than stream events.",
+      "viewer_independence": "Sites V01-V07 in eval-viewer/* are independent of NDJSON parsing — only V04/V06 hardcode with_skill/without_skill/new_skill/old_skill badge logic, which is a display concern, not a parsing concern."
+    }
+  }
+}

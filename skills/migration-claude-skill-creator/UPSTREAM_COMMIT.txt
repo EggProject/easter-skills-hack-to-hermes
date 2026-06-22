@@ -1,0 +1,4 @@
+5fc2987a44918a455ef7dc583b51f8faf875c3ed
+# Source: https://github.com/anthropics/claude-plugins-official/tree/5fc2987a44918a455ef7dc583b51f8faf875c3ed/plugins/skill-creator/skills/skill-creator
+# Fetched at: 2026-06-22T17:36:25Z
+# Files: 18 (225004 bytes)

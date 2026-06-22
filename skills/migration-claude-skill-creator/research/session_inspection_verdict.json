@@ -1,0 +1,50 @@
+{
+  "scope": "session_inspection",
+  "research_date": "2026-06-22",
+  "verdict_criterion": "D10 functionality-only: session-inspection is 'értelmes' (worth using) ONLY IF it returns intermediate tool_use messages. Pure final-text access (same as `hermes -z`) = NOT worth it. UI/speed/own-vs-child isolation NOT relevant.",
+  "verdict": "partial",
+  "verdict_rationale": "Hermes DOES expose the full post-hoc trajectory (including intermediate tool_use messages) via two complementary paths: (a) `hermes sessions export --session-id <id> <file>.jsonl` writes the full message log to JSONL — confirmed by trajectory-format docs to include assistant tool_use turns inlined as ```{'name': ..., 'arguments': {...}}``` inside the gpt turn, plus tool responses; (b) SQLite at ~/.hermes/state.db (sessions + messages + messages_fts tables) holds role, content, tool_calls, tool_name, token_count for every turn. However these are POST-HOC exports of past sessions, NOT a real-time stream of intermediate tool_use events from a still-running child hermes -z invocation — for a live child, `delegate_task` only returns a structured final summary ('only its final summary enters the parent's context'). So verdict is 'partial': full tool-trace access exists, but only after the child completes (export), not during.",
+  "evidence": [
+    {
+      "url": "https://hermes-agent.nousresearch.com/docs/developer-guide/trajectory-format",
+      "excerpt": "Assistant turn embeds ```{'name': ..., 'arguments': {...}}``` — arguments are JSON objects, not strings (parsed back from the API's JSON-string form). Tool turn wraps each result as <tool_response>{'tool_call_id': ..., 'name': ..., 'content': ...}</tool_response>. If content looks like JSON, it's parsed into an object. Multiple results are joined with newlines in one tool message.",
+      "relevance": "Confirms intermediate tool_use messages ARE persisted and exportable via trajectory JSONL format — includes tool name, arguments object, and tool_call_id."
+    },
+    {
+      "url": "https://hermes-agent.nousresearch.com/docs/user-guide/sessions",
+      "excerpt": "hermes sessions export backup.jsonl ... Format: one JSON object per line, including session metadata and all messages. Database: ~/.hermes/state.db (SQLite, WAL mode) — canonical store for both session metadata and all messages. ... messages table: full history with role, content, tool_calls, tool_name, token_count. ... The /sessions picker and listing views display previews (first user message excerpt), not raw tool blocks. Export is the only command documented to include full message history — and per the messages table schema, that includes role, content, tool_calls, tool_name, and token_count, so tool_use turns ARE present in exports.",
+      "relevance": "Confirms the EXPORT command gives full message log INCLUDING tool_use turns; the LIST/SHOW commands do NOT (only previews). Storage path confirmed: ~/.hermes/state.db."
+    },
+    {
+      "url": "https://kenhuangus.substack.com/p/designing-hermes-agent-from-scratch",
+      "excerpt": "Intermediate tool traces stay in the child session rather than the parent. The parent sees only the child's final text via a summarized return channel. The child persists tool traces separately, keeping the parent transcript readable for audit.",
+      "relevance": "Confirms parent/child split: child PERSISTS tool traces (good — exportable), parent only sees final text. So intermediate tool_use access exists via export-after-completion, NOT via live parent observation of a running child."
+    },
+    {
+      "url": "https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation",
+      "excerpt": "Post-hoc review: step through each subagent's turn-by-turn history even after they've returned to the parent. ... only its final summary enters the parent's context.",
+      "relevance": "Delegation doc explicitly confirms post-hoc turn-by-turn review is available (likely via /agents TUI overlay), but only final summary enters parent's LIVE context."
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/issues/8650",
+      "excerpt": "hermes sessions export can export sessions to JSONL, but there is no corresponding import command. The exported JSONL is effectively one-way.",
+      "relevance": "Independent confirmation (GitHub issue) that hermes sessions export writes JSONL of sessions."
+    },
+    {
+      "url": "https://github.com/nousresearch/hermes-agent/blob/main/website/docs/reference/environment-variables.md",
+      "excerpt": "HERMES_SESSION_ID: Set by the agent to the current session ID; user scripts called from tools can read it to correlate their output, telemetry, or side effects with the originating Hermes session. You should not set this manually — overriding it from a parent shell only takes effect outside an agent run, and is overwritten the moment the agent starts a session.",
+      "relevance": "Confirms HERMES_SESSION_ID exists and is auto-set; not a manual override knob. Useful as a correlation token for 'which child session do I export'."
+    }
+  ],
+  "if_available": {
+    "api_or_path": "Two complementary post-hoc paths; no live stream. (1) CLI export: `hermes sessions export [--session-id <id>] [--source <platform>] <file>.jsonl` — writes full JSONL of all messages including tool_use and tool_response turns. (2) Direct SQLite read: `~/.hermes/state.db` — `sessions` table + `messages` table (columns: role, content, tool_calls, tool_name, token_count) + `messages_fts` (FTS5). Legacy `~/.hermes/sessions/*.jsonl` files exist but are NO LONGER READ OR WRITTEN.",
+    "example_invocation": "hermes chat -Q \"run tests and report\" ; SESSION=$(hermes logs --json | jq -r '.[0].session_id'); hermes sessions export --session-id $SESSION /tmp/run.jsonl ; jq -c 'select(.tool_calls != null)' /tmp/run.jsonl   # yields every assistant turn that emitted tool calls",
+    "what_it_returns": "Per-line JSON objects: ShareGPT-flavored conversations array with assistant turns containing ```{'name': ..., 'arguments': {...}}``` blocks (arguments are objects, not strings) and tool turns containing <tool_response>{...}</tool_response> blocks. Reasoning is forced into ```...``` tags. Full schema documented in trajectory-format docs."
+  },
+  "if_unavailable": {
+    "closest_thing": "There is no live NDJSON stream of a still-running child's tool_use events. The closest live signal is the /agents TUI overlay (post-hoc step-through after the child has returned to the parent). For correlation during a run, the parent can pass a known HERMES_SESSION_ID and then export the child's session after it completes.",
+    "why_it_doesnt_count": "Post-hoc export is 'értelmes' per D10 ONLY IF it actually returns intermediate tool_use messages — which it DOES (verified: trajectory-format docs show tool_calls and tool_response blocks in the JSONL). So this DOES count under D10. The only thing it does NOT provide is a real-time stream-while-running; if the migration use case requires watching tool calls live, that capability is NOT available."
+  },
+  "confidence": "high",
+  "recommendation": "Session inspection via `hermes sessions export` + SQLite at ~/.hermes/state.db IS worth using for the migration use case because it returns full intermediate tool_use history post-hoc. If the use case requires a LIVE stream of tool_use events from a running child, the verdict flips to 'unavailable' — for that, the path is to have the child write its own log file or use the trajectory-format flag (config agent.save_trajectories: true OR --save-trajectories) to emit trajectory_samples.jsonl in real time."
+}

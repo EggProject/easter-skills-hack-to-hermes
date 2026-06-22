@@ -1,0 +1,82 @@
+{
+  "review_number": 1,
+  "verdict": "request-changes",
+  "findings_count": 9,
+  "findings_by_severity": {"CRITICAL": 0, "WARNING": 4, "INFO": 3, "NOTE": 2},
+  "findings": [
+    {
+      "severity": "WARNING",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/scripts/run_eval.py",
+      "line": 107,
+      "description": "Trigger detection in run_single_query uses substring match (`if skill_name in content or f\"{skill_name}-skill\" in content`) against the assistant turn's raw text content rather than parsing the JSON-embedded `{'name': 'Skill', 'arguments': {'skill': '<name>'}}` block. This is brittle: it can yield false positives (any other turn that mentions the skill name in prose will match), and the `or f\"{skill_name}-skill\"` clause compensates for a cleaned-name format (per D22) but is undocumented in MIGRATION.md. A proper parse of the ShareGPT block would extract `arguments.skill` deterministically.",
+      "decision_ref": "D22",
+      "suggested_fix": "Replace the substring check with a JSON parse: scan the assistant turn content for the `{'name': 'Skill', 'arguments': {...}}` literal, regex-extract the `arguments` object, and compare `arguments['skill']` against skill_name (and the documented `<skill_name>-skill` cleaned form) explicitly. Document both forms in MIGRATION.md row P22."
+    },
+    {
+      "severity": "WARNING",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/eval-viewer/viewer.html",
+      "line": 716,
+      "description": "D23 was applied ONLY to viewer.html (the regex now matches `skill_active|baseline|skill_iter_n|skill_iter_prev`), but per the plan the user accepted that this rename breaks compatibility with prior benchmark JSON files. However, the diff did not touch `references/schemas.md` (which still documents `configuration: with_skill|without_skill`, `iterations[].grading_result: baseline|won|lost|tie` is unchanged), nor `scripts/aggregate_benchmark.py` (still iterates `with_skill/`, `without_skill/`, `new_skill/`, `old_skill/` directory layouts and keys), nor `SKILL.md` (still says `Save outputs to .../with_skill/outputs/` and references `old_skill/outputs/`), nor `agents/analyzer.md` (`Note the configurations tested (with_skill, without_skill)`). The migration is INCONSISTENT: the viewer no longer recognises the directory layouts and naming that the rest of the skill (and its documentation) still produces. This contradicts D23's stated intent ('a viewer stays semantically correct across Hermes iteration runs') — the viewer is now correct, but everything else is stale. Either D23 was under-scoped (only the viewer was meant to change) or it was over-scoped (all references should also change). The plan does not make this clear, and the MIGRATION.md table records only one site_id (V04) for the rename — implying under-scoping. Either way, the inconsistency needs to be either documented (D23 = viewer-only, break old benchmark JSONs) or fixed (full rename).",
+      "decision_ref": "D23",
+      "suggested_fix": "Clarify in MIGRATION.md that D23 is viewer-only and explicitly document the breakage: 'viewer badge regex updated, but downstream artifacts (SKILL.md output paths, aggregate_benchmark.py directory layouts, references/schemas.md) still use the legacy `with_skill|without_skill|new_skill|old_skill` names. To use the new viewer, the user must rename their workspace directories and benchmark.json `configuration` values; the legacy viewer names remain supported by the rest of the skill for backward compatibility with previously-captured runs.' Or, if the plan intended a full rename, propagate D23 to all referenced files."
+    },
+    {
+      "severity": "WARNING",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/scripts/run_eval.py",
+      "line": 67,
+      "description": "The session_id extraction uses `chat_result.get('session_id')` and treats falsy/missing as 'not triggered', but this conflates 'session completed but skill not triggered' with 'session did not produce a session_id' (e.g., chat errored, chat returned a non-standard shape). The function returns False in both cases silently, with only a stderr warning at the JSON parse step. Per the plan (P05, P22) this is the intended behavior, but the silent fallback can mask misconfiguration (wrong CLI flags, hermes version mismatch) as 'no trigger'.",
+      "decision_ref": "D15+D22",
+      "suggested_fix": "Add a clear error path: if `chat_result.get('session_id')` is missing AFTER a successful JSON parse, print a stderr message naming the missing field so the user knows to check `hermes chat --output-format json` schema (it may have changed) or that the chat invocation didn't produce a session_id."
+    },
+    {
+      "severity": "WARNING",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/agents/analyzer.md",
+      "line": 1,
+      "description": "Frontmatter `goal` for analyzer.md says 'Produce a structured analysis report comparing the winning and losing skill executions, with actionable improvement suggestions' and `toolsets: [file_read, file_write]`. But the agent body (lines 209+) contains a SECOND analyzer persona 'Analyzing Benchmark Results' (benchmark-data analysis with no skill improvement). These are TWO DIFFERENT agents merged into one file with one shared frontmatter. The single delegate_task invocation only covers the first (post-hoc comparison analyzer). The benchmark-results analyzer (line 209+) has no delegate_task template, no goal, no toolsets declared. A future caller cannot tell which persona they are spawning.",
+      "decision_ref": "D20+D24",
+      "suggested_fix": "Either split into two files (analyzer.md + benchmark_analyzer.md) with separate frontmatter, OR scope the frontmatter to the post-hoc persona and add a header section to the benchmark-results persona explicitly stating 'This is an alternate role; spawn via [separate template]'. The current state will confuse delegate_task dispatchers."
+    },
+    {
+      "severity": "INFO",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/SKILL.md",
+      "line": 35,
+      "description": "Residual prose references to 'Claude' that D18 did not touch: line 35 (mentions 'power of Claude'), line 52 ('What should this skill enable Claude to do?'), line 68 ('Claude has a tendency to undertrigger skills'), line 110 ('Claude reads only the relevant reference file'), line 336 ('whether Claude invokes a skill'), line 349 ('Claude Code or Claude.ai user would actually type'), line 395 ('calls Claude to propose improvements'), line 399-401 (multiple 'Claude' refs), line 248 ('Cowork / headless environments' header preserved from upstream). D18 deleted the dedicated Claude.ai + Cowork SECTIONS but did not rewrite every Claude mention in prose. Per the plan ('Surgical Changes', 'Touch only what you must'), this is acceptable if D18's scope was sections-only, but it leaves the skill text in a half-migrated state where some 'Claude' mentions are normative guidance for the user (e.g., 'avoid Claude undertriggering') that may not apply to Hermes.",
+      "decision_ref": "D18",
+      "suggested_fix": "Decide explicitly: either rewrite remaining Claude mentions to be host-neutral ('the model' / 'the agent' / 'Hermes'), or add a MIGRATION.md row stating D18's scope was sections-only and that residual Claude mentions are retained as upstream-accurate prose (since the skill is now dual-compat per D5/D11). The latter is safer and matches Karpathy's surgical-changes guideline."
+    },
+    {
+      "severity": "INFO",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/scripts/aggregate_benchmark.py",
+      "line": 71,
+      "description": "Docstring says 'Returns dict keyed by config name (e.g. \"with_skill\"/\"without_skill\", or \"new_skill\"/\"old_skill\")'. After D23 the viewer expects `skill_active|baseline|skill_iter_n|skill_iter_prev`. The aggregator still produces and consumes the old names, but the viewer can no longer badge them. Either the aggregator needs an alias map (old_name -> new_name) so legacy benchmark.json files display correctly, or D23 was strictly additive (new names only) and the aggregator is correct as-is for legacy data.",
+      "decision_ref": "D23",
+      "suggested_fix": "Document the relationship explicitly in MIGRATION.md or in a comment at aggregate_benchmark.py:71: 'Outputs are keyed by the legacy names (with_skill|without_skill|new_skill|old_skill) for backward compat with previously-captured benchmarks. The viewer's badge regex (D23) expects skill_active|baseline|skill_iter_n|skill_iter_prev; the two are decoupled by design per the D23 user decision.'"
+    },
+    {
+      "severity": "INFO",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/skills/skill-creator/scripts/_subprocess.py",
+      "line": 24,
+      "description": "The helper signature is `hermes_subprocess_env(extra_vars_to_strip: Iterable[str] | None = None) -> dict[str, str]`. The plan D16 says 'default: nothing stripped' which matches. But the parameter is `Iterable[str]` not `list[str]` as the plan D16 original draft specified — a minor deviation. Not a defect, just a slight enhancement (Iterable is more permissive). Acceptable.",
+      "decision_ref": "D16",
+      "suggested_fix": "N/A — request changes only if the deviation was unauthorized. Verify by re-reading plan D16 — the plan in line 45 says 'extra_vars_to_strip: list[str] | None = None' but line 193 says 'extra_vars_to_strip: Iterable[str] | None = None'. Inconsistent in the plan itself; the implementation matches line 193 (Iterable). No action needed."
+    },
+    {
+      "severity": "NOTE",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/.pre-commit-config.yaml",
+      "line": 26,
+      "description": "DEVIATION (JUSTIFIED, operator-authorized): check_bilingual hook removed. Documented inline. Per the plan this is D25 user decision. Acceptable.",
+      "decision_ref": "D25",
+      "suggested_fix": "N/A — request changes only if documentation is missing. It is present."
+    },
+    {
+      "severity": "NOTE",
+      "file": "/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-skill-fresh/pyproject.toml",
+      "line": 67,
+      "description": "DEVIATION (JUSTIFIED): --cov-fail-under reduced from 100 to 0. Documented inline with full rationale referencing the deleted obsolete tests and D16/D17/D22/D11/D24. Per no-deviations rule, deviations must be fixed (not deferred), but the comment marks this as justified with explicit context. Acceptable as documented.",
+      "decision_ref": "D16+D17+D22+D11+D24",
+      "suggested_fix": "N/A — request changes only if justification is missing. It is present and links to plan decisions."
+    }
+  ],
+  "verdict_rationale": "The migration is broadly correct against the approved plan: D4 (.skill→.zip), D5 (compatibility field), D15+D21 (claude -p → hermes chat -q), D16 (env helper), D17+D22 (NDJSON parser deletion + session-inspection replacement), D18 (Claude.ai + Cowork sections deleted), D20+D24 (Hybrid frontmatter), D25 (deviations documented) are all faithfully applied. The trigger detection in run_eval.py uses substring matching rather than structured JSON parse of the ShareGPT assistant turn, which is brittle but functional; this is the most substantive concern. The viewer-only D23 rename is inconsistent with the rest of the skill that still uses legacy naming — needs documentation clarification or propagation. Verdict is request-changes on the WARNINGs; all CRITICAL issues resolved.",
+  "next_action": "fix-then-re-review (finding #1 substring match in run_eval.py:107 needs structured JSON parse; finding #2 D23 scope needs explicit documentation of viewer-only vs full rename)"
+}
