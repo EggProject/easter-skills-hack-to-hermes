@@ -294,12 +294,12 @@ The "stricter" re-evaluation produces the same result as Phase 2 — but the res
 ## Files
 
 - Input (read-only):
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-synthesized.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-prompt-engineer.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-researcher.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-code-reviewer.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-security-auditor.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-validated-r1.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/synthesis.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/prompt-engineer.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/researcher.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/code-reviewer.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/security-auditor.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md`
 - Source files (read-only, frissen olvasva):
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/SKILL.md`
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/SKILL.md.short`
@@ -316,4 +316,4 @@ The "stricter" re-evaluation produces the same result as Phase 2 — but the res
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/scripts/package_skill.py`
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/_subprocess.py`
 - Output (created):
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-info-evaluation.md` (this file)
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/info-re-evaluation.md` (this file)

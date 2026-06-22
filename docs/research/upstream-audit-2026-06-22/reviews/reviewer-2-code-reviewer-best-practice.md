@@ -3,9 +3,9 @@
 **Reviewer**: code-reviewer (best-practice lens)
 **Phase 3 attempt**: 2 (Reviewer 2 of 2)
 **Review date**: 2026-06-22
-**Synthesis under review**: `docs/research/upstream-audit-synthesized.md` (30 canonical rows: 0 CRITICAL / 0 WARNING / 25 INFO / 5 NOTE)
-**Phase 3.5 input**: `docs/research/upstream-audit-info-evaluation.md` (25 KEEP / 0 FIX)
-**Reviewer 1 input**: `docs/research/upstream-audit-validated-r1.md` (PASS)
+**Synthesis under review**: `docs/research/upstream-audit-2026-06-22/synthesis.md` (30 canonical rows: 0 CRITICAL / 0 WARNING / 25 INFO / 5 NOTE)
+**Phase 3.5 input**: `docs/research/upstream-audit-2026-06-22/info-re-evaluation.md` (25 KEEP / 0 FIX)
+**Reviewer 1 input**: `docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md` (PASS)
 
 ## Posture
 
@@ -17,7 +17,7 @@
 
 - URLs inspected (the 8 URLs cited in the upstream-evidence column of the 30 synthesis rows + the synthesiser's headline URLs):
   - Upstream main HEAD: `5fc2987a44918a455ef7dc583b51f8faf875c3ed` — `git ls-remote https://github.com/anthropics/claude-plugins-official.git 5fc2987a44918a455ef7dc583b51f8faf875c3ed` → returns `5fc2987a44918a455ef7dc583b51f8faf875c3ed refs/heads/main` (commit IS the current main tip; **verified reachable**)
-  - Vendored pin: `2a40fd2e7c52207aa903bd33fc4c65716126966e` — `git ls-remote https://github.com/anthropics/claude-plugins-official.git 2a40fd2e7c52207aa903bd33fc4c65716126966e` returns no tip entry (expected — older commit, not at tip of any branch); the researcher's `git log --format='%H %ai %s' -- plugins/skill-creator/skills/skill-creator/` (captured verbatim in `upstream-audit-researcher.md`) shows the SHA as the most recent pre-pin commit on the subtree lineage. **Reachability verified via the researcher's git-log protocol** (the synthesiser's evidence standard, not a bare ls-remote).
+  - Vendored pin: `2a40fd2e7c52207aa903bd33fc4c65716126966e` — `git ls-remote https://github.com/anthropics/claude-plugins-official.git 2a40fd2e7c52207aa903bd33fc4c65716126966e` returns no tip entry (expected — older commit, not at tip of any branch); the researcher's `git log --format='%H %ai %s' -- plugins/skill-creator/skills/skill-creator/` (captured verbatim in `lenses/researcher.md`) shows the SHA as the most recent pre-pin commit on the subtree lineage. **Reachability verified via the researcher's git-log protocol** (the synthesiser's evidence standard, not a bare ls-remote).
   - `https://github.com/anthropics/claude-plugins-official/commit/5fc2987a44918a455ef7dc583b51f8faf875c3ed` — format-correct (github.com commit URL with full SHA), reachable per the above ls-remote
   - `https://github.com/anthropics/claude-plugins-official/blame/5fc2987a44918a455ef7dc583b51f8faf875c3ed/plugins/skill-creator/skills/skill-creator/SKILL.md` — format-correct (github.com blame URL with full SHA + subtree path)
   - `https://github.com/anthropics/claude-plugins-official/tree/5fc2987a44918a455ef7dc583b51f8faf875c3ed/plugins/skill-creator/skills/skill-creator` — format-correct
@@ -107,7 +107,7 @@ I verified each of the 25 INFO rows' file:line citation by reading the cited lin
 | SYNTH-025 | `scripts/improve_description.py:63` | `"leirasat a <available_skills> rendszerprompt-index szamara."` | identical | YES |
 
 NOTE-row spot checks:
-- SYNTH-N01 cites "(all 18 vendored files; metadata)" — aggregate SHA-256 identity at the two SHAs is verifiable via the researcher's diff protocol; the `diff -rq` exit 0 + per-file SHA-256 diff empty claim is recorded in `upstream-audit-researcher.md` §Diff scope
+- SYNTH-N01 cites "(all 18 vendored files; metadata)" — aggregate SHA-256 identity at the two SHAs is verifiable via the researcher's diff protocol; the `diff -rq` exit 0 + per-file SHA-256 diff empty claim is recorded in `lenses/researcher.md` §Diff scope
 - SYNTH-N02 cites `docs/research/anthropic-skill-creator-original/UPSTREAM_COMMIT.txt` — verified via `cat` (file contains `2a40fd2e7c52207aa903bd33fc4c65716126966e`); no line number needed (single-line file)
 - SYNTH-N03 cites `SKILL.md` (no specific line) — the verifier checklist at SKILL.md:63-64 is the only D5 marker; the broader "Installer logic" gap is correctly characterized as DOC-GAP (not line-specific)
 - SYNTH-N04 cites `scripts/__init__.py` — verified via `ls`: vendored pin has `__init__.py` (0 bytes), local skill does not
@@ -216,11 +216,11 @@ Reviewer 1 (R8) also already verified all 11 cross-references surface in the syn
 
 - A szintézis + Phase 3.5 + Reviewer 1-2 kimenete együttesen **CANONICAL VALIDATED**
 - A Phase 4 docs-scribe-nek átadandó artifact-ok:
-  - `docs/research/upstream-audit-synthesized.md` (30 sor)
-  - `docs/research/upstream-audit-validated-r1.md` (Reviewer 1 PASS)
-  - `docs/research/upstream-audit-info-evaluation.md` (25 KEEP indoklás)
-  - `docs/research/upstream-audit-validated-r2.md` (ez a fájl, Reviewer 2 PASS)
-- Az `upstream-audit-validated.md` végleges artifact-ot a koordinátor állítja össze (vagy te, ha így utasít). Az ajánlott struktúra: 1) executive summary (PASS / 30 sor / 0 finding), 2) a 30 synthesis sor (változatlan), 3) Reviewer 1 + Reviewer 2 verdicts (PAS, R1-R8 + BP1-BP6 kategóriák), 4) Phase 3.5 KEEP tábla, 5) a 11 open question (CONFIRM/REMEDIATE/DEFER verdictekkel töltendő), 6) coverage matrix, 7) reconciliation log, 8) upstream-evidence URL-ek (BP1 verifikálva).
+  - `docs/research/upstream-audit-2026-06-22/synthesis.md` (30 sor)
+  - `docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md` (Reviewer 1 PASS)
+  - `docs/research/upstream-audit-2026-06-22/info-re-evaluation.md` (25 KEEP indoklás)
+  - `docs/research/upstream-audit-2026-06-22/reviews/reviewer-2-code-reviewer-best-practice.md` (ez a fájl, Reviewer 2 PASS)
+- Az `canonical-validated.md` végleges artifact-ot a koordinátor állítja össze (vagy te, ha így utasít). Az ajánlott struktúra: 1) executive summary (PASS / 30 sor / 0 finding), 2) a 30 synthesis sor (változatlan), 3) Reviewer 1 + Reviewer 2 verdicts (PAS, R1-R8 + BP1-BP6 kategóriák), 4) Phase 3.5 KEEP tábla, 5) a 11 open question (CONFIRM/REMEDIATE/DEFER verdictekkel töltendő), 6) coverage matrix, 7) reconciliation log, 8) upstream-evidence URL-ek (BP1 verifikálva).
 - További Reviewer-3 / Reviewer-4 / Reviewer-5 fázisok NEM szükségesek — az "agent-protocol.md" minimum-2-consecutive-clean-review küszöbje teljesül (Reviewer 1 PASS + Reviewer 2 PASS). A "reviews #4 and #5 mandatory" szabály csak akkor aktiválódik, ha reviews #1-#3 bármelyike FAIL-t jelzett volna.
 - Phase 4-nek átadandó: MIGRATION.upstream-sync.md megírása a 11 open question operator-verdictjeivel együtt (különösen SYNTH-N02 / SYNTH-N03 / SYNTH-N04 / SYNTH-N05 / pipeline shape direction).
 
@@ -250,4 +250,4 @@ Reviewer 1 (R8) also already verified all 11 cross-references surface in the syn
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/anthropic-skill-creator-original/UPSTREAM_COMMIT.txt`
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/anthropic-skill-creator-original/skills/skill-creator/scripts/__init__.py`
 - Output (created):
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-validated-r2.md` (this file)
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/reviews/reviewer-2-code-reviewer-best-practice.md` (this file)

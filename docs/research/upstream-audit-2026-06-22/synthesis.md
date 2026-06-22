@@ -6,10 +6,10 @@
 
 ## Input lenses
 
-1. **researcher** (`upstream-audit-researcher.md`) — upstream diff baseline
-2. **prompt-engineer** (`upstream-audit-prompt-engineer.md`) — Claude-prompt-language lens
-3. **code-reviewer** (`upstream-audit-code-reviewer.md`) — 07 plan D2/D5/D6/D7 vs implementation
-4. **security-auditor** (`upstream-audit-security-auditor.md`) — adversarial refuting (K1–K7)
+1. **researcher** (`lenses/researcher.md`) — upstream diff baseline
+2. **prompt-engineer** (`lenses/prompt-engineer.md`) — Claude-prompt-language lens
+3. **code-reviewer** (`lenses/code-reviewer.md`) — 07 plan D2/D5/D6/D7 vs implementation
+4. **security-auditor** (`lenses/security-auditor.md`) — adversarial refuting (K1–K7)
 
 ## Headline counts
 
@@ -220,7 +220,7 @@ The Phase 3 adversarial validator should:
 ## Files
 
 - **Input**: `docs/research/upstream-audit-{researcher,prompt-engineer,code-reviewer,security-auditor}.md` (4 Phase 1 audits)
-- **Output**: `docs/research/upstream-audit-synthesized.md` (this file)
+- **Output**: `docs/research/upstream-audit-2026-06-22/synthesis.md` (this file)
 - **Plan source**: `docs/plans/07-skill-creator-migration.md` (D2/D5/D6/D7)
 - **Vendored upstream pin**: `docs/research/anthropic-skill-creator-original/skills/skill-creator/` (textual pin: `UPSTREAM_COMMIT.txt` → `2a40fd2e7c52207aa903bd33fc4c65716126966e`)
 - **Bilingual advisory contract**: `hermes-skills-hitl-decisions.md` (Q4/Q5)

@@ -20,15 +20,15 @@
 
 | Phase | Agent | Input | Output | Verdict |
 | --- | --- | --- | --- | --- |
-| 1a | researcher | upstream GitHub fetch | `upstream-audit-researcher.md` | null result (byte-identical) |
-| 1b | prompt-engineer | local skill prompt-bearing files | `upstream-audit-prompt-engineer.md` | 25 DELIBERATE, 0 RESIDUE |
-| 1c | code-reviewer | 07 plan D2/D5/D6/D7 | `upstream-audit-code-reviewer.md` | 16 OK + 1 DOC-GAP |
-| 1d | security-auditor | K1–K7 adversarial | `upstream-audit-security-auditor.md` | 0 REAL-RESIDUE + 7 CONFIRMED-CLEAN |
-| 2 | architect (synth) | 4 Phase 1 MDs | `upstream-audit-synthesized.md` | 0 CRITICAL / 0 WARNING / 25 INFO / 5 NOTE |
-| 3-R1 | security-auditor (refute) | synthesized MD | `upstream-audit-validated-r1.md` | PASS (0 R1–R8 finding) |
-| 3.5 | prompt-engineer (INFO re-eval) | 25 INFO sor | `upstream-audit-info-evaluation.md` | 25/25 KEEP, 0 FIX |
-| 3-R2 | code-reviewer (best-practice) | synthesized + r1 + info-eval | `upstream-audit-validated-r2.md` | PASS (0 BP1–BP6 finding) |
-| 3.7 | docs-scribe (assembly) | 4 input MDs | **`upstream-audit-validated.md` (this file)** | — |
+| 1a | researcher | upstream GitHub fetch | `lenses/researcher.md` | null result (byte-identical) |
+| 1b | prompt-engineer | local skill prompt-bearing files | `lenses/prompt-engineer.md` | 25 DELIBERATE, 0 RESIDUE |
+| 1c | code-reviewer | 07 plan D2/D5/D6/D7 | `lenses/code-reviewer.md` | 16 OK + 1 DOC-GAP |
+| 1d | security-auditor | K1–K7 adversarial | `lenses/security-auditor.md` | 0 REAL-RESIDUE + 7 CONFIRMED-CLEAN |
+| 2 | architect (synth) | 4 Phase 1 MDs | `synthesis.md` | 0 CRITICAL / 0 WARNING / 25 INFO / 5 NOTE |
+| 3-R1 | security-auditor (refute) | synthesized MD | `reviews/reviewer-1-security-auditor-refuting.md` | PASS (0 R1–R8 finding) |
+| 3.5 | prompt-engineer (INFO re-eval) | 25 INFO sor | `info-re-evaluation.md` | 25/25 KEEP, 0 FIX |
+| 3-R2 | code-reviewer (best-practice) | synthesized + r1 + info-eval | `reviews/reviewer-2-code-reviewer-best-practice.md` | PASS (0 BP1–BP6 finding) |
+| 3.7 | docs-scribe (assembly) | 4 input MDs | **`canonical-validated.md` (this file)** | — |
 
 ## Findings table (canonical, 30 rows)
 
@@ -115,7 +115,7 @@ side — both positions are defensible.
 - R6 (upstream-evidence hiány): 0 finding
 - R7 (coverage gap): 0 finding
 - R8 (reconciliation log hézag): 0 finding
-- **Verdict: PASS** (artifact: `upstream-audit-validated-r1.md`)
+- **Verdict: PASS** (artifact: `reviews/reviewer-1-security-auditor-refuting.md`)
 
 ## Reviewer 2 (code-reviewer best-practice) verdict
 
@@ -125,13 +125,13 @@ side — both positions are defensible.
 - BP4 (Phase 3.5 KEEP validation): 0 finding (5/5 spot-checks hold)
 - BP5 (coverage matrix): 0 finding (14 files covered, out-of-scope correctly scoped)
 - BP6 (reconciliation + open questions): 0 finding
-- **Verdict: PASS** (artifact: `upstream-audit-validated-r2.md`)
+- **Verdict: PASS** (artifact: `reviews/reviewer-2-code-reviewer-best-practice.md`)
 
 ## Phase 3.5 (INFO re-evaluation) verdict
 
 - KEEP: 25 / FIX: 0 / TOTAL: 25
 - Minden INFO sor DELIBERATE bilingual advisory / negative-form guard / adapter-contract / T3-provenance / test-name encoding
-- **Verdict: no fixes needed** (artifact: `upstream-audit-info-evaluation.md`)
+- **Verdict: no fixes needed** (artifact: `info-re-evaluation.md`)
 
 ## Open questions for Phase 4 docs-scribe / Phase 5 GitHub issue
 
@@ -231,9 +231,9 @@ A `MIGRATION.upstream-sync.md` legyen DESCRIPTION-ONLY a 07-es tervvel összhang
 ## Files
 
 - Input (read-only):
-  - `docs/research/upstream-audit-synthesized.md`
-  - `docs/research/upstream-audit-validated-r1.md`
-  - `docs/research/upstream-audit-info-evaluation.md`
-  - `docs/research/upstream-audit-validated-r2.md`
-- Output (this file): `docs/research/upstream-audit-validated.md`
+  - `docs/research/upstream-audit-2026-06-22/synthesis.md`
+  - `docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md`
+  - `docs/research/upstream-audit-2026-06-22/info-re-evaluation.md`
+  - `docs/research/upstream-audit-2026-06-22/reviews/reviewer-2-code-reviewer-best-practice.md`
+- Output (this file): `docs/research/upstream-audit-2026-06-22/canonical-validated.md`
 - Downstream consumer: Phase 4 docs-scribe → `MIGRATION.upstream-sync.md`

@@ -3,7 +3,7 @@
 **Reviewer**: security-auditor (refuting / adversarial)
 **Phase 3 attempt**: 1
 **Review date**: 2026-06-22
-**Synthesis under review**: `docs/research/upstream-audit-synthesized.md`
+**Synthesis under review**: `docs/research/upstream-audit-2026-06-22/synthesis.md`
 **Synthesis summary**: 0 CRITICAL / 0 WARNING / 25 INFO (all DELIBERATE) / 5 NOTE — TOTAL 30
 
 ## Posture
@@ -310,11 +310,11 @@ itself documents "zero contradictions" with the rationale per axis.
   - **SYNTH-N01** (subtree silent) — no, this is audit-log material; belongs
     in audit history, not in "How to use".
 
-- Az audit artifact (= `upstream-audit-validated.md` végleges) összeállításához
+- Az audit artifact (= `canonical-validated.md` végleges) összeállításához
   szükséges lépések:
   1. Wait for Phase 3 / Reviewer 2 (code-reviewer best-practice lens).
   2. If Reviewer 2 also returns PASS, merge the two reviewer reports
-     (this one + Reviewer 2's) into `docs/research/upstream-audit-validated.md`
+     (this one + Reviewer 2's) into `docs/research/upstream-audit-2026-06-22/canonical-validated.md`
      as the canonical audit artefact.
   3. Carry the 11 open-questions from the synthesis into the validated
      document verbatim; mark each with the operator's verdict (CONFIRM /
@@ -336,4 +336,4 @@ itself documents "zero contradictions" with the rationale per axis.
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/_subprocess.py` (ground-truth verification)
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/agents/grader.md` (ground-truth verification)
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/skills/skill-creator/scripts/run_eval.py` (ground-truth verification)
-- **Output (created)**: `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-validated-r1.md` (this file)
+- **Output (created)**: `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md` (this file)
