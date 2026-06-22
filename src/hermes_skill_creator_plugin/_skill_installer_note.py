@@ -13,6 +13,9 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
+from hermes_skill_creator_plugin._patcher_migration_decisions import (
+    skill_port_decisions_lines,
+)
 from hermes_skill_creator_plugin._skill_installer_consts import (
     FROZEN_TIME_ENV_KEY,
     KEY_CLAUDE,
@@ -67,7 +70,13 @@ def render_migration_skill_port(
     for index, row in enumerate(T3_INVENTORY, start=1):
         lines.append(_format_t3_row(index, row))
     lines.extend(_render_strength_rows())
+    lines.extend(_render_decisions_section())
     return "\n".join(lines)
+
+
+def _render_decisions_section() -> list[str]:
+    """Render the Decisions section as markdown lines."""
+    return skill_port_decisions_lines()
 
 
 def generated_at() -> str:

@@ -7,8 +7,9 @@
 | Source repo | https://github.com/anthropics/claude-plugins-official |
 | Source skillId | skill-creator |
 | Pinned upstream commit | TBD |
+| Target Hermes version | 5e01a5db (installed) - authored against 36ae958 |
 | Plugin version | 0.1.0 |
-| Generated at | 2026-06-18T20:14:22Z |
+| Generated at | 2026-06-22T09:13:43Z |
 
 ## Documents in this set
 
@@ -19,4 +20,19 @@
 
 1. Run Script #1 against your user-owned Hermes checkout:
    `uv run hermes-skill-creator-patch --apply --task-e-redirect --target <hermes-checkout>`
-2. Run Script #1 with `--emit-migration-note` to regenerate this file.
+2. Install the plugin and migrated skill:
+   `uv run python -m hermes_skill_creator_plugin.install`
+3. Run Script #2 to audit / flip all profiles:
+   `uv run hermes-skill-creator-profiles --apply`
+4. Run Script #3 to print a report of enabled skills (optional):
+   `uv run hermes-skill-creator-report --profile default`
+5. Start a fresh Hermes session. The new skill appears in `skills_list()`.
+
+
+## Decisions
+
+**D1. MIGRATION is a 3-file split** — top-level index + Script #1 patches + migrated-skill T3 inventory; each file serves a different audience (see 08-migration-note-format.md §Decisions).
+**D2. Pinned upstream commit `2a40fd2e...` is TBD until verified** — the generator emits `TBD` and the manifest sha is recomputed on each regeneration until a WebFetch re-verifies the SHA (see 08-migration-note-format.md §Decisions).
+**D5. Row counts are computed at runtime from the sites table** — 1 (default), 1+7=8 with `--task-e-redirect`, 1+6=7 with `--task-e-redirect --no-schema-redirect`; T3 row count == 18 (see 08-migration-note-format.md §Decisions).
+**D6. Determinism: frozen timestamp + LF endings + no trailing whitespace** — `HERMES_SKILL_CREATOR_FROZEN_TIME` makes `Generated at` stable across runs (CI always sets it); tables sorted by `site_id` (patch) / row number (skill-port) (see 08-migration-note-format.md §Decisions).
+
