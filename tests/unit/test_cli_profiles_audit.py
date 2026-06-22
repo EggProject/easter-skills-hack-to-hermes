@@ -34,6 +34,7 @@ import json
 import os
 import sys
 import types
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -933,10 +934,16 @@ def test_walk_profile_subdirs_handles_oserror(installed, tmp_path: Path, monkeyp
 
     real_rglob = Path.rglob
 
-    def fake_rglob(self: Path, pattern: str):  # type: ignore[override]
+    def fake_rglob(
+        self: Path,
+        pattern: str,
+        *,
+        case_sensitive: bool | None = None,
+        recurse_symlinks: bool = False,
+    ) -> Iterator[Path]:
         if self == profile / "skills":
             raise OSError("simulated rglob failure")
-        yield from real_rglob(self, pattern)
+        yield from real_rglob(self, pattern, case_sensitive=case_sensitive, recurse_symlinks=recurse_symlinks)
 
     monkeypatch.setattr(walk_mod.Path, "rglob", fake_rglob)
     report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
