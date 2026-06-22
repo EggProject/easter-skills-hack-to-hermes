@@ -219,7 +219,7 @@ The Phase 3 adversarial validator should:
 
 ## Files
 
-- **Input**: `docs/research/upstream-audit-{researcher,prompt-engineer,code-reviewer,security-auditor}.md` (4 Phase 1 audits)
+- **Input**: `docs/research/upstream-audit-2026-06-22/lenses/{researcher,prompt-engineer,code-reviewer,security-auditor}.md` (4 Phase 1 audits)
 - **Output**: `docs/research/upstream-audit-2026-06-22/synthesis.md` (this file)
 - **Plan source**: `docs/plans/07-skill-creator-migration.md` (D2/D5/D6/D7)
 - **Vendored upstream pin**: `docs/research/anthropic-skill-creator-original/skills/skill-creator/` (textual pin: `UPSTREAM_COMMIT.txt` → `2a40fd2e7c52207aa903bd33fc4c65716126966e`)
