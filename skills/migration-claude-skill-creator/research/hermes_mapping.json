@@ -1,0 +1,111 @@
+{
+  "scope": "hermes_cli_mapping",
+  "research_date": "2026-06-22",
+  "method": "minimax MCP websearch + WebFetch of primary docs (hermes-agent.nousresearch.com, github.com/NousResearch/hermes-agent)",
+  "mappings": [
+    {
+      "claude_pattern": "claude -p \"<prompt>\" (non-interactive print mode)",
+      "hermes_equivalent": "hermes chat -q \"<prompt>\"  (one-shot, non-interactive)  OR  hermes -z \"<prompt>\"  (scripted one-shot: strips ALL cosmetic output, final-text-only on stdout)",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/user-guide/cli",
+      "confirm1_url": "https://hermesagent.org.cn/en/docs/reference/cli-commands",
+      "confirm2_url": "https://blakecrosley.com/guides/hermes",
+      "confidence": "high",
+      "notes": "hermes chat -q runs a single query non-interactively and includes tool output in transcript. hermes -z is the bare-bones variant: 'single prompt in, final response text out, nothing else on stdout or stderr'. If you need tool output in transcript, use hermes chat -q. Both documented as the canonical one-shot replacement for claude -p. Source: CLI guide (hermes-agent.nousresearch.com/docs/user-guide/cli)."
+    },
+    {
+      "claude_pattern": "claude -p --output-format stream-json --verbose --include-partial-messages (streaming JSON)",
+      "hermes_equivalent": "hermes chat -q \"<prompt>\" --output-format json   (structured JSON: result text + session_id, model, provider, num_turns, total_cost_usd, usage). NOTE: a dedicated stream-json / --include-partial-messages flag is NOT documented for hermes chat; the closest equivalents are (a) --output-format json for structured one-shot output (proposed in issue #3326, partial support), and (b) hermes sessions export --session-id <id>  for POST-HOC full trajectory including tool_use messages.",
+      "primary_url": "https://github.com/NousResearch/hermes-agent/issues/3326",
+      "confirm1_url": "https://hermes-agent.nousresearch.com/docs/user-guide/cli",
+      "confirm2_url": "https://hermesagent.org.cn/en/docs/reference/cli-commands",
+      "confidence": "medium",
+      "notes": "Hermes does not expose a real-time stream-json NDJSON pipe equivalent. The Claude-Code skill page (bundled in Hermes itself) documents claude's --output-format stream-json --include-partial-messages, but those flags belong to the child claude process, not to hermes chat. For streaming Hermes's own output, the documented path is hermes chat -Q (--quiet) to suppress banner/spinner, plus --output-format json when available. For post-run tool-call history use hermes sessions export (see session_inspection_verdict.json)."
+    },
+    {
+      "claude_pattern": "claude --model claude-...  (model selection)",
+      "hermes_equivalent": "hermes chat --model \"anthropic/claude-sonnet-4\"  OR  hermes chat -m \"anthropic/claude-sonnet-4\"  (override the configured default model; --provider can also force a specific provider)",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/user-guide/cli",
+      "confirm1_url": "https://github.com/NousResearch/hermes-agent/blob/main/cli-config.yaml.example",
+      "confirm2_url": "https://agentsoul.market/en/learn/hermes/reference/",
+      "confidence": "high",
+      "notes": "Both --model and -m are documented as model override flags. The cli-config.yaml.example explicitly notes 'Default model to use (can be overridden with --model flag).' Provider forcing is via --provider (nous | openrouter | anthropic, etc.)."
+    },
+    {
+      "claude_pattern": "os.environ.pop('CLAUDECODE', None)  (env-strip for nesting Claude inside Claude)",
+      "hermes_equivalent": "NO documented equivalent. Hermes does NOT auto-strip CLAUDECODE because CLAUDECODE is an Anthropic-specific signal. The equivalent Hermes-aware env vars are: HERMES_SESSION_ID (set automatically; do NOT override), HERMES_HOME (override config dir, useful for isolated nested profile), HERMES_YOLO_MODE (bypass approval prompts). For isolation between parent and child Hermes sessions use the profile mechanism (hermes -p <name>) which gives each profile its own HERMES_HOME, sessions, and gateway PID.",
+      "primary_url": "https://github.com/nousresearch/hermes-agent/blob/main/website/docs/reference/environment-variables.md",
+      "confirm1_url": "https://hermes-agent.nousresearch.com/docs/user-guide/profiles",
+      "confirm2_url": "https://github.com/NousResearch/hermes-agent/blob/main/AGENTS.md",
+      "confidence": "high",
+      "notes": "Env-vars reference explicitly says 'You should not set HERMES_SESSION_ID manually'. For nesting Hermes-in-Hermes, profiles (-p <name>) are the documented isolation boundary; they isolate ~/.hermes, sessions, gateway PID, and systemd service name. The CLAUDECODE strip pattern does not apply to Hermes."
+    },
+    {
+      "claude_pattern": "claude.ai  (Anthropic web URL / docs portal)",
+      "hermes_equivalent": "https://hermes-agent.nousresearch.com/docs  (official Hermes Agent docs portal)",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/",
+      "confirm1_url": "https://github.com/nousresearch/hermes-agent",
+      "confirm2_url": "https://hermes-agent.nousresearch.com/docs/user-guide/cli",
+      "confidence": "high",
+      "notes": "Official docs live at hermes-agent.nousresearch.com (Mintlify). Source markdown in github.com/NousResearch/hermes-agent/tree/main/website/docs. The repo README explicitly states 'All documentation lives at hermes-agent.nousresearch.com/docs'."
+    },
+    {
+      "claude_pattern": "Anthropic NDJSON event shape  {type: ..., message: {content: [{type, text}]}}  (claude -p --output-format stream-json event stream)",
+      "hermes_equivalent": "NO direct equivalent. Hermes does not emit the Anthropic-style NDJSON event stream. The closest Hermes-side event sources are: (a) hermes chat -q --output-format json — single final result object (not streaming, not NDJSON), (b) hermes sessions export --session-id <id> — full post-hoc trajectory in ShareGPT-compatible JSONL with tool_use turns inlined as  ```{'role': 'assistant', 'content': '... ```{'name': ..., 'arguments': {...}}``` ...'}``` inside the gpt turn (arguments are JSON objects, not strings).",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/developer-guide/trajectory-format",
+      "confirm1_url": "https://github.com/NousResearch/hermes-agent/issues/3326",
+      "confirm2_url": "https://hermes-agent.nousresearch.com/docs/user-guide/sessions",
+      "confidence": "high",
+      "notes": "Confirmed by trajectory-format docs: 'Assistant turn embeds ```{'name': ..., 'arguments': {...}}``` — arguments are JSON objects, not strings (parsed back from the API's JSON-string form). Tool turn wraps each result as <tool_response>{...}</tool_response>.' So Hermes's JSONL shape is ShareGPT-flavored, not Anthropic NDJSON. Schema mismatch is real; do not assume consumers of claude NDJSON can read this."
+    },
+    {
+      "claude_pattern": ".claude/commands/<target>.md  (user-defined slash-command directory)",
+      "hermes_equivalent": "NO direct equivalent. Hermes slash commands are CODE-defined via CommandDef in hermes_cli/commands.py — there is no user-editable .hermes/commands/ directory. Closest analogues: (a) skills installed to ~/.hermes/skills/ (or $HERMES_HOME/skills/) — preloadable via hermes -s <skill> or /skill <name> mid-session; (b) project-context files (.hermes.md / HERMES.md / AGENTS.md / CLAUDE.md) loaded with first-match-wins; (c) ~/.hermes/config.yaml for quick-command customization.",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-hermes-agent",
+      "confirm1_url": "https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/cli.md",
+      "confirm2_url": "https://github.com/NousResearch/hermes-agent",
+      "confidence": "high",
+      "notes": "Skills are loaded from ~/.hermes/skills/ (per-profile via HERMES_HOME) and may be installed from the hub via hermes skills install <id>. Project context is loaded from .hermes.md > HERMES.md > AGENTS.md > CLAUDE.md (capped at 20k chars). The registry of record for slash commands is hermes_cli/commands.py — adding one requires a code change, not a new file."
+    },
+    {
+      "claude_pattern": "Anthropic Cowork (multi-agent desktop collaboration product)",
+      "hermes_equivalent": "NO direct equivalent. Hermes Cowork / Claude Cowork 1:1 product does not exist. Hermes provides subagent delegation via the delegate_task tool (signature: goal, context, toolsets, tasks, max_iterations, role) which spawns child AIAgent instances with isolated context, restricted toolsets, and own terminal sessions. Multi-session parallelism is also available via hermes --background (spawn isolated background sessions, no shared history) and parallel batch mode through delegate_task tasks=[...].",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation",
+      "confirm1_url": "https://www.vellum.ai/blog/best-hermes-agent-alternatives",
+      "confirm2_url": "https://flowtivity.ai/blog/hermes-vs-codex-vs-claude-cowork/",
+      "confidence": "high",
+      "notes": "Cowork is positioned as a managed autonomous desktop product; Hermes is CLI/gateway-first and open-source. Hermes covers the delegation use case via the tool-call layer (delegate_task) rather than a separate product surface. Per the Vellum and Flowtivity comparisons, Cowork and Hermes are explicitly different products with overlapping capability; no Hermes Cowork SKU exists."
+    },
+    {
+      "claude_pattern": "Anthropic subagent YAML format  {name, description, tools, prompt}  (Claude Code .claude/agents/*.md frontmatter)",
+      "hermes_equivalent": "Hermes SKILL.md frontmatter is the analogue: each skill at ~/.hermes/skills/<name>/SKILL.md declares its name, description, and exposes its tools (each tool is a separate file under the skill directory). Multi-agent delegation itself is invoked from the agent loop via the delegate_task tool call: delegate_task(goal: str, context: str, toolsets: list[str], tasks: list, max_iterations: int, role: 'leaf' | 'orchestrator'). Subagents do NOT have a separate YAML manifest; they are spawned dynamically by delegate_task with a restricted toolset.",
+      "primary_url": "https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation",
+      "confirm1_url": "https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/autonomous-ai-agents/autonomous-ai-agents-hermes-agent",
+      "confirm2_url": "https://github.com/NousResearch/hermes-agent",
+      "confidence": "high",
+      "notes": "Hermes skill frontmatter (name + description) is injected into the system prompt. Tool definitions live inside the skill directory. delegate_task is the runtime primitive that produces an isolated child AIAgent; the 'YAML manifest' analogue is the toolsets list passed at call time, not a static file."
+    },
+    {
+      "claude_pattern": "webbrowser.open(url)  (Python stdlib — opens default browser)",
+      "hermes_equivalent": "Python stdlib unchanged: import webbrowser; webbrowser.open(url). Hermes has its own browser-automation layers on top (Browser-Use skill, Pinchtab skill, Firecrawl, Camoufox, page-agent skill), but for the trivial 'open URL in default browser' use case Python stdlib webbrowser is still the canonical, simplest path — Hermes does not provide or require a special CLI for that.",
+      "primary_url": "https://docs.python.org/3/library/webbrowser.html",
+      "confirm1_url": "https://hermes-agent.nousresearch.com/docs/user-guide/skills/optional/web-development/web-development-page-agent",
+      "confirm2_url": "https://github.com/NousResearch/hermes-agent/issues/493",
+      "confidence": "high",
+      "notes": "webbrowser is Python stdlib — no migration needed. Hermes-side, browser control lives in optional skills (page-agent, browser-use, Pinchtab issue #493). The point of the mapping is to flag that nothing needs to change for the trivial case; only when the skill needs an actual browser-driving agent does Hermes-specific machinery matter."
+    }
+  ],
+  "summary": {
+    "total_mappings": 10,
+    "no_equivalent": [
+      "claude -p --output-format stream-json --verbose --include-partial-messages  (Hermes has --output-format json for one-shot, but no real-time stream-json / partial-messages pipe)",
+      "Anthropic NDJSON event shape  {type, message: {content: [{type, text}]}}  (Hermes emits ShareGPT-flavored JSONL via sessions export, not Anthropic NDJSON)",
+      ".claude/commands/<target>.md  (Hermes slash commands are code-defined in hermes_cli/commands.py, not user-editable files)",
+      "Anthropic Cowork  (no Hermes product called Cowork; subagent delegation via delegate_task is the closest analogue)"
+    ],
+    "schema_mismatches_to_watch": [
+      "Anthropic NDJSON vs Hermes ShareGPT JSONL: consumers of claude's stream-json CANNOT read hermes sessions export directly",
+      "delegate_task returns structured final summary, NOT intermediate tool traces (parent sees only child's final text)",
+      "HERMES_SESSION_ID is read-only (auto-set); do NOT pop/set it the way CLAUDECODE is stripped for claude nesting"
+    ]
+  }
+}

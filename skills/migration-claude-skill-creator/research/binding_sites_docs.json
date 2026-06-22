@@ -1,0 +1,251 @@
+{
+  "scope": "docs",
+  "binding_sites": [
+    {
+      "site_id": "D01",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 14,
+      "match": "claude-with-access-to-the-skill",
+      "context_5lines": "- Decide what you want the skill to do and roughly how it should do it\n- Write a draft of the skill\n- Create a few test prompts and run claude-with-access-to-the-skill on them\n- Help the user evaluate the results both qualitatively and quantitatively\n  - While the runs happen in the background, draft some quantitative evals if there aren't any (if there are some, you can either use as is or modify if you feel something needs to change about them). Then explain them to the user (or if they already existed, explain the ones that already exist)",
+      "type": "claude_specific_terminology",
+      "severity": "info"
+    },
+    {
+      "site_id": "D02",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 67,
+      "match": "currently Claude has a tendency to \"undertrigger\" skills",
+      "context_5lines": "- **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All \"when to use\" info goes here, not in the body. Note: currently Claude has a tendency to \"undertrigger\" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit \"pushy\". So for instance, instead of \"How to build a simple fast dashboard to display internal Anthropic data.\", you might write \"How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'\"\n- **compatibility**: Required tools, dependencies (optional, rarely needed)\n- **the rest of the skill :)**",
+      "type": "claude_specific_behavior",
+      "severity": "info"
+    },
+    {
+      "site_id": "D03",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 67,
+      "match": "internal Anthropic data",
+      "context_5lines": "- **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All \"when to use\" info goes here, not in the body. Note: currently Claude has a tendency to \"undertrigger\" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit \"pushy\". So for instance, instead of \"How to build a simple fast dashboard to display internal Anthropic data.\", you might write \"How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'\"\n- **compatibility**: Required tools, dependencies (optional, rarely needed)\n- **the rest of the skill :)**",
+      "type": "anthropic_doc_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D04",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 68,
+      "match": "**compatibility**: Required tools, dependencies (optional, rarely needed)",
+      "context_5lines": "- **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All \"when to use\" info goes here, not in the body. Note: currently Claude has a tendency to \"undertrigger\" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit \"pushy\". So for instance, instead of \"How to build a simple fast dashboard to display internal Anthropic data.\", you might write \"How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'\"\n- **compatibility**: Required tools, dependencies (optional, rarely needed)\n- **the rest of the skill :)**",
+      "type": "anthropic_frontmatter_field",
+      "severity": "info"
+    },
+    {
+      "site_id": "D05",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 247,
+      "match": "**Cowork / headless environments:**",
+      "context_5lines": "   For iteration 2+, also pass `--previous-workspace <workspace>/iteration-<N-1>`.\n\n   **Cowork / headless environments:** If `webbrowser.open()` is not available or the environment has no display, use `--static <output_path>` to write a standalone HTML file instead of starting a server. Feedback will be downloaded as a `feedback.json` file when the user clicks \"Submit All Reviews\". After download, copy `feedback.json` into the workspace directory for the next iteration to pick up.",
+      "type": "cowork_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D06",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 335,
+      "match": "The description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill.",
+      "context_5lines": "## Description Optimization\n\nThe description field in SKILL.md frontmatter is the primary mechanism that determines whether Claude invokes a skill. After creating or improving a skill, offer to optimize the description for better triggering accuracy.",
+      "type": "claude_specific_behavior",
+      "severity": "info"
+    },
+    {
+      "site_id": "D07",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 348,
+      "match": "The queries must be realistic and something a Claude Code or Claude.ai user would actually type.",
+      "context_5lines": "```json\n[\n  {\"query\": \"the user prompt\", \"should_trigger\": true},\n  {\"query\": \"another prompt\", \"should_trigger\": false}\n]\n```\n\nThe queries must be realistic and something a Claude Code or Claude.ai user would actually type. Not abstract requests, but requests that are concrete and specific and have a good amount of detail. For instance, file paths, personal context about the user's job or situation, column names and values, company names, URLs. A little bit of backstory. Some might be in lowercase or contain abbreviations or typos or casual speech. Use a mix of different lengths, and focus on edge cases rather than making them clear-cut (the user will get a chance to sign off on them).",
+      "type": "claude_platform_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D08",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 398,
+      "match": "Skills appear in Claude's `available_skills` list with their name + description",
+      "context_5lines": "### How skill triggering works\n\nUnderstanding the triggering mechanism helps design better eval queries. Skills appear in Claude's `available_skills` list with their name + description, and Claude decides whether to consult a skill based on that description. The important thing to know is that Claude only consults skills for tasks it can't easily handle on its own — simple, one-step queries like \"read this PDF\" may not trigger a skill even if the description matches perfectly, because Claude can handle them directly with basic tools. Complex, multi-step, or specialized queries reliably trigger skills when the description matches.",
+      "type": "available_skills_list_shape",
+      "severity": "info"
+    },
+    {
+      "site_id": "D09",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 398,
+      "match": "Claude only consults skills for tasks it can't easily handle on its own",
+      "context_5lines": "### How skill triggering works\n\nUnderstanding the triggering mechanism helps design better eval queries. Skills appear in Claude's `available_skills` list with their name + description, and Claude decides whether to consult a skill based on that description. The important thing to know is that Claude only consults skills for tasks it can't easily handle on its own — simple, one-step queries like \"read this PDF\" may not trigger a skill even if the description matches perfectly, because Claude can handle them directly with basic tools. Complex, multi-step, or specialized queries reliably trigger skills when the description matches.",
+      "type": "claude_specific_behavior",
+      "severity": "info"
+    },
+    {
+      "site_id": "D10",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 420,
+      "match": "## Claude.ai-specific instructions",
+      "context_5lines": "---\n\n## Claude.ai-specific instructions\n\nIn Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:",
+      "type": "claude_ai_section",
+      "severity": "high"
+    },
+    {
+      "site_id": "D11",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 422,
+      "match": "In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents",
+      "context_5lines": "## Claude.ai-specific instructions\n\nIn Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:\n\n**Running test cases**: No subagents means no parallel execution. For each test case, read the skill's SKILL.md, then follow its instructions to accomplish the test prompt yourself. Do them one at a time. This is less rigorous than independent subagents (you wrote the skill and you're also running it, so you have full context), but it's a useful sanity check — and the human review step compensates. Skip the baseline runs — just use the skill to complete the task as requested.",
+      "type": "claude_ai_reference",
+      "severity": "high"
+    },
+    {
+      "site_id": "D12",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 426,
+      "match": "Claude.ai's VM has no display",
+      "context_5lines": "**Reviewing results**: If you can't open a browser (e.g., Claude.ai's VM has no display, or you're on a remote server), skip the browser reviewer entirely. Instead, present results directly in the conversation. For each test case, show the prompt and the output. If the output is a file the user needs to see (like a .docx or .xlsx), save it to the filesystem and tell them where it is so they can download and inspect it. Ask for feedback inline: \"How does this look? Anything you'd change?\"",
+      "type": "claude_ai_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D13",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 432,
+      "match": "the `claude` CLI tool (specifically `claude -p`) which is only available in Claude Code",
+      "context_5lines": "**Description optimization**: This section requires the `claude` CLI tool (specifically `claude -p`) which is only available in Claude Code. Skip it if you're on Claude.ai.\n\n**Blind comparison**: Requires subagents. Skip it.\n\n**Packaging**: The `package_skill.py` script works anywhere with Python and a filesystem. On Claude.ai, you can run it and the user can download the resulting `.skill` file.",
+      "type": "claude_cli_binding",
+      "severity": "high"
+    },
+    {
+      "site_id": "D14",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 445,
+      "match": "## Cowork-Specific Instructions",
+      "context_5lines": "---\n\n## Cowork-Specific Instructions\n\nIf you're in Cowork, the main things to know are:",
+      "type": "cowork_section",
+      "severity": "high"
+    },
+    {
+      "site_id": "D15",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 451,
+      "match": "the Cowork setup seems to disincline Claude from generating the eval viewer",
+      "context_5lines": "- You don't have a browser or display, so when generating the eval viewer, use `--static <output_path>` to write a standalone HTML file instead of starting a server. Then proffer a link that the user can click to open the HTML in their browser.\n- For whatever reason, the Cowork setup seems to disincline Claude from generating the eval viewer after running the tests, so just to reiterate: whether you're in Cowork or in Claude Code, after running tests, you should always generate the eval viewer for the human to look at examples before revising the skill yourself and trying to make corrections, using `generate_review.py` (not writing your own boutique html code). Sorry in advance but I'm gonna go all caps here: GENERATE THE EVAL VIEWER *BEFORE* evaluating inputs yourself. You want to get them in front of the human ASAP!",
+      "type": "cowork_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D16",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 454,
+      "match": "Description optimization (`run_loop.py` / `run_eval.py`) should work in Cowork just fine since it uses `claude -p` via subprocess",
+      "context_5lines": "- Packaging works — `package_skill.py` just needs Python and a filesystem.\n- Description optimization (`run_loop.py` / `run_eval.py`) should work in Cowork just fine since it uses `claude -p` via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.\n- **Updating an existing skill**: The user might be asking you to update an existing skill, not create a new one. Follow the update guidance in the claude.ai section above.",
+      "type": "cowork_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D17",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 455,
+      "match": "Follow the update guidance in the claude.ai section above",
+      "context_5lines": "- Packaging works — `package_skill.py` just needs Python and a filesystem.\n- Description optimization (`run_loop.py` / `run_eval.py`) should work in Cowork just fine since it uses `claude -p` via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.\n- **Updating an existing skill**: The user might be asking you to update an existing skill, not create a new one. Follow the update guidance in the claude.ai section above.",
+      "type": "claude_ai_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D18",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 476,
+      "match": "Run claude-with-access-to-the-skill on test prompts",
+      "context_5lines": "Repeating one more time the core loop here for emphasis:\n\n- Figure out what the skill is about\n- Draft or edit the skill\n- Run claude-with-access-to-the-skill on test prompts\n- With the user, evaluate the outputs:\n  - Create benchmark.json and run `eval-viewer/generate_review.py` to help the user review them\n  - Run quantitative evals\n- Repeat until you and the user are satisfied\n- Package the final skill and return it to the user.",
+      "type": "claude_specific_terminology",
+      "severity": "info"
+    },
+    {
+      "site_id": "D19",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 483,
+      "match": "If you're in Cowork, please specifically put \"Create evals JSON and run `eval-viewer/generate_review.py`",
+      "context_5lines": "Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put \"Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases\" in your TodoList to make sure it happens.\n\nGood luck!",
+      "type": "cowork_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D20",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 165,
+      "match": "Do NOT use `/skill-test` or any other testing skill.",
+      "context_5lines": "## Running and evaluating test cases\n\nThis section is one continuous sequence — don't stop partway through. Do NOT use `/skill-test` or any other testing skill.\n\nPut results in `<skill-name>-workspace/` as a sibling to the skill directory. Within the workspace, organize results by iteration (`iteration-1/`, `iteration-2/`, etc.) and within that, each test case gets a directory (`eval-0/`, `eval-1/`, etc.). Don't create all of this upfront — just create directories as you go.",
+      "type": "claude_code_slash_command",
+      "severity": "info"
+    },
+    {
+      "site_id": "D21",
+      "file": "skills/skill-creator/references/schemas.md",
+      "line": 228,
+      "match": "\"executor_model\": \"claude-sonnet-4-20250514\"",
+      "context_5lines": "  \"metadata\": {\n    \"skill_name\": \"pdf\",\n    \"skill_path\": \"/path/to/pdf\",\n    \"executor_model\": \"claude-sonnet-4-20250514\",\n    \"analyzer_model\": \"most-capable-model\",\n    \"timestamp\": \"2026-01-15T10:30:00Z\",\n    \"evals_run\": [1, 2, 3],\n    \"runs_per_configuration\": 3\n  },",
+      "type": "anthropic_model_reference",
+      "severity": "info"
+    },
+    {
+      "site_id": "D22",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 387,
+      "match": "--verbose",
+      "context_5lines": "```bash\npython -m scripts.run_loop \\\n  --eval-set <path-to-trigger-eval.json> \\\n  --skill-path <path-to-skill> \\\n  --model <model-id-powering-this-session> \\\n  --max-iterations 5 \\\n  --verbose\n```",
+      "type": "claude_cli_flag",
+      "severity": "info"
+    },
+    {
+      "site_id": "D23",
+      "file": "skills/skill-creator/SKILL.md",
+      "line": 385,
+      "match": "--model <model-id-powering-this-session>",
+      "context_5lines": "```bash\npython -m scripts.run_loop \\\n  --eval-set <path-to-trigger-eval.json> \\\n  --skill-path <path-to-skill> \\\n  --model <model-id-powering-this-session> \\\n  --max-iterations 5 \\\n  --verbose\n```",
+      "type": "claude_specific_runtime",
+      "severity": "info"
+    }
+  ],
+  "summary": {
+    "total_sites": 23,
+    "by_type": {
+      "claude_specific_terminology": 2,
+      "claude_specific_behavior": 3,
+      "anthropic_doc_reference": 1,
+      "anthropic_frontmatter_field": 1,
+      "anthropic_model_reference": 1,
+      "cowork_reference": 4,
+      "cowork_section": 1,
+      "claude_ai_section": 1,
+      "claude_ai_reference": 3,
+      "claude_cli_binding": 1,
+      "claude_cli_flag": 1,
+      "claude_specific_runtime": 1,
+      "claude_code_slash_command": 1,
+      "claude_platform_reference": 1,
+      "available_skills_list_shape": 1
+    },
+    "by_severity": {
+      "high": 4,
+      "info": 19
+    },
+    "files_scanned": [
+      "skills/skill-creator/SKILL.md",
+      "skills/skill-creator/references/schemas.md",
+      "skills/skill-creator/assets/eval_review.html"
+    ],
+    "notes": [
+      "No `claude.ai` URLs found (no http(s)://claude.ai references).",
+      "No `Anthropic-hosted` literal phrase found.",
+      "No `allowed-tools:` references in frontmatter context.",
+      "No `--include-partial-messages` or `stream-json` flags in prose.",
+      "available_skills list shape referenced once (prose only, no JSON shape example).",
+      "eval_review.html contains no Claude-specific bindings (generic UI template).",
+      "Two entire sections are Claude.ai/Cowork branches: L420-441 'Claude.ai-specific instructions' and L445-455 'Cowork-Specific Instructions'.",
+      "schemas.md references Anthropic model ID 'claude-sonnet-4-20250514' in benchmark.json example."
+    ]
+  }
+}

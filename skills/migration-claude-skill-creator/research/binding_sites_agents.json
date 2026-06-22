@@ -1,0 +1,147 @@
+{
+  "scope": "agents/*.md",
+  "binding_sites": [
+    {
+      "site_id": "G01",
+      "file": "agents/grader.md",
+      "line": 1,
+      "match": "# Grader Agent",
+      "context_5lines": "# Grader Agent\n\nEvaluate expectations against an execution transcript and outputs.\n\n## Role\n\nThe Grader reviews a transcript and output files, then determines whether each expectation passes or fails. Provide clear evidence for each judgment.",
+      "type": "missing_yaml_frontmatter",
+      "severity": "critical",
+      "notes": "No YAML frontmatter present. Migration target requires name/description/tools/prompt frontmatter for Anthropic subagent format. Currently pure markdown prompt body only."
+    },
+    {
+      "site_id": "G02",
+      "file": "agents/grader.md",
+      "line": 108,
+      "match": "Write a JSON file with this structure:",
+      "context_5lines": "### Step 7: Write Grading Results\n\nSave results to `{outputs_dir}/../grading.json` (sibling to outputs_dir).\n\n## Grading Criteria\n\n**PASS when**:\n- The transcript or outputs clearly demonstrate the expectation is true\n- Specific evidence can be cited\n- The evidence reflects genuine substance, not just surface compliance (e.g., a file exists AND contains correct content, not just the right filename)",
+      "type": "json_output_schema",
+      "severity": "info",
+      "notes": "Defines the grading JSON schema with fields: expectations[], summary{passed,failed,total,pass_rate}, execution_metrics{tool_calls,total_tool_calls,total_steps,errors_encountered,output_chars,transcript_chars}, timing{executor_duration_seconds,grader_duration_seconds,total_duration_seconds}, claims[], user_notes_summary{uncertainties,needs_review,workarounds}, eval_feedback{suggestions[],overall}. Schema is runtime output contract, NOT an Anthropic binding."
+    },
+    {
+      "site_id": "G03",
+      "file": "agents/grader.md",
+      "line": 137,
+      "match": "tool_calls: {\"Read\": 5, \"Write\": 2, \"Bash\": 8}",
+      "context_5lines": "  \"execution_metrics\": {\n    \"tool_calls\": {\n      \"Read\": 5,\n      \"Write\": 2,\n      \"Bash\": 8\n    },\n    \"total_tool_calls\": 15,",
+      "type": "claude_tool_name_in_schema",
+      "severity": "warning",
+      "notes": "Tool names 'Read', 'Write', 'Bash' embedded in example JSON output are Claude Code tool names. Schema example must migrate to Hermes/D3 tool name vocabulary OR be relabeled as generic category labels. These appear inside a quoted string within a markdown code block (not binding), but indicate the executor instrumentation layer hardcodes Claude tool names."
+    },
+    {
+      "site_id": "G04",
+      "file": "agents/grader.md",
+      "line": 30,
+      "match": "use the inspection tools provided in your prompt",
+      "context_5lines": "2. Read/examine each file relevant to the expectations. If outputs aren't plain text, use the inspection tools provided in your prompt — don't rely solely on what the transcript says the executor produced.\n3. Note contents, structure, and quality\n\n### Step 3: Evaluate Each Assertion",
+      "type": "implicit_tool_dependency",
+      "severity": "info",
+      "notes": "References 'inspection tools provided in your prompt' — relies on caller passing a tool whitelist in the invocation context. This is a soft Anthropic-flavored dependency (subagent tool grant pattern), but expressed generically; migration should make explicit which Hermes/D3 tools are granted."
+    },
+    {
+      "site_id": "A01",
+      "file": "agents/analyzer.md",
+      "line": 1,
+      "match": "# Post-hoc Analyzer Agent",
+      "context_5lines": "# Post-hoc Analyzer Agent\n\nAnalyze blind comparison results to understand WHY the winner won and generate improvement suggestions.\n\n## Role\n\nAfter the blind comparator determines a winner, the Post-hoc Analyzer \"unblids\" the results by examining the skills and transcripts. The goal is to extract actionable insights: what made the winner better, and how can the loser be improved?",
+      "type": "missing_yaml_frontmatter",
+      "severity": "critical",
+      "notes": "No YAML frontmatter present. Migration target requires name/description/tools/prompt frontmatter. File is pure markdown prompt body, no Anthropic subagent binding."
+    },
+    {
+      "site_id": "A02",
+      "file": "agents/analyzer.md",
+      "line": 93,
+      "match": "Write a JSON file with this structure:",
+      "context_5lines": "Save structured analysis to `{output_path}`.\n\n## Output Format\n\nWrite a JSON file with this structure:\n\n```json\n{\n  \"comparison_summary\": {\n    \"winner\": \"A\",",
+      "type": "json_output_schema",
+      "severity": "info",
+      "notes": "Defines analysis JSON schema with fields: comparison_summary{winner,winner_skill,loser_skill,comparator_reasoning}, winner_strengths[], loser_weaknesses[], instruction_following{winner{score,issues[]},loser{score,issues[]}}, improvement_suggestions[]{priority,category,suggestion,expected_impact}, transcript_insights{winner_execution_pattern,loser_execution_pattern}. Runtime output contract, not Anthropic binding."
+    },
+    {
+      "site_id": "A03",
+      "file": "agents/analyzer.md",
+      "line": 185,
+      "match": "---",
+      "context_5lines": "- **low**: Nice to have, marginal improvement\n\n---\n\n# Analyzing Benchmark Results\n\nWhen analyzing benchmark results, the analyzer's purpose is to **surface patterns and anomalies** across multiple runs, not suggest skill improvements.",
+      "type": "false_positive_yaml_delimiter",
+      "severity": "info",
+      "notes": "The '---' on line 185 is a Markdown horizontal rule separating two role sections in the same file (post-hoc analyzer vs. benchmark analyzer), NOT a YAML frontmatter block. No frontmatter conversion required for this line."
+    },
+    {
+      "site_id": "A04",
+      "file": "agents/analyzer.md",
+      "line": 149,
+      "match": "execution_pattern: \"Read skill -> Followed 5-step process...\"",
+      "context_5lines": "  \"transcript_insights\": {\n    \"winner_execution_pattern\": \"Read skill -> Followed 5-step process -> Used validation script -> Fixed 2 issues -> Produced output\",\n    \"loser_execution_pattern\": \"Read skill -> Unclear on approach -> Tried 3 different methods -> No validation -> Output had errors\"\n  }\n}",
+      "type": "implicit_claude_workflow_in_schema",
+      "severity": "info",
+      "notes": "Example transcript pattern string contains 'Read skill' (Claude tool verb). Schema field is a freeform string, but the example embeds Claude-style execution vocabulary. Likely safe to keep as illustrative example; not binding."
+    },
+    {
+      "site_id": "C01",
+      "file": "agents/comparator.md",
+      "line": 1,
+      "match": "# Blind Comparator Agent",
+      "context_5lines": "# Blind Comparator Agent\n\nCompare two outputs WITHOUT knowing which skill produced them.\n\n## Role\n\nThe Blind Comparator judges which output better accomplishes the eval task. You receive two outputs labeled A and B, but you do NOT know which skill produced which. This prevents bias toward a particular skill or approach.\n\nYour judgment is based purely on output quality and task completion.",
+      "type": "missing_yaml_frontmatter",
+      "severity": "critical",
+      "notes": "No YAML frontmatter present. Migration target requires name/description/tools/prompt frontmatter. File is pure markdown prompt body, no Anthropic subagent binding."
+    },
+    {
+      "site_id": "C02",
+      "file": "agents/comparator.md",
+      "line": 93,
+      "match": "Write a JSON file with this structure:",
+      "context_5lines": "Save results to a JSON file at the path specified (or `comparison.json` if not specified).\n\n## Output Format\n\nWrite a JSON file with this structure:\n\n```json\n{\n  \"winner\": \"A\",",
+      "type": "json_output_schema",
+      "severity": "info",
+      "notes": "Defines comparison JSON schema with fields: winner, reasoning, rubric{A{content,structure,content_score,structure_score,overall_score},B{...}}, output_quality{A{score,strengths,weaknesses},B{...}}, expectation_results{A{passed,total,pass_rate,details[]},B{...}}. Runtime output contract, not Anthropic binding."
+    },
+    {
+      "site_id": "C03",
+      "file": "agents/comparator.md",
+      "line": 196,
+      "match": "Stay blind",
+      "context_5lines": "## Guidelines\n\n- **Stay blind**: DO NOT try to infer which skill produced which output. Judge purely on output quality.\n- **Be specific**: Cite specific examples when explaining strengths and weaknesses.\n- **Be decisive**: Choose a winner unless outputs are genuinely equivalent.\n- **Output quality first**: Assertion scores are secondary to overall task completion.\n- **Be objective**: Don't favor outputs based on style preferences; focus on correctness and completeness.",
+      "type": "domain_protocol",
+      "severity": "info",
+      "notes": "Domain-specific protocol (blind evaluation); no Anthropic-specific tooling bindings. Safe to retain as-is in migration."
+    }
+  ],
+  "summary": {
+    "total_sites": 11,
+    "by_type": {
+      "missing_yaml_frontmatter": 3,
+      "json_output_schema": 3,
+      "claude_tool_name_in_schema": 1,
+      "implicit_tool_dependency": 1,
+      "false_positive_yaml_delimiter": 1,
+      "implicit_claude_workflow_in_schema": 1,
+      "domain_protocol": 1
+    },
+    "by_severity": {
+      "critical": 3,
+      "warning": 1,
+      "info": 7
+    },
+    "by_file": {
+      "agents/analyzer.md": 4,
+      "agents/comparator.md": 3,
+      "agents/grader.md": 4
+    },
+    "key_findings": [
+      "NONE of the three agent files have YAML frontmatter blocks (no name/description/tools/prompt headers). They are pure markdown prompt bodies.",
+      "The D3 decision's conversion target (YAML frontmatter -> delegate_task runtime format) means these files have NO frontmatter TO migrate; they need to be WRAPPED with new frontmatter at migration time.",
+      "The '---' on analyzer.md line 185 is a markdown horizontal rule between two role sections, NOT a YAML frontmatter delimiter.",
+      "No Anthropic-specific tool whitelists appear in prose body of any file.",
+      "No references to 'claude -p' or Anthropic SDK conventions.",
+      "Only Anthropic-flavored artifacts found: grader.md line 137 embeds Claude tool names (Read/Write/Bash) inside an example JSON schema, and analyzer.md line 149 contains a 'Read skill' verb in an example transcript string.",
+      "Output JSON schemas (expectations[], summary, execution_metrics, etc.) are runtime contracts consumed by downstream tooling, NOT Anthropic bindings. Migration should preserve them unchanged.",
+      "grader.md line 30 ('inspection tools provided in your prompt') is a soft caller-dependency pattern but expressed generically; needs explicit Hermes/D3 tool whitelist at the delegate_task invocation site."
+    ]
+  }
+}
