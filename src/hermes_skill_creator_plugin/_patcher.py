@@ -102,15 +102,17 @@ migration_rows_for_mode = _imps.migration_rows_for_mode
 _render_cap_row = _imps._render_cap_row
 _render_task_e_row = _imps._render_task_e_row
 ALL_TASK_E_SITES = _imps.ALL_TASK_E_SITES
+E0_CONSULT_RULE_DEF = _imps.E0_CONSULT_RULE_DEF
 E1_SKILLS_GUIDANCE = _imps.E1_SKILLS_GUIDANCE
 E2_MEMORY_GUIDANCE = _imps.E2_MEMORY_GUIDANCE
 E3_BUILD_SKILLS_PROMPT = _imps.E3_BUILD_SKILLS_PROMPT
+E4B_CONSULT_RULE_IMPORT = _imps.E4B_CONSULT_RULE_IMPORT
 E4_SKILL_REVIEW_PROMPT = _imps.E4_SKILL_REVIEW_PROMPT
 E5_COMBINED_REVIEW_PROMPT = _imps.E5_COMBINED_REVIEW_PROMPT
 E6_SKILL_MANAGE_SCHEMA_DESC = _imps.E6_SKILL_MANAGE_SCHEMA_DESC
 E7_SKILLS_DOC_SECTION = _imps.E7_SKILLS_DOC_SECTION
 S1_CAP_SITE = _imps.S1_CAP_SITE
-SKILL_CREATOR_CONSULT_RULE = _imps.SKILL_CREATOR_CONSULT_RULE
+S1_CAP_SITE_FALLBACK = _imps.S1_CAP_SITE_FALLBACK
 TOOLS_SKILL_UTILS_REL = _imps.TOOLS_SKILL_UTILS_REL
 sites_for_mode = _imps.sites_for_mode
 Anchor = _sites.Anchor
@@ -194,10 +196,13 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
         return early
     assert inputs.target is not None  # narrowed by preflight
     target_path = inputs.target.resolve()
+    # AC-2.11: circular-import preflight is now a SIGNAL, not an
+    # abort. The pipeline swaps S1.cap for S1.cap_fallback when a
+    # cycle is detected so the patch proceeds with a local
+    # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant.
     circular = _check_circular_import(target_path, state)
-    if circular is not None:
-        return circular
-    return _drive_pipeline(inputs, target_path, state)
+    use_fallback_cap = circular.detected
+    return _drive_pipeline(inputs, target_path, state, use_fallback_cap)
 
 
 def _select_sites_for_run(
@@ -230,6 +235,7 @@ def _drive_pipeline(
     inputs: PatchRunInputs,
     target_path: Path,
     state: _PatchBodyState,
+    use_fallback_cap: bool = False,
 ) -> PatcherResult:
     all_sites = list(
         sites_for_mode(
@@ -237,6 +243,12 @@ def _drive_pipeline(
             no_schema_redirect=inputs.no_schema_redirect,
         )
     )
+    # AC-2.11: when the circular-import pre-flight fired, swap S1.cap
+    # for S1.cap_fallback so the patch proceeds with a local
+    # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant instead of importing
+    # from ``tools.skills_tool`` (which would cycle).
+    if use_fallback_cap:
+        all_sites = [S1_CAP_SITE_FALLBACK if site.site_id == S1_CAP_SITE.site_id else site for site in all_sites]
     persisted = load_state(target_path)
     # Validation always runs on every site so a fresh LINE_DRIFT is
     # detected and either EXIT_DRIFT (default) or absorbed into the

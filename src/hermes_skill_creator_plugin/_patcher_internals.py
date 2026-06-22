@@ -4,6 +4,11 @@ Extracted from ``_patcher.py`` to keep that orchestrator module under
 wemake WPS202 (≤7 module members). Contains the per-run mutable state,
 the preflight + circular-import short-circuit checks, and the
 empty-result builder.
+
+AC-2.11 fallback: when :func:`_check_circular_import` detects a cycle,
+the patcher does NOT exit; instead it returns a ``_CircularImportInfo``
+signal so the pipeline can swap S1.cap for S1.cap_fallback and proceed
+with the local ``_MAX_DESCRIPTION_LENGTH = 1024`` constant.
 """
 
 from __future__ import annotations
@@ -26,6 +31,16 @@ class _PatchBodyState:
     diagnostics: list[str] = dataclasses.field(default_factory=list)
     sites_patched: list[str] = dataclasses.field(default_factory=list)
     sites_already: list[str] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass(frozen=True)
+class _CircularImportInfo:
+    """AC-2.11: signal that a cycle was detected so the caller can swap sites."""
+
+    detected: bool
+
+
+_NO_CIRCULAR_IMPORT = _CircularImportInfo(detected=False)
 
 
 def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
@@ -54,14 +69,19 @@ def _check_preflight(
 def _check_circular_import(
     target_path: Path,
     state: _PatchBodyState,
-) -> PatcherResult | None:
+) -> _CircularImportInfo:
+    """AC-2.11: return ``_CircularImportInfo(detected=True)`` when the
+    cycle pre-flight fires. The orchestrator swaps S1.cap for
+    S1.cap_fallback (which uses a local ``_MAX_DESCRIPTION_LENGTH = 1024``)
+    instead of aborting the run.
+    """
     skill_utils = target_path / _imps.TOOLS_SKILL_UTILS_REL
     if not _imps.file_has_circular_import(skill_utils):
-        return None
+        return _NO_CIRCULAR_IMPORT
     from hermes_skill_creator_plugin.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
 
     state.diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
-    return _empty_result(state.diagnostics, _imps.EXIT_IO)
+    return _CircularImportInfo(detected=True)
 
 
 def _run_patch_with_inputs(inputs: PatchRunInputs) -> PatcherResult:

@@ -28,6 +28,7 @@ import pytest
 
 from hermes_skill_creator_plugin._patcher import (
     ALL_TASK_E_SITES,
+    E0_CONSULT_RULE_DEF,
     E1_SKILLS_GUIDANCE,
     E2_MEMORY_GUIDANCE,
     E3_BUILD_SKILLS_PROMPT,
@@ -41,7 +42,7 @@ from hermes_skill_creator_plugin._patcher import (
     EXIT_PERMISSION,
     EXIT_USER_ABORT,
     S1_CAP_SITE,
-    SKILL_CREATOR_CONSULT_RULE,
+    S1_CAP_SITE_FALLBACK,
     STATE_SIDECAR,
     Anchor,
     PatchRunInputs,
@@ -62,6 +63,7 @@ from hermes_skill_creator_plugin._patcher import (
     write_rejected,
     write_state,
 )
+from hermes_skill_creator_plugin._patcher_sites_table import _CONSULT_RULE_TEXT
 from tests.conftest import SKILL_UTILS_PATCHED, assert_hermes_agent_untouched
 
 
@@ -426,15 +428,24 @@ def test_target_missing_agent_skill_utils_exits_4(tmp_path: Path, real_hermes_ag
     assert r.exit_code == EXIT_IO
 
 
-def test_circular_import_preflight_exits_4(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """agent/skill_utils.py already imports from tools.skills_tool
-    -> exit 4 with a 'potential circular import' diagnostic."""
+def test_circular_import_preflight_emits_diagnostic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """AC-2.11: agent/skill_utils.py already imports from
+    tools.skills_tool. The circular-import pre-flight emits a
+    diagnostic AND the patcher proceeds with the FALLBACK S1 site
+    (which uses a local ``_MAX_DESCRIPTION_LENGTH = 1024``). The run
+    exits 0 on --check (the cycle is no longer fatal).
+    """
     checkout = tmp_path / "cycle"
     (checkout / "agent").mkdir(parents=True)
-    (checkout / "agent" / "skill_utils.py").write_text(
-        "from tools.skills_tool import MAX_DESCRIPTION_LENGTH\n" * 10,
-        encoding="utf-8",
-    )
+    # Layout mirrors the real Hermes checkout: skill_utils.py has the
+    # cap-raise pair at L688/L689 so the S1.cap_fallback site anchors
+    # match. The cycle marker is on L1 so the preflight fires.
+    lines: list[str] = ["from tools.skills_tool import MAX_DESCRIPTION_LENGTH\n"]
+    for i in range(1, 687):
+        lines.append(f"# pad {i}\n")
+    lines.append("    if len(desc) > 60:\n")
+    lines.append('        return desc[:57] + "..."\n')
+    (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     r = run_patch(
         PatchRunInputs(
             target=checkout,
@@ -446,7 +457,7 @@ def test_circular_import_preflight_exits_4(tmp_path: Path, real_hermes_agent_sen
             no_schema_redirect=False,
         ),
     )
-    assert r.exit_code == EXIT_IO
+    assert r.exit_code == EXIT_OK
     assert any("circular import" in d for d in r.diagnostics)
 
 
@@ -973,12 +984,17 @@ def test_migration_rows_default_one() -> None:
     assert migration_rows_for_mode(task_e_redirect=False, no_schema_redirect=False) == 1
 
 
-def test_migration_rows_with_task_e_eight() -> None:
-    assert migration_rows_for_mode(task_e_redirect=True, no_schema_redirect=False) == 8
+def test_migration_rows_with_task_e_ten() -> None:
+    """AC-2.8: --task-e-redirect now patches 10 sites (S1.cap + 9 Task
+    E sites: E0 + E1-E5 + E4b + E6 + E7) instead of 8 (S1.cap + 7
+    Task E sites). E0 + E4b are the constant-definition + import sites.
+    """
+    assert migration_rows_for_mode(task_e_redirect=True, no_schema_redirect=False) == 10
 
 
-def test_migration_rows_with_no_schema_seven() -> None:
-    assert migration_rows_for_mode(task_e_redirect=True, no_schema_redirect=True) == 7
+def test_migration_rows_with_no_schema_nine() -> None:
+    """AC-2.8: --no-schema-redirect skips E6, leaving 9 sites."""
+    assert migration_rows_for_mode(task_e_redirect=True, no_schema_redirect=True) == 9
 
 
 def test_render_cap_row_contains_s1_cap() -> None:
@@ -999,12 +1015,20 @@ def test_render_task_e_row_contains_site_id() -> None:
 
 
 def test_skill_creator_consult_rule_constant() -> None:
-    """The shared constant is a non-empty string with the required
-    substrings."""
-    assert "skill-creator" in SKILL_CREATOR_CONSULT_RULE
-    assert "skill_view(name='skill-creator')" in SKILL_CREATOR_CONSULT_RULE
-    assert "skill_manage" in SKILL_CREATOR_CONSULT_RULE
-    assert "never auto-install" in SKILL_CREATOR_CONSULT_RULE
+    """AC-2.8: the shared constant lives in ``agent/prompt_builder.py``
+    (the target) and is written there by the E0 patch site. The plugin
+    no longer exports ``SKILL_CREATOR_CONSULT_RULE``; tests assert the
+    canonical wording via the E0 insertion payload.
+    """
+    assert "skill-creator" in _CONSULT_RULE_TEXT
+    assert "skill_view(name='skill-creator')" in _CONSULT_RULE_TEXT
+    assert "skill_manage" in _CONSULT_RULE_TEXT
+    assert "never auto-install" in _CONSULT_RULE_TEXT
+    # E0 is a top-of-file patch site anchored on the L1 docstring of
+    # ``agent/prompt_builder.py``; its insertion payload contains the
+    # canonical constant text.
+    assert _CONSULT_RULE_TEXT in E0_CONSULT_RULE_DEF.insertion
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in E0_CONSULT_RULE_DEF.insertion
 
 
 def test_emit_migration_note_writes_worktree_files(
@@ -1041,10 +1065,11 @@ def test_emit_migration_note_default_one_row(hermes_checkout: Path, worktree: Pa
     assert len(cap_data_rows) == 1
 
 
-def test_emit_migration_note_task_e_redirect_eight_rows(
-    hermes_checkout: Path, worktree: Path, frozen_time: str
-) -> None:
-    """--task-e-redirect writes an 8-row table (1 cap + 7 Task E)."""
+def test_emit_migration_note_task_e_redirect_ten_rows(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
+    """AC-2.8: --task-e-redirect writes a 10-row table (1 cap + 9 Task E
+    sites: E0 + E1-E5 + E4b + E6 + E7). E0 writes the constant
+    definition; E4b writes the import.
+    """
     p = generate_migration_note(
         target=hermes_checkout,
         worktree=worktree,
@@ -1057,7 +1082,7 @@ def test_emit_migration_note_task_e_redirect_eight_rows(
     task_e_table = text.split("## Task E sites")[1]
     task_e_rows = [ln for ln in task_e_table.splitlines() if ln.startswith("| E")]
     assert len(cap_data_rows) == 1
-    assert len(task_e_rows) == 7
+    assert len(task_e_rows) == 9
 
 
 def test_emit_migration_note_byte_identical_across_runs(
@@ -1832,7 +1857,9 @@ def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
     assert r2.exit_code == EXIT_OK
     assert set(r2.sites_already) == {"S1.cap"} | {s.site_id for s in ALL_TASK_E_SITES}
     already_msgs = [d for d in r2.diagnostics if "már javítva" in d or "already patched" in d]
-    assert len(already_msgs) == 8
+    # AC-2.8: 10 sites total now (S1.cap + 9 Task E sites including
+    # E0 and E4b).
+    assert len(already_msgs) == 10
 
 
 def test_task_e_drift_exits_2(
@@ -1869,7 +1896,9 @@ def test_task_e_drift_exits_2(
 
 def test_emit_migration_note_lists_all_sites(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
     """05 §Migration note — --emit-migration-note produces a table with
-    exactly 8 rows; with --no-schema-redirect exactly 7 rows."""
+    exactly 10 Task E rows (AC-2.8: S1.cap + E0 + E1-E5 + E4b + E6 +
+    E7); with --no-schema-redirect exactly 9 rows.
+    """
     p = generate_migration_note(
         target=hermes_checkout,
         worktree=worktree,
@@ -1882,7 +1911,7 @@ def test_emit_migration_note_lists_all_sites(hermes_checkout: Path, worktree: Pa
     task_e_table = text.split("## Task E sites")[1]
     task_e_rows = [ln for ln in task_e_table.splitlines() if ln.startswith("| E")]
     assert len(cap_rows) == 1
-    assert len(task_e_rows) == 7
+    assert len(task_e_rows) == 9
     # Row count = 8; the row note matches.
     p2 = generate_migration_note(
         target=hermes_checkout,
@@ -1893,7 +1922,9 @@ def test_emit_migration_note_lists_all_sites(hermes_checkout: Path, worktree: Pa
     text2 = p2.read_text(encoding="utf-8")
     task_e_table2 = text2.split("## Task E sites")[1]
     task_e_rows2 = [ln for ln in task_e_table2.splitlines() if ln.startswith("| E")]
-    assert len(task_e_rows2) == 6
+    # AC-2.8: 8 Task E rows when --no-schema-redirect drops E6 (E0 +
+    # E1-E5 + E4b + E7).
+    assert len(task_e_rows2) == 8
 
 
 def test_migration_note_index_links_resolve(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
@@ -2000,7 +2031,7 @@ def test_migration_task_e_rows_have_site_specific_anchor(
 ) -> None:
     """F5 — each Task E row in MIGRATION.hermes-patch.md has its
     site-specific anchor (the byte-exact single-line locator) in
-    the anchor cell.
+    the anchor cell. AC-2.8: 9 Task E rows now (E0 + E1-E5 + E4b + E6 + E7).
     """
     p = generate_migration_note(
         target=hermes_checkout,
@@ -2011,7 +2042,7 @@ def test_migration_task_e_rows_have_site_specific_anchor(
     text = p.read_text(encoding="utf-8")
     task_e_table = text.split("## Task E sites")[1]
     task_e_rows = [ln for ln in task_e_table.splitlines() if ln.startswith("| E")]
-    assert len(task_e_rows) == 7
+    assert len(task_e_rows) == 9
     # Build a site_id -> primary_anchor text map.
     expected = {s.site_id: s.primary_anchor().text for s in ALL_TASK_E_SITES}
     for row in task_e_rows:
@@ -2333,10 +2364,14 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
     (checkout / "tools").mkdir(parents=True)
     # The file does NOT contain the import marker; the subprocess
     # check should still detect the cycle if the import would fail.
-    (checkout / "agent" / "skill_utils.py").write_text(
-        "# no tools.skills_tool import here\n",
-        encoding="utf-8",
-    )
+    # Layout mirrors real Hermes: cap-raise anchors at L688/L689 so
+    # S1.cap_fallback validation succeeds after the cycle signal.
+    lines: list[str] = ["# no tools.skills_tool import here\n"]
+    for i in range(1, 687):
+        lines.append(f"# pad {i}\n")
+    lines.append("    if len(desc) > 60:\n")
+    lines.append('        return desc[:57] + "..."\n')
+    (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     # tools/skills_tool.py exists but is broken (SyntaxError), so
     # ``import tools.skills_tool`` will fail in the subprocess.
     (checkout / "tools" / "skills_tool.py").write_text(
@@ -2354,7 +2389,10 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
             no_schema_redirect=False,
         ),
     )
-    assert r.exit_code == EXIT_IO
+    # AC-2.11: the cycle is no longer fatal; the patcher proceeds with
+    # the S1.cap_fallback site, so --check exits 0 and emits the
+    # ``circular import`` diagnostic.
+    assert r.exit_code == EXIT_OK
     assert any("circular import" in d for d in r.diagnostics)
 
 
@@ -2463,3 +2501,296 @@ def test_emit_audit_log_combined_diff_sha_with_site_diffs(tmp_path: Path, monkey
     # per-site sha.
     assert "diff_sha256=" in text
     assert "site=S1.cap,S1.cap.b" in text
+
+
+# --- AC-2.3: dynamic placeholder keys in failure dicts ------------------
+
+
+def test_line_drift_failure_uses_actual_line_number_key() -> None:
+    """AC-2.3: a LINE_DRIFT failure encodes the actual 1-based line
+    number in the dict key (``actual_at_line_<N>``). The drift
+    diagnostic consumer reads the value via the dynamic key.
+    """
+    from hermes_skill_creator_plugin._patcher_validation import _line_drift_failure
+
+    anchor = Anchor(line=688, text="    if len(desc) > 60:")
+    text = "# pad\n" * 9 + "    if len(desc) > 60:\n"
+    failure = _line_drift_failure(
+        site=S1_CAP_SITE,
+        anchor=anchor,
+        line_no=10,  # found on L10 instead of expected L688
+        text=text,
+    )
+    assert failure["reason"] == "LINE_DRIFT"
+    assert failure["anchor_line"] == 688
+    assert failure["found_at_line"] == 10
+    # The dynamic key is the actual line number where the anchor was found.
+    assert "actual_at_line_10" in failure
+    assert "actual_at_line_<n>" not in failure  # no literal placeholder
+    assert "    if len(desc) > 60:" in failure["actual_at_line_10"]
+
+
+def test_text_drift_failure_uses_unknown_sentinel_key() -> None:
+    """AC-2.3: TEXT_DRIFT failures key the actual content under the
+    ``actual_at_line_unknown`` sentinel (no line number is known).
+    """
+    from hermes_skill_creator_plugin._patcher_validation import _text_drift_failure
+
+    anchor = Anchor(line=688, text="    if len(desc) > 60:")
+    failure = _text_drift_failure(site=S1_CAP_SITE, anchor=anchor)
+    assert failure["reason"] == "TEXT_DRIFT"
+    assert failure["anchor_line"] == 688
+    assert "actual_at_line_unknown" in failure
+    assert "actual_at_line_<missing>" not in failure  # no literal placeholder
+    assert failure["actual_at_line_unknown"] == "<not found>"
+
+
+def test_missing_file_failure_uses_unknown_sentinel_key() -> None:
+    """AC-2.3: TEXT_DRIFT for a missing file keys the actual content
+    under ``actual_at_line_unknown`` with the MISSING_FILE constant.
+    """
+    from hermes_skill_creator_plugin._patcher_validation import _missing_file_failure
+
+    failure = _missing_file_failure(S1_CAP_SITE)
+    assert failure["reason"] == "TEXT_DRIFT"
+    assert "actual_at_line_unknown" in failure
+    assert "actual_at_line_<missing>" not in failure
+    assert failure["actual_at_line_unknown"] == "<file missing>"
+
+
+def test_text_drift_diagnostic_consumer_reads_sentinel_key() -> None:
+    """AC-2.3: ``append_drift_diagnostic`` reads TEXT_DRIFT failures via
+    the ``actual_at_line_unknown`` sentinel key (regression guard for
+    the consumer-side migration from the literal placeholder). The
+    consumer is exercised without raising (the i18n format string
+    accepts ``{actual}`` but the current TEXT_DRIFT message only uses
+    ``{site_id}``; the test guards the call signature, not the render).
+    """
+    from hermes_skill_creator_plugin._patcher_pipeline_emit_helpers import (
+        append_drift_diagnostic,
+    )
+
+    diagnostics: list[str] = []
+    append_drift_diagnostic(
+        {
+            "site_id": "S1.cap",
+            "anchor_line": 688,
+            "reason": "TEXT_DRIFT",
+            "expected": "    if len(desc) > 60:",
+            "actual_at_line_unknown": "<file missing>",
+        },
+        diagnostics,
+    )
+    # The TEXT_DRIFT diagnostic is emitted with the site_id and the
+    # VALIDATION_FAILED follow-up.
+    assert any("S1.cap" in d for d in diagnostics)
+    assert any("validation failed" in d for d in diagnostics)
+    assert any("text drift" in d for d in diagnostics)
+
+
+def test_line_drift_diagnostic_consumer_reads_dynamic_key() -> None:
+    """AC-2.3: ``append_drift_diagnostic`` reads LINE_DRIFT failures
+    via the dynamic ``actual_at_line_<N>`` key. The diagnostic includes
+    the anchor_line (NOT the actual line number).
+    """
+    from hermes_skill_creator_plugin._patcher_pipeline_emit_helpers import (
+        append_drift_diagnostic,
+    )
+
+    diagnostics: list[str] = []
+    append_drift_diagnostic(
+        {
+            "site_id": "S1.cap",
+            "anchor_line": 688,
+            "found_at_line": 10,
+            "reason": "LINE_DRIFT",
+            "expected": "    if len(desc) > 60:",
+            "actual_at_line_10": "    if len(desc) > 60:",
+        },
+        diagnostics,
+    )
+    # The LINE_DRIFT message contains the EXPECTED anchor line (688),
+    # not the found_at_line.
+    assert any("688" in d for d in diagnostics)
+    assert any("line drift" in d for d in diagnostics)
+
+
+# --- AC-2.8: SKILL_CREATOR_CONSULT_RULE moved to target ------------------
+
+
+def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
+    hermes_checkout: Path,
+) -> None:
+    """AC-2.8: --task-e-redirect writes the ``SKILL_CREATOR_CONSULT_RULE``
+    constant definition at the top of ``agent/prompt_builder.py`` via
+    the E0 site. The patch proceeds to the other Task E sites.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
+    # The constant definition is present (assigned to the canonical name).
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in text
+    # And the canonical wording appears verbatim in the file.
+    assert "skill_view(name='skill-creator')" in text
+    assert "never auto-install" in text
+
+
+def test_e4b_consult_rule_import_writes_import_into_background_review(
+    hermes_checkout: Path,
+) -> None:
+    """AC-2.8: --task-e-redirect writes the
+    ``from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE``
+    import at the top of ``agent/background_review.py`` via the E4b
+    site. Without it, E4 and E5 would fail to resolve the constant.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
+    assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in text
+
+
+def test_e4_e5_share_constant_after_patch(hermes_checkout: Path) -> None:
+    """AC-2.8 / plans/05 §B1.2: E4 and E5 reference the literal
+    ``SKILL_CREATOR_CONSULT_RULE`` name and rely on the E4b import to
+    resolve it. After --task-e-redirect, the constant value appears
+    verbatim in BOTH the ``_SKILL_REVIEW_PROMPT`` and
+    ``_COMBINED_REVIEW_PROMPT`` backgrounds.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=True,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
+    assert text.count("SKILL_CREATOR_CONSULT_RULE") >= 3  # import + E4 + E5
+
+
+# --- AC-2.11 fallback: S1.cap_fallback + branching logic ----------------
+
+
+def test_s1_cap_fallback_uses_local_constant() -> None:
+    """AC-2.11: ``S1_CAP_SITE_FALLBACK`` uses a local
+    ``_MAX_DESCRIPTION_LENGTH = 1024`` constant (no cross-module
+    import). The anchors are identical to ``S1_CAP_SITE``.
+    """
+    assert S1_CAP_SITE_FALLBACK.site_id == "S1.cap_fallback"
+    assert S1_CAP_SITE_FALLBACK.kind == "cap"
+    assert S1_CAP_SITE_FALLBACK.anchors == S1_CAP_SITE.anchors
+    # The fallback insertion prepends a local constant definition
+    # then uses it in the cap check.
+    assert "_MAX_DESCRIPTION_LENGTH = 1024" in S1_CAP_SITE_FALLBACK.insertion
+    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in S1_CAP_SITE_FALLBACK.insertion
+    # The regular S1.cap cross-module constant is NOT used.
+    assert "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n" not in S1_CAP_SITE_FALLBACK.insertion
+
+
+def test_s1_cap_fallback_used_when_circular_import_detected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, real_hermes_agent_sentinel: str | None
+) -> None:
+    """AC-2.11: when ``file_has_circular_import`` returns True, the
+    patcher swaps S1.cap for S1.cap_fallback. The cap-raise site is
+    applied with the local constant instead of exiting on the cycle.
+    """
+    checkout = tmp_path / "fallback-apply"
+    (checkout / "agent").mkdir(parents=True)
+    lines: list[str] = ["# clean file\n"]
+    for i in range(1, 687):
+        lines.append(f"# pad {i}\n")
+    lines.append("    if len(desc) > 60:\n")
+    lines.append('        return desc[:57] + "..."\n')
+    (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
+
+    # Force the circular-import preflight to fire.
+    from hermes_skill_creator_plugin import _patcher_internals
+
+    def _force_circular(
+        _skill_utils_path: Path,
+        *,
+        cycle_marker: str = "",
+    ) -> bool:
+        return True
+
+    monkeypatch.setattr(
+        _patcher_internals._imps,
+        "file_has_circular_import",
+        _force_circular,
+    )
+
+    r = run_patch(
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
+    # The fallback cap-raise uses the LOCAL constant — no import
+    # from tools.skills_tool is needed at runtime.
+    assert "_MAX_DESCRIPTION_LENGTH = 1024" in text
+    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in text
+
+
+def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """AC-2.11 negative path: when there is no circular import, the
+    patcher uses the regular S1.cap site (cross-module
+    ``MAX_DESCRIPTION_LENGTH``) and does NOT emit the cycle diagnostic.
+    """
+    checkout = tmp_path / "normal-apply"
+    (checkout / "agent").mkdir(parents=True)
+    lines: list[str] = []
+    for i in range(1, 688):
+        lines.append(f"# pad {i}\n")
+    lines.append("    if len(desc) > 60:\n")
+    lines.append('        return desc[:57] + "..."\n')
+    (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
+
+    r = run_patch(
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
+    # Normal S1.cap — uses the cross-module constant, NOT the fallback.
+    assert "if len(desc) > MAX_DESCRIPTION_LENGTH:" in text
+    assert "_MAX_DESCRIPTION_LENGTH" not in text
+    # No cycle diagnostic.
+    assert not any("circular import" in d for d in r.diagnostics)

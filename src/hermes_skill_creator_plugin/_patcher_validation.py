@@ -78,12 +78,16 @@ def _validate_one_site(
 
 
 def _missing_file_failure(site: Site) -> dict[str, Any]:
-    """Build a TEXT_DRIFT failure for a site whose file is missing."""
+    """Build a TEXT_DRIFT failure for a site whose file is missing.
+
+    The ``actual_at_line_unknown`` sentinel key marks the failure as
+    TEXT_DRIFT (line number unknown because the file is absent).
+    """
     return {
         "site_id": site.site_id,
         "reason": REASON_TEXT_DRIFT,
         "expected": site.primary_anchor().text,
-        "actual_at_line_<missing>": MISSING_FILE,
+        "actual_at_line_unknown": MISSING_FILE,
     }
 
 
@@ -102,13 +106,17 @@ def _validate_site_anchors(
 
 
 def _text_drift_failure(site: Site, anchor: Anchor) -> dict[str, Any]:
-    """Build a TEXT_DRIFT failure (anchor not found)."""
+    """Build a TEXT_DRIFT failure (anchor not found).
+
+    The ``actual_at_line_unknown`` sentinel key marks the failure as
+    TEXT_DRIFT (line number unknown because the anchor is absent).
+    """
     return {
         "site_id": site.site_id,
         "anchor_line": anchor.line,
         "reason": REASON_TEXT_DRIFT,
         "expected": anchor.text,
-        "actual_at_line_<missing>": NOT_FOUND,
+        "actual_at_line_unknown": NOT_FOUND,
     }
 
 
@@ -118,7 +126,11 @@ def _line_drift_failure(
     line_no: int,
     text: str,
 ) -> dict[str, Any]:
-    """Build a LINE_DRIFT failure (anchor at wrong line)."""
+    """Build a LINE_DRIFT failure (anchor at wrong line).
+
+    The key encodes the actual 1-based line number so downstream
+    consumers can render ``actual_at_line_<N>`` directly.
+    """
     lines = text.splitlines()
     actual = lines[line_no - 1] if line_no <= len(lines) else OUT_OF_RANGE
     return {
@@ -127,5 +139,5 @@ def _line_drift_failure(
         "found_at_line": line_no,
         "reason": REASON_LINE_DRIFT,
         "expected": anchor.text,
-        "actual_at_line_<n>": actual,
+        f"actual_at_line_{line_no}": actual,
     }

@@ -18,6 +18,19 @@ from hermes_skill_creator_plugin.i18n.messages_en import (
 )
 
 
+def _pick_text_drift_actual(failure: dict[str, Any]) -> str:
+    """Return the TEXT_DRIFT ``actual`` string from a failure dict.
+
+    TEXT_DRIFT failures key the actual content under the
+    ``actual_at_line_unknown`` sentinel (the line number is unknown
+    because the file is missing or the anchor was not found). LINE_DRIFT
+    failures use a dynamic ``actual_at_line_<N>`` key and are not
+    consumed here.
+    """
+    actual_at_unknown = failure.get("actual_at_line_unknown", "")
+    return str(actual_at_unknown)
+
+
 def append_drift_diagnostic(
     failure: dict[str, Any],
     diagnostics: list[str],
@@ -35,7 +48,7 @@ def append_drift_diagnostic(
             TEXT_DRIFT.format(
                 site_id=failure["site_id"],
                 expected=failure.get("expected", ""),
-                actual=failure.get("actual_at_line_<missing>", ""),
+                actual=_pick_text_drift_actual(failure),
             ),
         )
     diagnostics.append(VALIDATION_FAILED.format(site_id=failure["site_id"]))
