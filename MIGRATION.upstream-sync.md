@@ -10,7 +10,7 @@
 | Previous pin | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
 | Audit date | 2026-06-22 |
 | Audit scope | Claude/Anthropic prompt residues ONLY (NOT code, NOT tool-name bindings, NOT JSON schemas) |
-| Audit artifact | docs/research/upstream-audit-validated.md |
+| Audit artifact | docs/research/upstream-audit-2026-06-22/canonical-validated.md |
 | Phase | description only — NO skill update applied |
 | Skill updated? | NO |
 | MIGRATION.md pin bumped? | NO (operator-policy: bump only after operator sign-off) |
@@ -52,7 +52,7 @@ Upstream subtree (`plugins/skill-creator/skills/skill-creator`) is **silent sinc
 
 - 25/25 INFO sor KEEP (DELIBERATE bilingual advisory / negative-form guard rail / adapter-contract docstring / T3-provenance / test-name encoding)
 - 0 FIX (no skill edits warranted)
-- Artifact: `docs/research/upstream-audit-info-evaluation.md`
+- Artifact: `docs/research/upstream-audit-2026-06-22/info-re-evaluation.md`
 
 ## Phase 3 (Reviewer verdicts)
 
@@ -109,9 +109,12 @@ Upstream subtree (`plugins/skill-creator/skills/skill-creator`) is **silent sinc
 ## Files
 
 - This file: `MIGRATION.upstream-sync.md`
-- Audit artifact (canonical validated): `docs/research/upstream-audit-validated.md`
-- Audit inputs: `docs/research/upstream-audit-{synthesized,validated-r1,validated-r2,info-evaluation}.md`
-- Audit lenses: `docs/research/upstream-audit-{researcher,prompt-engineer,code-reviewer,security-auditor}.md`
+- Audit artifact (canonical validated): `docs/research/upstream-audit-2026-06-22/canonical-validated.md`
+- Audit inputs:
+  - Phase 2 (synthesis): `docs/research/upstream-audit-2026-06-22/synthesis.md`
+  - Phase 3 (reviews): `docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md`, `docs/research/upstream-audit-2026-06-22/reviews/reviewer-2-code-reviewer-best-practice.md`
+  - Phase 3.5 (info re-evaluation): `docs/research/upstream-audit-2026-06-22/info-re-evaluation.md`
+- Audit lenses: `docs/research/upstream-audit-2026-06-22/lenses/{researcher,prompt-engineer,code-reviewer,security-auditor}.md`
 - Vendored baseline: `docs/research/anthropic-skill-creator-original/skills/skill-creator/` (pinned at `2a40fd2e...` via `UPSTREAM_COMMIT.txt`)
 - Related MIGRATION set: `MIGRATION.md`, `MIGRATION.hermes-patch.md`, `MIGRATION.skill-port.md`
 - Plan: `docs/plans/07-skill-creator-migration.md`
