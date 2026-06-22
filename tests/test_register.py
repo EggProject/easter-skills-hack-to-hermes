@@ -176,6 +176,61 @@ def test_register_silent_when_target_unknown(tmp_path: Path, monkeypatch: pytest
     assert not marker.exists()
 
 
+def test_register_emits_advisory_with_default_marker_when_home_unset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fixture: HERMES_HOME is UNSET, target_dir has unpatched skill_utils.py.
+    Exercises the ``if not home:`` fallback in ``_advisory_marker_path``
+    (line 41) which resolves the marker to ``~/.hermes/hermes-agent`` via
+    ``os.path.expanduser``. The advisory is still emitted and the marker
+    is written under the resolved default home.
+
+    CI runs on a fresh Ubuntu runner with no ``HERMES_HOME`` and no live
+    ``~/.hermes/hermes-agent``, so this branch is the one that the gate
+    actually exercises; without this test the fallback line is uncovered.
+    """
+    target = tmp_path / "checkout"
+    skill_utils = target / "agent" / "skill_utils.py"
+    skill_utils.parent.mkdir(parents=True, exist_ok=True)
+    skill_utils.write_text(
+        # fmt: off
+        textwrap.dedent(
+            """\
+            def extract_skill_description(desc):
+                if len(desc) > 60:
+                    return desc[:60]
+                return desc
+            """
+        ),
+        # fmt: on
+        encoding="utf-8",
+    )
+    # Default home (no live install) so the expanduser fallback lands in
+    # a writable, isolated tmp_path subtree instead of touching the host.
+    default_home = tmp_path / "default-home"
+    monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
+    monkeypatch.delenv("HERMES_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(default_home))
+    # Pre-create the parent dirs so ``Path.write_text`` inside emit_advisory
+    # can land the marker file. ``emit_advisory`` swallows OSError, so a
+    # missing parent dir would make the marker-write branch appear covered
+    # while silently no-oping — pre-creating keeps the assertion honest.
+    (default_home / ".hermes" / "hermes-agent").mkdir(parents=True, exist_ok=True)
+
+    ctx = _make_ctx()
+    register(ctx)
+
+    assert ctx.log.call_count == 1
+    log_message = ctx.log.call_args[0][0]
+    assert ADVISORY_CAP_EN in log_message
+    assert ADVISORY_CAP_HU in log_message
+    # Marker MUST land under the expanduser-resolved default home, NOT
+    # under any caller-supplied HERMES_HOME (which is unset here).
+    default_marker = default_home / ".hermes" / "hermes-agent" / ".hermes_skill_creator_advisory_seen"
+    assert default_marker.exists()
+    assert default_marker.read_text(encoding="utf-8") == "advisory shown\n"
+
+
 def test_advisory_log_contains_en_and_hu() -> None:
     """Static check: both bilingual halves are present in the i18n constants
     AND the constant pair contains the language tag prefixes."""
