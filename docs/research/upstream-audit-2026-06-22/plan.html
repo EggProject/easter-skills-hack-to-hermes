@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upstream Audit Terv — 2026-06-22 (PR #36)</title>
+<style>
+  :root {
+    --color-success: #059669;
+    --color-success-bg: #ecfdf5;
+    --color-success-border: #065f46;
+    --color-warning: #d97706;
+    --color-warning-bg: #fef3c7;
+    --color-warning-border: #92400e;
+    --color-critical: #dc2626;
+    --color-critical-bg: #fee2e2;
+    --color-critical-border: #991b1b;
+    --color-info: #2563eb;
+    --color-info-bg: #dbeafe;
+    --color-info-border: #1e40af;
+    --color-note: #6b7280;
+    --color-note-bg: #f3f4f6;
+    --color-note-border: #374151;
+    --color-text: #111827;
+    --color-text-muted: #4b5563;
+    --color-border: #e5e7eb;
+    --color-bg: #ffffff;
+    --color-bg-alt: #f9fafb;
+    --color-code-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg-alt);
+    color: var(--color-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+  header.page-header {
+    border-bottom: 3px solid var(--color-info);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text);
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 2.5rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  h3 {
+    font-size: 1.2rem;
+    margin: 1.5rem 0 0.75rem 0;
+  }
+  h4 {
+    font-size: 1rem;
+    margin: 1rem 0 0.5rem 0;
+    color: var(--color-text-muted);
+  }
+  p { margin: 0.75rem 0; }
+  code {
+    font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+    background: var(--color-code-bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: #1f2937;
+  }
+  pre {
+    background: #1f2937;
+    color: #f3f4f6;
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
+  .meta-item {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 0.6rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  .meta-item strong {
+    color: var(--color-text-muted);
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
+  }
+  .verdict-box {
+    background: linear-gradient(135deg, var(--color-success-bg) 0%, #d1fae5 100%);
+    border-left: 6px solid var(--color-success);
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    margin: 1.5rem 0;
+  }
+  .verdict-box .verdict-counts {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-success-border);
+    margin: 0.5rem 0;
+    font-family: "SF Mono", Monaco, monospace;
+  }
+  .verdict-box .verdict-counts span {
+    display: inline-block;
+    margin: 0 0.4rem;
+  }
+  .verdict-box .verdict-counts .count-crit { color: var(--color-critical); }
+  .verdict-box .verdict-counts .count-warn { color: var(--color-warning); }
+  .verdict-box .verdict-counts .count-info { color: var(--color-info); }
+  .verdict-box .verdict-counts .count-note { color: var(--color-note); }
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+  }
+  .badge-pass { background: var(--color-success-bg); color: var(--color-success-border); }
+  .badge-fail { background: var(--color-critical-bg); color: var(--color-critical-border); }
+  .badge-info { background: var(--color-info-bg); color: var(--color-info-border); }
+  .badge-warn { background: var(--color-warning-bg); color: var(--color-warning-border); }
+  .badge-note { background: var(--color-note-bg); color: var(--color-note-border); }
+  .badge-nit { background: #ede9fe; color: #5b21b6; }
+  .problem-box {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-left: 6px solid var(--color-warning);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.25rem 0;
+  }
+  .problem-box .problem-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .problem-box .problem-header h3 {
+    margin: 0;
+    flex: 1;
+  }
+  .problem-box.fixed {
+    border-left-color: var(--color-success);
+  }
+  .problem-box .commit-ref {
+    font-family: "SF Mono", Monaco, monospace;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+  }
+  .problem-section {
+    margin: 0.75rem 0;
+  }
+  .problem-section .label {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.92rem;
+  }
+  thead {
+    background: #f3f4f6;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+  th {
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  tbody tr:nth-child(even) {
+    background: var(--color-bg-alt);
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  ol.steps, ul.steps {
+    padding-left: 1.5rem;
+  }
+  ol.steps li, ul.steps li {
+    margin: 0.5rem 0;
+  }
+  .info-box {
+    background: var(--color-info-bg);
+    border-left: 4px solid var(--color-info);
+    padding: 1rem 1.25rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+  }
+  .success-box {
+    background: var(--color-success-bg);
+    border-left: 4px solid var(--color-success);
+    padding: 1rem 1.25rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+  }
+  .warning-box {
+    background: var(--color-warning-bg);
+    border-left: 4px solid var(--color-warning);
+    padding: 1rem 1.25rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+  }
+  .pipeline-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
+  .pipeline-status-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+  }
+  .pipeline-status-card .phase-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
+  }
+  .artifact-list {
+    list-style: none;
+    padding: 0;
+  }
+  .artifact-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .artifact-list li:last-child {
+    border-bottom: none;
+  }
+  .artifact-list a {
+    color: var(--color-info);
+    text-decoration: none;
+    word-break: break-all;
+  }
+  .artifact-list a:hover {
+    text-decoration: underline;
+  }
+  footer.page-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+  }
+  footer.page-footer p {
+    margin: 0.3rem 0;
+  }
+  footer.page-footer a {
+    color: var(--color-info);
+    text-decoration: none;
+  }
+  footer.page-footer a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 600px) {
+    .container { padding: 1rem 0.75rem 2.5rem; }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    h3 { font-size: 1.05rem; }
+    .verdict-box .verdict-counts { font-size: 1.15rem; }
+    table { font-size: 0.85rem; }
+    th, td { padding: 0.5rem 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <h1>Upstream Audit Terv — 2026-06-22</h1>
+  <p style="color: var(--color-text-muted); margin: 0;">
+    A Phase 1-7 upstream prompt-residue audit magyar nyelvű összefoglalója. A PR #36 review-jához készült, hogy a review-kat ne kelljen végigolvasni — a tervből látható minden megtalált probléma és javítás.
+  </p>
+</header>
+
+<section id="meta">
+  <h2>Meta adatok</h2>
+  <div class="meta-grid">
+    <div class="meta-item">
+      <strong>Audit dátum</strong>
+      2026-06-22
+    </div>
+    <div class="meta-item">
+      <strong>Upstream SHA</strong>
+      <code>5fc2987a44918a455ef7dc583b51f8faf875c3ed</code>
+    </div>
+    <div class="meta-item">
+      <strong>Korábbi pin</strong>
+      <code>2a40fd2e7c52207aa903bd33fc4c65716126966e</code>
+    </div>
+    <div class="meta-item">
+      <strong>Diff verdict</strong>
+      byte-identical (SHA-256 <code>c471bde8ea02f12b9cc490d117e4fa93ac61ab0e79c6e623e5a2e09ff1c5dc39</code>)
+    </div>
+    <div class="meta-item">
+      <strong>Upstream subtree commit-ok</strong>
+      0 (2026-04-23 óta)
+    </div>
+    <div class="meta-item">
+      <strong>PR</strong>
+      <a href="https://github.com/EggProject/easter-skills-hack-to-hermes/pull/36" style="color: var(--color-info);">#36</a>
+    </div>
+    <div class="meta-item">
+      <strong>Branch</strong>
+      <code>audit/upstream-prompt-residues-2026-06-22</code>
+    </div>
+    <div class="meta-item">
+      <strong>Issue (canonical)</strong>
+      <a href="https://github.com/EggProject/easter-skills-hack-to-hermes/issues/38" style="color: var(--color-info);">#38</a>
+    </div>
+    <div class="meta-item">
+      <strong>Issue (eredeti, auto-close)</strong>
+      <a href="https://github.com/EggProject/easter-skills-hack-to-hermes/issues/30" style="color: var(--color-info);">#30</a>
+    </div>
+  </div>
+</section>
+
+<section id="verdict">
+  <h2>Audit Verdict</h2>
+  <div class="verdict-box">
+    <span class="badge badge-pass">PASS</span>
+    <strong>Az upstream subtree byte-identical a korábbi pinnel szemben — Claude-prompt residue nem került be a subtree-be.</strong>
+    <div class="verdict-counts">
+      <span class="count-crit">0 CRITICAL</span> ·
+      <span class="count-warn">0 WARNING</span> ·
+      <span class="count-info">25 INFO</span> ·
+      <span class="count-note">5 NOTE</span>
+    </div>
+    <p>Összesen <strong>30 audit finding</strong>, mind DELIBERATE (Q4/Q5 contract — ezek a contract szerinti rögzített, szándékos karbantartási nyomok, nem eltérések).</p>
+    <p>A 25 INFO sor jellemzése:</p>
+    <ul>
+      <li><strong>Bilingual advisory</strong> — kétnyelvű megjegyzések, prompt engineering minta</li>
+      <li><strong>Negative-form guard rail</strong> — tagadás-alapú biztonsági prompt pattern</li>
+      <li><strong>Adapter-contract docstring</strong> — adapter réteg contract dokumentálás</li>
+      <li><strong>T3-provenance</strong> — T3-as eredet-nyomkövetés a subtree-ben</li>
+      <li><strong>Test-name encoding</strong> — teszt-nevek kódolási konvenciója</li>
+    </ul>
+  </div>
+</section>
+
+<section id="osszefoglalo">
+  <h2>Összefoglaló</h2>
+  <div class="success-box">
+    <p><strong>Audit eredmény: sikeres, upstream-kompatibilis, Claude-mentes.</strong></p>
+    <p>A Phase 1-7 pipeline teljes lefutott. A subtree byte-identical a korábbi <code>2a40fd2e</code> pinnel szemben, ami bizonyítja, hogy a 2026-04-23 óta eltelt időszakban nem került Claude-specifikus prompt residue a subtree-be. A 30 audit finding mind a Q4/Q5 contract szerinti deliberate kategória (rögzített karbantartási nyomok), egyik sem blokkoló.</p>
+    <p>A review gate (3 review pass) során 4 NIT/WARNING problémát talált a review pipeline — ezek mind javítva lettek a Phase 7.5-7.8 commit-okban. A PR #36 jelenleg 7 commit-os, ready for review.</p>
+  </div>
+</section>
+
+<section id="problemak">
+  <h2>Problémák és javítások</h2>
+  <p>A review pipeline során 4 NIT/WARNING szintű problémát azonosítottunk — mind a javításukra került a Phase 7.5-7.8 commit-okban. Ez a szekció részletezi mindegyiket.</p>
+
+  <div class="problem-box fixed">
+    <div class="problem-header">
+      <span class="badge badge-nit">NIT 1</span>
+      <span class="badge badge-pass">JAVÍTVA</span>
+      <h3>Probléma #1: UPSTREAM_COMMIT.txt path-referencia félreérthetősége</h3>
+    </div>
+    <div class="commit-ref">Commit: <code>fa72d66</code> (Phase 7.5)</div>
+    <div class="problem-section">
+      <span class="label">Probléma:</span>
+      A <code>MIGRATION.upstream-sync.md</code> "Files" szekciójában a <code>UPSTREAM_COMMIT.txt</code> fájlra való hivatkozás nem adta meg a teljes útvonalat — azt sugallva, hogy a <code>skills/</code> almappában van.
+    </div>
+    <div class="problem-section">
+      <span class="label">Megoldás:</span>
+      Explicit teljes útvonal: <code>docs/research/anthropic-skill-creator-original/UPSTREAM_COMMIT.txt</code>
+    </div>
+  </div>
+
+  <div class="problem-box fixed">
+    <div class="problem-header">
+      <span class="badge badge-nit">NIT 2</span>
+      <span class="badge badge-pass">JAVÍTVA</span>
+      <h3>Probléma #2: Reviewer riportok Input listái régi path-okra mutattak</h3>
+    </div>
+    <div class="commit-ref">Commit: <code>fa72d66</code> (Phase 7.5)</div>
+    <div class="problem-section">
+      <span class="label">Probléma:</span>
+      A Reviewer 1 + 2 riportok "Input (read-only)" szekciójában a fájl-path-ok a régi struktúrára mutattak.
+    </div>
+    <div class="problem-section">
+      <span class="label">Megoldás:</span>
+      Mindkét reviewer riportban a path-ok frissítve az új almappára.
+    </div>
+  </div>
+
+  <div class="problem-box fixed">
+    <div class="problem-header">
+      <span class="badge badge-nit">R7 NIT</span>
+      <span class="badge badge-pass">JAVÍTVA</span>
+      <h3>Probléma #3: Body content legacy path-referenciák 8 fájlban</h3>
+    </div>
+    <div class="commit-ref">Commit-ok: <code>2ff624b</code> (Phase 7.6) + <code>4f9e4f2</code> (Phase 7.7)</div>
+    <div class="problem-section">
+      <span class="label">Probléma:</span>
+      A restructure csak a fájlokat mozgatta, de a body content + header metadata + inline citations + Files szekciók továbbra is a régi path-okra hivatkoztak. 49 legacy path-ref 8 fájlban.
+    </div>
+    <div class="problem-section">
+      <span class="label">Érintett fájlok:</span>
+      <ul>
+        <li><code>synthesis.md</code></li>
+        <li><code>canonical-validated.md</code></li>
+        <li><code>info-re-evaluation.md</code></li>
+        <li><code>reviewer-1.md</code> + <code>reviewer-2.md</code></li>
+        <li><code>lenses/code-reviewer.md</code></li>
+        <li><code>lenses/prompt-engineer.md</code></li>
+        <li><code>lenses/security-auditor.md</code></li>
+      </ul>
+    </div>
+    <div class="problem-section">
+      <span class="label">Megoldás:</span>
+      Python <code>str.replace</code> scripttel batch replacement — 49 sor javítva, history preserved.
+    </div>
+  </div>
+
+  <div class="problem-box fixed">
+    <div class="problem-header">
+      <span class="badge badge-warn">R3 WARNING</span>
+      <span class="badge badge-pass">JAVÍTVA</span>
+      <h3>Probléma #4: synthesis.md:222 glob-form path bug</h3>
+    </div>
+    <div class="commit-ref">Commit: <code>72eab75</code> (Phase 7.8)</div>
+    <div class="problem-section">
+      <span class="label">Probléma:</span>
+      A Phase 7.6 Python script mapping dict-je csak explicit fájlneveket tartalmazott, de a glob-formát NEM fogta. A <code>synthesis.md</code> 222. sora ("Input" glob-form) maradt.
+    </div>
+    <div class="problem-section">
+      <span class="label">Megoldás:</span>
+      1 sor cserélve: <code>upstream-audit-{...}.md</code> → <code>upstream-audit-2026-06-22/lenses/{...}.md</code>
+    </div>
+    <div class="warning-box">
+      <strong>Tanulság:</strong> A 2. review átengedte volna — csak a 3. review (R1 kategória) kapta el. A multi-agent review gate (≥2 consecutive clean) indokolt.
+    </div>
+  </div>
+</section>
+
+<section id="pipeline">
+  <h2>Pipeline áttekintés</h2>
+  <p>A Phase 1-7 + 7.5-7.8 pipeline táblázata. A Phase 1-4 research + dedup, Phase 5 release, Phase 6 restructure, Phase 7 review gate + fix.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Fázis</th>
+        <th>Subagent</th>
+        <th>Scope</th>
+        <th>Eredmény</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1 (parallel)</td>
+        <td>researcher + prompt-engineer + code-reviewer + security-auditor</td>
+        <td>4 audit lens, párhuzamosan</td>
+        <td><span class="badge badge-pass">null / clean</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>architect</td>
+        <td>dedup + severity classification</td>
+        <td>0 CRIT / 0 WARN / 25 INFO / 5 NOTE</td>
+      </tr>
+      <tr>
+        <td>3 (sequential)</td>
+        <td>security-auditor refuting + code-reviewer best-practice</td>
+        <td>adversarial review</td>
+        <td><span class="badge badge-pass">R1 + R2 PASS</span></td>
+      </tr>
+      <tr>
+        <td>3.5</td>
+        <td>prompt-engineer</td>
+        <td>INFO re-evaluation (friss forrás-olvasás)</td>
+        <td>25/25 KEEP, 0 FIX</td>
+      </tr>
+      <tr>
+        <td>3.7</td>
+        <td>docs-scribe</td>
+        <td>canonical-validated.md</td>
+        <td>11 input → canonical</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>docs-scribe</td>
+        <td>MIGRATION.upstream-sync.md</td>
+        <td>house-style</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>devops-releaser</td>
+        <td>git + gh (PR #36, Issue #38)</td>
+        <td><span class="badge badge-info">OPEN</span></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>general-purpose</td>
+        <td>restructure (9 git mv) + README.md</td>
+        <td>history preserved</td>
+      </tr>
+      <tr>
+        <td>7.5</td>
+        <td>general-purpose</td>
+        <td>NIT fix (UPSTREAM_COMMIT + reviewer Input)</td>
+        <td>2 NIT javítva</td>
+      </tr>
+      <tr>
+        <td>7.6</td>
+        <td>general-purpose</td>
+        <td>body content path cleanup (5 fájl, 44 replacement)</td>
+        <td>Python script</td>
+      </tr>
+      <tr>
+        <td>7.7</td>
+        <td>general-purpose</td>
+        <td>lenses short-form cleanup (3 fájl, 5 replacement)</td>
+        <td>kiterjesztett script</td>
+      </tr>
+      <tr>
+        <td>7.8</td>
+        <td>general-purpose</td>
+        <td>synthesis.md:222 glob-form (1 sor)</td>
+        <td>Edit tool</td>
+      </tr>
+      <tr>
+        <td>7 R3-R5</td>
+        <td>code-reviewer × 3</td>
+        <td>review gate</td>
+        <td><span class="badge badge-pass">R4+R5 PASS</span> (2 consecutive clean)</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="nyitott-kerdesek">
+  <h2>Nyitott kérdések</h2>
+  <p>11 kérdés maradt, mind operátori döntésre vár — egyik sem blocker. Ezek a Q4/Q5 contract szerinti deliberate kategóriák jövőbeli kezeléséről szólnak (pl. mennyire legyenek explicit-ek a docstring-ek, hogyan jelöljük a T3-provenance-t).</p>
+  <ul class="steps">
+    <li>Az INFO finding-ok jövőbeli újraértékelésének ütemezése (quarterly? yearly?)</li>
+    <li>A deliberate kategóriák dokumentálásának mélysége (canonical-validated.md-ben részletes, vagy csak summary)</li>
+    <li>A subtree pin frissítési policy (mikor tekintjük "stale"-nek a pin-t)</li>
+    <li>A review gate küszöbértéke (≥2 consecutive clean — indokolt, vagy szigorítsuk?)</li>
+    <li>A Phase 7.6/7.7 Python script-ek újrafelhasználhatósága (artifact-ba kerüljenek, vagy one-shot?)</li>
+    <li>A glob-form path-ok jövőbeli kezelése (script kiterjesztés, vagy convention változtatás?)</li>
+    <li>A reviewer riport-ok tárolási helye (reviews/ almappában, vagy külön docs/research/reviews/)</li>
+    <li>A canonical-validated.md frissítési gyakorisága (új audit fázisban újraírjuk, vagy incrementális?)</li>
+    <li>Az upstream subtree SHA naplózás (CHANGELOG-ba, vagy külön UPSTREAM_LOG.md?)</li>
+    <li>A 30 finding backward compatibility hatása (régebbi klienseket érint-e bármelyik?)</li>
+    <li>A Phase 8 audit scope (következő audit tárgya — prompt-creator? skill-tester? mindkettő?)</li>
+  </ul>
+</section>
+
+<section id="next-steps">
+  <h2>Operátori next steps</h2>
+  <p>6 lépés, szigorúan ebben a sorrendben. A PR #36 merge-jére vonatkozó szabályok a <code>no-pr-merge-without-green-ci</code> és <code>follow-up-pr-until-merged</code> rule-okból jönnek.</p>
+  <ol class="steps">
+    <li>
+      <strong>CI zöld-re vár</strong> — a PR-on automatikusan fut a <code>.github/workflows/ci.yml</code>
+    </li>
+    <li>
+      <strong>Merge</strong> — ha CI zöld, merge-eld (NE <code>--admin</code> flag-gel ha CI piros, <code>no-pr-merge-without-green-ci</code> rule)
+    </li>
+    <li>
+      <strong>Merge SHA komment</strong> — Issue #38-ba komment a merge commit SHA-val
+    </li>
+    <li>
+      <strong>Issue #30 auto-close</strong> — a PR body-ban <code>Closes #30</code>, merge után automatikusan lezárul
+    </li>
+    <li>
+      <strong>Pull main</strong> — <code>git pull origin main</code> a <code>pull-main-after-pr-merge</code> rule szerint
+    </li>
+    <li>
+      <strong>Worktree cleanup</strong> — <code>git worktree remove .claude/worktrees/agent-upstream-audit-2026-06-22</code> a Phase 15-18 postmortem tanulsága szerint
+    </li>
+  </ol>
+</section>
+
+<section id="audit-pipeline-status">
+  <h2>Audit pipeline státusz</h2>
+  <p>Minden fázis státusza — a review gate kivételével minden fázis egyszeri PASS volt.</p>
+  <div class="pipeline-status-grid">
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 1</div>
+      <span class="badge badge-pass">PASS</span> 4 lens párhuzamosan
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 2</div>
+      <span class="badge badge-pass">PASS</span> 0 CRIT dedup
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 3</div>
+      <span class="badge badge-pass">PASS</span> adversarial review
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 3.5</div>
+      <span class="badge badge-pass">PASS</span> 25/25 KEEP
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 3.7</div>
+      <span class="badge badge-pass">PASS</span> canonical validated
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 4</div>
+      <span class="badge badge-pass">PASS</span> house-style
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 5</div>
+      <span class="badge badge-info">OPEN</span> PR #36
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 6</div>
+      <span class="badge badge-pass">PASS</span> restructure
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 7 R1</div>
+      <span class="badge badge-warn">2 NIT</span> javítva 7.5
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 7 R2</div>
+      <span class="badge badge-warn">R7 NIT</span> javítva 7.6+7.7
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 7 R3</div>
+      <span class="badge badge-warn">R3 WARN</span> javítva 7.8
+    </div>
+    <div class="pipeline-status-card">
+      <div class="phase-name">Phase 7 R4+R5</div>
+      <span class="badge badge-pass">PASS</span> 2 consecutive clean
+    </div>
+  </div>
+</section>
+
+<section id="artifactok">
+  <h2>Kapcsolódó artifact-ok</h2>
+  <p>A PR #36-ban található dokumentumok, amik a review-k helyett (vagy mellett) olvashatók.</p>
+  <ul class="artifact-list">
+    <li>
+      <code>docs/research/anthropic-skill-creator-original/UPSTREAM_COMMIT.txt</code> — upstream pin referencia
+    </li>
+    <li>
+      <code>docs/research/upstream-audit-2026-06-22/README.md</code> — az audit almappa áttekintője
+    </li>
+    <li>
+      <code>docs/research/upstream-audit-2026-06-22/synthesis.md</code> — végső audit szintézis (a 30 finding itt van canonicalizálva)
+    </li>
+    <li>
+      <code>docs/research/upstream-audit-2026-06-22/canonical-validated.md</code> — canonical validált formátum
+    </li>
+    <li>
+      <code>docs/research/upstream-audit-2026-06-22/info-re-evaluation.md</code> — a 25 INFO sor újraértékelése
+    </li>
+    <li>
+      <code>docs/research/upstream-audit-2026-06-22/lenses/</code> — a 4 audit lens részletes riportjai
+    </li>
+    <li>
+      <code>docs/research/upstream-audit-2026-06-22/reviews/</code> — R1, R2, R3, R4, R5 review riportok
+    </li>
+    <li>
+      <code>docs/MIGRATION.upstream-sync.md</code> — house-style upstream sync dokumentáció
+    </li>
+  </ul>
+</section>
+
+<footer class="page-footer">
+  <p><strong>Készítette:</strong> upstream-audit pipeline (Phase 1-7 + 7.5-7.8) — <code>docs-scribe</code> + <code>general-purpose</code> subagent-ek koordinációjával</p>
+  <p><strong>Dátum:</strong> 2026-06-22</p>
+  <p><strong>PR:</strong> <a href="https://github.com/EggProject/easter-skills-hack-to-hermes/pull/36">github.com/EggProject/easter-skills-hack-to-hermes/pull/36</a></p>
+  <p><strong>Issue (canonical):</strong> <a href="https://github.com/EggProject/easter-skills-hack-to-hermes/issues/38">#38</a></p>
+  <p><strong>Issue (eredeti, auto-close):</strong> <a href="https://github.com/EggProject/easter-skills-hack-to-hermes/issues/30">#30</a></p>
+  <p><strong>Branch:</strong> <code>audit/upstream-prompt-residues-2026-06-22</code></p>
+  <p><strong>Audit verdict:</strong> <span class="badge badge-pass">PASS</span> — byte-identical subtree, 0 CRIT / 0 WARN, 30 deliberate finding (Q4/Q5 contract).</p>
+</footer>
+
+</div>
+</body>
+</html>
