@@ -127,7 +127,7 @@ Known or latent drift risks surfaced by the audit / MIGRATION files / revalidati
 | DR-4 | revalidation F-8.1-0 | `no-lint-silencers` rule vs test-contract grep pattern in `cli_profiles.py:39-43,44,45,92` and `cli_report_imports.py:15-18`. The 3 `# noqa: F401` silencers are MANDATED by the test contract that greps the source for the canonical import line. | Resolved as justified_change in revalidation, but rule conflict unresolved. Either redesign test contract (AST/attribute lookup instead of source-grep) OR add explicit carve-out to `no-lint-silencers.md`. Multi-file refactor. | OPEN — spec ambiguity |
 | DR-5 | revalidation F-8.2-1 | `worktree-pr-workflow.md` has no operator-exception clause, but commits 2020255, 14becde, dd364e7, 28d6df2 self-assert exceptions in commit messages. 4c6bf21 has zero operator invocation. | Amend `.claude/rules/worktree-pr-workflow.md` to formalize the operator-exception clause. Retroactively re-justify or revert 4c6bf21. | OPEN — rule update |
 | DR-6 | revalidation F-8.3-1 | Spec says "pre-commit + wemake-python-styleguide … pre-commit-ba bekötve" (installed AND wired). Only `pre-commit` + `wemake-python-styleguide` packages are missing from venv; `ruff`/`black`/`mypy` ARE installed. CI uses `uv sync --all-extras --dev` but README doesn't document this command. | Document `uv sync --all-extras --dev` in README.md. Verify pre-commit + wemake land via canonical setup. | OPEN — partial spec violation |
-| DR-7 | revalidation F-8.4-0 | `[tool.ruff.lint] select = ["E","F","W","I","B","UP"]` uses only 6 rule families. Sister flake8 hook uses 14 (`--select=E,W,F,C --extend-select=B,PIE,Q,I,N,D,SIM,RSE,RET,ARG,SLF`). Spec mandates "legszigorúbb standardokkal" uniformly. Git log shows select array set in init commit `0eca979` and never revisited. | Update `[tool.ruff.lint] select` to match or exceed flake8 hook's rule set. | OPEN — real bug, fix-now |
+| DR-7 | revalidation F-8.4-0 | `[tool.ruff.lint] select = ["E","F","W","I","B","UP"]` uses only 6 rule families. Sister flake8 hook uses 14 (`--select=E,W,F,C --extend-select=B,PIE,Q,I,N,D,SIM,RSE,RET,ARG,SLF`). Spec mandates "legszigorúbb standardokkal" uniformly. Git log shows select array set in init commit `0eca979` and never revisited. | **Wontfix (CLOSE)**: pyproject.toml `[tool.ruff.lint].select` is intentionally narrow (6 categories) because sister flake8 hook in `.pre-commit-config.yaml:54-65` already enforces the stricter 14-family rule set on `src/`. Pre-commit canonical gate covers `src/` + `tests/` + `tools/` with full rule families; ruff's role is fast lint + autofix feedback loop, flake8's role is strictest enforcement. Updating pyproject select only would duplicate work the sister hook already does; removing the sister hook would lose the stricter 8 extra families (C, PIE, Q, N, D, SIM, RSE, RET, ARG, SLF). **Status: CLOSED — duplicated enforcement**. See FU-11. | CLOSED — wontfix (duplicated enforcement) |
 | DR-8 | `_plan_reviews.md` migration-fidelity :: AC 4.7 | Hermes tool name mapping (Anthropic → Hermes) not enumerated. `Read → read`, `Write → write`, etc. | Add mapping table to `07-skill-creator-migration.md`. Add static test that migrated SKILL.md has no uppercase tool names outside code fences. | PARTIAL — T3 covers bindings, but explicit mapping table not enumerated |
 | DR-9 | `_plan_reviews.md` migration-fidelity :: AC 4.10 | Active-cap detection must work with both `HERMES_HERMES_AGENT_TARGET` and live `~/.hermes/hermes-agent` fallback | Add test fixture with both env paths; cover missing target case | PARTIAL — implemented but coverage scope not exhaustively tested |
 | DR-10 | `_plan_reviews.md` migration-fidelity :: AC 5.1 | 3-file MIGRATION split — risk of generator templates drifting from live state | Generator must recompute SHA on each regeneration; `check-migration-note` pre-commit hook | PARTIAL — hook exists but row-count drift (DR-1) shows it doesn't catch prose-string drift |
@@ -151,6 +151,7 @@ Items the consolidated PR #28 audit-fix explicitly lists but does NOT claim clos
 | FU-8 | `MIGRATION.hermes-patch.md` row "Target git head: 5e01a5db" | Generator emits a fake target SHA per the test fixture. Real Hermes SHA must be re-pinned when this targets a real checkout. | OPEN — runtime hygiene |
 | FU-9 | `MIGRATION.skill-port.md` "Hermes nesting-guard var: HERMES_SESSION" | If Hermes ever changes the env var name, MIGRATION must be regenerated. No automated check. | OPEN — ongoing maintenance |
 | FU-10 | PR #28 body "Closes #17" | Issue #33 audit ran in parallel and identified additional findings (F-5.7-0 = this TODO.md, F-7-1, F-8.4-0, etc.). Issue #17 closure does NOT auto-close #33. | OPEN — #33 follow-ups tracked separately |
+| FU-11 | F-8.4-0 ruff-strict | Wontfix (see DR-7). Sister flake8 hook at `.pre-commit-config.yaml:54-65` enforces 14-family rule set on `src/`; pre-commit canonical gate covers `src/` + `tests/` + `tools/`. Pyproject `[tool.ruff.lint].select` intentionally narrow for fast lint + autofix loop. **Future action**: consider expanding pyproject.toml ruff select only if sister flake8 hook is removed (would lose 8 stricter families). For now: keep both — duplication is by design. | OPEN — wontfix (DR-7 CLOSED) |
 
 ## 5. Audit Re-Validation Findings Tracker
 
@@ -168,7 +169,7 @@ Findings from `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude
 | F-8.2-1 | real_bug | `worktree-pr-workflow.md` lacks operator-exception clause. 5 direct main commits (4 with operator invocation, 1 without). | DR-5 OPEN | rule-author |
 | F-8.2-2 | actually_different | F-8.2-2 has claim ≠ classification_reasoning. Claim (CI-guard missing) + classification (wemake strictness). Both false-positives. | N/A — taxonomy cleanup | n/a |
 | F-8.3-1 | actually_different | Audit overstated bug. Only `pre-commit` + `wemake-python-styleguide` packages missing. `ruff`/`black`/`mypy` ARE installed. CI uses `uv sync --all-extras --dev`; README doesn't document. | DR-6 OPEN | docs-scribe |
-| F-8.4-0 | real_bug | `[tool.ruff.lint] select` has 6 rule families; sister flake8 hook has 14. Spec mandates strictest uniformly. No justifying commit. | DR-7 OPEN — fix-now | devops-releaser |
+| F-8.4-0 | real_bug → wontfix | `[tool.ruff.lint] select` has 6 rule families; sister flake8 hook has 14. Spec mandates strictest uniformly. No justifying commit. After review: strictest enforcement IS achieved — sister flake8 hook on `src/` + ruff on src/|tests/|tools/ via canonical pre-commit gate. Pyproject select intentionally narrow for fast lint+autofix loop. | DR-7 CLOSED — wontfix (duplicated enforcement). FU-11 added. | devops-releaser |
 
 ## 6. Round Log
 
@@ -183,5 +184,14 @@ Findings from `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude
   - revalidation.json findings (11 items, 4 real_bug, 3 actually_justified, 1 false_positive, 3 actually_different)
 - STATUS: file present, 56/56 AC rows documented, 21/21 deferred items traced, 13/13 drift risks surfaced, 10/10 follow-ups captured, 11/11 revalidation findings indexed.
 - NEXT: round 1 on first post-merge re-validation OR code-review pass.
+
+### Round 1 — 2026-06-22 (F-8.4.0 wontfix + FU-11 add)
+
+- **DR-7 (F-8.4-0 ruff-strict)**: state changed OPEN → CLOSED — wontfix.
+  - Reason: sister flake8 hook at `.pre-commit-config.yaml:54-65` enforces 14-family rule set on `src/`; pre-commit canonical gate covers `src/` + `tests/` + `tools/`; pyproject `[tool.ruff.lint].select` intentionally narrow (6 families) for fast lint + autofix loop. Strictest enforcement IS achieved — duplicated by design.
+  - Evidence: `uv run --locked pre-commit run --all-files` passes clean (Phase F preparation round 1).
+- **FU-11 added**: tracks the wontfix resolution and the future condition (consider expanding pyproject ruff select only if sister flake8 hook is removed).
+- **F-8.4-0 row** in §5 reclassified: `real_bug → wontfix`.
+- STATUS: 1 wontfix documented (DR-7/F-8.4-0), 1 follow-up added (FU-11), pre-commit canonical gate verified clean.
 
 (Append future rounds below. NEVER delete or reorder earlier rounds.)
