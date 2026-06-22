@@ -29,6 +29,9 @@
       "mcp__plugin_honcho_honcho__list_conclusions",
       "mcp__plugin_honcho_honcho__create_conclusion",
       "mcp__plugin_honcho_honcho__delete_conclusion",
+      "mcp__sequential-thinking__sequentialthinking",
+      "mcp__chrome-mcp__take_snapshot",
+      "mcp__chrome-mcp__list_pages",
       "Bash(* --no-verify *)"
     ],
     "ask": [
