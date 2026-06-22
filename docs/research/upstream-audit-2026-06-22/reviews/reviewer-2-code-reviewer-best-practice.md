@@ -227,13 +227,13 @@ Reviewer 1 (R8) also already verified all 11 cross-references surface in the syn
 ## Files
 
 - Input (read-only):
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-synthesized.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-validated-r1.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-info-evaluation.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-researcher.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-prompt-engineer.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-code-reviewer.md`
-  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-security-auditor.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/synthesis.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/info-re-evaluation.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/researcher.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/prompt-engineer.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/code-reviewer.md`
+  - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/research/upstream-audit-2026-06-22/lenses/security-auditor.md`
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/docs/plans/07-skill-creator-migration.md`
   - `/Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/agent-upstream-audit-2026-06-22/MIGRATION.skill-port.md`
 - Source files (read-only, verified line-by-line):

@@ -115,6 +115,6 @@ Upstream subtree (`plugins/skill-creator/skills/skill-creator`) is **silent sinc
   - Phase 3 (reviews): `docs/research/upstream-audit-2026-06-22/reviews/reviewer-1-security-auditor-refuting.md`, `docs/research/upstream-audit-2026-06-22/reviews/reviewer-2-code-reviewer-best-practice.md`
   - Phase 3.5 (info re-evaluation): `docs/research/upstream-audit-2026-06-22/info-re-evaluation.md`
 - Audit lenses: `docs/research/upstream-audit-2026-06-22/lenses/{researcher,prompt-engineer,code-reviewer,security-auditor}.md`
-- Vendored baseline: `docs/research/anthropic-skill-creator-original/skills/skill-creator/` (pinned at `2a40fd2e...` via `UPSTREAM_COMMIT.txt`)
+- Vendored baseline: `docs/research/anthropic-skill-creator-original/skills/skill-creator/`, pinned at `2a40fd2e...` (pin recorded at `docs/research/anthropic-skill-creator-original/UPSTREAM_COMMIT.txt`)
 - Related MIGRATION set: `MIGRATION.md`, `MIGRATION.hermes-patch.md`, `MIGRATION.skill-port.md`
 - Plan: `docs/plans/07-skill-creator-migration.md`
