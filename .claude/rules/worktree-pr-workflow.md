@@ -10,12 +10,12 @@ A direct main commit is permitted ONLY when ALL of the following hold:
 
 - The operator (user) gave EXPLICIT authorization for the specific commit before it was made
 - The commit message body contains the literal marker `(operator-authorized exception)` on its own line
-- The commit message body documents the reason and the operator's authorization
+- The commit message body MUST use multi-`-m` formázás to record BOTH the operator name and the reason — e.g. `git commit --allow-empty -m "fix(scope): (operator-authorized exception) — <short reason>" -m "" -m "operator: <name>" -m "reason: <full explanation>"`
 - The change is scoped to operator-local config (e.g. `.gitignore`, `.mcp.json`, `.claude/settings.json`) OR is a one-shot emergency fix the operator explicitly waved through
 
 Post-hoc reconciliation:
 
-- If a direct main commit landed WITHOUT the marker, the next fix agent MUST retroactively annotate it with `git commit --allow-empty -m "fix(issue-NN/F-X): retroactively annotate <sha> as operator-authorized exception per worktree-pr-workflow.md"`
+- If a direct main commit landed WITHOUT the marker, the next fix agent MUST retroactively annotate it with `git commit --allow-empty -m "fix(issue-NN/F-X): retroactively annotate <sha> as operator-authorized exception per worktree-pr-workflow.md" -m "" -m "operator: <name>" -m "reason: <why this commit lacked the marker>"`
 - The annotation is an audit trail, NOT a re-authorization — it documents that the operator authorized the commit retroactively
 
 Audit trail:
