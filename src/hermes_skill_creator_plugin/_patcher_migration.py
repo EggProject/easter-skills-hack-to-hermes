@@ -53,6 +53,9 @@ from hermes_skill_creator_plugin._patcher_migration_task_e import (
     _render_task_e_row,
 )
 from hermes_skill_creator_plugin._patcher_sites import S1_CAP_SITE, Site, sites_for_mode
+from hermes_skill_creator_plugin._skill_installer_note import (
+    refresh_migration_manifest,
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -104,6 +107,7 @@ def generate_migration_note(
     )
     _write_patch_md(worktree, inputs)
     _write_index_md(worktree=worktree, timestamp=timestamp)
+    refresh_migration_manifest(worktree)
     return worktree / "MIGRATION.hermes-patch.md"
 
 

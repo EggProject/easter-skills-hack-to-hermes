@@ -18,17 +18,19 @@ D1 = (
     "+ migrated-skill T3 inventory; each file serves a different audience "
     "(see 08-migration-note-format.md §Decisions)."
 )
-D2_TBD = (
-    "**D2. Pinned upstream commit `2a40fd2e...` is TBD until verified** — the "
-    "generator emits `TBD` and the manifest sha is recomputed on each "
-    "regeneration until a WebFetch re-verifies the SHA "
-    "(see 08-migration-note-format.md §Decisions)."
+D2_PINNED_PATCH = (
+    "**D2. Pinned upstream commit `2a40fd2e...` is read from the vendored "
+    "`UPSTREAM_COMMIT.txt`** — the generator emits the SHA verbatim into all "
+    "three MIGRATION*.md files; the manifest sha is recomputed on each "
+    "regeneration, so any drift between the MIGRATION file content and "
+    "the manifest entry fails `check-migration-note` (see "
+    "08-migration-note-format.md §Decisions)."
 )
-D2_PINNED = (
-    "**D2. Pinned upstream commit `2a40fd2e...` is TBD until verified** — the "
-    "generator emits the SHA from `PINNED_UPSTREAM_COMMIT` (vendored source); "
-    "the manifest sha is recomputed on each regeneration until a WebFetch "
-    "re-verifies the GitHub SHA (see 08-migration-note-format.md §Decisions)."
+D2_PINNED_SKILL_PORT = (
+    "**D2. Pinned upstream commit `2a40fd2e...` is read from the vendored "
+    "`UPSTREAM_COMMIT.txt`** — the generator emits the SHA verbatim into the "
+    "`Pinned upstream commit` row; the manifest sha is recomputed on each "
+    "regeneration (see 08-migration-note-format.md §Decisions)."
 )
 D5_PATCH = (
     "**D5. Row counts are computed at runtime from the sites table** — 1 "
@@ -60,16 +62,28 @@ def render(lines: list[str]) -> str:
 
 def patch_decisions() -> str:
     """Decisions section for ``MIGRATION.hermes-patch.md``."""
-    body = [D1, D2_TBD, D5_PATCH, _d6("`site_id`")]
+    body = [D1, D2_PINNED_PATCH, D5_PATCH, _d6("`site_id`")]
     return render(body)
 
 
 def index_decisions() -> str:
     """Decisions section for ``MIGRATION.md`` (top-level index)."""
-    body = [D1, D2_TBD, D5_PATCH, _d6("`site_id` (patch) / row number (skill-port)")]
+    body = [
+        D1,
+        D2_PINNED_PATCH,
+        D5_PATCH,
+        _d6("`site_id` (patch) / row number (skill-port)"),
+    ]
     return render(body)
 
 
 def skill_port_decisions_lines() -> list[str]:
     """Decisions section for ``MIGRATION.skill-port.md`` as a list of lines."""
-    return ["## Decisions", "", D1, D2_PINNED, D5_SKILL_PORT, _d6("row number")]
+    return [
+        "## Decisions",
+        "",
+        D1,
+        D2_PINNED_SKILL_PORT,
+        D5_SKILL_PORT,
+        _d6("row number"),
+    ]

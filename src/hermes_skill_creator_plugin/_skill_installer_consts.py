@@ -25,7 +25,33 @@ UNPATCHED_MARKER = "if len(desc) > 60:"
 
 # --- path / env constants -------------------------------------------------
 LIVE_HERMES_AGENT_SUFFIX = "~/.hermes/hermes-agent"
-PINNED_UPSTREAM_COMMIT = "2a40fd2e7c52207aa903bd33fc4c65716126966e"
+_UPSTREAM_COMMIT_REL_PARTS = (
+    "docs",
+    "research",
+    "anthropic-skill-creator-original",
+    "UPSTREAM_COMMIT.txt",
+)
+_UPSTREAM_COMMIT_FILE = (
+    Path(__file__)
+    .resolve()
+    .parents[2]
+    .joinpath(
+        *_UPSTREAM_COMMIT_REL_PARTS,
+    )
+)
+
+
+def _load_pinned_upstream_commit() -> str:
+    """Read the pinned upstream commit SHA from UPSTREAM_COMMIT.txt.
+
+    The file is a single line containing the 40-char hex SHA. Strips
+    whitespace so trailing newlines / CRLF do not corrupt the emitted
+    markdown table cell.
+    """
+    return _UPSTREAM_COMMIT_FILE.read_text(encoding="utf-8").strip()
+
+
+PINNED_UPSTREAM_COMMIT = _load_pinned_upstream_commit()
 FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
 TEXT_ENCODING = "utf-8"
 SKILL_UTILS_REL_PARTS = ("agent", "skill_utils.py")

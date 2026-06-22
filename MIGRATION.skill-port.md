@@ -7,7 +7,7 @@
 | Source skill | skill-creator |
 | Pinned upstream commit | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
 | Hermes nesting-guard var | HERMES_SESSION |
-| Generated at | 2026-06-22T09:13:43Z |
+| Generated at | 2026-06-22T10:08:13Z |
 
 ## Per-binding replacements (T3)
 
@@ -43,6 +43,6 @@
 ## Decisions
 
 **D1. MIGRATION is a 3-file split** — top-level index + Script #1 patches + migrated-skill T3 inventory; each file serves a different audience (see 08-migration-note-format.md §Decisions).
-**D2. Pinned upstream commit `2a40fd2e...` is TBD until verified** — the generator emits the SHA from `PINNED_UPSTREAM_COMMIT` (vendored source); the manifest sha is recomputed on each regeneration until a WebFetch re-verifies the GitHub SHA (see 08-migration-note-format.md §Decisions).
+**D2. Pinned upstream commit `2a40fd2e...` is read from the vendored `UPSTREAM_COMMIT.txt`** — the generator emits the SHA verbatim into the `Pinned upstream commit` row; the manifest sha is recomputed on each regeneration (see 08-migration-note-format.md §Decisions).
 **D5. Row counts are computed at runtime from the sites table** — T3 row count == 18 (the number of rows in 07-skill-creator-migration.md's T3 inventory), enforced by `test_migration_note_exhaustive_skill_port` (see 08-migration-note-format.md §Decisions).
 **D6. Determinism: frozen timestamp + LF endings + no trailing whitespace** — `HERMES_SKILL_CREATOR_FROZEN_TIME` makes `Generated at` stable across runs (CI always sets it); tables sorted by row number (see 08-migration-note-format.md §Decisions).

@@ -6,12 +6,12 @@
 | --- | --- |
 | Source repo | https://github.com/anthropics/claude-plugins-official |
 | Source skillId | skill-creator |
-| Pinned upstream commit | TBD |
-| Target | /Users/kiscsicska/projects/easter-skills-hack-to-hermes-2/.claude/worktrees/fix-pr-consolidated/src/hermes_skill_creator_plugin/agent |
+| Pinned upstream commit | 2a40fd2e7c52207aa903bd33fc4c65716126966e |
+| Target | /private/tmp/hermes-fake-target |
 | Target git head | 5e01a5db |
 | --task-e-redirect | yes |
 | --no-schema-redirect | no |
-| Generated at | 2026-06-22T09:13:43Z |
+| Generated at | 2026-06-22T10:00:00Z |
 
 ## Cap-raise site (always applied)
 
@@ -36,6 +36,6 @@
 ## Decisions
 
 **D1. MIGRATION is a 3-file split** — top-level index + Script #1 patches + migrated-skill T3 inventory; each file serves a different audience (see 08-migration-note-format.md §Decisions).
-**D2. Pinned upstream commit `2a40fd2e...` is TBD until verified** — the generator emits `TBD` and the manifest sha is recomputed on each regeneration until a WebFetch re-verifies the SHA (see 08-migration-note-format.md §Decisions).
+**D2. Pinned upstream commit `2a40fd2e...` is read from the vendored `UPSTREAM_COMMIT.txt`** — the generator emits the SHA verbatim into all three MIGRATION*.md files; the manifest sha is recomputed on each regeneration, so any drift between the MIGRATION file content and the manifest entry fails `check-migration-note` (see 08-migration-note-format.md §Decisions).
 **D5. Row counts are computed at runtime from the sites table** — 1 (default), 1+7=8 with `--task-e-redirect`, 1+6=7 with `--task-e-redirect --no-schema-redirect`; T3 row count == 18 (see 08-migration-note-format.md §Decisions).
 **D6. Determinism: frozen timestamp + LF endings + no trailing whitespace** — `HERMES_SKILL_CREATOR_FROZEN_TIME` makes `Generated at` stable across runs (CI always sets it); tables sorted by `site_id` (see 08-migration-note-format.md §Decisions).

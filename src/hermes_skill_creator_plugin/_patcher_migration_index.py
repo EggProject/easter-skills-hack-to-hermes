@@ -12,6 +12,9 @@ from hermes_skill_creator_plugin._patcher_migration_consts import LF
 from hermes_skill_creator_plugin._patcher_migration_decisions import (
     index_decisions,
 )
+from hermes_skill_creator_plugin._skill_installer_consts import (
+    PINNED_UPSTREAM_COMMIT,
+)
 
 
 def _render_migration_index(timestamp: str) -> str:
@@ -29,7 +32,7 @@ def _render_index_header(timestamp: str) -> str:
         "| --- | --- |",
         "| Source repo | https://github.com/anthropics/claude-plugins-official |",
         "| Source skillId | skill-creator |",
-        "| Pinned upstream commit | TBD |",
+        f"| Pinned upstream commit | {PINNED_UPSTREAM_COMMIT} |",
         "| Target Hermes version | 5e01a5db (installed) - authored against 36ae958 |",
         "| Plugin version | 0.1.0 |",
         f"| Generated at | {timestamp} |",

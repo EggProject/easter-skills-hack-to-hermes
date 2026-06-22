@@ -95,4 +95,26 @@ def write_migration_note(worktree_root: Path) -> Path:
         ),
         encoding=TEXT_ENCODING,
     )
+    refresh_migration_manifest(worktree_root)
     return note
+
+
+def refresh_migration_manifest(worktree_root: Path) -> None:
+    """Recompute ``.migration_manifest.json`` for every MIGRATION*.md in root.
+
+    Both regeneration paths (Script #1 ``--emit-migration-note`` via
+    :func:`hermes_skill_creator_plugin._patcher_migration.generate_migration_note`
+    and the migrated-skill installer via :func:`write_migration_note`)
+    call this helper so the manifest entry tracks the just-written files
+    byte-for-byte. Required by :mod:`tools.check_migration_note` (the
+    ``check-migration-note`` pre-commit hook).
+    """
+    from tools._migration_manifest import dump_manifest
+    from tools._migration_paths import GLOB_PATTERNS, sha256_of
+
+    entries: list[tuple[str, str]] = []
+    for pattern in GLOB_PATTERNS:
+        candidate = worktree_root / pattern
+        if candidate.exists():
+            entries.append((pattern, sha256_of(candidate)))
+    dump_manifest(worktree_root / ".migration_manifest.json", entries)

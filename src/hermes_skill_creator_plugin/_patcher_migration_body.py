@@ -15,6 +15,9 @@ from hermes_skill_creator_plugin._patcher_migration_render import (
     HermesPatchContext,
     _yes_no,
 )
+from hermes_skill_creator_plugin._skill_installer_consts import (
+    PINNED_UPSTREAM_COMMIT,
+)
 
 
 def _render_migration_hermes_patch(ctx: HermesPatchContext) -> str:
@@ -72,7 +75,7 @@ def _compose_metadata_rows(
         "| --- | --- |",
         "| Source repo | https://github.com/anthropics/claude-plugins-official |",
         "| Source skillId | skill-creator |",
-        "| Pinned upstream commit | TBD |",
+        f"| Pinned upstream commit | {PINNED_UPSTREAM_COMMIT} |",
         f"| Target | {target_cell} |",
         f"| Target git head | {git_head} |",
         f"| --task-e-redirect | {task_e_cell} |",
