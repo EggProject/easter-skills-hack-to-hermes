@@ -260,7 +260,7 @@ enforced via negative-form guard rails rather than silent deletion.
    are the canonical D7 enforcement pattern and removing them would
    weaken the rubric.
 4. **Prompt-engineer cross-link**: The prompt-engineer audit
-   (`upstream-audit-prompt-engineer.md`) flagged 25 DELIBERATE findings
+   (`prompt-engineer.md`) flagged 25 DELIBERATE findings
    (F-PE-1..25). This audit confirms those 25 are all plan-allowed
    (bilingual advisory + negative-form guard rails + adapter-contract
    docstrings + T3-provenance references). **Recommendation**: Phase 2

@@ -306,8 +306,8 @@ clean.
 | 5 | `skills/skill-creator/scripts/*.py` (8 files) | local migrated | K4 docstring check, K5 subprocess audit |
 | 6 | `skills/skill-creator/_subprocess.py` | local migrated | K5 STRIDE audit |
 | 7 | `skills/skill-creator/eval-viewer/generate_review.py`, `viewer.html` | local migrated | K5 SSRF/XSS check (clean — relative `fetch('feedback.json')`) |
-| 8 | `docs/research/upstream-audit-researcher.md` | prior audit | cross-reference for F-R1..F-R4 |
-| 9 | `docs/research/upstream-audit-prompt-engineer.md` | prior audit | cross-reference for F-PE-1..F-PE-25 |
-| 10 | `docs/research/upstream-audit-code-reviewer.md` | prior audit | cross-reference for F-CR-1..F-CR-16 |
+| 8 | `docs/research/upstream-audit-2026-06-22/lenses/researcher.md` | prior audit | cross-reference for F-R1..F-R4 |
+| 9 | `docs/research/upstream-audit-2026-06-22/lenses/prompt-engineer.md` | prior audit | cross-reference for F-PE-1..F-PE-25 |
+| 10 | `docs/research/upstream-audit-2026-06-22/lenses/code-reviewer.md` | prior audit | cross-reference for F-CR-1..F-CR-16 |
 | 11 | `docs/plans/12-risks-and-open-questions.md Q1` (referenced in `_subprocess.py`) | plan source | Q1 nesting-guard var pin provenance |
 | 12 | `hermes-skills-hitl-decisions.md` Q4/Q5 (user memory) | user-confirmed decisions | bilingual-advisory negative-form policy |

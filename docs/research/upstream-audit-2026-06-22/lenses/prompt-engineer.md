@@ -249,7 +249,7 @@ non-trivial handoff items.
 | 18 | `docs/research/anthropic-skill-creator-original/skills/skill-creator/agents/grader.md` | vendored pin (upstream) | full read |
 | 19 | `docs/research/anthropic-skill-creator-original/skills/skill-creator/agents/analyzer.md` | vendored pin (upstream) | full read |
 | 20 | `docs/research/anthropic-skill-creator-original/skills/skill-creator/agents/comparator.md` | vendored pin (upstream) | full read |
-| 21 | `docs/research/upstream-audit-researcher.md` | upstream-audit researcher output | full read |
+| 21 | `docs/research/upstream-audit-2026-06-22/lenses/researcher.md` | upstream-audit researcher output | full read |
 
 ## Confidence summary
 
