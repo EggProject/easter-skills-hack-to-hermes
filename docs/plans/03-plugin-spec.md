@@ -24,7 +24,7 @@ src/hermes_skill_creator_plugin/
   plugin.yaml                 # manifest (required; YAML, not JSON)
   _advisory.py                # static-AST cap detection (NO setattr, NO mutation)
   _scope.py                   # hermes_home_scope context manager
-  _subprocess.py              # hermes_subprocess_env() helper
+  _subprocess.py              # marker-only stub (post-PR-E; canonical helper lives at skills/skill-creator/_subprocess.py, see AC-4.6/4.15)
   i18n/
     messages_en.py
     messages_hu.py
@@ -74,13 +74,11 @@ Per `hermes_cli/plugins.py`, the load model is a single `register(ctx)` callable
 ```python
 """hermes-skill-creator-plugin: advisory-only cap-state detector.
 
-The ``register(ctx)`` entry point lives in ``_register.py`` so this package
-``__init__`` stays a docstring-only shim (wemake WPS412 forbids non-docstring
-statements in a package ``__init__``).
+The plugin loader resolves ``register(ctx)`` directly from the
+``_register`` submodule at package-init time; this ``__init__.py``
+intentionally contains no re-exports or ``__all__`` (wemake WPS412
+forbids non-docstring statements in a package ``__init__``).
 """
-from ._register import register
-
-__all__ = ["register"]
 ```
 
 `src/hermes_skill_creator_plugin/_register.py` (sketch):
@@ -219,7 +217,7 @@ NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_descr
 - `test_advisory_log_contains_en_and_hu` — the cap-state advisory contains both `[en]` and `[hu]` markers.
 
 ### Coverage
-- 100% line + branch on `_advisory.py`, `__init__.py`, `_scope.py`, `_subprocess.py`. Every error path covered. The one-time-marker branches and the `unknown`/`patched`/`unpatched` tri-state are all exercised.
+- 100% line + branch on `_advisory.py`, `__init__.py`, `_scope.py`, and the canonical `skills/skill-creator/_subprocess.py` (post-PR-E; the plugin's `_subprocess.py` is a marker-only stub and is NOT a coverage target). Every error path covered. The one-time-marker branches and the `unknown`/`patched`/`unpatched` tri-state are all exercised.
 
 ## Fix ledger
 
@@ -266,4 +264,4 @@ NO `setattr(skill_utils, ...)`. NO rebind of `prompt_builder.extract_skill_descr
 - **Rationale**: the AST must distinguish "patched" from "unpatched" by matching either the literal `60` or the `MAX_DESCRIPTION_LENGTH` reference in the `Compare` node's comparators.
 - **Evidence**: `~/.hermes/hermes-agent @ 36ae958473b8530ffb1a395c4944b8cdbcae82fe` — `agent/skill_utils.py:688`/`:689` (unpatched `extract_skill_description` cap-raise site; literal `60` comparator, the actual slice being inspected by the AST walk) and `tools/skills_tool.py:98` (`MAX_DESCRIPTION_LENGTH` constant the patched form references). Note: an earlier draft cited `agent/skill_utils.py:653`/`:654` for this site, but those lines are the docstring of an unrelated function (`resolve_skill_config_values`); the real cap comparator is at 688/689. The byte sequence at 688/689 was NOT re-verified at the pinned commit during this edit; treat this citation as **inferred** rather than verified-from-source until a re-verify pass is run. Confidence: inferred.
 
-<!-- end of file: 269 lines (budget 260) -->
+<!-- end of file: 267 lines (budget 260) -->
