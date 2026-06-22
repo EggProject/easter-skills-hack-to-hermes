@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from hermes_skill_creator_plugin import _enabled_detection
-from hermes_skill_creator_plugin import _enabled_detection_parse as _ed_parse
+from easter_hermes_sorry_skills import _enabled_detection
+from easter_hermes_sorry_skills import _enabled_detection_parse as _ed_parse
 from tests.report._fixtures import _write_profile
 
 

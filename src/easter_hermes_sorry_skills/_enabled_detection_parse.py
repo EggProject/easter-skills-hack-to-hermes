@@ -1,0 +1,86 @@
+"""src/easter_hermes_sorry_skills/_enabled_detection_parse.py
+
+Frontmatter + YAML parsing helpers for enabled-detection.
+"""
+
+from __future__ import annotations
+
+import io
+import re
+from pathlib import Path
+from typing import Any
+
+import frontmatter
+import yaml
+
+_SKILLS_KEY = "skills"
+_DISABLED_KEY = "disabled"
+_PLATFORMS_KEY = "platforms"
+_DISABLED_IF_PLATFORM_KEY = "disabled_if_platform"
+_TEXT_ENCODING = "utf-8"
+_BAREWORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def parse_frontmatter(path: Path) -> dict[str, Any]:
+    """Parse a SKILL.md frontmatter block. Returns {} on any error."""
+    try:
+        text = path.read_text(encoding=_TEXT_ENCODING)
+    except OSError:
+        return {}
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end < 0:
+        return {}
+    block = text[3:end].strip()
+    try:
+        loaded = _load_frontmatter_or_none(text)
+    except Exception:
+        loaded = None
+    if loaded is None:
+        loaded = safe_yaml_dict(block)
+    return loaded
+
+
+def _load_frontmatter_or_none(text: str) -> dict[str, Any] | None:
+    post = frontmatter.load(io.StringIO(text))
+    if post.metadata:
+        return dict(post.metadata)
+    return None
+
+
+def safe_yaml_dict(block: str) -> dict[str, Any]:
+    """Parse a YAML block; return {} on any failure or non-dict result."""
+    try:
+        loaded = yaml.safe_load(block)
+    except yaml.YAMLError:
+        return {}
+    return dict(loaded) if isinstance(loaded, dict) else {}
+
+
+def load_config(profile_path: Path) -> dict[str, Any]:
+    """Read ``<profile_path>/config.yaml``. Returns {} on missing."""
+    cfg = profile_path / "config.yaml"
+    if not cfg.is_file():
+        return {}
+    try:
+        text = cfg.read_text(encoding=_TEXT_ENCODING)
+    except OSError:
+        return {}
+    return safe_yaml_dict(text)
+
+
+def add_list_entries(source: Any, target: set[str]) -> None:
+    """Populate ``target`` from list or bareword scalar ``source``."""
+    if isinstance(source, list):
+        for entry in source:
+            target.add(str(entry))
+    elif isinstance(source, str) and _BAREWORD_RE.fullmatch(source):
+        target.add(source)
+
+
+# Underscored aliases retained for legacy callers (Script #3 reporter path
+# and tests under ``tests/report/``). Both names have identical semantics
+# to the public ``load_config`` / ``parse_frontmatter``.
+_load_config = load_config
+_parse_frontmatter = parse_frontmatter

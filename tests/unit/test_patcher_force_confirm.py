@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hermes_skill_creator_plugin._patcher import (
+from easter_hermes_sorry_skills._patcher import (
     EXIT_USER_ABORT,
     S1_CAP_SITE,
 )
-from hermes_skill_creator_plugin._patcher_force_confirm import (
+from easter_hermes_sorry_skills._patcher_force_confirm import (
     ForceConfirmInputs,
     build_diff_text,
     force_confirm_gate,
@@ -185,6 +185,6 @@ def test_user_abort_result_from_outcome_no_refused_message() -> None:
 def test_false_callable_returns_false() -> None:
     """The ``_false_callable`` helper used as the default ``isatty``
     stand-in returns ``False``."""
-    from hermes_skill_creator_plugin._patcher import _false_callable
+    from easter_hermes_sorry_skills._patcher import _false_callable
 
     assert _false_callable() is False

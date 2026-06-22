@@ -1,4 +1,4 @@
-"""Unit tests for ``hermes_skill_creator_plugin.cli_profiles`` (TDD plan 06).
+"""Unit tests for ``easter_hermes_sorry_skills.cli_profiles`` (TDD plan 06).
 
 TDD list (plan 06 §TDD test list):
 - Per-profile audit: audit_default_profile, audit_named_profiles, audit_empty_profile,
@@ -245,7 +245,7 @@ def _install_fake_hermes_apis(
     fake_hermes_cli.skills_hub = fake_sh
 
     # Stash references on the test for assertions.
-    monkeypatch.setattr("hermes_skill_creator_plugin._scope._fhc_for_test", hc, raising=False)
+    monkeypatch.setattr("easter_hermes_sorry_skills._scope._fhc_for_test", hc, raising=False)
     return log
 
 
@@ -335,9 +335,9 @@ def installed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         # Force reimport so the freshly-patched sys.modules wins.
         import importlib
 
-        if "hermes_skill_creator_plugin.cli_profiles" in sys.modules:
-            del sys.modules["hermes_skill_creator_plugin.cli_profiles"]
-        cli = importlib.import_module("hermes_skill_creator_plugin.cli_profiles")
+        if "easter_hermes_sorry_skills.cli_profiles" in sys.modules:
+            del sys.modules["easter_hermes_sorry_skills.cli_profiles"]
+        cli = importlib.import_module("easter_hermes_sorry_skills.cli_profiles")
         setups.append({})
         return log, cli
 
@@ -767,7 +767,7 @@ def test_get_disabled_skill_names_uses_agent_skill_utils(installed) -> None:
     read-side (NOT ``hermes_cli.skills_config.get_disabled_skills``)."""
     log, cli = installed()
     # The module's audit function imports agent.skill_utils; assert it.
-    import hermes_skill_creator_plugin.cli_profiles as cp
+    import easter_hermes_sorry_skills.cli_profiles as cp
 
     src = Path(cp.__file__).read_text()
     assert "from agent.skill_utils import get_disabled_skill_names" in src
@@ -776,7 +776,7 @@ def test_get_disabled_skill_names_uses_agent_skill_utils(installed) -> None:
 def test_get_disabled_skill_names_takes_platform_str(installed) -> None:
     """The call site passes ``platform=None`` positionally, never ``config=``."""
     log, cli = installed()
-    import hermes_skill_creator_plugin.cli_profiles as cp
+    import easter_hermes_sorry_skills.cli_profiles as cp
 
     src = Path(cp.__file__).read_text()
     # No ``config=`` kwarg for the reader.
@@ -787,7 +787,7 @@ def test_get_disabled_skill_names_takes_platform_str(installed) -> None:
 def test_save_disabled_skills_uses_hermes_cli_skills_config(installed) -> None:
     """The writer is the ``hermes_cli.skills_config`` mutator (not agent.skill_utils)."""
     log, cli = installed()
-    import hermes_skill_creator_plugin.cli_profiles as cp
+    import easter_hermes_sorry_skills.cli_profiles as cp
 
     src = Path(cp.__file__).read_text()
     assert "from hermes_cli.skills_config import save_disabled_skills" in src
@@ -796,7 +796,7 @@ def test_save_disabled_skills_uses_hermes_cli_skills_config(installed) -> None:
 def test_save_disabled_skills_signature_is_positional(installed) -> None:
     """The call passes the disabled set positionally (NOT ``names=``)."""
     log, cli = installed()
-    import hermes_skill_creator_plugin.cli_profiles as cp
+    import easter_hermes_sorry_skills.cli_profiles as cp
 
     src = Path(cp.__file__).read_text()
     assert "save_disabled_skills(names=" not in src
@@ -902,7 +902,7 @@ def test_walks_skills_dir_for_skill_md(installed, tmp_path: Path) -> None:
 
 def test_read_gateway_pid_stat_handles_oserror(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``read_gateway_pid_stat`` survives OSError on ``.stat()``."""
-    import hermes_skill_creator_plugin._cli_profiles_walk as walk_mod
+    import easter_hermes_sorry_skills._cli_profiles_walk as walk_mod
 
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
@@ -926,7 +926,7 @@ def test_read_gateway_pid_stat_handles_oserror(installed, tmp_path: Path, monkey
 
 def test_walk_profile_subdirs_handles_oserror(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``walk_profile_subdirs`` survives OSError on ``.rglob()``/``.stat()``."""
-    import hermes_skill_creator_plugin._cli_profiles_walk as walk_mod
+    import easter_hermes_sorry_skills._cli_profiles_walk as walk_mod
 
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
@@ -955,7 +955,7 @@ def test_walk_profile_subdirs_handles_oserror(installed, tmp_path: Path, monkeyp
 
 def test_walk_profile_subdirs_handles_stat_oserror(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``_dir_size_bytes`` survives OSError on individual child ``.stat()``."""
-    import hermes_skill_creator_plugin._cli_profiles_walk as walk_mod
+    import easter_hermes_sorry_skills._cli_profiles_walk as walk_mod
 
     profile = tmp_path / "default"
     skills = profile / "skills"
@@ -1026,7 +1026,7 @@ def test_json_output_path_resolved_under_workdir(installed, tmp_path: Path, monk
     )
     assert out_path.exists()
     parsed = json.loads(out_path.read_text())
-    assert parsed["tool"] == "hermes-skill-creator-profiles"
+    assert parsed["tool"] == "easter-hermes-sorry-skills-profiles"
 
 
 def test_json_output_path_absolute(installed, tmp_path: Path) -> None:
@@ -1062,8 +1062,8 @@ def test_apply_refuses_real_hermes_home_without_yes(installed, tmp_path: Path, m
     tmp_path-based fake ``.hermes`` dir, then sets HERMES_HOME to the
     same path so ``_live_install_refused`` fires regardless of host.
     """
-    from hermes_skill_creator_plugin import _cli_profiles_pipeline as _pipeline_mod
-    from hermes_skill_creator_plugin import _cli_profiles_profiles as _profiles_mod
+    from easter_hermes_sorry_skills import _cli_profiles_pipeline as _pipeline_mod
+    from easter_hermes_sorry_skills import _cli_profiles_profiles as _profiles_mod
 
     fake_live = tmp_path / ".hermes"
     fake_live.mkdir()
@@ -1276,7 +1276,7 @@ def test_audit_audit_only_flag(installed, tmp_path: Path) -> None:
 
 def test_walk_skills_skips_files(fake_agent_module, tmp_path: Path) -> None:
     """A regular file (not a directory) in ``skills/`` is skipped (line 225)."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1293,7 +1293,7 @@ def _write_skill_simple(skills_dir, name, frontmatter):
 
 def test_walk_skills_skips_subdir_without_skill_md(fake_agent_module, tmp_path: Path) -> None:
     """A subdirectory without ``SKILL.md`` is skipped (line 228)."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1304,7 +1304,7 @@ def test_walk_skills_skips_subdir_without_skill_md(fake_agent_module, tmp_path: 
 
 def test_walk_skills_skips_on_parse_exception(fake_agent_module, tmp_path: Path, monkeypatch) -> None:
     """When ``parse_frontmatter`` raises, the walker drops the skill (defensive)."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1319,7 +1319,7 @@ def test_walk_skills_skips_on_parse_exception(fake_agent_module, tmp_path: Path,
 
 def test_walk_skills_skips_non_string_name(fake_agent_module, tmp_path: Path) -> None:
     """A non-string frontmatter ``name`` falls back to the dir name (line 239)."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1356,8 +1356,8 @@ def test_run_audit_refuses_live_home(installed, tmp_path: Path, monkeypatch: pyt
     Same host-independent LIVE_HERMES_HOME rebinding as the apply
     counterpart above.
     """
-    from hermes_skill_creator_plugin import _cli_profiles_pipeline as _pipeline_mod
-    from hermes_skill_creator_plugin import _cli_profiles_profiles as _profiles_mod
+    from easter_hermes_sorry_skills import _cli_profiles_pipeline as _pipeline_mod
+    from easter_hermes_sorry_skills import _cli_profiles_profiles as _profiles_mod
 
     fake_live = tmp_path / ".hermes"
     fake_live.mkdir()
@@ -1399,7 +1399,7 @@ def test_run_audit_continues_when_not_live(installed, tmp_path: Path, monkeypatc
 
 def test_now_iso_uses_frozen_time(installed) -> None:
     """``_now_iso(frozen_time)`` returns the frozen value verbatim."""
-    from hermes_skill_creator_plugin.cli_profiles import _now_iso
+    from easter_hermes_sorry_skills.cli_profiles import _now_iso
 
     assert _now_iso("2026-06-17T00:00:00Z") == "2026-06-17T00:00:00Z"
     # When not frozen, the format is a real ISO 8601 UTC string.
@@ -1410,21 +1410,21 @@ def test_now_iso_uses_frozen_time(installed) -> None:
 
 def test_diff_empty_sets(installed) -> None:
     """``_diff`` returns empty lists when both sets are empty."""
-    from hermes_skill_creator_plugin.cli_profiles import _diff
+    from easter_hermes_sorry_skills.cli_profiles import _diff
 
     assert _diff(set(), set()) == {"added": [], "removed": []}
 
 
 def test_walk_skills_handles_missing_dir(fake_agent_module, tmp_path: Path) -> None:
     """``_walk_skills`` returns empty when the skills dir does not exist."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     assert _walk_skills(tmp_path / "no-such-dir") == set()
 
 
 def test_walk_skills_handles_oserror(fake_agent_module, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``_walk_skills`` swallows OSError on a SKILL.md read (defensive)."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1447,7 +1447,7 @@ def test_walk_skills_handles_oserror(fake_agent_module, tmp_path: Path, monkeypa
 
 def test_walk_skills_handles_parse_error(fake_agent_module, tmp_path: Path) -> None:
     """``_walk_skills`` swallows parse errors and falls back to dirname."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1460,7 +1460,7 @@ def test_walk_skills_handles_parse_error(fake_agent_module, tmp_path: Path) -> N
 
 def test_walk_skills_handles_non_string_name(fake_agent_module, tmp_path: Path) -> None:
     """A frontmatter ``name:`` of a non-string type falls back to the dir name."""
-    from hermes_skill_creator_plugin.cli_profiles import _walk_skills
+    from easter_hermes_sorry_skills.cli_profiles import _walk_skills
 
     skills = tmp_path / "skills"
     skills.mkdir()
@@ -1474,10 +1474,10 @@ def test_walk_skills_handles_non_string_name(fake_agent_module, tmp_path: Path) 
 
 def test_audit_report_to_dict_and_contains() -> None:
     """AuditReport ``to_dict()``, ``__contains__``, ``__iter__``."""
-    from hermes_skill_creator_plugin.cli_profiles import AuditReport
+    from easter_hermes_sorry_skills.cli_profiles import AuditReport
 
     report = AuditReport(
-        tool="hermes-skill-creator-profiles",
+        tool="easter-hermes-sorry-skills-profiles",
         version="0.1.0",
         generated_at="2026-06-17T00:00:00Z",
         profiles=[],
@@ -1491,7 +1491,7 @@ def test_audit_report_to_dict_and_contains() -> None:
 
 def test_audit_report_to_json_bytes_byte_identical() -> None:
     """``to_json_bytes()`` is byte-identical across two calls on the same report."""
-    from hermes_skill_creator_plugin.cli_profiles import AuditReport
+    from easter_hermes_sorry_skills.cli_profiles import AuditReport
 
     r = AuditReport(
         tool="x",
@@ -1506,7 +1506,7 @@ def test_audit_report_to_json_bytes_byte_identical() -> None:
 
 def test_audit_report_eq_with_dict_and_report() -> None:
     """AuditReport ``__eq__`` works against dict and AuditReport."""
-    from hermes_skill_creator_plugin.cli_profiles import AuditReport
+    from easter_hermes_sorry_skills.cli_profiles import AuditReport
 
     r = AuditReport(
         tool="x",
@@ -1527,7 +1527,7 @@ def test_audit_report_eq_with_dict_and_report() -> None:
 
 def test_audit_report_hash() -> None:
     """AuditReport is hashable (delegates to to_dict items)."""
-    from hermes_skill_creator_plugin.cli_profiles import AuditReport
+    from easter_hermes_sorry_skills.cli_profiles import AuditReport
 
     r = AuditReport(
         tool="x",
@@ -1543,7 +1543,7 @@ def test_audit_report_hash() -> None:
 
 def test_bilingual_message_renders() -> None:
     """``_bilingual`` produces a single-line ``[en] ... / [hu] ...`` message."""
-    from hermes_skill_creator_plugin.cli_profiles import _bilingual
+    from easter_hermes_sorry_skills.cli_profiles import _bilingual
 
     out = _bilingual("profiles_msg_done", n=3)
     assert "[en]" in out

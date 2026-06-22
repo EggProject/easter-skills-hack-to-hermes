@@ -1,7 +1,7 @@
 """tests/report/test_enabled_detection.py
 
 TDD: tests for the shared enabled-detection module
-(hermes_skill_creator_plugin._enabled_detection) and its integration with
+(easter_hermes_sorry_skills._enabled_detection) and its integration with
 the reporter (cli_report.py).
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from hermes_skill_creator_plugin import _enabled_detection, cli_report
+from easter_hermes_sorry_skills import _enabled_detection, cli_report
 from tests.report._fixtures import _write_profile
 
 # --- _enabled_detection.get_enabled_skills ---

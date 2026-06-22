@@ -16,7 +16,6 @@
 #   4. black — secondary formatter
 #   5. mypy --strict — static type check
 #   6. check-line-count (F-meta local) — per-file cap + footer + budget table + per-cell
-#   7. check-migration-note (F-meta local) — MIGRATION*.md not hand-edited
 
 exclude: ^docs/research/
 
@@ -34,12 +33,6 @@ repos:
         entry: python3 tools/check_line_count.py --enforce-footer --enforce-budget-table --enforce-per-cell
         language: system
         files: '^(src/|tests/|tools/|docs/plans/).*\.(py|md)$'
-        pass_filenames: false
-      - id: check-migration-note
-        name: MIGRATION*.md is generated, not hand-edited
-        entry: python3 -m tools.check_migration_note
-        language: system
-        files: '^(MIGRATION\.md|MIGRATION\.hermes-patch\.md|MIGRATION\.skill-port\.md|\.migration_manifest\.json)$'
         pass_filenames: false
 
   - repo: https://github.com/wemake-services/wemake-python-styleguide

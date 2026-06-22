@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from hermes_skill_creator_plugin._reporter import SkillRow, make_row
-from hermes_skill_creator_plugin._reporter_sort import _RowFields
+from easter_hermes_sorry_skills._reporter import SkillRow, make_row
+from easter_hermes_sorry_skills._reporter_sort import _RowFields
 
 
 def _make_skill_dir(root: Path, name: str, *, description: str = "x" * 10) -> Path:

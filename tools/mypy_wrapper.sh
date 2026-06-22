@@ -13,10 +13,10 @@ cd "$(git rev-parse --show-toplevel)"
 # Prefer the project venv's mypy; fall back to PATH.
 if [[ -x ".venv/bin/mypy" ]]; then
     MYPYPATH=src .venv/bin/mypy --strict --explicit-package-bases \
-        src/hermes_skill_creator_plugin/__init__.py \
-        src/hermes_skill_creator_plugin/_advisory.py
+        src/easter_hermes_sorry_skills/__init__.py \
+        src/easter_hermes_sorry_skills/_advisory.py
 else
     MYPYPATH=src mypy --strict --explicit-package-bases \
-        src/hermes_skill_creator_plugin/__init__.py \
-        src/hermes_skill_creator_plugin/_advisory.py
+        src/easter_hermes_sorry_skills/__init__.py \
+        src/easter_hermes_sorry_skills/_advisory.py
 fi

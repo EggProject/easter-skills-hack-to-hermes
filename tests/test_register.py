@@ -1,4 +1,4 @@
-"""tests/test_register.py — TDD tests for src/hermes_skill_creator_plugin/__init__.py.
+"""tests/test_register.py — TDD tests for src/easter_hermes_sorry_skills/__init__.py.
 
 Plan file: docs/plans/03-plugin-spec.md
 ACs covered: AC-1.2
@@ -24,11 +24,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hermes_skill_creator_plugin import _advisory as _advisory_mod
-from hermes_skill_creator_plugin import _register
-from hermes_skill_creator_plugin._register import register
-from hermes_skill_creator_plugin.i18n.messages_en import ADVISORY_CAP_EN
-from hermes_skill_creator_plugin.i18n.messages_hu import ADVISORY_CAP_HU
+from easter_hermes_sorry_skills import _advisory as _advisory_mod
+from easter_hermes_sorry_skills import _register
+from easter_hermes_sorry_skills._register import register
+from easter_hermes_sorry_skills.i18n.messages_en import ADVISORY_CAP_EN
+from easter_hermes_sorry_skills.i18n.messages_hu import ADVISORY_CAP_HU
 
 
 class _RegisterCtx(Protocol):
@@ -51,7 +51,7 @@ def _make_ctx() -> MagicMock:
 
 
 def test_register_callable_in_package_init() -> None:
-    """`from hermes_skill_creator_plugin import register` resolves to a callable
+    """`from easter_hermes_sorry_skills import register` resolves to a callable
     taking a single `ctx` argument (the load model: one register(ctx) in __init__.py)."""
     assert callable(register)
     sig = inspect.signature(register)

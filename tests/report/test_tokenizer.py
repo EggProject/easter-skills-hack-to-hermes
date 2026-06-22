@@ -1,6 +1,6 @@
 """tests/report/test_tokenizer.py
 
-TDD: tests for hermes_skill_creator_plugin._tokenizer.estimate_tokens.
+TDD: tests for easter_hermes_sorry_skills._tokenizer.estimate_tokens.
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from hermes_skill_creator_plugin import _tokenizer
+from easter_hermes_sorry_skills import _tokenizer
 
 
 class _StubTokenizer:

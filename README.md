@@ -1,4 +1,4 @@
-Hermes skill-creator plugin and migration scripts (Phase 5 of Hermes Skills Hack).
+Easter Hermes sorry skills plugin and migration scripts (Phase 5 of Hermes Skills Hack).
 
 See `docs/plans/` for the full plan.
 
@@ -34,3 +34,7 @@ To run the full unified gate locally:
 ```sh
 uv run --locked pre-commit run --all-files
 ```
+
+## Refactor history
+
+- **2026-06-23** — Renamed package from `hermes_skill_creator_plugin` → `easter_hermes_sorry_skills` (CLI scripts now `easter-hermes-sorry-skills-{patch,profiles,report,install}`). Removed the `E3.build_skills_prompt` site entirely. Simplified `_CONSULT_RULE_TEXT` — the prompt-injected consult rule no longer references `skill-creator` install-detection or `skill_view(name='skill-creator')`. The rule is now: persist skills via `skill_manage`, patch-first for small fixes, the background review never auto-installs authoring tools.

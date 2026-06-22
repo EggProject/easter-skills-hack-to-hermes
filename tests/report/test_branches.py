@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from hermes_skill_creator_plugin import cli_report
-from hermes_skill_creator_plugin.cli_report import main
+from easter_hermes_sorry_skills import cli_report
+from easter_hermes_sorry_skills.cli_report import main
 from tests.report._fixtures import _write_profile
 
 # --- _resolve_hermes_home ---
@@ -270,7 +270,7 @@ def test_main_with_unknown_flag_passes_through(monkeypatch, hermes_home: Path) -
 
 def test_emit_tokenizer_warning_is_bilingual() -> None:
     """The wired callback MUST emit a single bilingual line (en/hu on one line)."""
-    from hermes_skill_creator_plugin import _tokenizer
+    from easter_hermes_sorry_skills import _tokenizer
 
     captured: list[str] = []
 
@@ -293,7 +293,7 @@ def test_cli_report_wires_warning_callback(monkeypatch, hermes_home: Path) -> No
     wired (rather than relying on incidental coverage).
     """
     _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
-    from hermes_skill_creator_plugin import _tokenizer
+    from easter_hermes_sorry_skills import _tokenizer
 
     seen: dict[str, object] = {}
 

@@ -1,7 +1,7 @@
 [project]
-name = "hermes-skill-creator-plugin"
+name = "easter-hermes-sorry-skills"
 version = "0.1.0"
-description = "Hermes skill-creator plugin + migration scripts (Phase 5)"
+description = "Easter Hermes sorry skills plugin + migration scripts (renamed from hermes-skill-creator-plugin on 2026-06-23)"
 readme = "README.md"
 requires-python = ">=3.14"
 license = { text = "Proprietary" }
@@ -28,17 +28,17 @@ dev = [
 ]
 
 [project.scripts]
-hermes-skill-creator-patch = "hermes_skill_creator_plugin.cli_patch:_main_entry"
-hermes-skill-creator-profiles = "hermes_skill_creator_plugin.cli_profiles:main"
-hermes-skill-creator-report = "hermes_skill_creator_plugin.cli_report:_main_entry"
-hermes-skill-creator-install = "hermes_skill_creator_plugin.skill_installer:install"
+easter-hermes-sorry-skills-patch = "easter_hermes_sorry_skills.cli_patch:_main_entry"
+easter-hermes-sorry-skills-profiles = "easter_hermes_sorry_skills.cli_profiles:main"
+easter-hermes-sorry-skills-report = "easter_hermes_sorry_skills.cli_report:_main_entry"
+easter-hermes-sorry-skills-install = "easter_hermes_sorry_skills.skill_installer:install"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hermes_skill_creator_plugin"]
+packages = ["src/easter_hermes_sorry_skills"]
 
 [tool.ruff]
 line-length = 120
@@ -68,8 +68,9 @@ testpaths = ["tests"]
 # tests/unit/test_subprocess_env.py + 5 other obsolete test files have been
 # deleted (they tested the previous Hermes port's HERMES_SESSION-stripping
 # helper, NDJSON event adapter, and Anthropic subagent YAML — all
-# superseded by D16/D17+D22/D11/D24). The `hermes_skill_creator_plugin`
-# package is now orphaned in this worktree; its code paths are not
-# exercised. New tests for the migrated skill will be added in a
-# follow-up PR. See MIGRATION.md D16/D17/D22/D11/D24 for context.
-addopts = "--cov=hermes_skill_creator_plugin --cov=tools --cov=tests.conftest --cov-branch --cov-fail-under=0"
+# superseded by D16/D17+D22/D11/D24). The `easter_hermes_sorry_skills`
+# package (renamed 2026-06-23 from hermes_skill_creator_plugin) is being
+# refactored; its code paths may not be fully exercised in this branch.
+# New tests for the migrated skill will be added in a follow-up PR.
+# See MIGRATION.md D16/D17/D22/D11/D24 for context.
+addopts = "--cov=easter_hermes_sorry_skills --cov=tools --cov=tests.conftest --cov-branch --cov-fail-under=0"

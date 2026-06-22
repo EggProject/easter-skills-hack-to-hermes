@@ -6,19 +6,17 @@ Exercises the full flag matrix and the bilingual help output.
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
-from hermes_skill_creator_plugin._patcher import (
+from easter_hermes_sorry_skills._patcher import (
     EXIT_IO,
     EXIT_OK,
     EXIT_USER_ABORT,
     STATE_SIDECAR,
 )
-from hermes_skill_creator_plugin.cli_patch import HELP_EN, HELP_HU, main
+from easter_hermes_sorry_skills.cli_patch import HELP_EN, HELP_HU, main
 
 # --- --help --------------------------------------------------------------
 
@@ -37,10 +35,8 @@ def test_help_options_mirrored() -> None:
         "--target",
         "--check",
         "--apply",
-        "--task-e-redirect",
         "--i-accept-line-drift",
         "--force",
-        "--emit-migration-note",
         "--yes",
         "--verbose",
     ]
@@ -118,86 +114,6 @@ def test_cli_force_with_i_accept_succeeds(hermes_checkout: Path, real_hermes_age
     assert r.exit_code == EXIT_OK
 
 
-def test_cli_task_e_redirect(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    runner = CliRunner()
-    r = runner.invoke(
-        main,
-        [
-            "--apply",
-            "--task-e-redirect",
-            "--target",
-            str(hermes_checkout),
-        ],
-    )
-    assert r.exit_code == EXIT_OK
-    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
-    assert "E1.skills_guidance" in state
-    assert "E7.skills_doc_section" in state
-
-
-def test_cli_no_schema_redirect(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    runner = CliRunner()
-    r = runner.invoke(
-        main,
-        [
-            "--apply",
-            "--task-e-redirect",
-            "--no-schema-redirect",
-            "--target",
-            str(hermes_checkout),
-        ],
-    )
-    assert r.exit_code == EXIT_OK
-    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
-    assert "E6.skill_manage_schema_desc" not in state
-
-
-# --- --emit-migration-note ----------------------------------------------
-
-
-def test_cli_emit_migration_note_default(hermes_checkout: Path, worktree: Path, frozen_time: str) -> None:
-    runner = CliRunner()
-    with runner.isolated_filesystem() as td:
-        # runner.isolated_filesystem sets cwd to a tmp dir
-        r = runner.invoke(
-            main,
-            [
-                "--emit-migration-note",
-                "--target",
-                str(hermes_checkout),
-            ],
-        )
-        assert r.exit_code == EXIT_OK
-        out_path = Path(td) / "MIGRATION.hermes-patch.md"
-        assert out_path.exists()
-        text = out_path.read_text(encoding="utf-8")
-        cap_table = text.split("## Task E sites")[0]
-        cap_rows = [ln for ln in cap_table.splitlines() if ln.startswith("| S1.")]
-        assert len(cap_rows) == 1
-
-
-def test_cli_emit_migration_note_target_required() -> None:
-    runner = CliRunner()
-    r = runner.invoke(main, ["--emit-migration-note"])
-    assert r.exit_code == EXIT_IO
-
-
-def test_cli_emit_migration_note_hermes_agent_refused() -> None:
-    runner = CliRunner()
-    r = runner.invoke(
-        main,
-        [
-            "--emit-migration-note",
-            "--target",
-            str(Path.home() / ".hermes" / "hermes-agent"),
-        ],
-    )
-    assert r.exit_code == EXIT_IO
-
-
-# --- --verbose (already emits diagnostics) -------------------------------
-
-
 def test_cli_verbose_emits_diagnostics(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
@@ -220,33 +136,9 @@ def test_cli_default_check_mode(hermes_checkout: Path, real_hermes_agent_sentine
     assert pre == post
 
 
-def test_cli_emit_migration_note_with_git_failure(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """When _git_head raises, the emit-migration-note path catches it
-    and continues with an empty git_head."""
-    from hermes_skill_creator_plugin import cli_patch
-
-    def boom(target: Path) -> str:
-        raise RuntimeError("simulated git failure")
-
-    monkeypatch.setattr(cli_patch, "_git_head", boom)
-    runner = CliRunner()
-    with runner.isolated_filesystem() as td:
-        r = runner.invoke(
-            main,
-            [
-                "--emit-migration-note",
-                "--target",
-                str(hermes_checkout),
-            ],
-        )
-        assert r.exit_code == EXIT_OK
-        out_path = Path(td) / "MIGRATION.hermes-patch.md"
-        assert out_path.exists()
-
-
 def test_cli_patch_main_entry_returns_main_exit_code(monkeypatch) -> None:
     """Calling the _main_entry function exercises the standalone CLI path."""
-    from hermes_skill_creator_plugin import cli_patch
+    from easter_hermes_sorry_skills import cli_patch
 
     monkeypatch.setattr(cli_patch, "main", lambda standalone_mode=False: None)
     assert cli_patch._main_entry() == 0

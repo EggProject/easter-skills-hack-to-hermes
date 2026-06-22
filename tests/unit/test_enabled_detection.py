@@ -1,4 +1,4 @@
-"""Unit tests for ``hermes_skill_creator_plugin._enabled_detection`` (TDD plan 06).
+"""Unit tests for ``easter_hermes_sorry_skills._enabled_detection`` (TDD plan 06).
 
 TDD list (plan 06 §TDD test list → Shared enabled-detection module):
 - test_get_enabled_skills_honors_config_toggle
@@ -205,7 +205,7 @@ def enabled_detection(fake_agent_skill_utils: types.ModuleType):
     """Import the module under test with a fake ``agent.skill_utils``."""
     import importlib
 
-    mod_name = "hermes_skill_creator_plugin._enabled_detection"
+    mod_name = "easter_hermes_sorry_skills._enabled_detection"
     if mod_name in sys.modules:
         return importlib.reload(sys.modules[mod_name])
     return importlib.import_module(mod_name)
@@ -739,7 +739,7 @@ def test_get_enabled_skills_platform_filter_skill_md_missing(enabled_detection, 
     # custom scenario where installed_names has an entry without a
     # backing file.
     # We do that by patching the walk to return a synthetic set.
-    from hermes_skill_creator_plugin import _enabled_detection as ed
+    from easter_hermes_sorry_skills import _enabled_detection as ed
 
     real_walk = ed._walk_installed_skill_names
     ed._walk_installed_skill_names = lambda d: {"synthetic"}
@@ -758,7 +758,7 @@ def test_get_enabled_skills_conditional_skill_md_missing(enabled_detection, tmp_
     (profile / "skills").mkdir()
     _write_config(profile, disabled=[])
 
-    from hermes_skill_creator_plugin import _enabled_detection as ed
+    from easter_hermes_sorry_skills import _enabled_detection as ed
 
     real_walk = ed._walk_installed_skill_names
     ed._walk_installed_skill_names = lambda d: {"synthetic"}
@@ -1115,7 +1115,7 @@ def test_find_skill_md_cross_ref_skips_non_dir_child(enabled_detection, tmp_path
 def test_apply_platform_filter_skill_md_none(enabled_detection, tmp_path: Path) -> None:
     """Direct test: a name in the filter with no backing SKILL.md is
     conservatively kept (line 214->216 False branch)."""
-    from hermes_skill_creator_plugin import _enabled_detection as ed
+    from easter_hermes_sorry_skills import _enabled_detection as ed
 
     real_walk = ed._walk_installed_skill_names
     ed._walk_installed_skill_names = lambda d: {"synthetic"}

@@ -1,0 +1,63 @@
+"""Click CLI surface for cli_profiles (Script #2 per-profile audit/flip).
+
+TDD tests reference ``easter_hermes_sorry_skills.cli_profiles.app`` /
+``make_cli()`` / ``_build_help_text``; ``cli_profiles.py`` re-exports
+them so existing imports continue to work.
+
+To keep this orchestrator module under wemake WPS202 (≤7 module
+members), the help-text constants live in ``_cli_profiles_cli_options``
++ ``_cli_profiles_cli_flags``, the bilingual help renderer lives in
+``_cli_profiles_cli_help``, and the click-option decorators live in
+``_cli_profiles_cli_build``. Only ``main_cmd`` + ``make_cli`` live here.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import click
+
+from easter_hermes_sorry_skills._cli_profiles_cli_build import (
+    _with_misc_flags,
+    _with_path_and_time_flags,
+)
+from easter_hermes_sorry_skills._cli_profiles_cli_help import build_help_text
+
+
+@click.command(
+    help=build_help_text(),
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+@click.pass_context
+def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
+    """Per-profile audit/flip for the migrated skill-creator skill (Script #2)."""
+    from easter_hermes_sorry_skills.cli_profiles import run_audit
+
+    apply_flag = bool(kwargs.get("apply", False))
+    audit_only = bool(kwargs.get("audit_only", False))
+    effective_apply = apply_flag and not audit_only
+    json_path = kwargs.get("json_path")
+    resolved_json: Path | None = Path(json_path) if isinstance(json_path, str) else None
+    run_audit(
+        apply=effective_apply,
+        json_path=resolved_json,
+        frozen_time=kwargs.get("frozen_time"),
+        skip_install=bool(kwargs.get("skip_install", False)),
+        yes=bool(kwargs.get("yes", False)),
+        profile=kwargs.get("profile"),
+    )
+
+
+# Apply the seven ``click.option`` decorators via wrapper helpers
+# so the function itself only has two decorators (``@click.command`` +
+# ``@click.pass_context``) — keeps the WPS216 cap of 5 happy.
+main_cmd = _with_misc_flags(main_cmd)
+main_cmd = _with_path_and_time_flags(main_cmd)
+
+
+def make_cli() -> Any:
+    """Return a ``click.testing.CliRunner`` for tests."""
+    from click.testing import CliRunner
+
+    return CliRunner()

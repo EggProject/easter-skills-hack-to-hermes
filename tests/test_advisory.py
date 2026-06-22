@@ -1,4 +1,4 @@
-"""tests/test_advisory.py — TDD tests for src/hermes_skill_creator_plugin/_advisory.py.
+"""tests/test_advisory.py — TDD tests for src/easter_hermes_sorry_skills/_advisory.py.
 
 Plan file: docs/plans/03-plugin-spec.md
 ACs covered: AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-4.10
@@ -22,8 +22,8 @@ from pathlib import Path
 
 import pytest
 
-from hermes_skill_creator_plugin import _advisory
-from hermes_skill_creator_plugin._advisory import (
+from easter_hermes_sorry_skills import _advisory
+from easter_hermes_sorry_skills._advisory import (
     PATCHED_CAP_REFERENCE,
     UNPATCHED_CAP,
     detect_cap_state,
