@@ -33,6 +33,7 @@ REJECTED_SIDECAR = _apply_mod.REJECTED_SIDECAR
 write_rejected = _apply_mod.write_rejected
 _atomic_write_bytes = _atomic_mod._atomic_write_bytes
 STATE_SIDECAR = _state_mod.STATE_SIDECAR
+STATE_DRIFTED = _consts_mod.STATE_DRIFTED
 load_state = _state_mod.load_state
 write_state = _state_mod.write_state
 EXIT_DRIFT = _consts_mod.EXIT_DRIFT

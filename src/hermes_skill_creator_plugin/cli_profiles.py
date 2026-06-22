@@ -63,6 +63,8 @@ def _bilingual(key: str, **format_values: object) -> str:
 
 diff_sets = _bindings.diff_sets
 walk_skills = _bindings.walk_skills
+walk_profile_subdirs = _bindings.walk_profile_subdirs
+read_gateway_pid_stat = _bindings.read_gateway_pid_stat
 _build_help_text = _bindings._build_help_text
 main_cmd = _bindings.main_cmd
 _make_cli = _bindings._make_cli
@@ -74,17 +76,7 @@ AuditReport = _bindings.AuditReport
 _walk_skills = walk_skills
 _diff = diff_sets
 run_audit = _run.run_audit
-PROFILE_DIRS = (
-    "memories",
-    "sessions",
-    "skills",
-    "skins",
-    "logs",
-    "plans",
-    "workspace",
-    "cron",
-    "home",
-)
+PROFILE_DIRS = _bindings.PROFILE_DIRS
 
 # ---------------------------------------------------------------------------
 # Click CLI re-export.

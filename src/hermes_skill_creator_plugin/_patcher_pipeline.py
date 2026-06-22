@@ -17,10 +17,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hermes_skill_creator_plugin import _patcher_pipeline_apply as _apply_mod
+from hermes_skill_creator_plugin import _patcher_pipeline_finalize as _finalize_mod
 from hermes_skill_creator_plugin import _patcher_pipeline_imports as _imps
+from hermes_skill_creator_plugin._patcher_pipeline_emit import _SiteDiff
 from hermes_skill_creator_plugin._patcher_sites import Site
 from hermes_skill_creator_plugin.i18n.messages_en import (
-    CROSS_FS_WARN,
     OK_ALREADY_PATCHED,
     OK_PATCHED,
 )
@@ -29,12 +30,16 @@ from hermes_skill_creator_plugin.i18n.messages_en import (
 # working for tests that reach for these symbols directly.
 _build_result = _apply_mod.build_result
 _build_site_payload = _apply_mod.build_site_payload
-_emit_site_audit = _apply_mod.emit_site_audit
 _io_error_result = _apply_mod.io_error_result
 _apply_one_site = _apply_mod.apply_one_site
 _try_atomic_write = _apply_mod.try_atomic_write
 
-AUDIT_LOG = _imps.AUDIT_LOG
+# Backward-compat alias for tests that monkeypatched the per-site emit
+# (the per-site line is now folded into the per-invocation audit line
+# emitted at the end of :func:`apply_sites`).
+_emit_site_audit = _apply_mod.emit_site_audit_stub
+
+audit_log_path = _imps.audit_log_path
 _cross_filesystem = _imps._cross_filesystem
 _now_iso = _imps._now_iso
 STATE_DRIFTED = _imps.STATE_DRIFTED
@@ -76,7 +81,7 @@ class ApplySitesInputs:
     write_state_fn: WriteStateFn
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class _ApplyLoop:
     """Per-iteration bindings for the descending-line ``apply_sites`` loop."""
 
@@ -86,6 +91,7 @@ class _ApplyLoop:
     sites_patched: list[str]
     state: dict[str, str]
     diagnostics: list[str]
+    site_diffs: list[_SiteDiff] = dataclasses.field(default_factory=list)
 
 
 def ok_check_result(inputs: OkCheckInputs) -> PatcherResult:
@@ -108,29 +114,29 @@ def ok_check_result(inputs: OkCheckInputs) -> PatcherResult:
     )
 
 
-def _finalize_apply(
-    inputs: ApplySitesInputs,
-    sites_patched: list[str],
-    sites_already: list[str],
-    state: dict[str, str],
-    diagnostics: list[str],
-) -> PatcherResult:
-    """Write state + cross-FS warning, then build the EXIT_OK result."""
-    target_path = inputs.target_path
-    if _cross_filesystem(target_path):
-        diagnostics.append(CROSS_FS_WARN)
-    inputs.write_state_fn(target_path, state)
-    return _build_result(
-        exit_code=inputs.exit_ok_code,
-        sites_patched=tuple(sites_patched),
-        sites_already=tuple(sites_already),
-        state=state,
-        diagnostics=tuple(diagnostics),
-    )
+@dataclasses.dataclass(frozen=True)
+class _FinalizeInputs:
+    """Bundled args for :func:`_finalize_apply` (WPS211 <= 5 args)."""
+
+    inputs: ApplySitesInputs
+    sites_patched: list[str]
+    sites_already: list[str]
+    state: dict[str, str]
+    diagnostics: list[str]
+    audit_path: Path
+    timestamp: str
+    site_diffs: list[_SiteDiff]
+
+
+_finalize_apply = _finalize_mod._finalize_apply
 
 
 def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
     """Apply one site inside the descending-line-order loop."""
+    before, after_bytes = _apply_mod.build_site_bytes(
+        loop.inputs.target_path / site.file_path,
+        site,
+    )
     outcome = _apply_one_site(
         _apply_mod._ApplyOneSiteInputs(
             site=site,
@@ -147,13 +153,13 @@ def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
     loop.sites_patched.append(site.site_id)
     loop.state[site.site_id] = STATE_PATCHED
     loop.diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
+    loop.site_diffs.append(_SiteDiff(site_id=site.site_id, before=before, after_bytes=after_bytes))
     return None
 
 
 def apply_sites(inputs: ApplySitesInputs) -> PatcherResult:
     """Apply sites in DESCENDING line order (insertions don't shift later sites)."""
-    target_path = inputs.target_path
-    audit_path = inputs.audit_log_path or (target_path / AUDIT_LOG)
+    audit_path = inputs.audit_log_path or audit_log_path()
     loop = _ApplyLoop(
         inputs=inputs,
         audit_path=audit_path,
@@ -170,9 +176,14 @@ def apply_sites(inputs: ApplySitesInputs) -> PatcherResult:
         if outcome is not None:
             return outcome
     return _finalize_apply(
-        loop.inputs,
-        loop.sites_patched,
-        inputs.sites_already,
-        loop.state,
-        loop.diagnostics,
+        _finalize_mod._FinalizeInputs(
+            inputs=loop.inputs,
+            sites_patched=loop.sites_patched,
+            sites_already=inputs.sites_already,
+            state=loop.state,
+            diagnostics=loop.diagnostics,
+            audit_path=loop.audit_path,
+            timestamp=loop.timestamp,
+            site_diffs=loop.site_diffs,
+        ),
     )

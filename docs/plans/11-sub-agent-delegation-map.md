@@ -97,7 +97,7 @@ open questions for the parent.
 | Module | Owner | Consumers |
 | --- | --- | --- |
 | `src/hermes_skill_creator_plugin/_scope.py` (hermes_home_scope) | D-script-2 (first to need it) | B-plugin (installer), C-script-1 (uses for `--target` resolve logging, no), E-skill (uses for hub install on test fixture) |
-| `src/hermes_skill_creator_plugin/_subprocess.py` (hermes_subprocess_env) | E-skill (first to need it) | (none yet) |
+| `skills/skill-creator/_subprocess.py` (hermes_subprocess_env) | E-skill (first to need it) | (none yet) |
 | `src/hermes_skill_creator_plugin/_advisory.py` (static-AST cap-detection) | B-plugin (first to need it) | C-script-1 (uses for `--target` cap pre-check) |
 | `src/hermes_skill_creator_plugin/_enabled_detection.py` (function `get_enabled_skills(profile_path: Path, *, platform: Optional[str] = None) -> frozenset[str]`; per-profile enabled-skill detection: config/toggle + profile + platform; honors `platforms:` / conditional exclusions) | D-script-2 (first to need it) | G-report (Script #3 reuses the EXACT same detection so the reporter's enabled-set matches what Script #2 audits) |
 | `src/hermes_skill_creator_plugin/i18n/messages_en.py` / `messages_hu.py` | B-plugin (first to need it) | C-script-1, D-script-2, E-skill, G-report |

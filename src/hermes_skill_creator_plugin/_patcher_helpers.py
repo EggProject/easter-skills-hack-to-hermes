@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import datetime
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 from hermes_skill_creator_plugin._patcher_helpers_fs import cross_filesystem as _cross_filesystem
@@ -46,6 +48,7 @@ locate_anchor = _locate_anchor
 DEFAULT_CYCLE_MARKER = "from tools.skills_tool import"
 FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
 HOME_DIR_PARTS = (".hermes", "hermes-agent")
+_SUBPROCESS_IMPORT_TIMEOUT_SEC = 5
 
 
 def hermes_agent_path() -> Path:
@@ -63,17 +66,42 @@ def file_has_circular_import(
     *,
     cycle_marker: str = DEFAULT_CYCLE_MARKER,
 ) -> bool:
-    """True iff the top of ``agent/skill_utils.py`` already imports from tools.
+    """True iff importing ``tools.skills_tool`` from this checkout would cycle.
 
     The pre-flight rejects the import strategy for
-    ``MAX_DESCRIPTION_LENGTH`` when the file already imports from
-    ``tools.skills_tool`` to avoid an agent <-> tools cycle; the
-    fallback is a local constant ``_MAX_DESCRIPTION_LENGTH = 1024``.
+    ``MAX_DESCRIPTION_LENGTH`` when ``tools.skills_tool`` exists in the
+    target checkout and the live ``import tools.skills_tool`` fails in a
+    subprocess (the cycle risk is real because a real Python process
+    was unable to resolve the module from the target cwd). The fallback
+    is a local constant ``_MAX_DESCRIPTION_LENGTH = 1024``.
+
+    The subprocess check replaces the previous string-grep approach
+    (which only checked whether ``agent/skill_utils.py`` already
+    contained a literal ``from tools.skills_tool import`` line). The
+    subprocess is only invoked when ``tools/skills_tool.py`` actually
+    exists in the target checkout so missing-module errors do NOT
+    produce a false-positive cycle detection.
     """
     if not skill_utils_path.exists():
         return False
     text = skill_utils_path.read_text(encoding="utf-8", errors="replace")
-    return cycle_marker in text
+    if cycle_marker in text:
+        return True
+    target_dir = skill_utils_path.parent.parent
+    target_tools_skill = target_dir / "tools" / "skills_tool.py"
+    if not target_tools_skill.exists():
+        return False
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", "import tools.skills_tool"],
+            cwd=str(target_dir),
+            check=False,
+            capture_output=True,
+            timeout=_SUBPROCESS_IMPORT_TIMEOUT_SEC,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return False
+    return completed.returncode != 0
 
 
 def site_already_patched(text: str, site: Site) -> bool:

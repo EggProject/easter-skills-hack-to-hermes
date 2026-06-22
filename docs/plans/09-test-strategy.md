@@ -148,7 +148,7 @@ Script #3 is REPORT-ONLY. A separate fixture (`hermes_home_writable` above) wrap
 | `src/hermes_skill_creator_plugin/hooks.py` | 80 | `tests/unit/test_hooks.py`, `tests/integration/test_hooks_advisory.py` | 100% |
 | `src/hermes_skill_creator_plugin/installer.py` | 200 | `tests/unit/test_installer.py`, `tests/integration/test_installer_apply.py` | 100% |
 | `src/hermes_skill_creator_plugin/_scope.py` | 40 | `tests/unit/test_scope.py` | 100% |
-| `src/hermes_skill_creator_plugin/_subprocess.py` | 30 | `tests/unit/test_subprocess.py` | 100% |
+| `skills/skill-creator/_subprocess.py` | 30 | `tests/unit/test_subprocess.py` | 100% |
 | `src/hermes_skill_creator_plugin/_advisory.py` | 60 | `tests/unit/test_advisory.py` | 100% |
 | `scripts/script_1_patch.py` | 400 | `tests/unit/test_script_1_*.py`, `tests/integration/test_script_1_apply.py` | 100% |
 | `scripts/script_2_profiles.py` | 400 | `tests/unit/test_script_2_*.py`, `tests/integration/test_script_2_apply.py` | 100% |

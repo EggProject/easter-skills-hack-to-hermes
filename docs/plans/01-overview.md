@@ -33,7 +33,7 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 
 ### 2. Script #1 (§5.2 + §6.B + §6.E)
 
-- **AC-2.1** Idempotent: re-running on a patched file is a no-op that exits 0 with `OK: already patched / OK: már javítva` per site.
+- **AC-2.1** Idempotent: re-running on a patched file is a no-op that exits 0 with `OK: site {site_id} already patched / OK: a {site_id} hely már javítva` per site (the `{site_id}` placeholder is substituted at runtime; the per-site bilingual format is the binding contract).
 - **AC-2.2** Multi-signal targeting: every site is identified by BOTH a unique 8+ char anchor string AND a 1-based line number; mismatch exits non-zero with a structured diagnostic.
 - **AC-2.3** All-or-nothing validation gate: if any one site fails pre-validation, the script writes a `.patch.rejected` report and exits non-zero WITHOUT writing any file (zero bytes written to the target).
 - **AC-2.4** Line drift: if the file's content at the expected line does not match the expected current text, the script emits a `LINE_DRIFT` diagnostic with the actual vs expected line, then EXITS 2. The operator MUST explicitly re-run with `--force --i-accept-line-drift` to retry line-only. **Default mode NEVER auto-bypasses the text+line match.**
@@ -67,7 +67,7 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 - **AC-4.3** Subagent split: `agents/{grader,analyzer,comparator}.md` (lowercase per Hermes convention) preserved with the same semantic roles; registered as `agent_name` in Hermes's subagent dispatch.
 - **AC-4.4** Eval pipeline: `scripts/{run_eval.py, aggregate_benchmark.py, generate_report.py, improve_description.py, quick_validate.py, package_skill.py, utils.py}` preserved and ported to Hermes.
 - **AC-4.5** Every Claude-specific invocation replaced per the T3 inventory (18 rows, 07).
-- **AC-4.6** Nesting-guard var: `HERMES_SESSION` (default, see 12-Q1). The `hermes_subprocess_env()` helper in `src/hermes_skill_creator_plugin/_subprocess.py` is the SINGLE source of truth for the var name. The parent process NEVER `os.environ.pop`s the var; the helper strips it from the subprocess env only.
+- **AC-4.6** Nesting-guard var: `HERMES_SESSION` (default, see 12-Q1). The `hermes_subprocess_env()` helper in `skills/skill-creator/_subprocess.py` is the SINGLE source of truth for the var name (see 07 D3 + AC-4.15). The parent process NEVER `os.environ.pop`s the var; the helper strips it from the subprocess env only.
 - **AC-4.7** Tool-name matches use `tool_name.lower() in (...)` (Hermes tool names are lowercase per `allowedAndForbiddenInvocations` in `plans/_research/hermesSkillConventions.json`).
 - **AC-4.8** CLI invocations use `hermes` not `claude`.
 - **AC-4.9** Eval viewer (`eval-viewer/{generate_review.py, viewer.html}`) preserved; `generate_review.py` updated to read Hermes-style streaming JSON event shape (see 12-Q2; adapter-based).
@@ -77,7 +77,7 @@ Migrate the Anthropic official `skill-creator` (pinned 2a40fd2e7c52207aa903bd33f
 
 - **AC-5.1** 3-file split: `MIGRATION.md` (top-level index, worktree root) + `MIGRATION.hermes-patch.md` (Script #1's sites, worktree root) + `MIGRATION.skill-port.md` (migrated skill's T3 inventory, worktree root). All three are source-controlled.
 - **AC-5.2** Each file contains: source repo URL, skillId, pinned commit hash (Script #1 target git head OR Anthropic upstream commit), exhaustive table.
-- **AC-5.3** Changelog table columns: `path:line | current | replacement | anchor` (for `MIGRATION.hermes-patch.md`) and `path:line | claude-binding | hermes-binding | test-id` (for `MIGRATION.skill-port.md`).
+- **AC-5.3** Changelog table columns: `site_id | location | current | replacement | anchor` (for `MIGRATION.hermes-patch.md`) and `# | location | claude-binding | hermes-binding | test-id` (for `MIGRATION.skill-port.md`). The `location` column carries the file path plus the relevant symbol/line/section reference (e.g. `agent/skill_utils.py | extract_skill_description` or `scripts/run_eval.py | invocation`) — this is the same format shown in the worked example at `08-migration-note-format.md:103` and matches what the generator emits.
 - **AC-5.4** Emitted by `--emit-migration-note` on Script #1 (regenerates `MIGRATION.hermes-patch.md` and `MIGRATION.md`) and by the migrated skill's own installer (regenerates `MIGRATION.skill-port.md`). The files are the authoritative artifacts for downstream AI agents.
 - **AC-5.5** Determinism + exhaustiveness: byte-identical across runs given the same input and `HERMES_SKILL_CREATOR_FROZEN_TIME`; row count == the T3 inventory count (18) for `MIGRATION.skill-port.md`; row count == 1 (cap) + (7 or 6, depending on `--no-schema-redirect`) for `MIGRATION.hermes-patch.md`.
 

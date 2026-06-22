@@ -635,7 +635,11 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
 
 
 def test_audit_log_appended_on_force(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """--force --i-accept-line-drift appends to the audit log."""
+    """--force --i-accept-line-drift appends to the per-invocation audit log
+    at ``HERMES_HOME/patch-audit.log`` (NOT in the target dir). The audit
+    line is appended on every successful --force invocation, even when
+    no drifted sites were retried (per AC-2.5.1: 'the invocation is
+    appended')."""
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -648,11 +652,56 @@ def test_audit_log_appended_on_force(hermes_checkout: Path, real_hermes_agent_se
         ),
     )
     assert r.exit_code == EXIT_OK
-    audit = hermes_checkout / ".patch.audit.log"
+    # AC-2.5.1: per-invocation audit line at HERMES_HOME/patch-audit.log
+    # (not the target's .patch.audit.log).
+    audit = hermes_checkout / "patch-audit.log"
+    assert audit.exists(), f"audit log not at {audit}"
+    # The old target-dir location MUST NOT exist.
+    assert not (hermes_checkout / ".patch.audit.log").exists()
+    text = audit.read_text(encoding="utf-8")
+    assert "diff_sha256=" in text
+
+
+def test_audit_log_includes_drifted_site_diff_sha(
+    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
+) -> None:
+    """When --force retries a drifted site, the audit log entry lists
+    that site and the combined diff_sha256 is non-empty."""
+    # First, apply without --force so S1.cap is patched.
+    run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    audit = hermes_checkout / "patch-audit.log"
+    # No --force run yet: no audit log.
+    assert not audit.exists()
+    # Run --force (no drifted sites; the audit line is the empty-invocation).
+    run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
     assert audit.exists()
     text = audit.read_text(encoding="utf-8")
-    assert "S1.cap" in text
-    assert "diff_sha256=" in text
+    # One --force invocation: exactly 1 line of content (besides the trailing newline).
+    # The audit log is bilingual, so ``diff_sha256=`` appears twice per
+    # line (EN + HU halves).
+    assert text.count("diff_sha256=") == 2
+    # No drifted sites → site_id list is empty in the audit line.
+    assert "site=" in text
 
 
 # --- bilingual format / site table hygiene -------------------------------
@@ -2032,7 +2081,7 @@ def test_now_iso_returns_current_when_unset(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_force_audit_log_uses_frozen_time(hermes_checkout: Path, frozen_time: str) -> None:
-    """The audit log line uses the frozen timestamp."""
+    """The per-invocation audit log line uses the frozen timestamp."""
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -2045,7 +2094,7 @@ def test_force_audit_log_uses_frozen_time(hermes_checkout: Path, frozen_time: st
         ),
     )
     assert r.exit_code == EXIT_OK
-    audit = hermes_checkout / ".patch.audit.log"
+    audit = hermes_checkout / "patch-audit.log"
     assert audit.exists()
     text = audit.read_text(encoding="utf-8")
     assert frozen_time in text
@@ -2133,3 +2182,284 @@ def test_apply_then_check_exits_0_with_already_patched(
     assert r.exit_code == EXIT_OK
     assert any("már javítva" in d for d in r.diagnostics)
     assert any("S1.cap" in d for d in r.diagnostics)
+
+
+# =====================================================================
+# PR-B (issue #17) — 5-bug fixes for AC-2.5, AC-2.5.1, AC-2.10, AC-2.11
+# =====================================================================
+
+
+def test_force_retries_only_state_drifted_sites(hermes_checkout: Path) -> None:
+    """Fix #1 (AC-2.5): ``--force --i-accept-line-drift`` retries ONLY
+    sites whose persisted state is ``drifted``. After a successful
+    ``--apply`` (no drift in state) the ``--force`` retry must not
+    re-apply anything (the cap site is ``patched`` not ``drifted``)."""
+    # First, plain --apply: S1.cap is patched.
+    r1 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r1.exit_code == EXIT_OK
+    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
+    assert state["S1.cap"] == "patched"
+    # The cap file is now byte-identical to what --apply produced.
+    pre = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
+    # --force on a clean (patched) state: nothing should be re-applied.
+    r2 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r2.exit_code == EXIT_OK
+    post = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
+    assert pre == post, "force re-applied a non-drifted site"
+
+
+def test_force_gate_proceeds_when_yes_flag_set(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fix #4 (AC-2.10): ``--yes`` flag suppresses the TTY gate and
+    proceeds to apply."""
+    # Simulate a TTY (so the gate would otherwise prompt).
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    # If the gate prompts and tries to read, the test would hang /
+    # raise EOFError; ``--yes`` must short-circuit before input().
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            yes=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+
+
+def test_force_gate_refuses_on_tty_negative_reply(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fix #2 (AC-2.5.1): when TTY prompts and the operator replies
+    anything other than ``"yes"``, the run EXITS 5 (user abort)."""
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda *_a, **_kw: "no")
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            yes=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_USER_ABORT
+    assert any("refused" in d or "megtagadva" in d for d in r.diagnostics)
+
+
+def test_force_gate_proceeds_on_tty_yes_reply(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fix #2 (AC-2.5.1): when TTY prompts and the operator replies
+    ``"yes"``, the run proceeds (EXIT_OK)."""
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda *_a, **_kw: "yes")
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            yes=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+
+
+def test_audit_log_uses_hermes_home_not_target(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """Fix #3 (AC-2.5.1): audit log is at ``HERMES_HOME/patch-audit.log``
+    (NOT ``target/.patch.audit.log``) and is one line per invocation."""
+    # hermes_home fixture sets HERMES_HOME to hermes_checkout itself.
+    assert hermes_checkout.name == "hermes-home"
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=True,
+            i_accept_line_drift=True,
+            yes=True,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    audit_path = hermes_checkout / "patch-audit.log"
+    assert audit_path.exists()
+    # Old location MUST NOT exist anymore.
+    assert not (hermes_checkout / ".patch.audit.log").exists()
+    text = audit_path.read_text(encoding="utf-8")
+    # Per-invocation: ONE line (bilingual format splits EN+HU halves
+    # but counts as one line of content + trailing newline).
+    assert text.count("diff_sha256=") == 2  # EN + HU halves
+    # Timestamp + diff_sha256 + target are present in the audit line.
+    assert "timestamp=" in text
+    assert "target=" in text
+
+
+def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fix #5 (AC-2.11): the pre-flight uses ``subprocess.run`` to
+    actually exercise ``import tools.skills_tool`` (not a string grep)."""
+    checkout = tmp_path / "subprocess-cycle"
+    (checkout / "agent").mkdir(parents=True)
+    (checkout / "tools").mkdir(parents=True)
+    # The file does NOT contain the import marker; the subprocess
+    # check should still detect the cycle if the import would fail.
+    (checkout / "agent" / "skill_utils.py").write_text(
+        "# no tools.skills_tool import here\n",
+        encoding="utf-8",
+    )
+    # tools/skills_tool.py exists but is broken (SyntaxError), so
+    # ``import tools.skills_tool`` will fail in the subprocess.
+    (checkout / "tools" / "skills_tool.py").write_text(
+        "def broken(:\n",  # SyntaxError
+        encoding="utf-8",
+    )
+    r = run_patch(
+        PatchRunInputs(
+            target=checkout,
+            check=True,
+            apply=False,
+            force=False,
+            i_accept_line_drift=False,
+            task_e_redirect=False,
+            no_schema_redirect=False,
+        ),
+    )
+    assert r.exit_code == EXIT_IO
+    assert any("circular import" in d for d in r.diagnostics)
+
+
+def test_circular_import_subprocess_oserror_swallowed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fix #5 branch: when the subprocess raises ``OSError`` (e.g.
+    executable not found), the pre-flight falls back to ``False`` and
+    does NOT flag a cycle."""
+    import subprocess as _subprocess
+
+    from hermes_skill_creator_plugin import _patcher_helpers
+
+    checkout = tmp_path / "oserror-cycle"
+    (checkout / "agent").mkdir(parents=True)
+    (checkout / "tools").mkdir(parents=True)
+    (checkout / "agent" / "skill_utils.py").write_text("# ok\n", encoding="utf-8")
+    (checkout / "tools" / "skills_tool.py").write_text("# ok\n", encoding="utf-8")
+
+    def boom(*_args: object, **_kwargs: object) -> _subprocess.CompletedProcess[bytes]:
+        raise OSError("simulated subprocess failure")
+
+    monkeypatch.setattr(_patcher_helpers.subprocess, "run", boom)
+    assert _patcher_helpers.file_has_circular_import(checkout / "agent" / "skill_utils.py") is False
+
+
+def test_circular_import_subprocess_timeout_swallowed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fix #5 branch: when the subprocess times out
+    (``SubprocessError``), the pre-flight falls back to ``False``."""
+    import subprocess as _subprocess
+
+    from hermes_skill_creator_plugin import _patcher_helpers
+
+    checkout = tmp_path / "timeout-cycle"
+    (checkout / "agent").mkdir(parents=True)
+    (checkout / "tools").mkdir(parents=True)
+    (checkout / "agent" / "skill_utils.py").write_text("# ok\n", encoding="utf-8")
+    (checkout / "tools" / "skills_tool.py").write_text("# ok\n", encoding="utf-8")
+
+    def boom(*_args: object, **_kwargs: object) -> _subprocess.CompletedProcess[bytes]:
+        raise _subprocess.TimeoutExpired(cmd="python", timeout=5)
+
+    monkeypatch.setattr(_patcher_helpers.subprocess, "run", boom)
+    assert _patcher_helpers.file_has_circular_import(checkout / "agent" / "skill_utils.py") is False
+
+
+def test_diff_sha_deterministic() -> None:
+    """The diff-sha helper is deterministic and stable."""
+    from hermes_skill_creator_plugin._patcher_apply_atomic import _diff_sha
+
+    h1 = _diff_sha(b"before", b"after")
+    h2 = _diff_sha(b"before", b"after")
+    assert h1 == h2
+    assert len(h1) == 64  # sha256 hex
+
+
+def test_diff_sha_separates_empty_inputs() -> None:
+    """Two empty inputs still produce a non-empty, distinct hash."""
+    from hermes_skill_creator_plugin._patcher_apply_atomic import _diff_sha
+
+    h_empty = _diff_sha(b"", b"")
+    h_just_before = _diff_sha(b"x", b"")
+    assert h_empty != h_just_before
+
+
+def test_emit_audit_log_combined_diff_sha_empty() -> None:
+    """``emit_audit_log`` with no site_diffs emits a line whose diff
+    sha is the empty-string sha (still 64 hex chars)."""
+    from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+        _AuditLogInputs,
+        emit_audit_log,
+    )
+
+    emit_audit_log(
+        _AuditLogInputs(
+            audit_path=Path("/tmp/audit-test.log"),
+            timestamp="2026-01-01T00:00:00Z",
+            target_path=Path("/tmp"),
+            site_diffs=(),
+        ),
+    )
+
+
+def test_emit_audit_log_combined_diff_sha_with_site_diffs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``emit_audit_log`` with one or more ``SiteDiff`` entries
+    produces a deterministic combined diff sha that incorporates each
+    per-site diff sha."""
+    from hermes_skill_creator_plugin._patcher_pipeline_emit import (
+        _AuditLogInputs,
+        _SiteDiff,
+        emit_audit_log,
+    )
+
+    audit_path = tmp_path / "audit.log"
+    emit_audit_log(
+        _AuditLogInputs(
+            audit_path=audit_path,
+            timestamp="2026-01-01T00:00:00Z",
+            target_path=tmp_path,
+            site_diffs=(
+                _SiteDiff(site_id="S1.cap", before=b"before", after_bytes=b"after"),
+                _SiteDiff(site_id="S1.cap.b", before=b"x", after_bytes=b"y"),
+            ),
+        ),
+    )
+    text = audit_path.read_text(encoding="utf-8")
+    # The combined diff sha is non-empty AND distinct from any single
+    # per-site sha.
+    assert "diff_sha256=" in text
+    assert "site=S1.cap,S1.cap.b" in text

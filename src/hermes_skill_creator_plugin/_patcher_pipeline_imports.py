@@ -28,14 +28,13 @@ from hermes_skill_creator_plugin.i18n import messages_en as _i18n_en
 
 # Constants and helpers re-bound under the names ``_patcher_pipeline``
 # already uses locally.
-AUDIT_LOG = _apply_mod.AUDIT_LOG
+audit_log_path = _apply_mod.audit_log_path
 _cross_filesystem = _helpers_mod.cross_filesystem
 _now_iso = _migration_mod._now_iso
 EXIT_IO = _consts_mod.EXIT_IO
 EXIT_PERMISSION = _consts_mod.EXIT_PERMISSION
 STATE_DRIFTED = _consts_mod.STATE_DRIFTED
 STATE_PATCHED = _consts_mod.STATE_PATCHED
-emit_audit_log = _emit_mod.emit_audit_log
 mutate_lines_for_site = _emit_mod.mutate_lines_for_site
 IO_ERROR = _i18n_en.IO_ERROR
 PERMISSION_DENIED = _i18n_en.PERMISSION_DENIED

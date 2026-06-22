@@ -50,6 +50,7 @@ plans/09-test-strategy.md.
 from __future__ import annotations
 
 import dataclasses
+import sys
 from pathlib import Path
 
 from hermes_skill_creator_plugin import _patcher_imports as _imps
@@ -58,18 +59,20 @@ from hermes_skill_creator_plugin import _patcher_sites as _sites
 from hermes_skill_creator_plugin._patcher_pipeline import (
     ApplySitesInputs,
     OkCheckInputs,
+    apply_sites,
+    ok_check_result,
 )
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    apply_sites as _apply_sites_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline import (
-    ok_check_result as _ok_check_result_pipeline,
-)
-from hermes_skill_creator_plugin._patcher_pipeline_emit import _FailDriftInputs
 from hermes_skill_creator_plugin._patcher_pipeline_emit import (
-    fail_with_drift as _fail_with_drift_pipeline,
+    _FailDriftInputs,
+    fail_with_drift,
 )
-from hermes_skill_creator_plugin._patcher_validation import validate_sites as _validate_sites
+from hermes_skill_creator_plugin._patcher_validation import validate_sites
+
+# Local re-bindings.
+_apply_sites_pipeline = apply_sites
+_ok_check_result_pipeline = ok_check_result
+_fail_with_drift_pipeline = fail_with_drift
+_validate_sites = validate_sites
 
 # Local bindings matching the previous top-level import names. The
 # actual imports live in :mod:`._patcher_imports` to keep this
@@ -78,6 +81,7 @@ REJECTED_SIDECAR = _imps.REJECTED_SIDECAR
 write_rejected = _imps.write_rejected
 _atomic_write_bytes = _imps._atomic_write_bytes
 STATE_SIDECAR = _imps.STATE_SIDECAR
+STATE_DRIFTED = _imps.STATE_DRIFTED
 load_state = _imps.load_state
 write_state = _imps.write_state
 EXIT_DRIFT = _imps.EXIT_DRIFT
@@ -196,19 +200,55 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     return _drive_pipeline(inputs, target_path, state)
 
 
+def _select_sites_for_run(
+    all_sites: list[_sites.Site],
+    persisted: dict[str, str],
+    *,
+    force: bool,
+) -> list[_sites.Site]:
+    """Return the sites that should be APPLIED for this invocation.
+
+    AC-2.5: ``--force`` retries ONLY sites with ``LINE_DRIFT`` diagnostic.
+    Already-matched / already-patched sites are NOT re-applied. The
+    LINE_DRIFT sites are determined by the persisted state
+    (``.patch.state.json``); a fresh line-drift detection in the current
+    validation pass is folded in via :func:`_drive_pipeline`.
+
+    Non-``--force`` runs apply every site.
+    """
+    if not force:
+        return all_sites
+    return [site for site in all_sites if persisted.get(site.site_id) == STATE_DRIFTED]
+
+
+def _false_callable() -> bool:
+    """Stand-in ``isatty`` for streams that lack the attribute."""
+    return False
+
+
 def _drive_pipeline(
     inputs: PatchRunInputs,
     target_path: Path,
     state: _PatchBodyState,
 ) -> PatcherResult:
-    sites = list(
+    all_sites = list(
         sites_for_mode(
             task_e_redirect=inputs.task_e_redirect,
             no_schema_redirect=inputs.no_schema_redirect,
         )
     )
     persisted = load_state(target_path)
-    validation = _validate_sites(sites, target_path, persisted, state.sites_already)
+    # Validation always runs on every site so a fresh LINE_DRIFT is
+    # detected and either EXIT_DRIFT (default) or absorbed into the
+    # apply-time filter (when ``--force``). AC-2.5: ``--force`` retries
+    # ONLY drifted sites; already-matched sites are skipped at apply
+    # time (see :func:`_select_sites_for_run`).
+    validation = _validate_sites(all_sites, target_path, persisted, state.sites_already)
+    # AC-2.4: any drift on a default run EXITS 2 (no auto-bypass). AC-2.5:
+    # ``--force`` retries ONLY drifted sites at apply time, but a fresh
+    # LINE_DRIFT or TEXT_DRIFT still EXITS 2 because ``--force`` is a
+    # retry, not a bypass — the operator must manually fix the line and
+    # then re-run with ``--force``.
     if validation.failures:
         return _fail_with_drift_pipeline(
             _FailDriftInputs(
@@ -221,6 +261,31 @@ def _drive_pipeline(
                 exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
             ),
         )
+    # AC-2.5: when ``--force`` is set, only LINE_DRIFT sites (per
+    # persisted state) are retried; already-matched / already-patched
+    # sites are NOT re-applied.
+    sites = _select_sites_for_run(all_sites, persisted, force=inputs.force)
+    # AC-2.5.1: --force --i-accept-line-drift triggers a TTY pause +
+    # diff-print + bilingual confirmation gate. ``--yes`` suppresses
+    # the gate (CI / non-TTY runs). EXIT_USER_ABORT (5) on refusal.
+    if inputs.force and inputs.i_accept_line_drift and not inputs.check:
+        from hermes_skill_creator_plugin._patcher_force_confirm import (
+            ForceConfirmInputs,
+            force_confirm_gate,
+            user_abort_result_from_outcome,
+        )
+
+        outcome = force_confirm_gate(
+            ForceConfirmInputs(
+                sites=tuple(sites),
+                target_path=target_path,
+                yes=inputs.yes,
+                stdin_isatty=bool(getattr(sys.stdin, "isatty", _false_callable)()),
+                stdout_isatty=bool(getattr(sys.stdout, "isatty", _false_callable)()),
+            ),
+        )
+        if not outcome.proceed:
+            return user_abort_result_from_outcome(outcome, tuple(state.diagnostics))
     if inputs.check or not inputs.apply:
         return _ok_check_result_pipeline(
             OkCheckInputs(

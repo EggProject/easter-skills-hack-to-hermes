@@ -13,6 +13,10 @@ from hermes_skill_creator_plugin._cli_profiles_diff import (
     NEVER_DISABLE,
     diff_sets,
 )
+from hermes_skill_creator_plugin._cli_profiles_walk import (
+    read_gateway_pid_stat,
+    walk_profile_subdirs,
+)
 
 
 def new_row(
@@ -24,7 +28,12 @@ def new_row(
 
 
 def empty_row(profile_name: str) -> dict[str, Any]:
-    """Return the baseline empty row dict (no convenience handles)."""
+    """Return the baseline empty row dict (no convenience handles).
+
+    ``subdirs`` and ``gateway_pid`` are populated by
+    ``populate_walk_row`` (AC-3.10). They start empty so the JSON
+    serialization is deterministic before the walk runs.
+    """
     return {
         "profile_name": profile_name,
         "current_disabled": [],
@@ -37,6 +46,8 @@ def empty_row(profile_name: str) -> dict[str, Any]:
             "added_installed": [],
             "removed_installed": [],
         },
+        "subdirs": {},
+        "gateway_pid": {"present": False, "size": 0, "mtime": 0},
         "actions_taken": [],
         "errors": [],
     }
@@ -55,6 +66,16 @@ def populate_diff_row(
     row["desired_disabled"] = sorted(desired_disabled)
     row["desired_installed"] = sorted(desired_installed)
     row["diff"] = build_diff(disabled_now, installed_now, desired_disabled, desired_installed)
+
+
+def populate_walk_row(row: dict[str, Any], profile_path: Path) -> None:
+    """Fill in the per-profile directory walk fields on ``row`` (AC-3.10).
+
+    Calls ``walk_profile_subdirs`` for the canonical PROFILE_DIRS set
+    and ``read_gateway_pid_stat`` for the flat ``gateway.pid`` file.
+    """
+    row["subdirs"] = walk_profile_subdirs(profile_path)
+    row["gateway_pid"] = read_gateway_pid_stat(profile_path)
 
 
 def build_diff(

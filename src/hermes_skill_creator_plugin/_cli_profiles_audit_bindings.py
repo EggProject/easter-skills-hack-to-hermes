@@ -16,6 +16,7 @@ from hermes_skill_creator_plugin import _cli_profiles_bilingual as _bilingual_mo
 from hermes_skill_creator_plugin import _cli_profiles_diff as _diff_mod
 from hermes_skill_creator_plugin import _cli_profiles_report as _report_mod
 from hermes_skill_creator_plugin import _cli_profiles_row as _row_mod
+from hermes_skill_creator_plugin import _cli_profiles_walk as _walk_mod
 from hermes_skill_creator_plugin import _scope as _scope_mod
 
 # Re-bindings matching the previous top-level names exposed by the
@@ -30,7 +31,11 @@ read_disabled_or_empty = _apply_mod.read_disabled_or_empty
 build_bilingual = _bilingual_mod.build_bilingual
 diff_sets = _diff_mod.diff_sets
 walk_skills = _diff_mod.walk_skills
+walk_profile_subdirs = _walk_mod.walk_profile_subdirs
+read_gateway_pid_stat = _walk_mod.read_gateway_pid_stat
+PROFILE_DIRS = _walk_mod.PROFILE_DIRS
 AuditReport = _report_mod.AuditReport
 new_row = _row_mod.new_row
 populate_diff_row = _row_mod.populate_diff_row
+populate_walk_row = _row_mod.populate_walk_row
 hermes_home_scope = _scope_mod.hermes_home_scope

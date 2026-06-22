@@ -29,6 +29,9 @@ from hermes_skill_creator_plugin import (
 from hermes_skill_creator_plugin import (
     _cli_profiles_report as _report_mod,
 )
+from hermes_skill_creator_plugin import (
+    _cli_profiles_walk as _walk_mod,
+)
 from hermes_skill_creator_plugin.i18n import messages_en as _messages_en_mod
 from hermes_skill_creator_plugin.i18n import messages_hu as _messages_hu_mod
 
@@ -38,6 +41,9 @@ _audit_profile = _audit_mod.audit_profile
 _build_bilingual = _bilingual_mod.build_bilingual
 diff_sets = _diff_mod.diff_sets
 walk_skills = _diff_mod.walk_skills
+walk_profile_subdirs = _walk_mod.walk_profile_subdirs
+read_gateway_pid_stat = _walk_mod.read_gateway_pid_stat
+PROFILE_DIRS = _walk_mod.PROFILE_DIRS
 _build_help_text = _cli_help_mod.build_help_text
 main_cmd = _cli_mod.main_cmd
 _make_cli = _cli_mod.make_cli
