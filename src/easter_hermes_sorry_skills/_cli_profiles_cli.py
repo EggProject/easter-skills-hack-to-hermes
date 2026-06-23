@@ -13,7 +13,6 @@ members), the help-text constants live in ``_cli_profiles_cli_options``
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import click
@@ -34,17 +33,9 @@ def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
     """Per-profile audit/flip for the migrated skill-creator skill (Script #2)."""
     from easter_hermes_sorry_skills.cli_profiles import run_audit
 
-    apply_flag = bool(kwargs.get("apply", False))
-    audit_only = bool(kwargs.get("audit_only", False))
-    effective_apply = apply_flag and not audit_only
-    json_path = kwargs.get("json_path")
-    resolved_json: Path | None = Path(json_path) if isinstance(json_path, str) else None
+    dry_run = bool(kwargs.get("dry_run", False))
     run_audit(
-        apply=effective_apply,
-        json_path=resolved_json,
-        frozen_time=kwargs.get("frozen_time"),
-        skip_install=bool(kwargs.get("skip_install", False)),
-        yes=bool(kwargs.get("yes", False)),
+        apply=not dry_run,
         profile=kwargs.get("profile"),
     )
 

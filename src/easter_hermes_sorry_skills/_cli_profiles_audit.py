@@ -104,7 +104,10 @@ def _audit_load_or_error(
 
 def _audit_disabled_now(errors: list[str]) -> set[str]:
     """Read the currently-disabled skill names; append error on failure."""
-    from agent.skill_utils import get_disabled_skill_names
+    try:
+        from agent.skill_utils import get_disabled_skill_names
+    except ImportError:
+        get_disabled_skill_names = None  # type: ignore[assignment]
 
     return read_disabled_or_empty(get_disabled_skill_names, errors)
 

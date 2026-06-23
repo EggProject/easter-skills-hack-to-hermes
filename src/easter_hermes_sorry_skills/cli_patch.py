@@ -11,8 +11,10 @@ The patcher applies two classes of changes to a Hermes checkout:
   (``SKILL_CREATOR_CONSULT_RULE``) into the Hermes prompt surfaces
   flagged by Task E.
 
-There are no opt-out flags. Task E runs by default. Use ``--check``
-to audit without writing.
+There are no opt-out flags. Task E runs by default. The patcher
+WRITES by default; use ``--dry-run`` to audit without writing.
+``--target`` defaults to ``~/.hermes/hermes-agent`` so the patcher
+refuses the no-touch sentinel unless an explicit path is given.
 
 The CLI is intentionally thin: every flag flows through to
 ``run_patch`` which returns a ``PatcherResult``. We then translate the
@@ -41,6 +43,7 @@ import click
 from easter_hermes_sorry_skills._patcher import (
     PatcherResult,
     PatchRunInputs,
+    hermes_agent_path,
     run_patch,
 )
 from easter_hermes_sorry_skills.cli_patch_flow import (
@@ -53,31 +56,23 @@ _GIT_REV_PARSE_TIMEOUT_SEC = 5
 
 HELP_EN = """\
 Usage (English):
-  uv run easter-hermes-sorry-skills-patch --check      --target <dir>
-  uv run easter-hermes-sorry-skills-patch --apply      --target <dir> \\
-      [--i-accept-line-drift]
+  uv run easter-hermes-sorry-skills-patch [--dry-run] [--target <dir>]
   uv run easter-hermes-sorry-skills-patch --help
 
 Patcher applies:
   S1.cap  replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH
   Task E  5 prompt-injection sites (consult rule for skill-creator)
           applied by default, no flag
-          After --apply, the on-disk skills prompt snapshot is purged to force a cold rebuild.
+          After a successful write, the on-disk skills prompt snapshot
+          is purged to force a cold rebuild.
 
 Options:
-  --target DIR                 REQUIRED. User-owned Hermes checkout.
-                               Refuses ~/.hermes/hermes-agent (resolve()).
-  --check                      Audit only; no writes. Default.
-  --apply                      Write the patch atomically.
-  --i-accept-line-drift        Required iff --force is set; explicit
-                               second confirmation. Without it, --force
-                               exits 5.
-  --force                      Line-only override. Requires
-                               --i-accept-line-drift. Retries ONLY
-                               sites with LINE_DRIFT diagnostic.
-  --yes                        Suppresses interactive TTY confirmation
-                               for --force. --yes alone does not bypass
-                               --target refusal.
+  --target DIR                 User-owned Hermes checkout.
+                               Defaults to ~/.hermes/hermes-agent,
+                               which is REFUSED (resolve() comparison,
+                               exit code 4). Pass an explicit path to
+                               patch a different checkout.
+  --dry-run                    Audit only; no writes. Default: WRITES.
   --verbose                    Print bilingual per-site diagnostics.
   --help                       Show this help.
 
@@ -87,34 +82,24 @@ Exit codes: 0 OK / 1 validation / 2 drift / 3 permission / 4 I/O /
 
 HELP_HU = """\
 Használat (magyar):
-  uv run easter-hermes-sorry-skills-patch --check      --target <mappa>
-  uv run easter-hermes-sorry-skills-patch --apply      --target <mappa> \\
-      [--i-accept-line-drift]
+  uv run easter-hermes-sorry-skills-patch [--dry-run] [--target <mappa>]
   uv run easter-hermes-sorry-skills-patch --help
 
 A patcher a kovetkezoket vegzi:
   S1.cap  a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli
   Task E  5 prompt-injection hely (skill-creator tanacsado szabaly)
           alapertelmezetten fut, nincs flag
-          --apply utan a skills-prompt snapshot torolve lesz a hideg-rebuildhoz.
+          Sikeres iras utan a skills-prompt snapshot torolve lesz
+          a hideg-rebuildhoz.
 
 Opciok:
-  --target DIR                 KOTELEZO. Felhasznai tulajdonu Hermes
-                               checkout. Megtagadja a
-                               ~/.hermes/hermes-agent celt
-                               (resolve() osszehasonlitas).
-  --check                      Csak audit; nem ir. Alapertelmezett.
-  --apply                      Atomikusan vegzi a patch-et.
-  --i-accept-line-drift        Kotelezo, ha a --force be van allitva;
-                               masodik megerosites. Nelkule a --force
-                               5-re kilep.
-  --force                      Sor-alapu feluliras.
-                               --i-accept-line-drift kell hozza. Csak
-                               a LINE_DRIFT diagnosztikaju helyeket
-                               probalja ujra.
-  --yes                        Elnyomja a --force interaktiv TTY
-                               megerositeset. A --yes onmagaban nem
-                               keruli meg a --target megtagadast.
+  --target DIR                 Felhasznaloi tulajdonu Hermes checkout.
+                               Alapertelmezett: ~/.hermes/hermes-agent,
+                               amit a patcher MEGTAGAD (resolve()
+                               osszehasonlitas, 4-es kilepesi kod).
+                               Adj meg explicit utat egy masik
+                               checkout patchelesehez.
+  --dry-run                    Csak audit; nem ir. Alapertelmezett: IR.
   --verbose                    Bilingual per-hely diagnosztikat nyomtat.
   --help                       Ezt a sugot mutatja.
 
@@ -143,11 +128,7 @@ class PatchArgs:
     """
 
     target: str | None
-    check: bool
-    do_apply: bool
-    i_accept_line_drift: bool
-    force: bool
-    yes: bool
+    dry_run: bool
     verbose: bool
 
 
@@ -158,27 +139,22 @@ def _patch_impl(args: PatchArgs) -> int:
     that test code can call this directly without click's process-exit
     side-effects.
     """
-    target_path: Path | None = _resolve_target(args.target)
+    # ``--target`` defaults to ``hermes_agent_path()``; the patcher
+    # refuses to write the no-touch sentinel (resolved path compare).
+    target_str = args.target if args.target else str(hermes_agent_path())
+    target_path: Path | None = _resolve_target(target_str)
+    assert target_path is not None  # narrowed by the default above
 
-    check, apply_mode = args.check, args.do_apply
-    if not check and not apply_mode:
-        # default: --check when neither --check nor --apply is given.
-        check = True
-
-    # The --force / --i-accept-line-drift guard is enforced inside
-    # run_patch (which returns EXIT_USER_ABORT). No click-level guard
-    # is needed here.
+    # Default: WRITE. ``--dry-run`` switches to audit-only (check=True,
+    # apply=False). The patcher does the rest of the validation.
+    dry_run = args.dry_run
 
     patcher_result = run_patch(
         PatchRunInputs(
             target=target_path,
-            check=check,
-            apply=args.do_apply,
-            force=args.force,
-            i_accept_line_drift=args.i_accept_line_drift,
-            yes=args.yes,
+            dry_run=dry_run,
             verbose=args.verbose,
-            git_head=_git_head(target_path) if target_path else "",
+            git_head=_git_head(target_path),
         ),
     )
 
@@ -194,11 +170,7 @@ def main(ctx: click.Context, /, **_kwargs: object) -> None:
         _patch_impl(
             PatchArgs(
                 target=opts.get("target"),
-                check=bool(opts.get("check", False)),
-                do_apply=bool(opts.get("do_apply", False)),
-                i_accept_line_drift=bool(opts.get("i_accept_line_drift", False)),
-                force=bool(opts.get("force", False)),
-                yes=bool(opts.get("yes", False)),
+                dry_run=bool(opts.get("dry_run", False)),
                 verbose=bool(opts.get("verbose", False)),
             ),
         ),
@@ -213,23 +185,7 @@ main = click.command(
 
 
 main = _add_click_option(main, "--target", default_val=None)
-main = _add_click_option(main, "--check", is_flag_val=True, default_val=False)
-main = _add_click_option(
-    main,
-    "--apply",
-    dest="do_apply",
-    is_flag_val=True,
-    default_val=False,
-)
-main = click.option(
-    "--i-accept-line-drift",
-    "i_accept_line_drift",
-    is_flag=True,
-    default=False,
-    help=(),
-)(main)
-main = click.option("--force", is_flag=True, default=False, help=())(main)
-main = click.option("--yes", is_flag=True, default=False, help=())(main)
+main = _add_click_option(main, "--dry-run", is_flag_val=True, default_val=False)
 main = click.option("--verbose", is_flag=True, default=False, help=())(main)
 
 

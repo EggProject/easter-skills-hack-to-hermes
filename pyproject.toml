@@ -20,7 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.6",
+    "ruff==0.11.9",
     "black>=24.0",
     "mypy>=1.10",
     "wemake-python-styleguide>=1.0",
@@ -28,10 +28,9 @@ dev = [
 ]
 
 [project.scripts]
-easter-hermes-sorry-skills-patch = "easter_hermes_sorry_skills.cli_patch:_main_entry"
-easter-hermes-sorry-skills-profiles = "easter_hermes_sorry_skills.cli_profiles:main"
+easter-hermes-sorry-skills-patch-hermes = "easter_hermes_sorry_skills.cli_patch:_main_entry"
+easter-hermes-sorry-skills-install-profiles = "easter_hermes_sorry_skills.cli_profiles:main"
 easter-hermes-sorry-skills-report = "easter_hermes_sorry_skills.cli_report:_main_entry"
-easter-hermes-sorry-skills-install = "easter_hermes_sorry_skills.skill_installer:install"
 
 [build-system]
 requires = ["hatchling"]

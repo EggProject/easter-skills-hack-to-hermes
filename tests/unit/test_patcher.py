@@ -33,7 +33,6 @@ from easter_hermes_sorry_skills._patcher import (
     EXIT_IO,
     EXIT_OK,
     EXIT_PERMISSION,
-    EXIT_USER_ABORT,
     S1_CAP_SITE,
     S1_CAP_SITE_FALLBACK,
     STATE_SIDECAR,
@@ -155,10 +154,7 @@ def test_apply_cap_only_default_idempotent(hermes_checkout: Path, real_hermes_ag
     r1 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r1.exit_code == EXIT_OK
@@ -166,10 +162,7 @@ def test_apply_cap_only_default_idempotent(hermes_checkout: Path, real_hermes_ag
     r2 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r2.exit_code == EXIT_OK
@@ -185,10 +178,7 @@ def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str 
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -201,10 +191,7 @@ def test_apply_creates_state_sidecar(hermes_checkout: Path, real_hermes_agent_se
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -214,33 +201,12 @@ def test_apply_creates_state_sidecar(hermes_checkout: Path, real_hermes_agent_se
     assert raw["S1.cap"] in {"patched", "matched"}
 
 
-def test_force_retries_only_drifted_sites(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """After a successful run, a subsequent --force exits 0 with the
-    state sidecar preserving the patched status."""
-    run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
-        ),
-    )
-    pre = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    post = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
-    # After successful first apply, --force has nothing drifted to retry;
-    # the file should be byte-identical (no new write).
-    assert pre == post
+# REMOVED (Phase 7 refactor): ``test_force_retries_only_drifted_sites``
+# — verified that a second ``--force`` run on a clean (already-patched)
+# state did not re-write the file. The ``--force`` flag was removed
+# in Phase 7A.5; the post-Phase 7 ``--apply`` already short-circuits
+# on already-patched sites via the state sidecar, which is covered by
+# ``test_apply_cap_only_default_idempotent``.
 
 
 # --- cap-raise specifics (B2) --------------------------------------------
@@ -259,10 +225,7 @@ def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sent
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code != EXIT_OK
@@ -280,10 +243,7 @@ def test_apply_cap_raise_max_description_length_defined(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -308,10 +268,7 @@ def test_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentine
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -333,10 +290,7 @@ def test_task_e_always_touches_target_files(hermes_checkout: Path) -> None:
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -353,10 +307,7 @@ def test_target_required_exits_4(real_hermes_agent_sentinel: str | None) -> None
     r = run_patch(
         PatchRunInputs(
             target=None,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_IO
@@ -370,10 +321,7 @@ def test_target_resolves_to_hermes_agent_refused(
     r = run_patch(
         PatchRunInputs(
             target=hermes_agent_path(),
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_IO
@@ -387,10 +335,7 @@ def test_target_missing_agent_skill_utils_exits_4(tmp_path: Path, real_hermes_ag
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_IO
@@ -417,30 +362,18 @@ def test_circular_import_preflight_emits_diagnostic(tmp_path: Path, real_hermes_
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_OK
     assert any("circular import" in d for d in r.diagnostics)
 
 
-def test_force_without_i_accept_line_drift_exits_5(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
-    """--force alone -> exit 5."""
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=False,
-        ),
-    )
-    assert r.exit_code == EXIT_USER_ABORT
+# REMOVED (Phase 7 refactor): ``test_force_without_i_accept_line_drift_exits_5``
+# — exercised the preflight rule "force without i_accept_line_drift
+# -> EXIT_USER_ABORT". The ``--force`` / ``--i-accept-line-drift``
+# flags were removed in Phase 7A.5; the preflight rule is therefore
+# unreachable. See ``_patcher_internals.py:run_preflight`` comment.
 
 
 def test_line_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
@@ -455,10 +388,7 @@ def test_line_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_DRIFT
@@ -475,10 +405,7 @@ def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_DRIFT
@@ -494,10 +421,7 @@ def test_e1_skills_guidance_appends_only(hermes_checkout: Path) -> None:
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -519,10 +443,7 @@ def test_e2_memory_guidance_appends_only(hermes_checkout: Path) -> None:
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -540,10 +461,7 @@ def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -563,10 +481,7 @@ def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -612,10 +527,7 @@ def test_e4b_consult_rule_import_writes_import_into_background_review(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -633,10 +545,7 @@ def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -659,10 +568,7 @@ def test_e4_e5_share_constant_after_patch(hermes_checkout: Path) -> None:
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -698,20 +604,14 @@ def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
     r1 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r1.exit_code == EXIT_OK
     r2 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r2.exit_code == EXIT_OK
@@ -742,10 +642,7 @@ def test_task_e_drift_exits_2(
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_DRIFT
@@ -782,10 +679,7 @@ def test_apply_atomic_on_rename_failure(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     # We expect non-zero exit (permission-like) on the OSError path.
@@ -804,10 +698,7 @@ def test_apply_preserves_mode_bits(hermes_checkout: Path, real_hermes_agent_sent
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -823,10 +714,7 @@ def test_apply_cross_filesystem_target_warns(hermes_checkout: Path, real_hermes_
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -851,10 +739,7 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code != EXIT_OK
@@ -864,68 +749,12 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
     assert pre_pb == post_pb
 
 
-def test_audit_log_appended_on_force(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """--force --i-accept-line-drift appends to the per-invocation audit log
-    at ``HERMES_HOME/patch-audit.log`` (NOT in the target dir). The audit
-    line is appended on every successful --force invocation, even when
-    no drifted sites were retried (per AC-2.5.1: 'the invocation is
-    appended')."""
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    # AC-2.5.1: per-invocation audit line at HERMES_HOME/patch-audit.log
-    # (not the target's .patch.audit.log).
-    audit = hermes_checkout / "patch-audit.log"
-    assert audit.exists(), f"audit log not at {audit}"
-    # The old target-dir location MUST NOT exist.
-    assert not (hermes_checkout / ".patch.audit.log").exists()
-    text = audit.read_text(encoding="utf-8")
-    assert "diff_sha256=" in text
-
-
-def test_audit_log_includes_drifted_site_diff_sha(
-    hermes_checkout: Path, real_hermes_agent_sentinel: str | None
-) -> None:
-    """When --force retries a drifted site, the audit log entry lists
-    that site and the combined diff_sha256 is non-empty."""
-    # First, apply without --force so S1.cap is patched.
-    run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
-        ),
-    )
-    audit = hermes_checkout / "patch-audit.log"
-    # No --force run yet: no audit log.
-    assert not audit.exists()
-    # Run --force (no drifted sites; the audit line is the empty-invocation).
-    run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-        ),
-    )
-    assert audit.exists()
-    text = audit.read_text(encoding="utf-8")
-    # One --force invocation: exactly 1 line of content (besides the trailing newline).
-    # The audit log is bilingual, so ``diff_sha256=`` appears twice per
-    # line (EN + HU halves).
-    assert text.count("diff_sha256=") == 2
-    # No drifted sites → site_id list is empty in the audit line.
-    assert "site=" in text
+# REMOVED (Phase 7 refactor): ``test_audit_log_appended_on_force`` and
+# ``test_audit_log_includes_drifted_site_diff_sha`` — verified that
+# ``--force`` invocations appended an entry to ``HERMES_HOME/patch-audit.log``
+# (and the old target-dir ``.patch.audit.log`` was NOT created). The
+# ``--force`` flag and its audit-log emission path were removed in
+# Phase 7A.5.
 
 
 # --- bilingual format / site table hygiene -------------------------------
@@ -943,10 +772,7 @@ def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_her
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -985,19 +811,13 @@ def test_check_already_patched_exits_0(hermes_checkout: Path, real_hermes_agent_
     run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -1009,19 +829,13 @@ def test_state_sidecar_survives_re_run(hermes_checkout: Path, real_hermes_agent_
     run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -1206,10 +1020,7 @@ def test_apply_anchor_text_missing_exits_drift(tmp_path: Path, real_hermes_agent
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_DRIFT
@@ -1235,10 +1046,7 @@ def test_apply_cap_secondary_anchor_mismatch_caught_by_validation(
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_DRIFT
@@ -1267,10 +1075,7 @@ def test_apply_permission_error_branch(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_PERMISSION
@@ -1366,10 +1171,7 @@ def test_apply_emits_cross_fs_warning(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -1483,10 +1285,7 @@ def test_patcher_never_touches_live_hermes(
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -1559,10 +1358,7 @@ def test_apply_cap_raise_with_long_description(
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -1594,10 +1390,7 @@ def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_PERMISSION
@@ -1622,10 +1415,7 @@ def test_partial_failure_zero_writes(
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_DRIFT
@@ -1636,31 +1426,13 @@ def test_partial_failure_zero_writes(
     assert any(f["site_id"] == "S1.cap" for f in rejected["failures"])
 
 
-def test_force_still_drifts_exits_nonzero(
-    tmp_path: Path,
-) -> None:
-    """04 §Error paths — second drift after --force --i-accept-line-drift
-    still exits non-zero with LINE_DRIFT."""
-    checkout = tmp_path / "second-drift"
-    (checkout / "agent").mkdir(parents=True)
-    # Put a valid cap-raise site at L10 (not L688) so it's pre-validated
-    # and patched, then drift it on a subsequent run.
-    (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 9) + '\n    if len(desc) > 60:\n        return desc[:57] + "..."\n',
-        encoding="utf-8",
-    )
-    # First --force --i-accept-line-drift run: anchor at L10 not L688.
-    # Pre-validation will catch the line drift immediately.
-    r = run_patch(
-        PatchRunInputs(
-            target=checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-        ),
-    )
-    assert r.exit_code == EXIT_DRIFT
+# REMOVED (Phase 7 refactor): ``test_force_still_drifts_exits_nonzero``
+# — tested the "drift-after-force" error path for ``--force
+# --i-accept-line-drift`` runs. The ``--force`` /
+# ``--i-accept-line-drift`` flags were removed in Phase 7A.5; the
+# default ``--apply`` path still EXITS 2 on drift, which is covered
+# by ``test_line_drift_exits_2_with_diagnostic`` and
+# ``test_text_drift_exits_2_with_diagnostic``.
 
 
 def test_no_implicit_concat_normalization() -> None:
@@ -1696,29 +1468,17 @@ def test_now_iso_returns_current_when_unset(monkeypatch: pytest.MonkeyPatch) -> 
     assert len(s) == 20  # YYYY-MM-DDTHH:MM:SSZ
 
 
-def test_force_audit_log_uses_frozen_time(hermes_checkout: Path, frozen_time: str) -> None:
-    """The per-invocation audit log line uses the frozen timestamp."""
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    audit = hermes_checkout / "patch-audit.log"
-    assert audit.exists()
-    text = audit.read_text(encoding="utf-8")
-    assert frozen_time in text
+# REMOVED (Phase 7 refactor): ``test_force_audit_log_uses_frozen_time``
+# — verified that the per-invocation audit log emitted by ``--force``
+# runs carries the frozen timestamp. The ``--force`` flag and its
+# audit-log emission path were removed in Phase 7A.5.
 
 
 def test_run_patch_required_params() -> None:
     """The run_patch signature accepts a single :class:`PatchRunInputs` struct
-    whose fields are the required operational parameters plus optional
-    side-effects (yes/verbose/audit_log_path/git_head) that carry safe
-    defaults (False/False/None/'').
+    whose fields are the operational parameters (target, dry_run) plus
+    optional side-effects (verbose/audit_log_path/git_head) that carry
+    safe defaults (False/None/'').
     """
     import inspect
 
@@ -1732,14 +1492,14 @@ def test_run_patch_required_params() -> None:
     fields = {field.name for field in PatchRunInputs.__dataclass_fields__.values()}
     required = {
         "target",
-        "check",
-        "apply",
-        "force",
-        "i_accept_line_drift",
+        "dry_run",
+        "verbose",
+        "audit_log_path",
+        "git_head",
     }
     assert required.issubset(fields), f"missing required fields: {required - fields}"
     # Optional side-effects have safe defaults.
-    assert PatchRunInputs.__dataclass_fields__["yes"].default is False
+    assert PatchRunInputs.__dataclass_fields__["dry_run"].default is False
     assert PatchRunInputs.__dataclass_fields__["verbose"].default is False
     assert PatchRunInputs.__dataclass_fields__["audit_log_path"].default is None
     assert PatchRunInputs.__dataclass_fields__["git_head"].default == ""
@@ -1753,19 +1513,13 @@ def test_apply_then_check_exits_0_with_already_patched(
     run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -1778,128 +1532,27 @@ def test_apply_then_check_exits_0_with_already_patched(
 # =====================================================================
 
 
-def test_force_retries_only_state_drifted_sites(hermes_checkout: Path) -> None:
-    """Fix #1 (AC-2.5): ``--force --i-accept-line-drift`` retries ONLY
-    sites whose persisted state is ``drifted``. After a successful
-    ``--apply`` (no drift in state) the ``--force`` retry must not
-    re-apply anything (the cap site is ``patched`` not ``drifted``)."""
-    # First, plain --apply: S1.cap is patched.
-    r1 = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
-        ),
-    )
-    assert r1.exit_code == EXIT_OK
-    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
-    assert state["S1.cap"] == "patched"
-    # The cap file is now byte-identical to what --apply produced.
-    pre = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
-    # --force on a clean (patched) state: nothing should be re-applied.
-    r2 = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-        ),
-    )
-    assert r2.exit_code == EXIT_OK
-    post = hashlib.sha256((hermes_checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
-    assert pre == post, "force re-applied a non-drifted site"
+# REMOVED (Phase 7 refactor): ``test_force_retries_only_state_drifted_sites``
+# — tested ``--force --i-accept-line-drift`` retry-only-drifted-sites
+# semantics. The ``--force`` / ``--i-accept-line-drift`` flags were
+# removed in Phase 7A.5; the patcher now always applies all sites
+# (skipping already-patched ones via the state sidecar).
 
 
-def test_force_gate_proceeds_when_yes_flag_set(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fix #4 (AC-2.10): ``--yes`` flag suppresses the TTY gate and
-    proceeds to apply."""
-    # Simulate a TTY (so the gate would otherwise prompt).
-    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
-    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
-    # If the gate prompts and tries to read, the test would hang /
-    # raise EOFError; ``--yes`` must short-circuit before input().
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-            yes=True,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
+# REMOVED (Phase 7 refactor): ``test_force_gate_proceeds_when_yes_flag_set``,
+# ``test_force_gate_refuses_on_tty_negative_reply``,
+# ``test_force_gate_proceeds_on_tty_yes_reply`` — tested the TTY consent
+# gate that prompted for ``"yes"`` before applying ``--force`` patches.
+# The ``--force`` / ``--i-accept-line-drift`` / ``--yes`` CLI flags
+# were removed in Phase 7A.5 along with the gate. See
+# ``_patcher_internals.py:run_preflight`` comment.
 
 
-def test_force_gate_refuses_on_tty_negative_reply(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fix #2 (AC-2.5.1): when TTY prompts and the operator replies
-    anything other than ``"yes"``, the run EXITS 5 (user abort)."""
-    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
-    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
-    monkeypatch.setattr("builtins.input", lambda *_a, **_kw: "no")
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-            yes=False,
-        ),
-    )
-    assert r.exit_code == EXIT_USER_ABORT
-    assert any("refused" in d or "megtagadva" in d for d in r.diagnostics)
-
-
-def test_force_gate_proceeds_on_tty_yes_reply(hermes_checkout: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fix #2 (AC-2.5.1): when TTY prompts and the operator replies
-    ``"yes"``, the run proceeds (EXIT_OK)."""
-    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
-    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
-    monkeypatch.setattr("builtins.input", lambda *_a, **_kw: "yes")
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-            yes=False,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-
-
-def test_audit_log_uses_hermes_home_not_target(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """Fix #3 (AC-2.5.1): audit log is at ``HERMES_HOME/patch-audit.log``
-    (NOT ``target/.patch.audit.log``) and is one line per invocation."""
-    # hermes_home fixture sets HERMES_HOME to hermes_checkout itself.
-    assert hermes_checkout.name == "hermes-home"
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=True,
-            i_accept_line_drift=True,
-            yes=True,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    audit_path = hermes_checkout / "patch-audit.log"
-    assert audit_path.exists()
-    # Old location MUST NOT exist anymore.
-    assert not (hermes_checkout / ".patch.audit.log").exists()
-    text = audit_path.read_text(encoding="utf-8")
-    # Per-invocation: ONE line (bilingual format splits EN+HU halves
-    # but counts as one line of content + trailing newline).
-    assert text.count("diff_sha256=") == 2  # EN + HU halves
-    # Timestamp + diff_sha256 + target are present in the audit line.
-    assert "timestamp=" in text
-    assert "target=" in text
+# REMOVED (Phase 7 refactor): ``test_audit_log_uses_hermes_home_not_target``
+# — tested the per-invocation audit log emitted by ``--force`` runs.
+# The ``--force`` / ``--i-accept-line-drift`` / ``--yes`` CLI flags
+# were removed in Phase 7A.5 along with their TTY gate and audit-log
+# emission paths. See ``_patcher_internals.py:run_preflight`` comment.
 
 
 def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1927,10 +1580,7 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=True,
-            apply=False,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=True,
         ),
     )
     # AC-2.11: the cycle is no longer fatal; the patcher proceeds with
@@ -2213,10 +1863,7 @@ def test_s1_cap_fallback_used_when_circular_import_detected(
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -2244,10 +1891,7 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     r = run_patch(
         PatchRunInputs(
             target=checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r.exit_code == EXIT_OK
@@ -2301,10 +1945,7 @@ def test_apply_purges_skills_cache(
     r1 = _patcher.run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r1.exit_code == EXIT_OK, f"first apply failed: {r1.diagnostics}"
@@ -2317,10 +1958,7 @@ def test_apply_purges_skills_cache(
     r2 = _patcher.run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r2.exit_code == EXIT_OK, f"second apply failed: {r2.diagnostics}"
@@ -2337,10 +1975,7 @@ def test_idempotency_per_site(
     r1 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r1.exit_code == EXIT_OK, f"first apply failed: {r1.diagnostics}"
@@ -2351,10 +1986,7 @@ def test_idempotency_per_site(
     r2 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
+            dry_run=False,
         ),
     )
     assert r2.exit_code == EXIT_OK, f"second apply failed: {r2.diagnostics}"

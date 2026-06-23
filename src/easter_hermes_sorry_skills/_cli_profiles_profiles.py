@@ -9,7 +9,10 @@ from __future__ import annotations
 import datetime as _datetime_mod
 from pathlib import Path
 
-from hermes_cli.profiles import ProfileInfo
+try:
+    from hermes_cli.profiles import ProfileInfo
+except ImportError:  # hermes_cli not installed in this venv
+    ProfileInfo = None  # type: ignore[assignment,misc]
 
 from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
 
@@ -48,6 +51,8 @@ def _select_profiles(
 
 
 def _list_all_profiles() -> list[ProfileInfo]:
+    if ProfileInfo is None:
+        return []
     from hermes_cli.profiles import list_profiles as _list_profiles
 
     return _list_profiles()

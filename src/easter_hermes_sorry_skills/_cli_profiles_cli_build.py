@@ -35,9 +35,10 @@ def _value_flag(cmd: click.Command, flag: str, dest: str, help_key: str, **extra
 
 
 def _with_misc_flags(cmd: click.Command) -> click.Command:
-    """Apply the four boolean flags: --apply / --audit / --yes / --skip-install."""
+    """Apply the four boolean flags: --apply / --dry-run / --yes / --skip-install."""
     cmd = _bool_flag(cmd, "--apply", "apply", "profiles_opt_apply")
-    cmd = _bool_flag(cmd, "--audit", "audit_only", "profiles_opt_audit")
+    cmd = _bool_flag(cmd, "--dry-run", "dry_run", "profiles_opt_dry_run")
+    cmd = _bool_flag(cmd, "--audit", "dry_run", "profiles_opt_audit")
     cmd = _bool_flag(cmd, "--yes", "yes", "profiles_opt_yes")
     cmd = _bool_flag(cmd, "--skip-install", "skip_install", "profiles_opt_skip_install")
     return cmd

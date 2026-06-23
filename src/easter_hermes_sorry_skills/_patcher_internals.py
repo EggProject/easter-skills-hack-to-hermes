@@ -60,7 +60,14 @@ def _check_preflight(
     inputs: PatchRunInputs,
     state: _PatchBodyState,
 ) -> PatcherResult | None:
-    preflight = _run_preflight(inputs.target, inputs.force, inputs.i_accept_line_drift)
+    # ``--force`` and ``--i-accept-line-drift`` were removed from
+    # ``PatchRunInputs`` (Phase 7A.5). Preflight rule 4 ("force without
+    # i_accept_line_drift -> EXIT_USER_ABORT") is therefore unreachable
+    # from this entry point, so we pass ``False, False`` to keep the
+    # legacy ``run_preflight(target, force, i_accept_line_drift)``
+    # signature intact. ``inputs.dry_run`` is handled later in
+    # ``_drive_pipeline`` and does not affect preflight refusal rules.
+    preflight = _run_preflight(inputs.target, False, False)
     if preflight is None:
         return None
     return _empty_result([*state.diagnostics, preflight[1]], preflight[0])

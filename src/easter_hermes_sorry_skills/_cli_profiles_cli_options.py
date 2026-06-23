@@ -18,12 +18,8 @@ HELP_HU_HEADER = "Használat (magyar):"
 EN_SECTION = "Options:"
 HU_SECTION = "Kapcsolók:"
 EN_USAGE_BAR = (
-    "  easter-hermes-sorry-skills-profiles [--apply] [--audit] [--profile NAME]\n"
-    "                                  [--json PATH] [--yes] [--skip-install]\n"
-    "                                  [--frozen-time ISO] [--help]"
+    "  easter-hermes-sorry-skills-profiles [--dry-run] [--profile NAME]\n                                  [--help]"
 )
 HU_USAGE_BAR = (
-    "  easter-hermes-sorry-skills-profiles [--apply] [--audit] [--profile NÉV]\n"
-    "                                  [--json ÚTVONAL] [--yes] [--skip-install]\n"
-    "                                  [--frozen-time ISO] [--help]"
+    "  easter-hermes-sorry-skills-profiles [--dry-run] [--profile NÉV]\n                                  [--help]"
 )

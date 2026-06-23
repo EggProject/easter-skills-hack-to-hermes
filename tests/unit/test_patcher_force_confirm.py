@@ -1,8 +1,12 @@
 """Unit tests for ``_patcher_force_confirm`` (AC-2.5.1 + AC-2.10).
 
 Covers the pure-function branches in :mod:`_patcher_force_confirm`:
-the unified-diff builder, the gate's proceed/refuse logic across TTY /
-non-TTY / ``--yes`` permutations, and the user-abort result builder.
+the unified-diff builder and the gate's pass-through behaviour.
+
+Phase 7A.5: ``--force`` / ``--yes`` have been removed; the gate is
+now a pass-through that always proceeds. The refuse / TTY-prompt
+branches no longer exist; tests for them have been collapsed into
+``test_force_confirm_gate_always_proceeds``.
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ from easter_hermes_sorry_skills._patcher import (
 )
 from easter_hermes_sorry_skills._patcher_force_confirm import (
     ForceConfirmInputs,
+    ForceConfirmOutcome,
     build_diff_text,
     force_confirm_gate,
     user_abort_result_from_outcome,
@@ -45,8 +50,9 @@ def test_build_diff_text_missing_source_file(tmp_path: Path) -> None:
     assert "tervezett diff" in text or "planned diff" in text
 
 
-def test_force_confirm_gate_yes_proceeds() -> None:
-    """``--yes`` short-circuits the gate to proceed without prompt."""
+def test_force_confirm_gate_always_proceeds() -> None:
+    """Phase 7A.5: the gate is a pass-through — it always proceeds,
+    regardless of TTY state or legacy ``--yes`` flag."""
     out = force_confirm_gate(
         ForceConfirmInputs(
             sites=(),
@@ -58,10 +64,12 @@ def test_force_confirm_gate_yes_proceeds() -> None:
     )
     assert out.proceed is True
     assert out.refused_message is None
+    assert out.response is None
+    assert out.prompt_text == ""
 
 
-def test_force_confirm_gate_non_tty_proceeds_without_yes() -> None:
-    """Non-TTY without ``--yes`` proceeds silently (CI / CliRunner)."""
+def test_force_confirm_gate_always_proceeds_on_non_tty() -> None:
+    """Pass-through: non-TTY inputs still proceed."""
     out = force_confirm_gate(
         ForceConfirmInputs(
             sites=(),
@@ -75,72 +83,35 @@ def test_force_confirm_gate_non_tty_proceeds_without_yes() -> None:
     assert out.refused_message is None
 
 
-def test_force_confirm_gate_tty_yes_reply_proceeds() -> None:
-    """TTY prompt with ``"yes"`` reply proceeds."""
+def test_user_abort_result_from_outcome_no_refused_message() -> None:
+    """When the outcome has no refused_message (the new default),
+    the result diagnostics contain only the base diagnostics
+    (no extra refused line)."""
     out = force_confirm_gate(
         ForceConfirmInputs(
             sites=(),
             target_path=Path("/tmp"),
-            yes=False,
+            yes=True,
             stdin_isatty=True,
             stdout_isatty=True,
-            read_input=lambda: "yes",
-            emit_message=lambda _msg: None,
         ),
     )
-    assert out.proceed is True
-    assert out.response == "yes"
     assert out.refused_message is None
+    result = user_abort_result_from_outcome(out, ("only-base",))
+    assert "only-base" in result.diagnostics
+    assert not any("refused" in d or "megtagadva" in d for d in result.diagnostics)
 
 
-def test_force_confirm_gate_tty_non_yes_reply_refuses() -> None:
-    """TTY prompt with anything other than ``"yes"`` refuses (exit 5)."""
-    out = force_confirm_gate(
-        ForceConfirmInputs(
-            sites=(),
-            target_path=Path("/tmp"),
-            yes=False,
-            stdin_isatty=True,
-            stdout_isatty=True,
-            read_input=lambda: "no",
-            emit_message=lambda _msg: None,
-        ),
-    )
-    assert out.proceed is False
-    assert out.refused_message is not None
-    assert "refused" in out.refused_message or "megtagadva" in out.refused_message
-
-
-def test_force_confirm_gate_tty_empty_reply_refuses() -> None:
-    """TTY prompt with empty reply refuses."""
-    out = force_confirm_gate(
-        ForceConfirmInputs(
-            sites=(),
-            target_path=Path("/tmp"),
-            yes=False,
-            stdin_isatty=True,
-            stdout_isatty=True,
-            read_input=lambda: "",
-            emit_message=lambda _msg: None,
-        ),
-    )
-    assert out.proceed is False
-    assert out.refused_message is not None
-
-
-def test_user_abort_result_from_outcome_basic() -> None:
-    """The user-abort result builder produces a PatcherResult with
-    EXIT_USER_ABORT and the refused message in diagnostics."""
-    out = force_confirm_gate(
-        ForceConfirmInputs(
-            sites=(),
-            target_path=Path("/tmp"),
-            yes=False,
-            stdin_isatty=True,
-            stdout_isatty=True,
-            read_input=lambda: "no",
-            emit_message=lambda _msg: None,
-        ),
+def test_user_abort_result_from_outcome_with_refused_message() -> None:
+    """The user-abort result builder produces EXIT_USER_ABORT and
+    appends the refused message to the base diagnostics when one
+    is present (synthetic refused outcome for backwards-compat)."""
+    out = ForceConfirmOutcome(
+        proceed=False,
+        diff_text="",
+        prompt_text="",
+        response="no",
+        refused_message="Force confirmation refused (megtagadva).",
     )
     result = user_abort_result_from_outcome(out, ("existing diag",))
     assert result.exit_code == EXIT_USER_ABORT
@@ -148,43 +119,8 @@ def test_user_abort_result_from_outcome_basic() -> None:
     assert any("existing diag" in d for d in result.diagnostics)
 
 
-def test_force_confirm_gate_tty_only_stdin_not_enough() -> None:
-    """The gate requires BOTH stdin AND stdout to be TTYs."""
-    out = force_confirm_gate(
-        ForceConfirmInputs(
-            sites=(),
-            target_path=Path("/tmp"),
-            yes=False,
-            stdin_isatty=True,
-            stdout_isatty=False,
-        ),
-    )
-    assert out.proceed is True  # treated as non-interactive, proceeds silently
-
-
-def test_user_abort_result_from_outcome_no_refused_message() -> None:
-    """When the outcome has no refused_message, the result diagnostics
-    contain only the base diagnostics (no extra refused line)."""
-    out = force_confirm_gate(
-        ForceConfirmInputs(
-            sites=(),
-            target_path=Path("/tmp"),
-            yes=True,  # --yes → no refused_message
-            stdin_isatty=True,
-            stdout_isatty=True,
-        ),
-    )
-    assert out.refused_message is None
-    result = user_abort_result_from_outcome(out, ("only-base",))
-    # Even though the gate proceeded, the builder still produces a
-    # PatcherResult with the base diagnostics.
-    assert "only-base" in result.diagnostics
-    assert not any("refused" in d or "megtagadva" in d for d in result.diagnostics)
-
-
-def test_false_callable_returns_false() -> None:
-    """The ``_false_callable`` helper used as the default ``isatty``
-    stand-in returns ``False``."""
-    from easter_hermes_sorry_skills._patcher import _false_callable
-
-    assert _false_callable() is False
+# NOTE: ``test_false_callable_returns_false`` was removed.
+# Phase 7 refactor: ``_patcher._false_callable`` (the default ``isatty``
+# stand-in) was deleted when ``ForceConfirmInputs`` was migrated to explicit
+# ``stdin_isatty`` / ``stdout_isatty`` ``bool`` fields. The helper is no
+# longer needed and is intentionally absent from ``_patcher``.

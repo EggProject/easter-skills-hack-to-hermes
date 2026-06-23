@@ -2,8 +2,8 @@
 
 Extracted to keep :mod:`_patcher_pipeline` under wemake WPS202
 (<=7 module members). Holds the ``_FinalizeInputs`` bundle dataclass
-and the ``_finalize_apply`` function that emits the per-invocation
-audit log line and builds the EXIT_OK PatcherResult.
+and the ``_finalize_apply`` function that writes state and builds
+the EXIT_OK PatcherResult.
 """
 
 from __future__ import annotations
@@ -14,13 +14,7 @@ from typing import TYPE_CHECKING
 
 from easter_hermes_sorry_skills import _patcher_pipeline_apply as _apply_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_imports as _imps
-from easter_hermes_sorry_skills._patcher_pipeline_emit import (
-    _AuditLogInputs,
-    _SiteDiff,
-)
-from easter_hermes_sorry_skills._patcher_pipeline_emit import (
-    emit_audit_log as _emit_audit_log,
-)
+from easter_hermes_sorry_skills._patcher_pipeline_emit import _SiteDiff
 from easter_hermes_sorry_skills.i18n.messages_en import CROSS_FS_WARN
 
 if TYPE_CHECKING:
@@ -43,20 +37,11 @@ class _FinalizeInputs:
 
 
 def _finalize_apply(spec: _FinalizeInputs) -> PatcherResult:
-    """Write state + cross-FS warning, emit per-invocation audit line, then EXIT_OK."""
+    """Write state + cross-FS warning, then EXIT_OK."""
     target_path = spec.inputs.target_path
     if _imps._cross_filesystem(target_path):
         spec.diagnostics.append(CROSS_FS_WARN)
     spec.inputs.write_state_fn(target_path, spec.state)
-    if spec.inputs.force:
-        _emit_audit_log(
-            _AuditLogInputs(
-                audit_path=spec.audit_path,
-                timestamp=spec.timestamp,
-                target_path=target_path,
-                site_diffs=tuple(spec.site_diffs),
-            ),
-        )
     return _apply_mod.build_result(
         exit_code=spec.inputs.exit_ok_code,
         sites_patched=tuple(spec.sites_patched),

@@ -197,6 +197,7 @@ EN_MESSAGES = MappingProxyType(
         ),
         "profiles_opt_apply": ("Perform the writes (default is dry-run)."),
         "profiles_opt_audit": ("Run audit only; do not perform any writes (alias for the default)."),
+        "profiles_opt_dry_run": ("Run audit only; do not perform any writes (default mode)."),
         "profiles_opt_profile": ("Restrict the run to a single profile (default: every profile)."),
         "profiles_opt_json": ("Write the deterministic JSON report to PATH (default: ./profile-audit.json)."),
         "profiles_opt_yes": ("Suppress the interactive TTY confirmation (CI / non-TTY runs)."),

@@ -12,7 +12,11 @@ from pathlib import Path
 from typing import cast
 
 import click
-from hermes_cli.profiles import ProfileInfo
+
+try:
+    from hermes_cli.profiles import ProfileInfo
+except ImportError:  # hermes_cli not installed in this venv
+    ProfileInfo = None  # type: ignore[assignment,misc]
 
 from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
 from easter_hermes_sorry_skills import _cli_profiles_orchestrator as _orchestrator

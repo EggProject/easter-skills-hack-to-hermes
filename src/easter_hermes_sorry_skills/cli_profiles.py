@@ -36,17 +36,53 @@ See also: plans/06-script-2-profiles.md, plans/09-test-strategy.md.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
+from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
+from easter_hermes_sorry_skills import _cli_profiles_profiles as _profiles_mod
+from easter_hermes_sorry_skills import _cli_profiles_run as _run
+
+
+def _try_import_agent_utils() -> tuple[
+    Callable[[], list[str]] | None,
+    Callable[[list[str]], None] | None,
+]:
+    """Try to import the read/write disabled-skill helpers.
+
+    Returns a ``(get_disabled_skill_names, save_disabled_skills)`` pair
+    of callables, with each entry set to ``None`` if its source package
+    is missing from this venv. The live call sites
+    (``_cli_profiles_audit.py:107`` and ``_cli_profiles_audit.py:131``)
+    do their own local import with a try/except fallback, so a missing
+    binding here is non-fatal.
+    """
+    get_names: Callable[[], list[str]] | None
+    save_skills: Callable[[list[str]], None] | None
+    try:
+        from agent.skill_utils import get_disabled_skill_names
+    except ModuleNotFoundError:
+        # ``agent`` package is not installed in this venv.
+        get_names = None
+    else:
+        get_names = get_disabled_skill_names
+    try:
+        from hermes_cli.skills_config import save_disabled_skills
+    except ModuleNotFoundError:
+        # ``hermes_cli`` is not installed in this venv.
+        save_skills = None
+    else:
+        save_skills = save_disabled_skills
+    return get_names, save_skills
+
+
 # Tests grep this module's source for the canonical import lines
 # (the read-side ``agent.skill_utils.get_disabled_skill_names`` and
 # the write-side ``hermes_cli.skills_config.save_disabled_skills``);
 # the audit helpers live in ``_cli_profiles_audit`` and the unused-
 # import silencer is mandated by the test contract.
-from agent.skill_utils import get_disabled_skill_names
-from hermes_cli.skills_config import save_disabled_skills
-
-from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
-from easter_hermes_sorry_skills import _cli_profiles_profiles as _profiles_mod
-from easter_hermes_sorry_skills import _cli_profiles_run as _run
+get_disabled_skill_names: Callable[[], list[str]] | None
+save_disabled_skills: Callable[[list[str]], None] | None
+get_disabled_skill_names, save_disabled_skills = _try_import_agent_utils()
 
 # Re-bindings matching the previous top-level names exposed by this
 # orchestrator (kept for backward compat with tests + external callers).

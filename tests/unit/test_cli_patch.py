@@ -14,7 +14,6 @@ from click.testing import CliRunner
 from easter_hermes_sorry_skills._patcher import (
     EXIT_IO,
     EXIT_OK,
-    EXIT_USER_ABORT,
     STATE_SIDECAR,
 )
 from easter_hermes_sorry_skills.cli_patch import HELP_EN, HELP_HU, main
@@ -34,11 +33,7 @@ def test_help_options_mirrored() -> None:
     """Each option in HELP_EN must also appear in HELP_HU."""
     options = [
         "--target",
-        "--check",
-        "--apply",
-        "--i-accept-line-drift",
-        "--force",
-        "--yes",
+        "--dry-run",
         "--verbose",
     ]
     for opt in options:
@@ -51,7 +46,7 @@ def test_help_options_mirrored() -> None:
 
 def test_cli_target_required_exits_4() -> None:
     runner = CliRunner()
-    r = runner.invoke(main, ["--check"])
+    r = runner.invoke(main, ["--dry-run"])
     assert r.exit_code == EXIT_IO
     assert "[en]" in r.output or "[en]" in (r.stderr or "")
     assert "[hu]" in r.output or "[hu]" in (r.stderr or "")
@@ -59,20 +54,20 @@ def test_cli_target_required_exits_4() -> None:
 
 def test_cli_target_hermes_agent_refused() -> None:
     runner = CliRunner()
-    r = runner.invoke(main, ["--check", "--target", str(Path.home() / ".hermes" / "hermes-agent")])
+    r = runner.invoke(main, ["--dry-run", "--target", str(Path.home() / ".hermes" / "hermes-agent")])
     assert r.exit_code == EXIT_IO
     combined = r.output + (r.stderr or "")
     assert "hermes-agent" in combined
 
 
-# --- --apply happy path -------------------------------------------------
+# --- default (write) happy path -----------------------------------------
 
 
 def test_cli_apply_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     runner = CliRunner()
     r = runner.invoke(
         main,
-        ["--apply", "--target", str(hermes_checkout)],
+        ["--target", str(hermes_checkout)],
     )
     assert r.exit_code == EXIT_OK
     assert (hermes_checkout / STATE_SIDECAR).exists()
@@ -84,47 +79,23 @@ def test_cli_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: 
     runner = CliRunner()
     r = runner.invoke(
         main,
-        ["--check", "--target", str(hermes_checkout)],
+        ["--dry-run", "--target", str(hermes_checkout)],
     )
     assert r.exit_code == EXIT_OK
     post = hashlib.sha256(target_file.read_bytes()).hexdigest()
     assert pre == post
 
 
-def test_cli_force_without_i_accept_exits_5(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    runner = CliRunner()
-    r = runner.invoke(
-        main,
-        ["--apply", "--force", "--target", str(hermes_checkout)],
-    )
-    assert r.exit_code == EXIT_USER_ABORT
-
-
-def test_cli_force_with_i_accept_succeeds(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    runner = CliRunner()
-    r = runner.invoke(
-        main,
-        [
-            "--apply",
-            "--force",
-            "--i-accept-line-drift",
-            "--target",
-            str(hermes_checkout),
-        ],
-    )
-    assert r.exit_code == EXIT_OK
-
-
 def test_cli_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Task E always runs by default; no opt-out flag exists.
 
-    With only --apply + --target, both S1.cap and all 5 Task E sites
+    With only --target (default = write), both S1.cap and all 5 Task E sites
     are written into the state sidecar (E0/E1/E2/E4/E5).
     """
     runner = CliRunner()
     r = runner.invoke(
         main,
-        ["--apply", "--target", str(hermes_checkout)],
+        ["--target", str(hermes_checkout)],
     )
     assert r.exit_code == EXIT_OK
     state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
@@ -141,13 +112,13 @@ def test_cli_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sen
 def test_cli_task_e_check_mode_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Task E is checked (not just applied) by default — no opt-out flag.
 
-    --check with --target (no Task E flag) must audit Task E sites too,
+    --dry-run with --target (no Task E flag) must audit Task E sites too,
     producing exit 0 and surfacing every Task E site in the OK diagnostics.
     """
     runner = CliRunner()
     r = runner.invoke(
         main,
-        ["--check", "--verbose", "--target", str(hermes_checkout)],
+        ["--dry-run", "--verbose", "--target", str(hermes_checkout)],
     )
     assert r.exit_code == EXIT_OK
     combined = r.output + (r.stderr or "")
@@ -167,22 +138,22 @@ def test_cli_verbose_emits_diagnostics(hermes_checkout: Path, real_hermes_agent_
     runner = CliRunner()
     r = runner.invoke(
         main,
-        ["--apply", "--verbose", "--target", str(hermes_checkout)],
+        ["--verbose", "--target", str(hermes_checkout)],
     )
     assert r.exit_code == EXIT_OK
     # The diagnostics include bilingual OK lines
     assert "OK" in r.output
 
 
-def test_cli_default_check_mode(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """When neither --check nor --apply is given, the CLI defaults to --check."""
+def test_cli_default_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """When no flag is given, the CLI defaults to WRITES (exit 0 on success)."""
     target_file = hermes_checkout / "agent" / "skill_utils.py"
     pre = hashlib.sha256(target_file.read_bytes()).hexdigest()
     runner = CliRunner()
     r = runner.invoke(main, ["--target", str(hermes_checkout)])
     assert r.exit_code == EXIT_OK
     post = hashlib.sha256(target_file.read_bytes()).hexdigest()
-    assert pre == post
+    assert pre != post
 
 
 def test_cli_patch_main_entry_returns_main_exit_code(monkeypatch) -> None:

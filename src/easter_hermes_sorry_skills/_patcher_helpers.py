@@ -99,7 +99,7 @@ def file_has_circular_import(
             capture_output=True,
             timeout=_SUBPROCESS_IMPORT_TIMEOUT_SEC,
         )
-    except subprocess.SubprocessError, OSError:
+    except (subprocess.SubprocessError, OSError):
         return False
     return completed.returncode != 0
 

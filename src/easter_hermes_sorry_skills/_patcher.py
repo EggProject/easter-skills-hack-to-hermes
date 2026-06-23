@@ -47,7 +47,6 @@ plans/09-test-strategy.md.
 from __future__ import annotations
 
 import dataclasses
-import sys
 from pathlib import Path
 
 from easter_hermes_sorry_skills import _patcher_imports as _imps
@@ -160,11 +159,7 @@ class PatchRunInputs:
     """
 
     target: Path | None = None
-    check: bool = False
-    apply: bool = False
-    force: bool = False
-    i_accept_line_drift: bool = False
-    yes: bool = False
+    dry_run: bool = False
     verbose: bool = False
     audit_log_path: Path | None = None
     git_head: str = ""
@@ -199,8 +194,6 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
 def _select_sites_for_run(
     all_sites: list[_sites.Site],
     persisted: dict[str, str],
-    *,
-    force: bool,
 ) -> list[_sites.Site]:
     """Return the sites that should be APPLIED for this invocation.
 
@@ -212,14 +205,7 @@ def _select_sites_for_run(
 
     Non-``--force`` runs apply every site.
     """
-    if not force:
-        return all_sites
-    return [site for site in all_sites if persisted.get(site.site_id) == STATE_DRIFTED]
-
-
-def _false_callable() -> bool:
-    """Stand-in ``isatty`` for streams that lack the attribute."""
-    return False
+    return all_sites  # Phase 7A.5: --force removed; always return all_sites
 
 
 def _drive_pipeline(
@@ -263,29 +249,8 @@ def _drive_pipeline(
     # AC-2.5: when ``--force`` is set, only LINE_DRIFT sites (per
     # persisted state) are retried; already-matched / already-patched
     # sites are NOT re-applied.
-    sites = _select_sites_for_run(all_sites, persisted, force=inputs.force)
-    # AC-2.5.1: --force --i-accept-line-drift triggers a TTY pause +
-    # diff-print + bilingual confirmation gate. ``--yes`` suppresses
-    # the gate (CI / non-TTY runs). EXIT_USER_ABORT (5) on refusal.
-    if inputs.force and inputs.i_accept_line_drift and not inputs.check:
-        from easter_hermes_sorry_skills._patcher_force_confirm import (
-            ForceConfirmInputs,
-            force_confirm_gate,
-            user_abort_result_from_outcome,
-        )
-
-        outcome = force_confirm_gate(
-            ForceConfirmInputs(
-                sites=tuple(sites),
-                target_path=target_path,
-                yes=inputs.yes,
-                stdin_isatty=bool(getattr(sys.stdin, "isatty", _false_callable)()),
-                stdout_isatty=bool(getattr(sys.stdout, "isatty", _false_callable)()),
-            ),
-        )
-        if not outcome.proceed:
-            return user_abort_result_from_outcome(outcome, tuple(state.diagnostics))
-    if inputs.check or not inputs.apply:
+    sites = _select_sites_for_run(all_sites, persisted)
+    if inputs.dry_run:
         return _ok_check_result_pipeline(
             OkCheckInputs(
                 sites=sites,
@@ -307,7 +272,7 @@ def _drive_pipeline(
                 sites_patched=state.sites_patched,
                 sites_already=state.sites_already,
                 diagnostics=state.diagnostics,
-                force=inputs.force,
+                force=False,
                 audit_log_path=inputs.audit_log_path,
                 exit_ok_code=EXIT_OK,
                 write_state_fn=write_state,

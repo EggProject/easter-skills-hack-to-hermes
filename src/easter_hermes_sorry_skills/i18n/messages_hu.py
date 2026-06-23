@@ -199,6 +199,7 @@ HU_MESSAGES = MappingProxyType(
         ),
         "profiles_opt_apply": ("Végrehajtja az írásokat (alap: száraz futás)."),
         "profiles_opt_audit": ("Csak audit; nem hajt végre írást (alias az alap módhoz)."),
+        "profiles_opt_dry_run": ("Csak audit; nem hajt végre írást (alap mód)."),
         "profiles_opt_profile": ("A futást egyetlen profilra korlátozza (alap: minden profil)."),
         "profiles_opt_json": ("A determinisztikus JSON jelentést a PATH helyre írja (alap: ./profile-audit.json)."),
         "profiles_opt_yes": ("Elnyomja az interaktív TTY megerősítést (CI / nem-TTY futás)."),
