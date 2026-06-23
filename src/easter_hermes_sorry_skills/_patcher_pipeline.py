@@ -114,20 +114,6 @@ def ok_check_result(inputs: OkCheckInputs) -> PatcherResult:
     )
 
 
-@dataclasses.dataclass(frozen=True)
-class _FinalizeInputs:
-    """Bundled args for :func:`_finalize_apply` (WPS211 <= 5 args)."""
-
-    inputs: ApplySitesInputs
-    sites_patched: list[str]
-    sites_already: list[str]
-    state: dict[str, str]
-    diagnostics: list[str]
-    audit_path: Path
-    timestamp: str
-    site_diffs: list[_SiteDiff]
-
-
 _finalize_apply = _finalize_mod._finalize_apply
 
 
