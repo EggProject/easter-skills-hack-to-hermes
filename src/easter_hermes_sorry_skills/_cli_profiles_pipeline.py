@@ -9,14 +9,12 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import click
 
-try:
+if TYPE_CHECKING:
     from hermes_cli.profiles import ProfileInfo
-except ImportError:  # hermes_cli not installed in this venv
-    ProfileInfo = None  # type: ignore[assignment,misc]
 
 from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
 from easter_hermes_sorry_skills import _cli_profiles_orchestrator as _orchestrator

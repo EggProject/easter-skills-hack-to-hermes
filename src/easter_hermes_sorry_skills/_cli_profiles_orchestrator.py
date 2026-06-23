@@ -6,14 +6,12 @@ module under the wemake WPS202 cap (<=7 module members).
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import click
 
-try:
+if TYPE_CHECKING:
     from hermes_cli.profiles import ProfileInfo
-except ImportError:  # hermes_cli not installed in this venv
-    ProfileInfo = None  # type: ignore[assignment,misc]
 
 from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
 

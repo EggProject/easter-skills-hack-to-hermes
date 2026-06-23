@@ -6,6 +6,7 @@ Re-exports helpers from the split sub-modules so existing
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -93,10 +94,11 @@ def _audit_load_or_error(
     monkeypatch flexibility; the union of its two return paths is
     statically known to be ``dict[str, Any]``.
     """
+    load_config: Callable[[], dict[str, Any]] | None
     try:
         from hermes_cli.config import load_config
     except ImportError:  # hermes_cli not installed in this venv
-        load_config = None  # type: ignore[assignment]
+        load_config = None
 
     config = load_config_or_error(load_config, errors, row)
     # Look up the mutator at call time so monkeypatch.setattr on
@@ -107,10 +109,11 @@ def _audit_load_or_error(
 
 def _audit_disabled_now(errors: list[str]) -> set[str]:
     """Read the currently-disabled skill names; append error on failure."""
+    get_disabled_skill_names: Callable[[], list[str]] | None
     try:
         from agent.skill_utils import get_disabled_skill_names
     except ImportError:
-        get_disabled_skill_names = None  # type: ignore[assignment]
+        get_disabled_skill_names = None
 
     return read_disabled_or_empty(get_disabled_skill_names, errors)
 
@@ -134,18 +137,21 @@ def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
     """Build the apply dep set and run the apply pipeline for one profile."""
     from agent.prompt_builder import clear_skills_system_prompt_cache
 
+    save_config: Callable[[dict[str, Any]], None] | None
     try:
         from hermes_cli.config import save_config
     except ImportError:  # hermes_cli not installed in this venv
-        save_config = None  # type: ignore[assignment]
+        save_config = None
+    save_disabled_skills: Callable[[list[str]], None] | None
     try:
         from hermes_cli.skills_config import save_disabled_skills
     except ImportError:  # hermes_cli not installed in this venv
-        save_disabled_skills = None  # type: ignore[assignment]
+        save_disabled_skills = None
+    do_install: Callable[..., Path] | None
     try:
         from hermes_cli.skills_hub import do_install
     except ImportError:  # hermes_cli not installed in this venv
-        do_install = None  # type: ignore[assignment]
+        do_install = None
 
     deps = _ApplyDeps(
         save_disabled_skills=save_disabled_skills,
