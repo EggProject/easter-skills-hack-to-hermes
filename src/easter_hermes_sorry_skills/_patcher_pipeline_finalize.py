@@ -34,7 +34,17 @@ class _FinalizeInputs:
 
 
 def _finalize_apply(spec: _FinalizeInputs) -> PatcherResult:
-    """Write state + cross-FS warning, then EXIT_OK."""
+    """Write state + cross-FS warning, then EXIT_OK.
+
+    Note: ``spec`` is a ``@dataclass(frozen=True)``, so attribute
+    assignment is forbidden — but ``spec.diagnostics`` is a
+    ``list[str]`` field whose contents remain mutable. We
+    intentionally append ``CROSS_FS_WARN`` to that list in place
+    (rather than rebuilding the dataclass with ``dataclasses.replace``)
+    because the field is constructed once at the call site and shared
+    by reference; mutating the list keeps the warning alongside the
+    diagnostics accumulated upstream without an extra copy.
+    """
     target_path = spec.inputs.target_path
     if _imps._cross_filesystem(target_path):
         spec.diagnostics.append(CROSS_FS_WARN)

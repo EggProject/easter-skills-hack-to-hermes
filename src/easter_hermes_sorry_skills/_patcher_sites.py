@@ -35,11 +35,9 @@ Anchor = _sites_table.Anchor
 Site = _sites_table.Site
 
 
-def sites_for_mode(*, task_e_redirect: bool) -> tuple[Site, ...]:
-    """Return the (S1.cap, [Task E...]) tuple for the given flag combination."""
+def sites_for_mode() -> tuple[Site, ...]:
+    """Return the (S1.cap, [Task E...]) tuple."""
     sites: list[Site] = [S1_CAP_SITE]
-    if not task_e_redirect:
-        return tuple(sites)
     for site in ALL_TASK_E_SITES:
         sites.append(site)
     return tuple(sites)

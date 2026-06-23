@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -34,17 +33,11 @@ class ForceConfirmInputs:
     """Inputs for :func:`force_confirm_gate` (bundled for WPS211).
 
     The ``--yes`` / ``--force`` CLI flags have been removed
-    (Phase 7A.5); the gate is now a pass-through. Legacy fields are
-    retained for unit-test compatibility only.
+    (Phase 7A.5); the gate is now a pass-through.
     """
 
     sites: tuple[Site, ...]
     target_path: Path
-    yes: bool = False
-    stdin_isatty: bool = False
-    stdout_isatty: bool = False
-    read_input: Callable[[], str] | None = None
-    emit_message: Callable[[str], None] | None = None
 
 
 @dataclasses.dataclass(frozen=True)

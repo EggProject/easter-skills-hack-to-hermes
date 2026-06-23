@@ -65,7 +65,6 @@ _CONSULT_RULE_DEFINITION = f"\nSKILL_CREATOR_CONSULT_RULE = (\n    {_CONSULT_RUL
 # --- site ``kind`` constants (WPS226 — reused > 3 times) -------------------
 KIND_APPEND = "append"
 KIND_CAP = "cap"
-KIND_SCHEMA_APPEND = "schema_append"
 
 # Compact newline-literal aliases used by the Task E insertion strings.
 # Extracted into named constants so wemake WPS342 (implicit raw string)
@@ -102,9 +101,8 @@ class Site:
     entries (1 anchor for an append-only Task E site, 2 anchors for
     the S1.cap atomic pair).
 
-    ``kind`` is ``"cap"`` (replace pair), ``"append"`` (additive Task
-    E line, ADDITIVE-ONLY per plans/05 B1.0), or ``"schema_append"``
-    (append a line inside a multi-line string value).
+    ``kind`` is ``"cap"`` (replace pair) or ``"append"`` (additive Task
+    E line, ADDITIVE-ONLY per plans/05 B1.0).
 
     ``file`` is the path RELATIVE to the --target root.
 

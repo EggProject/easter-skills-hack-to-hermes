@@ -215,7 +215,7 @@ def _build_background_review_padded() -> str:
     lines: list[str] = []
     # AC-2.8: L1 docstring anchors E4b. Real Hermes's
     # ``background_review.py`` already has a docstring at L1 and the
-    # E4/E5 anchors at L105/L192, so the padding below preserves those
+    # E4/E5 anchors at L105/L194, so the padding below preserves those
     # line numbers (mirrors the real layout: docstring + blank +
     # padding + anchors).
     lines.append('"""Background review (test fixture stand-in for agent/background_review.py)."""\n')

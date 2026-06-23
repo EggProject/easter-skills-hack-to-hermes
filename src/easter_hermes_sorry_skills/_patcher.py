@@ -214,8 +214,8 @@ def _drive_pipeline(
     state: _PatchBodyState,
     use_fallback_cap: bool = False,
 ) -> PatcherResult:
-    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 6 Task E sites.
-    all_sites = list(sites_for_mode(task_e_redirect=True))
+    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 5 Task E sites.
+    all_sites = list(sites_for_mode())
     # AC-2.11: when the circular-import pre-flight fired, swap S1.cap
     # for S1.cap_fallback so the patch proceeds with a local
     # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant instead of importing

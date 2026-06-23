@@ -51,15 +51,11 @@ def test_build_diff_text_missing_source_file(tmp_path: Path) -> None:
 
 
 def test_force_confirm_gate_always_proceeds() -> None:
-    """Phase 7A.5: the gate is a pass-through — it always proceeds,
-    regardless of TTY state or legacy ``--yes`` flag."""
+    """Phase 7A.5: the gate is a pass-through — it always proceeds."""
     out = force_confirm_gate(
         ForceConfirmInputs(
             sites=(),
             target_path=Path("/tmp"),
-            yes=True,
-            stdin_isatty=True,
-            stdout_isatty=True,
         ),
     )
     assert out.proceed is True
@@ -74,9 +70,6 @@ def test_force_confirm_gate_always_proceeds_on_non_tty() -> None:
         ForceConfirmInputs(
             sites=(),
             target_path=Path("/tmp"),
-            yes=False,
-            stdin_isatty=False,
-            stdout_isatty=False,
         ),
     )
     assert out.proceed is True
@@ -91,9 +84,6 @@ def test_user_abort_result_from_outcome_no_refused_message() -> None:
         ForceConfirmInputs(
             sites=(),
             target_path=Path("/tmp"),
-            yes=True,
-            stdin_isatty=True,
-            stdout_isatty=True,
         ),
     )
     assert out.refused_message is None
