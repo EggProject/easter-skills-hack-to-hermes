@@ -126,9 +126,6 @@ def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
         _apply_mod._ApplyOneSiteInputs(
             site=site,
             target_path=loop.inputs.target_path,
-            force=loop.inputs.force,
-            audit_path=loop.audit_path,
-            timestamp=loop.timestamp,
             after_bytes=payload.after_bytes,
         ),
     )

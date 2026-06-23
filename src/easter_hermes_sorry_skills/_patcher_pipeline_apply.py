@@ -37,9 +37,6 @@ class _ApplyOneSiteInputs:
 
     site: Site
     target_path: Path
-    force: bool
-    audit_path: Path
-    timestamp: str
     after_bytes: bytes
 
 

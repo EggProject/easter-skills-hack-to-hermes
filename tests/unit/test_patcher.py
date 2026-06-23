@@ -1873,9 +1873,11 @@ def test_purge_skills_prompt_snapshot_removes_file(tmp_path: Path) -> None:
     purged = purge_skills_prompt_snapshot(tmp_path)
     assert purged == snapshot
     assert not snapshot.exists()
-    # Idempotent: second call returns None (file already gone)
+    # Idempotent: second call returns the path unconditionally and is a no-op
+    # (file already gone — unlink(missing_ok=True) is a no-op).
     purged2 = purge_skills_prompt_snapshot(tmp_path)
-    assert purged2 is None
+    assert purged2 == snapshot
+    assert not snapshot.exists()
 
 
 def test_apply_purges_skills_cache(

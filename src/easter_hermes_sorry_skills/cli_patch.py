@@ -1,4 +1,4 @@
-"""Script #1 click CLI: easter-hermes-sorry-skills-patch.
+"""Script #1 click CLI: easter-hermes-sorry-skills-patch-hermes.
 
 Bilingual --help (two-section EN/HU) and a small wrapper around
 :func:`easter_hermes_sorry_skills._patcher.run_patch`.
@@ -51,8 +51,8 @@ from easter_hermes_sorry_skills.cli_patch_options import _add_click_option
 
 HELP_EN = """\
 Usage (English):
-  uv run easter-hermes-sorry-skills-patch [--dry-run] [--target <dir>]
-  uv run easter-hermes-sorry-skills-patch --help
+  uv run easter-hermes-sorry-skills-patch-hermes [--dry-run] [--target <dir>]
+  uv run easter-hermes-sorry-skills-patch-hermes --help
 
 Patcher applies:
   S1.cap  replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH
@@ -77,8 +77,8 @@ Exit codes: 0 OK / 1 validation / 2 drift / 3 permission / 4 I/O /
 
 HELP_HU = """\
 Használat (magyar):
-  uv run easter-hermes-sorry-skills-patch [--dry-run] [--target <mappa>]
-  uv run easter-hermes-sorry-skills-patch --help
+  uv run easter-hermes-sorry-skills-patch-hermes [--dry-run] [--target <mappa>]
+  uv run easter-hermes-sorry-skills-patch-hermes --help
 
 A patcher a kovetkezoket vegzi:
   S1.cap  a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli
@@ -116,7 +116,7 @@ def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
 
 @dataclass(frozen=True)
 class PatchArgs:
-    """Parsed CLI args for ``easter-hermes-sorry-skills-patch``.
+    """Parsed CLI args for ``easter-hermes-sorry-skills-patch-hermes``.
 
     One field per click option. The click wrapper translates argv into
     an instance and hands it to :func:`_patch_impl`.

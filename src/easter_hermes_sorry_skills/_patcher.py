@@ -148,6 +148,10 @@ class PatchRunInputs:
     target: Path | None = None
     dry_run: bool = False
     verbose: bool = False
+    # Deprecated: no caller (CLI or tests) sets this to non-None; the
+    # ``ApplySitesInputs.audit_log_path`` field falls back to the
+    # ``audit_log_path()`` factory in ``_patcher_pipeline.apply_sites``
+    # when this is ``None``. Retained for API/back-compat.
     audit_log_path: Path | None = None
     git_head: str = ""
 
