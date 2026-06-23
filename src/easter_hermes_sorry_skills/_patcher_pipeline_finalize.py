@@ -9,7 +9,6 @@ the EXIT_OK PatcherResult.
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from easter_hermes_sorry_skills import _patcher_pipeline_apply as _apply_mod
@@ -31,8 +30,6 @@ class _FinalizeInputs:
     sites_already: list[str]
     state: dict[str, str]
     diagnostics: list[str]
-    audit_path: Path
-    timestamp: str
     site_diffs: list[_SiteDiff]
 
 

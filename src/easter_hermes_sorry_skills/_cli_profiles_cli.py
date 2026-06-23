@@ -13,6 +13,7 @@ members), the help-text constants live in ``_cli_profiles_cli_options``
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import click
@@ -34,9 +35,16 @@ def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
     from easter_hermes_sorry_skills.cli_profiles import run_audit
 
     dry_run = bool(kwargs.get("dry_run", False))
+    raw_json_path = kwargs.get("json_path")
+    json_path: Path | None
+    json_path = Path(raw_json_path) if isinstance(raw_json_path, str) else None
     run_audit(
         apply=not dry_run,
         profile=kwargs.get("profile"),
+        json_path=json_path,
+        frozen_time=kwargs.get("frozen_time"),
+        skip_install=bool(kwargs.get("skip_install", False)),
+        yes=bool(kwargs.get("yes", False)),
     )
 
 

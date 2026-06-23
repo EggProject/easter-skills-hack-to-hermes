@@ -109,16 +109,6 @@ FORCE_AUDIT_LOG = (
 )
 TEXT_DRIFT = "[en] text drift detected at site {site_id} / [hu] szöveg-eltérés a {site_id} helyen"
 MIGRATION_REGENERATED = "[en] migration note regenerated at {path} / [hu] migrációs jegyzet újragenerálva itt: {path}"
-FORCE_CONFIRM_PROMPT = (
-    "[en] --force --i-accept-line-drift: type 'yes' to apply the diff above "
-    "and exit 0, anything else to abort (exit 5). / "
-    "[hu] --force --i-accept-line-drift: írd be a 'yes'-t a fenti diff "
-    "alkalmazásához (0 kilépés), bármi más megszakít (5 kilépés)."
-)
-FORCE_CONFIRM_REFUSED = (
-    "[en] --force confirmation refused by operator (exit 5 user abort). / "
-    "[hu] --force megerősítés megtagadva a kezelő által (5 kilépés, felhasználói megszakítás)."
-)
 FORCE_CONFIRM_DIFF_HEADER = (
     "[en] --force: planned diff (unified) for {sites} / [hu] --force: tervezett diff (unified) ehhez: {sites}"
 )
@@ -195,9 +185,9 @@ EN_MESSAGES = MappingProxyType(
             "mirroring HERMES_HOME in both the override token and "
             "os.environ['HERMES_HOME']."
         ),
-        "profiles_opt_apply": ("Perform the writes (default is dry-run)."),
-        "profiles_opt_audit": ("Run audit only; do not perform any writes (alias for the default)."),
-        "profiles_opt_dry_run": ("Run audit only; do not perform any writes (default mode)."),
+        "profiles_opt_apply": ("Write the audit findings to the target (DEFAULT behavior)."),
+        "profiles_opt_audit": ("Run audit only; do not write (inverse of default)."),
+        "profiles_opt_dry_run": ("Same as --audit (do not write)."),
         "profiles_opt_profile": ("Restrict the run to a single profile (default: every profile)."),
         "profiles_opt_json": ("Write the deterministic JSON report to PATH (default: ./profile-audit.json)."),
         "profiles_opt_yes": ("Suppress the interactive TTY confirmation (CI / non-TTY runs)."),

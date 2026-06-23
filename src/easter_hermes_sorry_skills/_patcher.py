@@ -139,8 +139,8 @@ def run_patch(inputs: PatchRunInputs) -> PatcherResult:
 
     Accepts a single :class:`PatchRunInputs` struct (WPS211-bundled)
     whose fields are the operational parameters plus optional
-    side-effects (yes/verbose/audit_log_path/git_head) that carry safe
-    defaults (False/False/None/'').
+    side-effects (verbose/audit_log_path/git_head) that carry safe
+    defaults (False/None/'').
 
     Returns a :class:`PatcherResult`; the caller (CLI) is responsible
     for translating ``exit_code`` into a ``SystemExit``. This function

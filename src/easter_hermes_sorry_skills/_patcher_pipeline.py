@@ -182,8 +182,6 @@ def apply_sites(inputs: ApplySitesInputs) -> PatcherResult:
             sites_already=inputs.sites_already,
             state=loop.state,
             diagnostics=loop.diagnostics,
-            audit_path=loop.audit_path,
-            timestamp=loop.timestamp,
             site_diffs=loop.site_diffs,
         ),
     )

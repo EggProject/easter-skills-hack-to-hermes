@@ -1,10 +1,17 @@
 """--force TTY confirmation gate (AC-2.5.1 + AC-2.10).
 
-Phase 7A.5: ``--force`` / ``--yes`` have been removed. The gate
-is now a pass-through that always proceeds (no interactive prompt,
-no auto-confirm). It is retained as a function and a
-``ForceConfirmInputs`` bundle for call-site stability and
-backwards-compatible unit-test surface.
+.. deprecated::
+    DEPRECATED for production use. The ``--force`` / ``--yes`` CLI
+    flags have been removed (Phase 7 refactor). This module is
+    retained ONLY for the backwards-compatible unit-test surface:
+    no production code path imports or invokes
+    :func:`force_confirm_gate` anymore (the canonical
+    :func:`easter_hermes_sorry_skills._patcher._drive_pipeline`
+    no longer calls it). The gate is now an unconditional
+    pass-through that always proceeds (no interactive prompt,
+    no auto-confirm). Do not add new callers; if you need a
+    pre-apply confirmation in production, build it at the call
+    site, not by reviving this module.
 """
 
 from __future__ import annotations
@@ -54,10 +61,17 @@ class ForceConfirmOutcome:
 def force_confirm_gate(inputs: ForceConfirmInputs) -> ForceConfirmOutcome:
     """Run the --force TTY confirmation gate.
 
-    Phase 7A.5: ``--force`` / ``--yes`` have been removed; there is
-    no auto-confirm path and no interactive prompt. The gate is a
-    pass-through that always proceeds. Retained as a function for
-    call-site stability and test compatibility.
+    .. deprecated::
+        DEPRECATED for production use. The ``--force`` / ``--yes``
+        CLI flags have been removed (Phase 7 refactor); there is no
+        auto-confirm path and no interactive prompt. The function is
+        a pass-through that always proceeds and is invoked ONLY by
+        the backwards-compatible unit-test surface
+        (``tests/unit/test_patcher_force_confirm.py``). The canonical
+        production pipeline
+        (:func:`easter_hermes_sorry_skills._patcher._drive_pipeline`)
+        no longer imports or calls this function. Do not introduce
+        new production callers.
     """
     diff_text = build_diff_text(inputs.sites, inputs.target_path)
     return ForceConfirmOutcome(

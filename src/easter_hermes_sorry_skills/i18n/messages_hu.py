@@ -110,16 +110,6 @@ FORCE_AUDIT_LOG = (
 )
 TEXT_DRIFT = "[hu] szöveg-eltérés a {site_id} helyen / [en] text drift detected at site {site_id}"
 MIGRATION_REGENERATED = "[hu] migrációs jegyzet újragenerálva itt: {path} / [en] migration note regenerated at {path}"
-FORCE_CONFIRM_PROMPT = (
-    "[hu] --force --i-accept-line-drift: írd be a 'yes'-t a fenti diff "
-    "alkalmazásához (0 kilépés), bármi más megszakít (5 kilépés). / "
-    "[en] --force --i-accept-line-drift: type 'yes' to apply the diff above "
-    "and exit 0, anything else to abort (exit 5)."
-)
-FORCE_CONFIRM_REFUSED = (
-    "[hu] --force megerősítés megtagadva a kezelő által (5 kilépés, felhasználói megszakítás). / "
-    "[en] --force confirmation refused by operator (exit 5 user abort)."
-)
 FORCE_CONFIRM_DIFF_HEADER = (
     "[hu] --force: tervezett diff (unified) ehhez: {sites} / [en] --force: planned diff (unified) for {sites}"
 )
@@ -197,9 +187,9 @@ HU_MESSAGES = MappingProxyType(
             "HERMES_HOME-ot mind az override tokenben, mind az "
             "os.environ['HERMES_HOME']-ban."
         ),
-        "profiles_opt_apply": ("Végrehajtja az írásokat (alap: száraz futás)."),
-        "profiles_opt_audit": ("Csak audit; nem hajt végre írást (alias az alap módhoz)."),
-        "profiles_opt_dry_run": ("Csak audit; nem hajt végre írást (alap mód)."),
+        "profiles_opt_apply": ("Alapértelmezetten ír (WRITE)."),
+        "profiles_opt_audit": ("Csak audit; NEM ír (a default ellentéte)."),
+        "profiles_opt_dry_run": ("Ugyanaz mint --audit (NEM ír)."),
         "profiles_opt_profile": ("A futást egyetlen profilra korlátozza (alap: minden profil)."),
         "profiles_opt_json": ("A determinisztikus JSON jelentést a PATH helyre írja (alap: ./profile-audit.json)."),
         "profiles_opt_yes": ("Elnyomja az interaktív TTY megerősítést (CI / nem-TTY futás)."),
