@@ -7,7 +7,7 @@
 - [`02-architecture.md`](02-architecture.md) — 02 — Architecture, Component Diagram, Data Flow
 - [`03-plugin-spec.md`](03-plugin-spec.md) — 03 — Hermes Plugin Spec (§5.1, 60→1024 Cap Raise)
 - [`04-script-1-patch.md`](04-script-1-patch.md) — 04 — Script #1 (cap-raise patch; --target REQUIRED)
-- _(`05-script-1-task-e-toggle.md` deleted 2026-06-23 — Task E feature removed entirely.)_
+- _(`05-script-1-task-e-toggle.md` deleted 2026-06-23 — Task E feature removed entirely; restored 2026-06-23 from `cc06903`.)_
 - [`06-script-2-profiles.md`](06-script-2-profiles.md) — 06 — Script #2 (per-profile audit/flip; hermes_home_scope)
 - [`07-skill-creator-migration.md`](07-skill-creator-migration.md) — 07 — Migrated skill (T3 18 rows; tool-name mapping; HERMES_SESSION+CLAUDECODE strip)
 - [`08-migration-note-format.md`](08-migration-note-format.md) — 08 — MIGRATION (3-file split)
@@ -36,7 +36,7 @@ All 14 plan files (00–13) are emitted. Every file is under 500 lines; see `00-
 
 ## Audit trail
 
-- **2026-06-23 (Task E removed)** — The entire Task E feature has been removed. `_CONSULT_RULE_TEXT`, `_CONSULT_RULE_DEFINITION`, the 7 remaining Task E sites (E0, E1, E2, E4b, E4, E5, E6, E7), and all `--task-e-redirect` / `--no-schema-redirect` / `--emit-migration-note` CLI flags are gone. The patcher is now cap-only: S1.cap (the `60 → MAX_DESCRIPTION_LENGTH` cap-raise in `agent/skill_utils.py`). The `_patcher_migration*.py` modules are deleted (along with `tools/_migration_paths.py` and `tools/check_migration_note.py`). `docs/plans/05-script-1-task-e-toggle.md` is deleted. All other plan docs are preserved as historical record.
+- **2026-06-23 (Task E restored)** — The Task E feature was over-removed in commit `9cd3b90`; restored in this refactor from `cc06903` (commit `cc06903`'s simplified Task E with the new `Közepes` rule text: 'When creating or editing a skill — use skill-creator. Persist with skill_manage. Small targeted fixes stay patch-first.'). 7 Task E sites restored: E0 (constant definition in prompt_builder.py), E1 (MEMORY_GUIDANCE concat), E2 (SKILLS_GUIDANCE concat), E4b (import in background_review.py), E4 + E5 (background review prompt concat), E6 (skill_manager_tool.py description), E7 (skills.md blockquote). NO flags (Task E always runs). Migration note generation code stays deleted (MIGRATION.hermes-patch.md no longer generated).
 - **2026-06-23** — Refactor (commit on branch `refactor/rename-and-easter`):
   - Renamed package `hermes_skill_creator_plugin` → `easter_hermes_sorry_skills`
   - Simplified `_CONSULT_RULE_TEXT` (removed `skill-creator` install-detection conditional)

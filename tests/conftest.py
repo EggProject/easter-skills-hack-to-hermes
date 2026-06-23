@@ -2,7 +2,8 @@
 
 Merged conftest (Phase 7 / PR #5): combines:
   - main's hermes_home / hermes_checkout / skill_creator_home / real_hermes_agent_sentinel
-  - branch's SKILL_UTILS_PATCHED / SKILL_UTILS_BODY /
+  - branch's SKILL_UTILS_PATCHED / SKILL_UTILS_BODY / PROMPT_BUILDER_PATCHED /
+    BACKGROUND_REVIEW_PATCHED / SKILL_MANAGER_TOOL_PATCHED / SKILLS_DOC_BODY /
     worktree / frozen_time / assert_hermes_agent_untouched (function)
   - hermes_checkout is overridden to lay down the padded branch content
     inside main's hermes_home so both main-tests AND branch-tests pass.
@@ -164,6 +165,135 @@ def _build_skill_utils_padded() -> str:
 SKILL_UTILS_PATCHED = _build_skill_utils_padded()
 
 
+PROMPT_BUILDER_BODY = '''\
+"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""
+
+# --- MEMORY_GUIDANCE (E2 anchor is L158) ---
+MEMORY_GUIDANCE = (
+    "If you've discovered a new way to do something, "
+    "solved a problem that could be "
+    "necessary later, save it as a skill with the skill tool.\\n"
+    ")  # end MEMORY_GUIDANCE
+'''
+
+
+def _build_prompt_builder_padded() -> str:
+    lines: list[str] = []
+    # AC-2.8: L1 docstring anchors E0 (which inserts the
+    # ``SKILL_CREATOR_CONSULT_RULE`` definition immediately after).
+    # Real Hermes's ``prompt_builder.py`` already has a docstring at L1
+    # and the E1/E2 anchors at L179/L158 (E3 was removed 2026-06-23), so the padding
+    # below preserves those line numbers (the fixture mirrors the
+    # real layout: docstring + blank + padding + anchors).
+    lines.append('"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""\n')
+    lines.append("\n")
+    for i in range(1, 156):
+        lines.append(f"# padding {i}\n")
+    lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
+    for i in range(159, 179):
+        lines.append(f"# padding {i}\n")
+    lines.append('    "Skills that aren\'t maintained become liabilities."\n')
+    for i in range(180, 1421):
+        lines.append(f"# padding {i}\n")
+    # E3 anchor (L1421) was removed 2026-06-23 — the loop below still
+    # pads every line individually to preserve the fixture's total
+    # line count.
+    for i in range(1422, 1440):
+        lines.append(f"# padding {i}\n")
+    return "".join(lines)
+
+
+PROMPT_BUILDER_PATCHED = _build_prompt_builder_padded()
+
+
+BACKGROUND_REVIEW_BODY = '''\
+"""Background review (test fixture stand-in for agent/background_review.py)."""
+'''
+
+
+def _build_background_review_padded() -> str:
+    lines: list[str] = []
+    # AC-2.8: L1 docstring anchors E4b. Real Hermes's
+    # ``background_review.py`` already has a docstring at L1 and the
+    # E4/E5 anchors at L105/L192, so the padding below preserves those
+    # line numbers (mirrors the real layout: docstring + blank +
+    # padding + anchors).
+    lines.append('"""Background review (test fixture stand-in for agent/background_review.py)."""\n')
+    lines.append("\n")
+    for i in range(1, 103):
+        lines.append(f"# padding {i}\n")
+    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n")
+    lines.append("\n")
+    lines.append('"\n')
+    for i in range(106, 192):
+        lines.append(f"# padding {i}\n")
+    lines.append('    "(2), or (3).\n')
+    lines.append("\n")
+    lines.append('"\n')
+    for i in range(193, 220):
+        lines.append(f"# padding {i}\n")
+    return "".join(lines)
+
+
+BACKGROUND_REVIEW_PATCHED = _build_background_review_padded()
+
+
+SKILL_MANAGER_TOOL_BODY = '''\
+"""Skill manager (test fixture stand-in for tools/skill_manager_tool.py)."""
+'''
+
+
+def _build_skill_manager_tool_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 1099):
+        lines.append(f"# padding {i}\n")
+    lines.append("SKILL_MANAGE_SCHEMA = {\n")
+    lines.append('    "name": "skill_manage",\n')
+    lines.append('    "description": (\n')
+    for i in range(1102, 1129):
+        lines.append(f'        "padding line {i} of description. "\n')
+    lines.append('        "pitfalls come up; pin only guards against irrecoverable loss."\n')
+    lines.append("    ),\n")
+    for i in range(1131, 1150):
+        lines.append(f"# padding {i}\n")
+    return "".join(lines)
+
+
+SKILL_MANAGER_TOOL_PATCHED = _build_skill_manager_tool_padded()
+
+
+SKILLS_DOC_BODY = """\
+# Skills
+
+## Agent-Managed Skills (skill_manage tool)
+
+The agent can create, update, and delete its own skills via the
+`skill_manage` tool. This is the agent's **procedural memory** — when it
+figures out a non-trivial workflow, it saves the approach as a skill for
+future reuse.
+
+### When the Agent Creates Skills
+"""
+
+
+def _build_skills_doc_padded() -> str:
+    lines: list[str] = []
+    for i in range(1, 378):
+        lines.append(f"<!-- padding {i} -->\n")
+    lines.append("## Agent-Managed Skills (skill_manage tool)\n")
+    lines.append("\n")
+    lines.append(
+        "The agent can create, update, and delete its own skills via the "
+        "`skill_manage` tool. This is the agent's **procedural memory** — "
+        "when it figures out a non-trivial workflow, it saves the approach "
+        "as a skill for future reuse.\n"
+    )
+    return "".join(lines)
+
+
+SKILLS_DOC_PATCHED = _build_skills_doc_padded()
+
+
 # --- main (B-plugin) fixtures ---------------------------------------------
 
 # Default sentinel path: the operator's live Hermes install. Tests must NEVER
@@ -260,8 +390,9 @@ def hermes_checkout(hermes_home: Path) -> Generator[Path]:
     """Synthetic Hermes checkout for tests.
 
     Returns `hermes_home` itself (per F-meta design: hermes_checkout == hermes_home)
-    after laying down the padded SKILL_UTILS_PATCHED file AND the 6-file
-    MINIMAL_HERMES_FILES layout. Both main-tests AND branch-tests can use it.
+    after laying down the padded branch anchor files
+    (SKILL_UTILS_PATCHED, etc.) AND the 6-file MINIMAL_HERMES_FILES layout.
+    Both main-tests AND branch-tests can use it.
     """
     checkout = hermes_home
     (checkout / "agent").mkdir(parents=True, exist_ok=True)
@@ -269,6 +400,12 @@ def hermes_checkout(hermes_home: Path) -> Generator[Path]:
     (checkout / "hermes_cli").mkdir(parents=True, exist_ok=True)
     (checkout / "website" / "docs" / "user-guide" / "features").mkdir(parents=True, exist_ok=True)
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
+    (checkout / "agent" / "prompt_builder.py").write_text(PROMPT_BUILDER_PATCHED, encoding="utf-8")
+    (checkout / "agent" / "background_review.py").write_text(BACKGROUND_REVIEW_PATCHED, encoding="utf-8")
+    (checkout / "tools" / "skill_manager_tool.py").write_text(SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8")
+    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
+        SKILLS_DOC_PATCHED, encoding="utf-8"
+    )
     # Lay down the 6-file MINIMAL_HERMES_FILES layout (idempotent — seed_minimal
     # overwrites existing files).
     seed_minimal(checkout)
@@ -314,6 +451,11 @@ __all__ = [
     "HERMES_HOME",
     "SKILL_UTILS_PATCHED",
     "SKILL_UTILS_BODY",
+    "PROMPT_BUILDER_PATCHED",
+    "BACKGROUND_REVIEW_PATCHED",
+    "SKILL_MANAGER_TOOL_PATCHED",
+    "SKILLS_DOC_BODY",
+    "SKILLS_DOC_PATCHED",
     "assert_hermes_agent_untouched",
     "assert_hermes_agent_untouched_sentinel",
     "hermes_home",

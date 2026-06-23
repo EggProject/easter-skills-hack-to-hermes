@@ -6,8 +6,9 @@ primitives, the migration note renderer, and the pure-function
 helpers live in sibling modules to keep each file under the 500-line
 hard cap (plans/10 D1):
 
-- :mod:`._patcher_sites` — Site dataclass and the S1.cap two-anchor
-  atomic pair.
+- :mod:`._patcher_sites` — Site dataclass, the S1.cap two-anchor
+  atomic pair, the 7 Task E sites, and the shared
+  ``SKILL_CREATOR_CONSULT_RULE`` constant.
 - :mod:`._patcher_apply` — atomic write (``<file>.patch.tmp`` +
   ``os.replace``), the state / rejected / audit sidecars.
 - :mod:`._patcher_helpers` — pure-function helpers (anchor locator,
@@ -18,9 +19,9 @@ hard cap (plans/10 D1):
 
 The orchestrator's public API (``run_patch``, ``PatcherResult``, the
 ``Anchor`` / ``Site`` dataclasses, the site constants, exit codes,
-``_atomic_write_bytes`` for tests) is
-re-exported from this module so existing imports
-(``from easter_hermes_sorry_skills._patcher import ...``) keep working.
+``_atomic_write_bytes`` for tests) is re-exported from this module so
+existing imports (``from easter_hermes_sorry_skills._patcher import
+...``) keep working.
 
 The patcher:
 
@@ -93,9 +94,19 @@ is_hermes_agent = _imps.is_hermes_agent
 locate_anchor = _imps.locate_anchor
 site_already_patched = _imps.site_already_patched
 site_in_state = _imps.site_in_state
+ALL_TASK_E_SITES = _imps.ALL_TASK_E_SITES
+E0_CONSULT_RULE_DEF = _imps.E0_CONSULT_RULE_DEF
+E1_SKILLS_GUIDANCE = _imps.E1_SKILLS_GUIDANCE
+E2_MEMORY_GUIDANCE = _imps.E2_MEMORY_GUIDANCE
+E4B_CONSULT_RULE_IMPORT = _imps.E4B_CONSULT_RULE_IMPORT
+E4_SKILL_REVIEW_PROMPT = _imps.E4_SKILL_REVIEW_PROMPT
+E5_COMBINED_REVIEW_PROMPT = _imps.E5_COMBINED_REVIEW_PROMPT
+E6_SKILL_MANAGE_SCHEMA_DESC = _imps.E6_SKILL_MANAGE_SCHEMA_DESC
+E7_SKILLS_DOC_SECTION = _imps.E7_SKILLS_DOC_SECTION
 S1_CAP_SITE = _imps.S1_CAP_SITE
 S1_CAP_SITE_FALLBACK = _imps.S1_CAP_SITE_FALLBACK
 TOOLS_SKILL_UTILS_REL = _imps.TOOLS_SKILL_UTILS_REL
+sites_for_mode = _imps.sites_for_mode
 Anchor = _sites.Anchor
 Site = _sites.Site
 
@@ -216,7 +227,8 @@ def _drive_pipeline(
     state: _PatchBodyState,
     use_fallback_cap: bool = False,
 ) -> PatcherResult:
-    all_sites = [S1_CAP_SITE]
+    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 7 Task E sites.
+    all_sites = list(sites_for_mode(task_e_redirect=True, no_schema_redirect=False))
     # AC-2.11: when the circular-import pre-flight fired, swap S1.cap
     # for S1.cap_fallback so the patch proceeds with a local
     # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant instead of importing

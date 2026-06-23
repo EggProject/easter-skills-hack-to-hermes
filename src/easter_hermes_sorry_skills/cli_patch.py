@@ -3,6 +3,17 @@
 Bilingual --help (two-section EN/HU) and a small wrapper around
 :func:`easter_hermes_sorry_skills._patcher.run_patch`.
 
+The patcher applies two classes of changes to a Hermes checkout:
+- S1.cap (PRIMARY): replaces the hard-coded ``60`` cap in
+  ``agent/skill_utils.py``'s ``extract_skill_description`` with
+  ``MAX_DESCRIPTION_LENGTH``.
+- 7 Task E sites (ALWAYS-ON, no flag): injects the consult rule
+  (``SKILL_CREATOR_CONSULT_RULE``) into the Hermes prompt surfaces
+  flagged by Task E.
+
+There are no opt-out flags. Task E runs by default. Use ``--check``
+to audit without writing.
+
 The CLI is intentionally thin: every flag flows through to
 ``run_patch`` which returns a ``PatcherResult``. We then translate the
 ``exit_code`` into a ``SystemExit`` and emit any bilingual diagnostics
@@ -47,6 +58,11 @@ Usage (English):
       [--i-accept-line-drift]
   uv run easter-hermes-sorry-skills-patch --help
 
+Patcher applies:
+  S1.cap  replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH
+  Task E  7 prompt-injection sites (consult rule for skill-creator)
+          applied by default, no flag
+
 Options:
   --target DIR                 REQUIRED. User-owned Hermes checkout.
                                Refuses ~/.hermes/hermes-agent (resolve()).
@@ -74,6 +90,11 @@ Használat (magyar):
   uv run easter-hermes-sorry-skills-patch --apply      --target <mappa> \\
       [--i-accept-line-drift]
   uv run easter-hermes-sorry-skills-patch --help
+
+A patcher a kovetkezoket vegzi:
+  S1.cap  a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli
+  Task E  7 prompt-injection hely (skill-creator tanacsado szabaly)
+          alapertelmezetten fut, nincs flag
 
 Opciok:
   --target DIR                 KOTELEZO. Felhasznai tulajdonu Hermes

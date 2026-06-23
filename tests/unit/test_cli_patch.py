@@ -6,6 +6,7 @@ Exercises the full flag matrix and the bilingual help output.
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -112,6 +113,58 @@ def test_cli_force_with_i_accept_succeeds(hermes_checkout: Path, real_hermes_age
         ],
     )
     assert r.exit_code == EXIT_OK
+
+
+def test_cli_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """Task E always runs by default; no opt-out flag exists.
+
+    With only --apply + --target, both S1.cap and all 7 Task E sites
+    are written into the state sidecar (E0/E1/E2/E4/E5/E6/E7).
+    """
+    runner = CliRunner()
+    r = runner.invoke(
+        main,
+        ["--apply", "--target", str(hermes_checkout)],
+    )
+    assert r.exit_code == EXIT_OK
+    state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
+    # All 7 Task E sites must be in the state sidecar — Task E ran by default.
+    assert "E0.consult_rule_def" in state
+    assert "E1.skills_guidance" in state
+    assert "E2.memory_guidance" in state
+    assert "E4.skill_review_prompt_opt4" in state
+    assert "E5.combined_review_prompt_opt4" in state
+    assert "E6.skill_manage_schema_desc" in state
+    assert "E7.skills_doc_section" in state
+    # S1.cap also runs by default (always-on, not opt-out).
+    assert "S1.cap" in state
+
+
+def test_cli_task_e_check_mode_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """Task E is checked (not just applied) by default — no opt-out flag.
+
+    --check with --target (no Task E flag) must audit Task E sites too,
+    producing exit 0 and surfacing every Task E site in the OK diagnostics.
+    """
+    runner = CliRunner()
+    r = runner.invoke(
+        main,
+        ["--check", "--verbose", "--target", str(hermes_checkout)],
+    )
+    assert r.exit_code == EXIT_OK
+    combined = r.output + (r.stderr or "")
+    # Every Task E site must appear in the verbose OK diagnostics,
+    # proving Task E was validated by default with no flag.
+    for site_id in (
+        "E0.consult_rule_def",
+        "E1.skills_guidance",
+        "E2.memory_guidance",
+        "E4.skill_review_prompt_opt4",
+        "E5.combined_review_prompt_opt4",
+        "E6.skill_manage_schema_desc",
+        "E7.skills_doc_section",
+    ):
+        assert site_id in combined, f"Task E site {site_id} not checked by default"
 
 
 def test_cli_verbose_emits_diagnostics(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:

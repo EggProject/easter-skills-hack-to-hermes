@@ -27,6 +27,8 @@ from pathlib import Path
 import pytest
 
 from easter_hermes_sorry_skills._patcher import (
+    ALL_TASK_E_SITES,
+    E0_CONSULT_RULE_DEF,
     EXIT_DRIFT,
     EXIT_IO,
     EXIT_OK,
@@ -50,7 +52,35 @@ from easter_hermes_sorry_skills._patcher import (
     write_rejected,
     write_state,
 )
-from tests.conftest import SKILL_UTILS_PATCHED, assert_hermes_agent_untouched
+from easter_hermes_sorry_skills._patcher_sites_table import _CONSULT_RULE_TEXT
+from tests.conftest import (
+    BACKGROUND_REVIEW_PATCHED,
+    PROMPT_BUILDER_PATCHED,
+    SKILL_MANAGER_TOOL_PATCHED,
+    SKILL_UTILS_PATCHED,
+    SKILLS_DOC_PATCHED,
+    assert_hermes_agent_untouched,
+)
+
+
+def _write_task_e_files(checkout: Path) -> None:
+    """Write the 4 Task E target files (plus a tools/ dir) into ``checkout``.
+
+    Phase C2 dropped both ``--task-e-redirect`` and ``--no-schema-redirect``
+    flags; Task E always runs now. Tests that build a checkout under
+    ``tmp_path`` must lay down these 4 files (using the conftest padded
+    fixtures) or the patcher fails its pre-validation with drift on the
+    missing target files.
+    """
+    (checkout / "agent").mkdir(parents=True, exist_ok=True)
+    (checkout / "tools").mkdir(parents=True, exist_ok=True)
+    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(parents=True, exist_ok=True)
+    (checkout / "agent" / "prompt_builder.py").write_text(PROMPT_BUILDER_PATCHED, encoding="utf-8")
+    (checkout / "agent" / "background_review.py").write_text(BACKGROUND_REVIEW_PATCHED, encoding="utf-8")
+    (checkout / "tools" / "skill_manager_tool.py").write_text(SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8")
+    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
+        SKILLS_DOC_PATCHED, encoding="utf-8"
+    )
 
 
 def _split_markdown_row(row: str) -> list[str]:
@@ -275,6 +305,56 @@ def test_apply_cap_raise_max_description_length_defined(
     assert "MAX_DESCRIPTION_LENGTH - 3" in "\n".join(lines[687:691])
 
 
+def test_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """Default --apply patches all 7 Task E sites + S1.cap (8 sites).
+
+    Phase C2 dropped both ``--task-e-redirect`` and ``--no-schema-redirect``
+    flags; Task E always runs now (the cap site is patched in the same
+    pass).
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    expected = {"S1.cap"} | {s.site_id for s in ALL_TASK_E_SITES}
+    assert expected.issubset(set(r.state.keys()))
+
+
+def test_task_e_always_touches_target_files(hermes_checkout: Path) -> None:
+    """Phase C2: Task E is no longer opt-in. Every default --apply
+    touches the 4 Task E files (prompt_builder, background_review,
+    skill_manager_tool, skills.md). After a default apply the consult
+    rule (literal ``SKILL_CREATOR_CONSULT_RULE`` for E0/E1/E2/E4b/E4/E5
+    and the descriptive ``skill-creator`` form for E6/E7) is reachable
+    in each file's patched content.
+    """
+    targets = [
+        (hermes_checkout / "agent" / "prompt_builder.py", "SKILL_CREATOR_CONSULT_RULE"),
+        (hermes_checkout / "agent" / "background_review.py", "SKILL_CREATOR_CONSULT_RULE"),
+        (hermes_checkout / "tools" / "skill_manager_tool.py", "skill-creator"),
+        (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md", "skill-creator"),
+    ]
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    for p, needle in targets:
+        text = p.read_text(encoding="utf-8")
+        assert needle in text, f"{p} missing {needle!r}"
+
+
 # --- Task E composition --------------------------------------------------
 
 
@@ -334,7 +414,7 @@ def test_circular_import_preflight_emits_diagnostic(tmp_path: Path, real_hermes_
     exits 0 on --check (the cycle is no longer fatal).
     """
     checkout = tmp_path / "cycle"
-    (checkout / "agent").mkdir(parents=True)
+    _write_task_e_files(checkout)
     # Layout mirrors the real Hermes checkout: skill_utils.py has the
     # cap-raise pair at L688/L689 so the S1.cap_fallback site anchors
     # match. The cycle marker is on L1 so the preflight fires.
@@ -415,6 +495,322 @@ def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
     assert r.rejected_path is not None
     rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
     assert any(f["site_id"] == "S1.cap" for f in rejected["failures"])
+
+
+def test_e1_skills_guidance_appends_only(hermes_checkout: Path) -> None:
+    """05 §Per-site additive-only — E1 anchor is preserved verbatim
+    and the consult-rule line sits immediately after it (NOT split).
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    # Find the E1 anchor in the post-patch file.
+    anchor_idx = next(i for i, ln in enumerate(lines) if "aren't maintained become liabilities" in ln)
+    assert lines[anchor_idx] == '    "Skills that aren\'t maintained become liabilities."'
+    # The next line is the appended consult-rule line (constant name).
+    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
+    # The SKILL_CREATOR_CONSULT_RULE constant is reachable in the module.
+    assert "SKILL_CREATOR_CONSULT_RULE" in text
+
+
+def test_e2_memory_guidance_appends_only(hermes_checkout: Path) -> None:
+    """05 §Per-site additive-only — E2 anchor preserved verbatim and
+    the consult-rule line follows it.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    anchor_idx = next(i for i, ln in enumerate(lines) if "necessary later, save it as a skill" in ln)
+    assert lines[anchor_idx] == '    "necessary later, save it as a skill with the skill tool.\\n"'
+    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
+
+
+def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
+    """05 §Per-site additive-only — E4 anchor preserved verbatim and
+    the consult-rule line follows it.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
+    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3)."
+    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
+    assert lines[anchor_idx + 2] == ""
+    assert lines[anchor_idx + 3] == '"'
+
+
+def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
+    """05 §Per-site additive-only — E5 anchor preserved verbatim and
+    the consult-rule line follows it.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    # E5's anchor `(2), or (3).` is a substring of E4's anchor; find
+    # the EXACT line (E5's anchor text).
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).')
+    assert lines[anchor_idx] == '    "(2), or (3).'
+    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
+    assert lines[anchor_idx + 2] == ""
+    assert lines[anchor_idx + 3] == '"'
+
+
+def test_e6_skill_manage_schema_desc_appends(hermes_checkout: Path) -> None:
+    """05 §Per-site additive-only — E6 anchor preserved verbatim;
+    the appended sentence sits between the anchor and the closing ),.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "tools" / "skill_manager_tool.py").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    anchor_idx = next(i for i, ln in enumerate(lines) if "pitfalls come up; pin only guards" in ln)
+    assert lines[anchor_idx] == '        "pitfalls come up; pin only guards against irrecoverable loss."'
+    # The appended line follows.
+    appended = lines[anchor_idx + 1]
+    assert "skill-creator" in appended
+    assert "skill_manage" in appended
+    # The closing ")," still follows.
+    assert lines[anchor_idx + 2] == "    ),"
+
+
+def test_e7_skills_doc_section_appends(hermes_checkout: Path) -> None:
+    """05 §Per-site additive-only — E7 anchor preserved verbatim;
+    the clarifier blockquote follows it.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln.startswith("The agent can create, update"))
+    # The clarifier blockquote sits on the next non-blank line.
+    clarifier_idx = next(i for i in range(anchor_idx + 1, len(lines)) if lines[i].startswith("> Note:"))
+    assert "skill-creator" in lines[clarifier_idx]
+    assert "skill_manage" in lines[clarifier_idx]
+
+
+def test_task_e_current_text_is_unique_in_source() -> None:
+    """05 §Anchor-hygiene — each Task E primary anchor is one or more
+    physical lines and yields exactly 1 hit in its site table.
+    """
+    for site in ALL_TASK_E_SITES:
+        # The primary anchor is exactly the bytes of one or more
+        # consecutive physical lines — no implicit-concat joining,
+        # no whitespace normalization. Multi-line anchors (carrying
+        # real newline characters) are matched against consecutive
+        # file lines by ``locate_anchor``.
+        anchor = site.primary_anchor()
+        # fmt: off
+        assert (
+            len(anchor.text) >= 8
+        ), f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
+        # fmt: on
+        # The insertion is a single NEW line (additive-only).
+        assert site.insertion.endswith("\n")
+
+
+def test_e4b_consult_rule_import_writes_import_into_background_review(
+    hermes_checkout: Path,
+) -> None:
+    """AC-2.8: Task E writes the
+    ``from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE``
+    import at the top of ``agent/background_review.py`` via the E4b
+    site. Without it, E4 and E5 would fail to resolve the constant.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
+    assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in text
+
+
+def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
+    hermes_checkout: Path,
+) -> None:
+    """AC-2.8: Task E writes the ``SKILL_CREATOR_CONSULT_RULE``
+    constant definition at the top of ``agent/prompt_builder.py`` via
+    the E0 site. The patch proceeds to the other Task E sites.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
+    # The constant definition is present (assigned to the canonical name).
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in text
+    # And the canonical wording appears verbatim in the file.
+    assert "use skill-creator" in text
+    assert "Persist with skill_manage" in text
+    assert "Small targeted fixes stay patch-first." in text
+
+
+def test_e4_e5_share_constant_after_patch(hermes_checkout: Path) -> None:
+    """AC-2.8 / plans/05 §B1.2: E4 and E5 reference the literal
+    ``SKILL_CREATOR_CONSULT_RULE`` name and rely on the E4b import to
+    resolve it. After Task E runs, the constant value appears
+    verbatim in BOTH the ``_SKILL_REVIEW_PROMPT`` and
+    ``_COMBINED_REVIEW_PROMPT`` backgrounds.
+    """
+    r = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_OK
+    text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
+    assert text.count("SKILL_CREATOR_CONSULT_RULE") >= 3  # import + E4 + E5
+
+
+def test_skill_creator_consult_rule_constant() -> None:
+    """AC-2.8: the shared constant lives in ``agent/prompt_builder.py``
+    (the target) and is written there by the E0 patch site. The plugin
+    no longer exports ``SKILL_CREATOR_CONSULT_RULE``; tests assert the
+    canonical "Közepes" wording via ``_CONSULT_RULE_TEXT``.
+    """
+    # Phase C2 canonical wording ("Közepes" tier): short rule that
+    # names ``skill-creator`` and ``skill_manage`` and reinforces the
+    # patch-first preference for small fixes.
+    assert "use skill-creator" in _CONSULT_RULE_TEXT
+    assert "Persist with skill_manage" in _CONSULT_RULE_TEXT
+    assert "Small targeted fixes stay patch-first." in _CONSULT_RULE_TEXT
+    assert "skill-creator" in _CONSULT_RULE_TEXT  # ensure skill-creator mentioned
+    # E0 is a top-of-file patch site anchored on the L1 docstring of
+    # ``agent/prompt_builder.py``; its insertion payload contains the
+    # canonical constant text.
+    assert _CONSULT_RULE_TEXT in E0_CONSULT_RULE_DEF.insertion
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in E0_CONSULT_RULE_DEF.insertion
+
+
+def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
+    """05 §Idempotency / drift — second --apply exits 0 with all 8 sites
+    (E6 was removed 2026-06-23) reporting 'already patched' /
+    'már javítva'.
+    """
+    r1 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r1.exit_code == EXIT_OK
+    r2 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r2.exit_code == EXIT_OK
+    assert set(r2.sites_already) == {"S1.cap"} | {s.site_id for s in ALL_TASK_E_SITES}
+    already_msgs = [d for d in r2.diagnostics if "már javítva" in d or "already patched" in d]
+    # AC-2.8: 9 sites total now (S1.cap + 8 Task E sites including
+    # E0 and E4b; E6 was removed 2026-06-23).
+    assert len(already_msgs) == 9
+
+
+def test_task_e_drift_exits_2(
+    tmp_path: Path,
+) -> None:
+    """05 §Idempotency / drift — corrupt the E4 L105 anchor; run
+    --apply; exit 2 with TEXT_DRIFT naming E2 (the first site that
+    depends on the prompt_builder file state).
+    """
+    checkout = tmp_path / "e4-drift"
+    _write_task_e_files(checkout)
+    # skill_utils.py is required for S1.cap (the run aborts with exit 4
+    # if it's missing); the patcher validates ALL sites up-front.
+    (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
+    # Overwrite the prompt_builder.py anchor with a corrupted line; the
+    # Task E pre-validation should catch the TEXT_DRIFT on the first
+    # site that depends on this file (E2.memory_guidance).
+    pad = "\n".join(["# pad"] * 105) + "\n    CORRUPTED-ANCHOR\n"
+    (checkout / "agent" / "prompt_builder.py").write_text(pad, encoding="utf-8")
+    r = run_patch(
+        PatchRunInputs(
+            target=checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r.exit_code == EXIT_DRIFT
+    assert r.rejected_path is not None
+    rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
+    assert any(f["site_id"] == "E2.memory_guidance" for f in rejected["failures"])
 
 
 # --- edge cases ----------------------------------------------------------
@@ -1201,7 +1597,7 @@ def test_apply_cap_raise_with_long_description(
     called with a >1024 char description, the patched function
     returns ~MAX_DESCRIPTION_LENGTH-3 chars (NOT 60 chars)."""
     checkout = tmp_path / "long-desc"
-    (checkout / "agent").mkdir(parents=True)
+    _write_task_e_files(checkout)
     # Use the standard fixture: the cap-raise site is at L688/L689.
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
     r = run_patch(
@@ -1227,7 +1623,7 @@ def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     from easter_hermes_sorry_skills import _patcher
 
     checkout = tmp_path / "unwritable"
-    (checkout / "agent").mkdir(parents=True)
+    _write_task_e_files(checkout)
     target = checkout / "agent" / "skill_utils.py"
     target.write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
     target_path_resolved = target.resolve()
@@ -1554,8 +1950,7 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
     """Fix #5 (AC-2.11): the pre-flight uses ``subprocess.run`` to
     actually exercise ``import tools.skills_tool`` (not a string grep)."""
     checkout = tmp_path / "subprocess-cycle"
-    (checkout / "agent").mkdir(parents=True)
-    (checkout / "tools").mkdir(parents=True)
+    _write_task_e_files(checkout)
     # The file does NOT contain the import marker; the subprocess
     # check should still detect the cycle if the import would fail.
     # Layout mirrors real Hermes: cap-raise anchors at L688/L689 so
@@ -1834,7 +2229,7 @@ def test_s1_cap_fallback_used_when_circular_import_detected(
     applied with the local constant instead of exiting on the cycle.
     """
     checkout = tmp_path / "fallback-apply"
-    (checkout / "agent").mkdir(parents=True)
+    _write_task_e_files(checkout)
     lines: list[str] = ["# clean file\n"]
     for i in range(1, 687):
         lines.append(f"# pad {i}\n")
@@ -1881,7 +2276,7 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     ``MAX_DESCRIPTION_LENGTH``) and does NOT emit the cycle diagnostic.
     """
     checkout = tmp_path / "normal-apply"
-    (checkout / "agent").mkdir(parents=True)
+    _write_task_e_files(checkout)
     lines: list[str] = []
     for i in range(1, 688):
         lines.append(f"# pad {i}\n")
