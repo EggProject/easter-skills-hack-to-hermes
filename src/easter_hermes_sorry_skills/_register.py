@@ -29,7 +29,7 @@ from easter_hermes_sorry_skills._advisory import (
 from easter_hermes_sorry_skills.i18n.messages_en import ADVISORY_CAP_EN
 from easter_hermes_sorry_skills.i18n.messages_hu import ADVISORY_CAP_HU
 
-_MARKER_FILENAME = ".hermes_skill_creator_advisory_seen"
+_MARKER_FILENAME = ".easter_hermes_sorry_skills_advisory_seen"
 
 
 def _advisory_marker_path() -> Path:

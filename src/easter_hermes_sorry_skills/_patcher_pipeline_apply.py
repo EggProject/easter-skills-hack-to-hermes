@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from easter_hermes_sorry_skills import _patcher_pipeline_imports as _imps
 from easter_hermes_sorry_skills import _patcher_pipeline_results as _results_mod
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
 
 EXIT_IO = _imps.EXIT_IO
@@ -30,9 +30,6 @@ build_result = _results_mod.build_result
 build_result_with_rejected = _results_mod.build_result_with_rejected
 io_error_result = _results_mod.io_error_result
 
-if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
-
 
 @dataclasses.dataclass(frozen=True)
 class _ApplyOneSiteInputs:
@@ -43,6 +40,7 @@ class _ApplyOneSiteInputs:
     force: bool
     audit_path: Path
     timestamp: str
+    after_bytes: bytes
 
 
 @dataclasses.dataclass(frozen=True)
@@ -72,8 +70,7 @@ def apply_one_site(inputs: _ApplyOneSiteInputs) -> PatcherResult | None:
     site = inputs.site
     target_path = inputs.target_path
     path = target_path / site.file_path
-    payload = build_site_payload(path, site)
-    io_result = try_atomic_write(path, payload.after_bytes)
+    io_result = try_atomic_write(path, inputs.after_bytes)
     if io_result is not None:
         return io_result
     return None

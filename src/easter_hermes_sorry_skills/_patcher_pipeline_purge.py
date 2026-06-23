@@ -16,10 +16,8 @@ from __future__ import annotations
 import dataclasses
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 
 SKILLS_PROMPT_SNAPSHOT_FILENAME = ".skills_prompt_snapshot.json"
 

@@ -46,13 +46,8 @@ from easter_hermes_sorry_skills._patcher import (
     hermes_agent_path,
     run_patch,
 )
-from easter_hermes_sorry_skills.cli_patch_flow import (
-    resolve_target as _resolve_target,
-)
 from easter_hermes_sorry_skills.cli_patch_git import git_head as _git_head
 from easter_hermes_sorry_skills.cli_patch_options import _add_click_option
-
-_GIT_REV_PARSE_TIMEOUT_SEC = 5
 
 HELP_EN = """\
 Usage (English):
@@ -132,6 +127,10 @@ class PatchArgs:
     verbose: bool
 
 
+def resolve_target(target_str: str | None) -> Path | None:
+    return Path(target_str).resolve() if target_str else None
+
+
 def _patch_impl(args: PatchArgs) -> int:
     """Idempotent Hermes patcher (S1.cap: MAX_DESCRIPTION_LENGTH cap-raise).
 
@@ -142,7 +141,7 @@ def _patch_impl(args: PatchArgs) -> int:
     # ``--target`` defaults to ``hermes_agent_path()``; the patcher
     # refuses to write the no-touch sentinel (resolved path compare).
     target_str = args.target if args.target else str(hermes_agent_path())
-    target_path: Path | None = _resolve_target(target_str)
+    target_path: Path | None = resolve_target(target_str)
     assert target_path is not None  # narrowed by the default above
 
     # Default: WRITE. ``--dry-run`` switches to audit-only (check=True,
@@ -186,7 +185,7 @@ main = click.command(
 
 main = _add_click_option(main, "--target", default_val=None)
 main = _add_click_option(main, "--dry-run", is_flag_val=True, default_val=False)
-main = click.option("--verbose", is_flag=True, default=False, help=())(main)
+main = _add_click_option(main, "--verbose", is_flag_val=True, default_val=False)
 
 
 def _main_entry() -> int:

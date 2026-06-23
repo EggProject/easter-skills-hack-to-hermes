@@ -8,23 +8,16 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from easter_hermes_sorry_skills import _patcher_pipeline_emit_helpers as _helpers
-from easter_hermes_sorry_skills._patcher_apply import (
-    _append_audit_log,
-    write_rejected,
-)
-from easter_hermes_sorry_skills._patcher_apply_atomic import _diff_sha
+from easter_hermes_sorry_skills._patcher_apply import write_rejected
 from easter_hermes_sorry_skills._patcher_pipeline_consts import (
     REMEDIATION_EN,
     REMEDIATION_HU,
 )
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
-from easter_hermes_sorry_skills.i18n.messages_en import FORCE_AUDIT_LOG
-
-if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
 
 
 @dataclasses.dataclass(frozen=True)
@@ -47,16 +40,6 @@ class _SiteDiff:
     site_id: str
     before: bytes
     after_bytes: bytes
-
-
-@dataclasses.dataclass(frozen=True)
-class _AuditLogInputs:
-    """Inputs for :func:`emit_audit_log` (bundled for WPS211)."""
-
-    audit_path: Path
-    timestamp: str
-    target_path: Path
-    site_diffs: tuple[_SiteDiff, ...] = ()
 
 
 def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
@@ -87,29 +70,6 @@ def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
         state=inputs.state,
         rejected_path=rejected_path,
     )
-
-
-def emit_audit_log(inputs: _AuditLogInputs) -> None:
-    """Append one FORCE_AUDIT_LOG line per ``--force`` invocation.
-
-    Per AC-2.5.1 the audit log records ONE line per invocation
-    (timestamp + combined diff sha256) at ``~/.hermes/patch-audit.log``.
-    The combined diff is the sha256 of the empty-bytes separator joined
-    per-site ``HASH_SEPARATOR`` diff shas (so the audit log records the
-    set of sites touched by THIS invocation in a deterministic order).
-    """
-    parts: list[str] = []
-    for site_diff in inputs.site_diffs:
-        parts.append(_diff_sha(site_diff.before, site_diff.after_bytes))
-    combined_diff_sha = _helpers.combined_sha(parts)
-    site_ids = ",".join(sd.site_id for sd in inputs.site_diffs)
-    audit_line = FORCE_AUDIT_LOG.format(
-        timestamp=inputs.timestamp,
-        site_id=site_ids,
-        diff_sha=combined_diff_sha,
-        target=str(inputs.target_path),
-    )
-    _append_audit_log(inputs.audit_path, audit_line)
 
 
 def mutate_lines_for_site(site: Site, text: str) -> list[str]:

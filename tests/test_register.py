@@ -107,7 +107,7 @@ def test_register_silent_when_cap_patched(tmp_path: Path, monkeypatch: pytest.Mo
     )
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".hermes_skill_creator_advisory_seen"
+    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
     monkeypatch.setenv("HERMES_HOME", str(home))
 
@@ -139,7 +139,7 @@ def test_register_emits_advisory_when_cap_unpatched(tmp_path: Path, monkeypatch:
     )
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".hermes_skill_creator_advisory_seen"
+    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
     monkeypatch.setenv("HERMES_HOME", str(home))
 
@@ -165,7 +165,7 @@ def test_register_silent_when_target_unknown(tmp_path: Path, monkeypatch: pytest
     target.mkdir(parents=True, exist_ok=True)
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".hermes_skill_creator_advisory_seen"
+    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
     monkeypatch.setenv("HERMES_HOME", str(home))
 
@@ -226,7 +226,7 @@ def test_register_emits_advisory_with_default_marker_when_home_unset(
     assert ADVISORY_CAP_HU in log_message
     # Marker MUST land under the expanduser-resolved default home, NOT
     # under any caller-supplied HERMES_HOME (which is unset here).
-    default_marker = default_home / ".hermes" / "hermes-agent" / ".hermes_skill_creator_advisory_seen"
+    default_marker = default_home / ".hermes" / "hermes-agent" / ".easter_hermes_sorry_skills_advisory_seen"
     assert default_marker.exists()
     assert default_marker.read_text(encoding="utf-8") == "advisory shown\n"
 

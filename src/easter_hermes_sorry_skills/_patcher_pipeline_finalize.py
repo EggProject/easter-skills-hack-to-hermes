@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING
 from easter_hermes_sorry_skills import _patcher_pipeline_apply as _apply_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_imports as _imps
 from easter_hermes_sorry_skills._patcher_pipeline_emit import _SiteDiff
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills.i18n.messages_en import CROSS_FS_WARN
 
 if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
     from easter_hermes_sorry_skills._patcher_pipeline import ApplySitesInputs
 
 

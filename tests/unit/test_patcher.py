@@ -1650,53 +1650,6 @@ def test_diff_sha_separates_empty_inputs() -> None:
     assert h_empty != h_just_before
 
 
-def test_emit_audit_log_combined_diff_sha_empty() -> None:
-    """``emit_audit_log`` with no site_diffs emits a line whose diff
-    sha is the empty-string sha (still 64 hex chars)."""
-    from easter_hermes_sorry_skills._patcher_pipeline_emit import (
-        _AuditLogInputs,
-        emit_audit_log,
-    )
-
-    emit_audit_log(
-        _AuditLogInputs(
-            audit_path=Path("/tmp/audit-test.log"),
-            timestamp="2026-01-01T00:00:00Z",
-            target_path=Path("/tmp"),
-            site_diffs=(),
-        ),
-    )
-
-
-def test_emit_audit_log_combined_diff_sha_with_site_diffs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """``emit_audit_log`` with one or more ``SiteDiff`` entries
-    produces a deterministic combined diff sha that incorporates each
-    per-site diff sha."""
-    from easter_hermes_sorry_skills._patcher_pipeline_emit import (
-        _AuditLogInputs,
-        _SiteDiff,
-        emit_audit_log,
-    )
-
-    audit_path = tmp_path / "audit.log"
-    emit_audit_log(
-        _AuditLogInputs(
-            audit_path=audit_path,
-            timestamp="2026-01-01T00:00:00Z",
-            target_path=tmp_path,
-            site_diffs=(
-                _SiteDiff(site_id="S1.cap", before=b"before", after_bytes=b"after"),
-                _SiteDiff(site_id="S1.cap.b", before=b"x", after_bytes=b"y"),
-            ),
-        ),
-    )
-    text = audit_path.read_text(encoding="utf-8")
-    # The combined diff sha is non-empty AND distinct from any single
-    # per-site sha.
-    assert "diff_sha256=" in text
-    assert "site=S1.cap,S1.cap.b" in text
-
-
 # --- AC-2.3: dynamic placeholder keys in failure dicts ------------------
 
 

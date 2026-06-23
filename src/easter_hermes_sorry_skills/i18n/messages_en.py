@@ -101,12 +101,6 @@ CROSS_FS_WARN = (
     "[hu] figyelmeztetés: a cél és az ideiglenes könyvtár különböző "
     "fájlrendszeren van"
 )
-FORCE_AUDIT_LOG = (
-    "[en] --force audit log entry appended: timestamp={timestamp} "
-    "site={site_id} diff_sha256={diff_sha} target={target} / "
-    "[hu] --force audit bejegyzés hozzáfűzve: timestamp={timestamp} "
-    "site={site_id} diff_sha256={diff_sha} target={target}"
-)
 TEXT_DRIFT = "[en] text drift detected at site {site_id} / [hu] szöveg-eltérés a {site_id} helyen"
 MIGRATION_REGENERATED = "[en] migration note regenerated at {path} / [hu] migrációs jegyzet újragenerálva itt: {path}"
 FORCE_CONFIRM_DIFF_HEADER = (

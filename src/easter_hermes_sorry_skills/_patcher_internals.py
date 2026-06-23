@@ -18,10 +18,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from easter_hermes_sorry_skills import _patcher_imports as _imps
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_preflight import run_preflight as _run_preflight
 
 if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult, PatchRunInputs
+    from easter_hermes_sorry_skills._patcher import PatchRunInputs
 
 
 @dataclasses.dataclass
@@ -45,8 +46,6 @@ _NO_CIRCULAR_IMPORT = _CircularImportInfo(detected=False)
 
 def _empty_result(diagnostics: list[str], exit_code: int) -> PatcherResult:
     """Build a PatcherResult with no sites touched and the given diagnostics."""
-    from easter_hermes_sorry_skills._patcher import PatcherResult
-
     return PatcherResult(
         exit_code=exit_code,
         sites_patched=(),

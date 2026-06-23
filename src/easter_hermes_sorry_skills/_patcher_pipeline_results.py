@@ -8,10 +8,8 @@ construction helpers.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 
 
 def io_error_result(path: Path, exc: OSError | PermissionError) -> PatcherResult:
@@ -49,9 +47,7 @@ def build_result(
     state: dict[str, str],
     diagnostics: tuple[str, ...],
 ) -> PatcherResult:
-    """Build a ``PatcherResult`` (lazy import to avoid the cycle)."""
-    from easter_hermes_sorry_skills._patcher import PatcherResult
-
+    """Build a ``PatcherResult``."""
     return PatcherResult(
         exit_code=exit_code,
         sites_patched=sites_patched,
@@ -70,8 +66,6 @@ def build_result_with_rejected(
     rejected_path: Path,
 ) -> PatcherResult:
     """Build a ``PatcherResult`` with a non-``None`` ``rejected_path``."""
-    from easter_hermes_sorry_skills._patcher import PatcherResult
-
     return PatcherResult(
         exit_code=exit_code,
         sites_patched=(),

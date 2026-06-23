@@ -18,14 +18,11 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from easter_hermes_sorry_skills._patcher_consts import EXIT_USER_ABORT
 from easter_hermes_sorry_skills._patcher_force_confirm_diff import build_diff_text
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
-
-if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
 
 
 @dataclasses.dataclass(frozen=True)
@@ -81,8 +78,6 @@ def user_abort_result_from_outcome(
     base_diagnostics: tuple[str, ...] = (),
 ) -> PatcherResult:
     """Build a PatcherResult for a refused --force confirmation."""
-    from easter_hermes_sorry_skills._patcher import PatcherResult
-
     diagnostics = list(base_diagnostics)
     if outcome.refused_message is not None:
         diagnostics.append(outcome.refused_message)

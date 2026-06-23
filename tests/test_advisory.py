@@ -233,18 +233,18 @@ def test_resolve_target_dir_falls_back_to_default(monkeypatch: pytest.MonkeyPatc
 
 
 def test_should_emit_advisory_first_time(tmp_path: Path) -> None:
-    marker = tmp_path / ".hermes_skill_creator_advisory_seen"
+    marker = tmp_path / ".easter_hermes_sorry_skills_advisory_seen"
     assert should_emit_advisory(marker) is True
 
 
 def test_should_emit_advisory_after_marker(tmp_path: Path) -> None:
-    marker = tmp_path / ".hermes_skill_creator_advisory_seen"
+    marker = tmp_path / ".easter_hermes_sorry_skills_advisory_seen"
     marker.write_text("advisory shown\n", encoding="utf-8")
     assert should_emit_advisory(marker) is False
 
 
 def test_emit_advisory_writes_marker(tmp_path: Path) -> None:
-    marker = tmp_path / ".hermes_skill_creator_advisory_seen"
+    marker = tmp_path / ".easter_hermes_sorry_skills_advisory_seen"
     emit_advisory(marker)
     assert marker.exists()
     assert marker.read_text(encoding="utf-8") == "advisory shown\n"
@@ -252,7 +252,7 @@ def test_emit_advisory_writes_marker(tmp_path: Path) -> None:
 
 def test_emit_advisory_idempotent(tmp_path: Path) -> None:
     """First call emits; marker file written; second call does NOT raise (idempotent)."""
-    marker = tmp_path / ".hermes_skill_creator_advisory_seen"
+    marker = tmp_path / ".easter_hermes_sorry_skills_advisory_seen"
     emit_advisory(marker)
     assert marker.exists()
     # Second call should be a no-op (no exception, marker unchanged).
@@ -262,7 +262,7 @@ def test_emit_advisory_idempotent(tmp_path: Path) -> None:
 
 def test_emit_advisory_re_emits_when_marker_deleted(tmp_path: Path) -> None:
     """delete marker; next emit writes it again."""
-    marker = tmp_path / ".hermes_skill_creator_advisory_seen"
+    marker = tmp_path / ".easter_hermes_sorry_skills_advisory_seen"
     emit_advisory(marker)
     marker.unlink()
     assert should_emit_advisory(marker) is True

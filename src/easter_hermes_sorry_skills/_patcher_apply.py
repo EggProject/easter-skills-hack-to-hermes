@@ -33,7 +33,6 @@ from pathlib import Path
 from typing import Any
 
 from easter_hermes_sorry_skills._patcher_apply_atomic import (
-    NEWLINE,
     TEXT_ENCODING,
     _atomic_write_bytes,
     _with_newline,
@@ -60,14 +59,6 @@ def _hermes_home_for_audit() -> Path:
 def audit_log_path() -> Path:
     """Return the per-invocation audit-log path under HERMES_HOME."""
     return _hermes_home_for_audit() / AUDIT_LOG_NAME
-
-
-def _append_audit_log(audit_path: Path, line: str) -> None:
-    """Append one line to the audit log; create parent dirs as needed."""
-    audit_path.parent.mkdir(parents=True, exist_ok=True)
-    formatted = _with_newline(line.rstrip(NEWLINE))
-    with audit_path.open("a", encoding=TEXT_ENCODING) as fh:
-        fh.write(formatted)
 
 
 def _build_rejected_payload(

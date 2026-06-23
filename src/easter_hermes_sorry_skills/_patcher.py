@@ -51,6 +51,7 @@ from pathlib import Path
 
 from easter_hermes_sorry_skills import _patcher_imports as _imps
 from easter_hermes_sorry_skills import _patcher_internals as _patcher_internals
+from easter_hermes_sorry_skills import _patcher_pipeline_types as _pipeline_types
 from easter_hermes_sorry_skills import _patcher_sites as _sites
 from easter_hermes_sorry_skills._patcher_pipeline import (
     ApplySitesInputs,
@@ -112,26 +113,12 @@ Site = _sites.Site
 
 # --- result type ---------------------------------------------------------
 
-
-@dataclasses.dataclass(frozen=True)
-class PatcherResult:
-    """Outcome of a patcher run.
-
-    ``exit_code`` follows the matrix in plans/04 (0..5).
-    ``sites_patched`` is the list of site_ids touched by THIS run.
-    ``sites_already`` is the list of site_ids that were already patched
-    BEFORE this run (idempotency).
-    ``state`` is the updated ``.patch.state.json`` mapping
-    ``{site_id: "matched" | "drifted" | "patched" | "already"}``.
-    ``diagnostics`` is the list of bilingual messages emitted.
-    """
-
-    exit_code: int
-    sites_patched: tuple[str, ...]
-    sites_already: tuple[str, ...]
-    state: dict[str, str]
-    diagnostics: tuple[str, ...]
-    rejected_path: Path | None = None
+# Re-exported so ``from easter_hermes_sorry_skills._patcher import
+# PatcherResult`` keeps working for external callers. The canonical
+# definition lives in :mod:`._patcher_pipeline_types` (leaf module
+# with no outbound ``_patcher*`` dependencies, so the pipeline
+# siblings can import it at top level without creating a cycle).
+PatcherResult = _pipeline_types.PatcherResult
 
 
 def run_patch(inputs: PatchRunInputs) -> PatcherResult:
@@ -191,23 +178,6 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     return _drive_pipeline(inputs, target_path, state, use_fallback_cap)
 
 
-def _select_sites_for_run(
-    all_sites: list[_sites.Site],
-    persisted: dict[str, str],
-) -> list[_sites.Site]:
-    """Return the sites that should be APPLIED for this invocation.
-
-    AC-2.5: ``--force`` retries ONLY sites with ``LINE_DRIFT`` diagnostic.
-    Already-matched / already-patched sites are NOT re-applied. The
-    LINE_DRIFT sites are determined by the persisted state
-    (``.patch.state.json``); a fresh line-drift detection in the current
-    validation pass is folded in via :func:`_drive_pipeline`.
-
-    Non-``--force`` runs apply every site.
-    """
-    return all_sites  # Phase 7A.5: --force removed; always return all_sites
-
-
 def _drive_pipeline(
     inputs: PatchRunInputs,
     target_path: Path,
@@ -227,7 +197,7 @@ def _drive_pipeline(
     # detected and either EXIT_DRIFT (default) or absorbed into the
     # apply-time filter (when ``--force``). AC-2.5: ``--force`` retries
     # ONLY drifted sites; already-matched sites are skipped at apply
-    # time (see :func:`_select_sites_for_run`).
+    # time.
     validation = _validate_sites(all_sites, target_path, persisted, state.sites_already)
     # AC-2.4: any drift on a default run EXITS 2 (no auto-bypass). AC-2.5:
     # ``--force`` retries ONLY drifted sites at apply time, but a fresh
@@ -249,7 +219,7 @@ def _drive_pipeline(
     # AC-2.5: when ``--force`` is set, only LINE_DRIFT sites (per
     # persisted state) are retried; already-matched / already-patched
     # sites are NOT re-applied.
-    sites = _select_sites_for_run(all_sites, persisted)
+    sites = all_sites
     if inputs.dry_run:
         return _ok_check_result_pipeline(
             OkCheckInputs(

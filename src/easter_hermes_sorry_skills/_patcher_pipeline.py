@@ -20,6 +20,7 @@ from easter_hermes_sorry_skills import _patcher_pipeline_apply as _apply_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_finalize as _finalize_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_imports as _imps
 from easter_hermes_sorry_skills._patcher_pipeline_emit import _SiteDiff
+from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
 from easter_hermes_sorry_skills.i18n.messages_en import (
     OK_ALREADY_PATCHED,
@@ -46,8 +47,6 @@ STATE_DRIFTED = _imps.STATE_DRIFTED
 STATE_PATCHED = _imps.STATE_PATCHED
 
 if TYPE_CHECKING:
-    from easter_hermes_sorry_skills._patcher import PatcherResult
-
     WriteStateFn = Any  # Callable[[Path, dict[str, str]], None]
 
 
@@ -119,7 +118,7 @@ _finalize_apply = _finalize_mod._finalize_apply
 
 def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
     """Apply one site inside the descending-line-order loop."""
-    before, after_bytes = _apply_mod.build_site_bytes(
+    payload = _apply_mod.build_site_payload(
         loop.inputs.target_path / site.file_path,
         site,
     )
@@ -130,6 +129,7 @@ def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
             force=loop.inputs.force,
             audit_path=loop.audit_path,
             timestamp=loop.timestamp,
+            after_bytes=payload.after_bytes,
         ),
     )
     if outcome is not None:
@@ -139,7 +139,9 @@ def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
     loop.sites_patched.append(site.site_id)
     loop.state[site.site_id] = STATE_PATCHED
     loop.diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
-    loop.site_diffs.append(_SiteDiff(site_id=site.site_id, before=before, after_bytes=after_bytes))
+    loop.site_diffs.append(
+        _SiteDiff(site_id=site.site_id, before=payload.before, after_bytes=payload.after_bytes),
+    )
     return None
 
 

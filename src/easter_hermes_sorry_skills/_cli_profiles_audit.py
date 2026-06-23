@@ -93,7 +93,10 @@ def _audit_load_or_error(
     monkeypatch flexibility; the union of its two return paths is
     statically known to be ``dict[str, Any]``.
     """
-    from hermes_cli.config import load_config
+    try:
+        from hermes_cli.config import load_config
+    except ImportError:  # hermes_cli not installed in this venv
+        load_config = None  # type: ignore[assignment]
 
     config = load_config_or_error(load_config, errors, row)
     # Look up the mutator at call time so monkeypatch.setattr on
@@ -130,9 +133,19 @@ def _audit_diff_row(
 def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
     """Build the apply dep set and run the apply pipeline for one profile."""
     from agent.prompt_builder import clear_skills_system_prompt_cache
-    from hermes_cli.config import save_config
-    from hermes_cli.skills_config import save_disabled_skills
-    from hermes_cli.skills_hub import do_install
+
+    try:
+        from hermes_cli.config import save_config
+    except ImportError:  # hermes_cli not installed in this venv
+        save_config = None  # type: ignore[assignment]
+    try:
+        from hermes_cli.skills_config import save_disabled_skills
+    except ImportError:  # hermes_cli not installed in this venv
+        save_disabled_skills = None  # type: ignore[assignment]
+    try:
+        from hermes_cli.skills_hub import do_install
+    except ImportError:  # hermes_cli not installed in this venv
+        do_install = None  # type: ignore[assignment]
 
     deps = _ApplyDeps(
         save_disabled_skills=save_disabled_skills,
