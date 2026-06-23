@@ -7,7 +7,7 @@ helpers live in sibling modules to keep each file under the 500-line
 hard cap (plans/10 D1):
 
 - :mod:`._patcher_sites` — Site dataclass, the S1.cap two-anchor
-  atomic pair, the 7 Task E sites, and the shared
+  atomic pair, the 6 Task E sites, and the shared
   ``SKILL_CREATOR_CONSULT_RULE`` constant.
 - :mod:`._patcher_apply` — atomic write (``<file>.patch.tmp`` +
   ``os.replace``), the state / rejected / audit sidecars.
@@ -63,6 +63,9 @@ from easter_hermes_sorry_skills._patcher_pipeline_emit import (
     _FailDriftInputs,
     fail_with_drift,
 )
+from easter_hermes_sorry_skills._patcher_pipeline_purge import (
+    apply_skills_cache_purge_to_result,
+)
 from easter_hermes_sorry_skills._patcher_validation import validate_sites
 
 # Local re-bindings.
@@ -101,8 +104,6 @@ E2_MEMORY_GUIDANCE = _imps.E2_MEMORY_GUIDANCE
 E4B_CONSULT_RULE_IMPORT = _imps.E4B_CONSULT_RULE_IMPORT
 E4_SKILL_REVIEW_PROMPT = _imps.E4_SKILL_REVIEW_PROMPT
 E5_COMBINED_REVIEW_PROMPT = _imps.E5_COMBINED_REVIEW_PROMPT
-E6_SKILL_MANAGE_SCHEMA_DESC = _imps.E6_SKILL_MANAGE_SCHEMA_DESC
-E7_SKILLS_DOC_SECTION = _imps.E7_SKILLS_DOC_SECTION
 S1_CAP_SITE = _imps.S1_CAP_SITE
 S1_CAP_SITE_FALLBACK = _imps.S1_CAP_SITE_FALLBACK
 TOOLS_SKILL_UTILS_REL = _imps.TOOLS_SKILL_UTILS_REL
@@ -227,8 +228,8 @@ def _drive_pipeline(
     state: _PatchBodyState,
     use_fallback_cap: bool = False,
 ) -> PatcherResult:
-    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 7 Task E sites.
-    all_sites = list(sites_for_mode(task_e_redirect=True, no_schema_redirect=False))
+    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 6 Task E sites.
+    all_sites = list(sites_for_mode(task_e_redirect=True))
     # AC-2.11: when the circular-import pre-flight fired, swap S1.cap
     # for S1.cap_fallback so the patch proceeds with a local
     # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant instead of importing
@@ -297,17 +298,19 @@ def _drive_pipeline(
                 write_state_fn=write_state,
             ),
         )
-    return _apply_sites_pipeline(
-        ApplySitesInputs(
-            sites=sites,
-            target_path=target_path,
-            state=persisted,
-            sites_patched=state.sites_patched,
-            sites_already=state.sites_already,
-            diagnostics=state.diagnostics,
-            force=inputs.force,
-            audit_log_path=inputs.audit_log_path,
-            exit_ok_code=EXIT_OK,
-            write_state_fn=write_state,
-        ),
+    return apply_skills_cache_purge_to_result(
+        _apply_sites_pipeline(
+            ApplySitesInputs(
+                sites=sites,
+                target_path=target_path,
+                state=persisted,
+                sites_patched=state.sites_patched,
+                sites_already=state.sites_already,
+                diagnostics=state.diagnostics,
+                force=inputs.force,
+                audit_log_path=inputs.audit_log_path,
+                exit_ok_code=EXIT_OK,
+                write_state_fn=write_state,
+            )
+        )
     )

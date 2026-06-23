@@ -118,8 +118,8 @@ def test_cli_force_with_i_accept_succeeds(hermes_checkout: Path, real_hermes_age
 def test_cli_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """Task E always runs by default; no opt-out flag exists.
 
-    With only --apply + --target, both S1.cap and all 7 Task E sites
-    are written into the state sidecar (E0/E1/E2/E4/E5/E6/E7).
+    With only --apply + --target, both S1.cap and all 5 Task E sites
+    are written into the state sidecar (E0/E1/E2/E4/E5).
     """
     runner = CliRunner()
     r = runner.invoke(
@@ -128,14 +128,12 @@ def test_cli_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sen
     )
     assert r.exit_code == EXIT_OK
     state = json.loads((hermes_checkout / STATE_SIDECAR).read_text(encoding="utf-8"))
-    # All 7 Task E sites must be in the state sidecar — Task E ran by default.
+    # All 5 Task E sites must be in the state sidecar — Task E ran by default.
     assert "E0.consult_rule_def" in state
     assert "E1.skills_guidance" in state
     assert "E2.memory_guidance" in state
     assert "E4.skill_review_prompt_opt4" in state
     assert "E5.combined_review_prompt_opt4" in state
-    assert "E6.skill_manage_schema_desc" in state
-    assert "E7.skills_doc_section" in state
     # S1.cap also runs by default (always-on, not opt-out).
     assert "S1.cap" in state
 
@@ -161,8 +159,6 @@ def test_cli_task_e_check_mode_runs_by_default(hermes_checkout: Path, real_herme
         "E2.memory_guidance",
         "E4.skill_review_prompt_opt4",
         "E5.combined_review_prompt_opt4",
-        "E6.skill_manage_schema_desc",
-        "E7.skills_doc_section",
     ):
         assert site_id in combined, f"Task E site {site_id} not checked by default"
 

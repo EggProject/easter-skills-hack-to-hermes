@@ -43,8 +43,6 @@ from pathlib import Path
 TOOLS_SKILL_UTILS_REL = Path("agent") / "skill_utils.py"
 PROMPT_BUILDER_REL = Path("agent") / "prompt_builder.py"
 BACKGROUND_REVIEW_REL = Path("agent") / "background_review.py"
-SKILL_MANAGER_TOOL_REL = Path("tools") / "skill_manager_tool.py"
-SKILLS_DOC_REL = Path("website") / "docs" / "user-guide" / "features" / "skills.md"
 
 # --- shared Task E constant text (written into agent/prompt_builder.py by E0).
 # The plugin does NOT define a Python-level ``SKILL_CREATOR_CONSULT_RULE``
@@ -106,7 +104,7 @@ class Site:
 
     ``kind`` is ``"cap"`` (replace pair), ``"append"`` (additive Task
     E line, ADDITIVE-ONLY per plans/05 B1.0), or ``"schema_append"``
-    (E6-style: append a line inside a multi-line string value).
+    (append a line inside a multi-line string value).
 
     ``file`` is the path RELATIVE to the --target root.
 
@@ -144,8 +142,6 @@ E4B_LINE = 1
 # (E4b applies last, so L105/L192 anchors remain valid).
 E4_LINE = 105
 E5_LINE = 194
-E6_LINE = 1129
-E7_LINE = 380
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
 # (agent/background_review.py). The patcher matches these against the
@@ -205,7 +201,7 @@ S1_CAP_SITE_FALLBACK = Site(
 )
 
 
-# --- the 8 Task E sites ---------------------------------------------------
+# --- the 6 Task E sites ---------------------------------------------------
 
 # E0 inserts the SKILL_CREATOR_CONSULT_RULE constant definition at the
 # top of agent/prompt_builder.py (immediately after the L1 docstring).
@@ -305,72 +301,6 @@ E5_COMBINED_REVIEW_PROMPT = Site(
     line_for_state=E5_LINE,
 )
 
-E6_SKILL_MANAGE_SCHEMA_DESC = Site(
-    site_id="E6.skill_manage_schema_desc",
-    file_path=SKILL_MANAGER_TOOL_REL,
-    anchors=(
-        Anchor(
-            line=E6_LINE,
-            text='        "pitfalls come up; pin only guards against irrecoverable loss."',
-        ),
-    ),
-    # E6 appends inside the multi-line description value (the closing
-    # ")," lives on L1130). The appended line begins with one leading
-    # space so it concatenates to the previous literal via Python
-    # implicit-concat.
-    insertion=(
-        '        " skill-creator, when installed, supplies authoring/validation '
-        "guidance only (skill_view(name='skill-creator')); skill_manage "
-        'remains the writer and never auto-installs it."\n'
-    ),
-    expected_replacement=(
-        '        " skill-creator, when installed, supplies authoring/validation '
-        "guidance only (skill_view(name='skill-creator')); skill_manage "
-        'remains the writer and never auto-installs it."'
-    ),
-    kind=KIND_SCHEMA_APPEND,
-    line_for_state=E6_LINE,
-)
-
-E7_SKILLS_DOC_SECTION = Site(
-    site_id="E7.skills_doc_section",
-    file_path=SKILLS_DOC_REL,
-    anchors=(
-        Anchor(
-            line=E7_LINE,
-            text=(
-                "The agent can create, update, and delete its own skills via the "
-                "`skill_manage` tool. This is the agent's **procedural memory** — "
-                "when it figures out a non-trivial workflow, it saves the approach "
-                "as a skill for future reuse."
-            ),
-        ),
-    ),
-    # E7 is a markdown clarifier block; it sits as a blockquote paragraph
-    # immediately after the L380 paragraph.
-    insertion=(
-        "\n"
-        "> Note: `skill-creator` is an optional, hub-installed "
-        "authoring/validation skill — NOT bundled, NOT required. "
-        "`skill_manage` remains the only writer; the agent may "
-        "`skill_view(name='skill-creator')` for guidance before "
-        "creating/editing a skill, falls back to built-in rules if it is "
-        "absent (auto-creation stays enabled), and the background review "
-        "never auto-installs it.\n"
-    ),
-    expected_replacement=(
-        "> Note: `skill-creator` is an optional, hub-installed "
-        "authoring/validation skill — NOT bundled, NOT required. "
-        "`skill_manage` remains the only writer; the agent may "
-        "`skill_view(name='skill-creator')` for guidance before "
-        "creating/editing a skill, falls back to built-in rules if it is "
-        "absent (auto-creation stays enabled), and the background review "
-        "never auto-installs it."
-    ),
-    kind=KIND_APPEND,
-    line_for_state=E7_LINE,
-)
-
 ALL_TASK_E_SITES: tuple[Site, ...] = (
     E0_CONSULT_RULE_DEF,
     E1_SKILLS_GUIDANCE,
@@ -378,6 +308,4 @@ ALL_TASK_E_SITES: tuple[Site, ...] = (
     E4B_CONSULT_RULE_IMPORT,
     E4_SKILL_REVIEW_PROMPT,
     E5_COMBINED_REVIEW_PROMPT,
-    E6_SKILL_MANAGE_SCHEMA_DESC,
-    E7_SKILLS_DOC_SECTION,
 )

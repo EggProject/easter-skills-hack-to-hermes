@@ -39,6 +39,7 @@ from easter_hermes_sorry_skills._patcher import (
     STATE_SIDECAR,
     Anchor,
     PatchRunInputs,
+    Site,
     _atomic_write_bytes,
     _cross_filesystem,
     file_has_circular_import,
@@ -56,31 +57,23 @@ from easter_hermes_sorry_skills._patcher_sites_table import _CONSULT_RULE_TEXT
 from tests.conftest import (
     BACKGROUND_REVIEW_PATCHED,
     PROMPT_BUILDER_PATCHED,
-    SKILL_MANAGER_TOOL_PATCHED,
     SKILL_UTILS_PATCHED,
-    SKILLS_DOC_PATCHED,
     assert_hermes_agent_untouched,
 )
 
 
 def _write_task_e_files(checkout: Path) -> None:
-    """Write the 4 Task E target files (plus a tools/ dir) into ``checkout``.
+    """Write the 2 Task E target files into ``checkout``.
 
     Phase C2 dropped both ``--task-e-redirect`` and ``--no-schema-redirect``
     flags; Task E always runs now. Tests that build a checkout under
-    ``tmp_path`` must lay down these 4 files (using the conftest padded
+    ``tmp_path`` must lay down these 2 files (using the conftest padded
     fixtures) or the patcher fails its pre-validation with drift on the
     missing target files.
     """
     (checkout / "agent").mkdir(parents=True, exist_ok=True)
-    (checkout / "tools").mkdir(parents=True, exist_ok=True)
-    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(parents=True, exist_ok=True)
     (checkout / "agent" / "prompt_builder.py").write_text(PROMPT_BUILDER_PATCHED, encoding="utf-8")
     (checkout / "agent" / "background_review.py").write_text(BACKGROUND_REVIEW_PATCHED, encoding="utf-8")
-    (checkout / "tools" / "skill_manager_tool.py").write_text(SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8")
-    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
-        SKILLS_DOC_PATCHED, encoding="utf-8"
-    )
 
 
 def _split_markdown_row(row: str) -> list[str]:
@@ -306,7 +299,7 @@ def test_apply_cap_raise_max_description_length_defined(
 
 
 def test_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """Default --apply patches all 7 Task E sites + S1.cap (8 sites).
+    """Default --apply patches all 6 Task E sites + S1.cap (7 sites).
 
     Phase C2 dropped both ``--task-e-redirect`` and ``--no-schema-redirect``
     flags; Task E always runs now (the cap site is patched in the same
@@ -328,17 +321,14 @@ def test_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentine
 
 def test_task_e_always_touches_target_files(hermes_checkout: Path) -> None:
     """Phase C2: Task E is no longer opt-in. Every default --apply
-    touches the 4 Task E files (prompt_builder, background_review,
-    skill_manager_tool, skills.md). After a default apply the consult
-    rule (literal ``SKILL_CREATOR_CONSULT_RULE`` for E0/E1/E2/E4b/E4/E5
-    and the descriptive ``skill-creator`` form for E6/E7) is reachable
-    in each file's patched content.
+    touches the 2 Task E files (prompt_builder, background_review).
+    After a default apply the consult rule literal
+    ``SKILL_CREATOR_CONSULT_RULE`` is reachable in each file's patched
+    content.
     """
     targets = [
         (hermes_checkout / "agent" / "prompt_builder.py", "SKILL_CREATOR_CONSULT_RULE"),
         (hermes_checkout / "agent" / "background_review.py", "SKILL_CREATOR_CONSULT_RULE"),
-        (hermes_checkout / "tools" / "skill_manager_tool.py", "skill-creator"),
-        (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md", "skill-creator"),
     ]
     r = run_patch(
         PatchRunInputs(
@@ -591,55 +581,6 @@ def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     assert lines[anchor_idx + 3] == '"'
 
 
-def test_e6_skill_manage_schema_desc_appends(hermes_checkout: Path) -> None:
-    """05 §Per-site additive-only — E6 anchor preserved verbatim;
-    the appended sentence sits between the anchor and the closing ),.
-    """
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    text = (hermes_checkout / "tools" / "skill_manager_tool.py").read_text(encoding="utf-8")
-    lines = text.splitlines()
-    anchor_idx = next(i for i, ln in enumerate(lines) if "pitfalls come up; pin only guards" in ln)
-    assert lines[anchor_idx] == '        "pitfalls come up; pin only guards against irrecoverable loss."'
-    # The appended line follows.
-    appended = lines[anchor_idx + 1]
-    assert "skill-creator" in appended
-    assert "skill_manage" in appended
-    # The closing ")," still follows.
-    assert lines[anchor_idx + 2] == "    ),"
-
-
-def test_e7_skills_doc_section_appends(hermes_checkout: Path) -> None:
-    """05 §Per-site additive-only — E7 anchor preserved verbatim;
-    the clarifier blockquote follows it.
-    """
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            check=False,
-            apply=True,
-            force=False,
-            i_accept_line_drift=False,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    text = (hermes_checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").read_text(encoding="utf-8")
-    lines = text.splitlines()
-    anchor_idx = next(i for i, ln in enumerate(lines) if ln.startswith("The agent can create, update"))
-    # The clarifier blockquote sits on the next non-blank line.
-    clarifier_idx = next(i for i in range(anchor_idx + 1, len(lines)) if lines[i].startswith("> Note:"))
-    assert "skill-creator" in lines[clarifier_idx]
-    assert "skill_manage" in lines[clarifier_idx]
-
-
 def test_task_e_current_text_is_unique_in_source() -> None:
     """05 §Anchor-hygiene — each Task E primary anchor is one or more
     physical lines and yields exactly 1 hit in its site table.
@@ -750,8 +691,8 @@ def test_skill_creator_consult_rule_constant() -> None:
 
 
 def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
-    """05 §Idempotency / drift — second --apply exits 0 with all 8 sites
-    (E6 was removed 2026-06-23) reporting 'already patched' /
+    """05 §Idempotency / drift — second --apply exits 0 with all 7 sites
+    (S1.cap + 6 Task E sites) reporting 'already patched' /
     'már javítva'.
     """
     r1 = run_patch(
@@ -776,9 +717,9 @@ def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
     assert r2.exit_code == EXIT_OK
     assert set(r2.sites_already) == {"S1.cap"} | {s.site_id for s in ALL_TASK_E_SITES}
     already_msgs = [d for d in r2.diagnostics if "már javítva" in d or "already patched" in d]
-    # AC-2.8: 9 sites total now (S1.cap + 8 Task E sites including
-    # E0 and E4b; E6 was removed 2026-06-23).
-    assert len(already_msgs) == 9
+    # AC-2.8: 7 sites total now (S1.cap + 6 Task E sites including
+    # E0 and E4b).
+    assert len(already_msgs) == 7
 
 
 def test_task_e_drift_exits_2(
@@ -991,7 +932,14 @@ def test_audit_log_includes_drifted_site_diff_sha(
 
 
 def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """Every diagnostic in the run is bilingual (en/hu on a single line)."""
+    """Every USER-FACING diagnostic in the run is bilingual (en/hu on a single line).
+
+    Internal/operator notes (e.g. the skills-prompt-snapshot purge note
+    emitted by ``_drive_pipeline`` after a successful --apply) are
+    single-line informational messages that are not part of the
+    bilingual user-facing diagnostic stream and are excluded from the
+    regex check.
+    """
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -1003,7 +951,15 @@ def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_her
     )
     assert r.exit_code == EXIT_OK
     pattern = __import__("re").compile(r"^\[en\] .+ / \[hu\] .+$")
+    # Operator notes that are NOT translated (single-line, no [en]/[hu]).
+    _non_bilingual_operator_notes = (
+        "snapshot",
+        "purge",
+    )
     for d in r.diagnostics:
+        is_note = any(token in d.lower() for token in _non_bilingual_operator_notes)
+        if is_note:
+            continue
         assert pattern.match(d), f"non-bilingual diagnostic: {d!r}"
 
 
@@ -1963,6 +1919,7 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     # tools/skills_tool.py exists but is broken (SyntaxError), so
     # ``import tools.skills_tool`` will fail in the subprocess.
+    (checkout / "tools").mkdir(parents=True, exist_ok=True)
     (checkout / "tools" / "skills_tool.py").write_text(
         "def broken(:\n",  # SyntaxError
         encoding="utf-8",
@@ -2300,3 +2257,108 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     assert "_MAX_DESCRIPTION_LENGTH" not in text
     # No cycle diagnostic.
     assert not any("circular import" in d for d in r.diagnostics)
+
+
+# =====================================================================
+# Skills prompt snapshot purge + per-site idempotency (Task E refactor)
+# =====================================================================
+
+
+def test_purge_skills_prompt_snapshot_removes_file(tmp_path: Path) -> None:
+    """purge_skills_prompt_snapshot() deletes the file and is idempotent."""
+    from easter_hermes_sorry_skills._patcher_pipeline_purge import (
+        SKILLS_PROMPT_SNAPSHOT_FILENAME,
+        purge_skills_prompt_snapshot,
+    )
+
+    snapshot = tmp_path / SKILLS_PROMPT_SNAPSHOT_FILENAME
+    snapshot.write_text("{}")
+    purged = purge_skills_prompt_snapshot(tmp_path)
+    assert purged == snapshot
+    assert not snapshot.exists()
+    # Idempotent: second call returns None (file already gone)
+    purged2 = purge_skills_prompt_snapshot(tmp_path)
+    assert purged2 is None
+
+
+def test_apply_purges_skills_cache(
+    hermes_checkout: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Successful --apply purges the skills prompt snapshot from the fake HERMES_HOME."""
+    from easter_hermes_sorry_skills import _patcher
+    from easter_hermes_sorry_skills._patcher_pipeline_purge import (
+        SKILLS_PROMPT_SNAPSHOT_FILENAME,
+    )
+
+    # hermes_checkout already set HERMES_HOME=hermes_checkout via the
+    # hermes_home fixture; install the snapshot INSIDE that directory
+    # so the post-apply purge deletes it.
+    snapshot = hermes_checkout / SKILLS_PROMPT_SNAPSHOT_FILENAME
+    snapshot.write_text("{}")
+    # First --apply to populate state.
+    r1 = _patcher.run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r1.exit_code == EXIT_OK, f"first apply failed: {r1.diagnostics}"
+    # The snapshot must be purged by the end of the successful apply.
+    assert not snapshot.exists(), "skills prompt snapshot was NOT purged by --apply"
+    # Diagnostics should mention the purge.
+    purge_msgs = [d for d in r1.diagnostics if "snapshot" in d.lower() or "purge" in d.lower()]
+    assert purge_msgs, f"no purge diagnostic in {r1.diagnostics}"
+    # Second --apply is a no-op for the snapshot (already gone).
+    r2 = _patcher.run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r2.exit_code == EXIT_OK, f"second apply failed: {r2.diagnostics}"
+
+
+@pytest.mark.parametrize("site", [S1_CAP_SITE, *ALL_TASK_E_SITES], ids=lambda s: s.site_id)
+def test_idempotency_per_site(
+    site: Site,
+    hermes_checkout: Path,
+) -> None:
+    """Each site is idempotent on reapply: second --apply reports the site
+    as 'already patched' / 'már javítva'."""
+    # First --apply: site lands in ``sites_patched``.
+    r1 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r1.exit_code == EXIT_OK, f"first apply failed: {r1.diagnostics}"
+    assert site.site_id in r1.sites_patched, f"{site.site_id} should be patched on first apply; got {r1.sites_patched}"
+    # Second --apply: site must be reported as 'already patched' (either
+    # by appearing in ``sites_already`` OR by a bilingual diagnostic
+    # naming the site). The two together cover both code paths.
+    r2 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            check=False,
+            apply=True,
+            force=False,
+            i_accept_line_drift=False,
+        ),
+    )
+    assert r2.exit_code == EXIT_OK, f"second apply failed: {r2.diagnostics}"
+    reapply_msg = f"{site.site_id} should be 'already patched' on reapply; got {r2.sites_already}"
+    assert site.site_id in r2.sites_already, reapply_msg
+    already_msgs = [d for d in r2.diagnostics if site.site_id in d]
+    assert already_msgs, f"no diagnostic naming {site.site_id} on reapply: {r2.diagnostics}"

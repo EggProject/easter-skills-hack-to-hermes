@@ -7,7 +7,7 @@ The patcher applies two classes of changes to a Hermes checkout:
 - S1.cap (PRIMARY): replaces the hard-coded ``60`` cap in
   ``agent/skill_utils.py``'s ``extract_skill_description`` with
   ``MAX_DESCRIPTION_LENGTH``.
-- 7 Task E sites (ALWAYS-ON, no flag): injects the consult rule
+- 5 Task E sites (ALWAYS-ON, no flag): injects the consult rule
   (``SKILL_CREATOR_CONSULT_RULE``) into the Hermes prompt surfaces
   flagged by Task E.
 
@@ -60,8 +60,9 @@ Usage (English):
 
 Patcher applies:
   S1.cap  replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH
-  Task E  7 prompt-injection sites (consult rule for skill-creator)
+  Task E  5 prompt-injection sites (consult rule for skill-creator)
           applied by default, no flag
+          After --apply, the on-disk skills prompt snapshot is purged to force a cold rebuild.
 
 Options:
   --target DIR                 REQUIRED. User-owned Hermes checkout.
@@ -93,8 +94,9 @@ Használat (magyar):
 
 A patcher a kovetkezoket vegzi:
   S1.cap  a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli
-  Task E  7 prompt-injection hely (skill-creator tanacsado szabaly)
+  Task E  5 prompt-injection hely (skill-creator tanacsado szabaly)
           alapertelmezetten fut, nincs flag
+          --apply utan a skills-prompt snapshot torolve lesz a hideg-rebuildhoz.
 
 Opciok:
   --target DIR                 KOTELEZO. Felhasznai tulajdonu Hermes
