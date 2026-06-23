@@ -36,8 +36,27 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
+      - name: Install system packages (bats, shellcheck, kcov)
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck kcov
+
       - name: Run pre-commit (all hooks)
         run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Run bats smoke tests
+        run: bats tests/bats/
+
+      - name: kcov coverage gate for scripts/
+        run: |
+          kcov --include-pattern='scripts/' --exclude-pattern='tests/' bash tests/bats/
+          # Find any per-file coverage < 100% in the kcov index.html. Match the
+          # `coverPer` <td> class precisely (avoids the `0%` substring false-positive
+          # on `10%` / `20%` / etc). Exclude `100.0%`.
+          UNDER=$(grep -oE 'class="coverPer">[0-9]+\.[0-9]+%' kcov-output/bats/index.html | grep -v '100\.0%' || true)
+          if [ -n "$UNDER" ]; then
+            echo "ERROR: kcov reports < 100% coverage on some script line(s):"
+            echo "$UNDER"
+            exit 1
+          fi
 
       - name: Run pytest (0% coverage required — D27 deviation)
         # DEVIATION (JUSTIFIED, operator-authorized): coverage threshold reduced

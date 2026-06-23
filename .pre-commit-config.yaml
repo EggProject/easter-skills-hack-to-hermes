@@ -35,6 +35,13 @@ repos:
         files: '^(src/|tests/|tools/|docs/plans/).*\.(py|md)$'
         pass_filenames: false
 
+      - id: bats
+        name: bats smoke tests for scripts/ and tests/bats/
+        entry: bash -c 'bats tests/bats/'
+        language: system
+        pass_filenames: false
+        files: '^tests/bats/.*\.bats$'
+
   - repo: https://github.com/wemake-services/wemake-python-styleguide
     rev: 1.6.2
     hooks:
@@ -80,3 +87,15 @@ repos:
         additional_dependencies: [click, ruamel.yaml, types-PyYAML, pytest, python-frontmatter]
         args: ["--strict"]
         files: '^src/.*\.py$'
+
+  # shellcheck: local binary (NOT shellcheck-precommit Docker image — the user
+  # macOS dev environment has no Docker; on CI ubuntu, `apt-get install shellcheck`
+  # makes the `shellcheck` binary available in PATH for the system hook).
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: ShellCheck (local shellcheck binary)
+        entry: bash -c 'shellcheck --severity=warning scripts/*.sh'
+        language: system
+        pass_filenames: false
+        files: '^scripts/.*\.sh$'
