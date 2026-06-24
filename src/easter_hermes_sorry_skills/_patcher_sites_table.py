@@ -278,8 +278,14 @@ E4_SKILL_REVIEW_PROMPT = Site(
             text=_E4_TEXT,
         ),
     ),
-    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}\n",
-    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}",
+    # E4/E5 insert a SINGLE source line that ends with a LITERAL
+    # ``'\n\n'`` Python string literal. The ``!r`` is load-bearing:
+    # without it the f-string inlines actual newlines and the
+    # insertion spans 3 source lines, breaking the layout asserted
+    # by ``test_e4_skill_review_prompt_appends_only`` and
+    # ``test_e5_combined_review_prompt_appends_only``.
+    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
+    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
     kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
@@ -293,8 +299,8 @@ E5_COMBINED_REVIEW_PROMPT = Site(
             text=_E5_TEXT,
         ),
     ),
-    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}\n",
-    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}",
+    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
+    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
     kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )
