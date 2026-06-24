@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from easter_hermes_sorry_skills._patcher_apply_atomic import _diff_sha
-from easter_hermes_sorry_skills._patcher_pipeline_consts import REASON_LINE_DRIFT
+from easter_hermes_sorry_skills._patcher_consts import REASON_LINE_DRIFT
 from easter_hermes_sorry_skills.i18n.messages_en import (
     LINE_DRIFT,
     TEXT_DRIFT,

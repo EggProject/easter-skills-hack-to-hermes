@@ -19,11 +19,6 @@ from easter_hermes_sorry_skills import _patcher_pipeline_results as _results_mod
 from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
 
-EXIT_IO = _imps.EXIT_IO
-EXIT_PERMISSION = _imps.EXIT_PERMISSION
-IO_ERROR_TEXT = _imps.IO_ERROR
-PERMISSION_DENIED_TEXT = _imps.PERMISSION_DENIED
-
 # Re-bindings for backward compat (existing callers and test patches
 # resolve through these names).
 build_result = _results_mod.build_result

@@ -1,35 +1,11 @@
-"""Constants for the apply + drift pipeline.
+"""Default remediation text for the apply + drift pipeline (EN/HU).
 
-Mirrors the ``_patcher.EXIT_*`` codes and the ``state["<site>"]`` values.
-Lives in its own module to keep ``_patcher_pipeline`` under the
-wemake WPS202 member-count cap.
+Lives in its own module so :mod:`._patcher_pipeline_emit` and the
+rejected-sidecar writer can share these strings without inlining them
+in the orchestrator. Exit codes, state strings, and failure-reason
+constants live in :mod:`._patcher_consts` and are imported directly
+from there by consumers.
 """
-
-from easter_hermes_sorry_skills._patcher_consts import (
-    EXIT_IO as _EXIT_IO_SRC,
-)
-from easter_hermes_sorry_skills._patcher_consts import (
-    EXIT_PERMISSION as _EXIT_PERMISSION_SRC,
-)
-from easter_hermes_sorry_skills._patcher_consts import (
-    REASON_LINE_DRIFT as _REASON_LINE_DRIFT_SRC,
-)
-from easter_hermes_sorry_skills._patcher_consts import (
-    STATE_DRIFTED as _STATE_DRIFTED_SRC,
-)
-from easter_hermes_sorry_skills._patcher_consts import (
-    STATE_PATCHED as _STATE_PATCHED_SRC,
-)
-
-# Re-bind under the canonical public name so this module stays the
-# public re-export surface for the apply/drift pipeline. The ``_SRC``
-# suffix on the import above sidesteps pyflakes F401 (pyflakes does not
-# treat ``X = X`` self-rename as a use of ``X``).
-EXIT_IO = _EXIT_IO_SRC
-EXIT_PERMISSION = _EXIT_PERMISSION_SRC
-REASON_LINE_DRIFT = _REASON_LINE_DRIFT_SRC
-STATE_DRIFTED = _STATE_DRIFTED_SRC
-STATE_PATCHED = _STATE_PATCHED_SRC
 
 # Default remediation text for line-drift rejected sidecars (EN/HU).
 # Phase 7A.5 removed ``--force --i-accept-line-drift``; drift is now terminal.

@@ -20,8 +20,8 @@ The single consumer (``_try_atomic_write``) lazy-imports it.
 from __future__ import annotations as annotations
 
 from easter_hermes_sorry_skills import _patcher_apply as _apply_mod
+from easter_hermes_sorry_skills import _patcher_consts as _consts_mod
 from easter_hermes_sorry_skills import _patcher_helpers as _helpers_mod
-from easter_hermes_sorry_skills import _patcher_pipeline_consts as _consts_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_emit as _emit_mod
 from easter_hermes_sorry_skills.i18n import messages_en as _i18n_en
 
