@@ -52,7 +52,7 @@ def _hermes_home_for_audit() -> Path:
     the audit log away from the operator's live install. The path is
     always returned as an absolute, resolved Path.
     """
-    raw = os.environ.get("HERMES_HOME", "~/.hermes")
+    raw = os.environ.get("HERMES_HOME") or "~/.hermes"
     return Path(raw).expanduser().resolve()
 
 

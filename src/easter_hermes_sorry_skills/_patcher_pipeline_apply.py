@@ -49,17 +49,39 @@ class _SitePayload:
 
 
 def build_site_payload(path: Path, site: Site) -> _SitePayload:
-    """Read ``path`` and return the (before, after) byte pair for ``site``."""
+    """Read ``path`` and return the (before, after) byte pair for ``site``.
+
+    Raises ``OSError`` (e.g. ``FileNotFoundError`` after a TOCTOU race
+    between pre-validation and apply) so callers can route it through
+    the same IO-error path used for write failures. Use
+    :func:`try_build_site_payload` when the caller wants the error
+    translated to a ``PatcherResult`` directly.
+    """
     before = path.read_bytes()
     text = before.decode("utf-8", errors="replace")
     new_lines = _imps.mutate_lines_for_site(site, text)
     return _SitePayload(before=before, after_bytes="".join(new_lines).encode("utf-8"))
 
 
-def build_site_bytes(path: Path, site: Site) -> tuple[bytes, bytes]:
-    """Read ``path`` and return the (before, after) byte tuple for ``site``."""
-    payload = build_site_payload(path, site)
-    return payload.before, payload.after_bytes
+def try_build_site_payload(
+    path: Path,
+    site: Site,
+) -> tuple[PatcherResult | None, _SitePayload | None]:
+    """Read ``path`` and return the (before, after) byte pair for ``site``.
+
+    On ``OSError`` (e.g. the target file was deleted between
+    pre-validation and apply) return ``(PatcherResult(EXIT_IO), None)``
+    so the per-site loop can record the failure and stop cleanly
+    instead of letting an uncaught ``FileNotFoundError`` escape.
+
+    On success return ``(None, _SitePayload(...))``. The shape matches
+    the per-site loop's existing ``outcome | None`` pattern.
+    """
+    try:
+        payload = build_site_payload(path, site)
+    except (PermissionError, OSError) as exc:
+        return io_error_result(path, exc), None
+    return None, payload
 
 
 def apply_one_site(inputs: _ApplyOneSiteInputs) -> PatcherResult | None:
@@ -82,12 +104,3 @@ def try_atomic_write(path: Path, after_bytes: bytes) -> PatcherResult | None:
     except (PermissionError, OSError) as exc:
         return io_error_result(path, exc)
     return None
-
-
-def emit_site_audit_stub(*_args: object, **_kwargs: object) -> None:
-    """No-op stub: per-site audit emit was replaced by per-invocation.
-
-    External callers / test monkeypatches that import this name should
-    still resolve to a callable; the per-site line is now part of the
-    per-invocation line emitted at the end of ``apply_sites``.
-    """

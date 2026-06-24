@@ -98,7 +98,11 @@ CROSS_FS_WARN = (
     "[hu] figyelmeztetés: a cél és az ideiglenes könyvtár különböző "
     "fájlrendszeren van"
 )
-TEXT_DRIFT = "[en] text drift detected at site {site_id} / [hu] szöveg-eltérés a {site_id} helyen"
+TEXT_DRIFT = (
+    "[en] text drift detected at site {site_id}: expected {expected!r}, "
+    "actual {actual!r} / [hu] szöveg-eltérés a {site_id} helyen: "
+    "elvárt {expected!r}, tényleges {actual!r}"
+)
 
 # Column headers (English half — the Hungarian half lives in messages_hu.py).
 COL_PROFILE = "profile"

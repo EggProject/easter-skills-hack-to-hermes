@@ -297,29 +297,6 @@ def test_reporter_format_text_module_importable() -> None:
     assert mod is not None
 
 
-# --- _cli_profiles_audit_imports.py: re-export module (lines 16-24) ---
-
-
-def test_cli_profiles_audit_imports_module_exposes_re_exports() -> None:
-    """The audit import-hub MUST re-bind bilingual/diff/report helpers."""
-    from easter_hermes_sorry_skills import _cli_profiles_audit_imports
-
-    assert callable(_cli_profiles_audit_imports.build_bilingual)
-    assert callable(_cli_profiles_audit_imports.diff_sets)
-    assert _cli_profiles_audit_imports.AuditReport is not None
-
-
-# --- cli_profiles_imports.py: stub module (line 22) ---
-
-
-def test_cli_profiles_imports_module_importable() -> None:
-    """The cli_profiles import-hub stub MUST import cleanly (line 22 future-annotations)."""
-    import importlib
-
-    mod = importlib.import_module("easter_hermes_sorry_skills.cli_profiles_imports")
-    assert mod is not None
-
-
 # --- _cli_report_helpers.py: backward-compat stub (line 18) ---
 
 

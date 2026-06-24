@@ -39,7 +39,7 @@ def load_state(target: Path) -> dict[str, str]:
         return {}
     try:
         raw = json.loads(sidecar.read_text(encoding=TEXT_ENCODING))
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return {}
     return _coerce_state(raw)
 

@@ -278,8 +278,8 @@ E4_SKILL_REVIEW_PROMPT = Site(
             text=_E4_TEXT,
         ),
     ),
-    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
-    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
+    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}\n",
+    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}",
     kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
@@ -293,8 +293,8 @@ E5_COMBINED_REVIEW_PROMPT = Site(
             text=_E5_TEXT,
         ),
     ),
-    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
-    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
+    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}\n",
+    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2}",
     kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )

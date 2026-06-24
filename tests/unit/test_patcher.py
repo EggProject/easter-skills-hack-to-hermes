@@ -933,6 +933,30 @@ def test_load_state_non_dict(tmp_path: Path) -> None:
     assert load_state(tmp_path) == {}
 
 
+def test_load_state_oserror_on_read(tmp_path: Path) -> None:
+    """When the sidecar is unreadable (OSError mid-read), return {}."""
+    sidecar = tmp_path / STATE_SIDECAR
+    sidecar.write_bytes(b'{"S1.cap": "patched"}')
+
+    real_read_text = Path.read_text
+
+    def fake_read_text(self: Path, *args: object, **kwargs: object) -> str:
+        if self == sidecar:
+            raise OSError("simulated read failure")
+        return real_read_text(self, *args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(Path, "read_text", fake_read_text)
+        assert load_state(tmp_path) == {}
+
+
+def test_load_state_unicode_decode_error(tmp_path: Path) -> None:
+    """When the sidecar contains non-UTF-8 bytes, return {}."""
+    sidecar = tmp_path / STATE_SIDECAR
+    sidecar.write_bytes(b"\xff\xfe\x00invalid-utf8")
+    assert load_state(tmp_path) == {}
+
+
 def test_write_state_roundtrip(tmp_path: Path) -> None:
     write_state(tmp_path, {"S1.cap": "patched"})
     assert load_state(tmp_path) == {"S1.cap": "patched"}
@@ -1255,6 +1279,101 @@ def test_atomic_write_bytes_chmod_post_replace_raises(tmp_path: Path, monkeypatc
     # Should NOT raise; chmod is best-effort.
     _atomic_write_bytes(p, b"new")
     assert p.read_bytes() == b"new"
+
+
+# =====================================================================
+# F-28 — TOCTOU race: build_site_payload must translate OSError on read
+# =====================================================================
+#
+# Pre-validation snapshots the target files (preflight), but the apply
+# step re-reads them via ``build_site_payload``. Between the two reads
+# a concurrent ``rm`` / ``mv`` can delete the file; ``path.read_bytes()``
+# raises ``FileNotFoundError`` (a subclass of ``OSError``). Without a
+# try/except wrapper that error escapes to the caller as an uncaught
+# exception and aborts the whole patcher. ``try_build_site_payload``
+# catches ``OSError`` and returns a ``PatcherResult`` with ``EXIT_IO``
+# so the per-site loop can record the failure cleanly.
+# ---------------------------------------------------------------------
+
+
+def test_try_build_site_payload_returns_payload_on_success(tmp_path: Path) -> None:
+    """``try_build_site_payload`` returns ``(None, _SitePayload)`` when
+    the target file is readable."""
+    from easter_hermes_sorry_skills._patcher_pipeline_apply import (
+        try_build_site_payload,
+    )
+
+    target = tmp_path / "skill_utils.py"
+    target.write_bytes(b"def extract_skill_description(desc: str) -> str:\n    return desc\n")
+    outcome, payload = try_build_site_payload(target, S1_CAP_SITE)
+    assert outcome is None
+    assert payload is not None
+    assert payload.before == target.read_bytes()
+    assert payload.after_bytes != payload.before
+
+
+def test_try_build_site_payload_translates_fnfe_to_io_result(tmp_path: Path) -> None:
+    """When ``read_bytes`` raises ``FileNotFoundError`` (TOCTOU race),
+    ``try_build_site_payload`` returns an EXIT_IO ``PatcherResult``
+    and ``(outcome, payload)`` shape is ``(PatcherResult, None)``."""
+    from easter_hermes_sorry_skills._patcher_pipeline_apply import (
+        try_build_site_payload,
+    )
+
+    missing = tmp_path / "deleted_between_preflight_and_apply.py"
+    assert not missing.exists()
+    outcome, payload = try_build_site_payload(missing, S1_CAP_SITE)
+    assert payload is None
+    assert outcome is not None
+    assert outcome.exit_code == EXIT_IO
+    assert outcome.sites_patched == ()
+    assert any(str(missing) in d for d in outcome.diagnostics)
+
+
+def test_try_build_site_payload_translates_oserror_to_io_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When ``read_bytes`` raises a non-FNFE ``OSError`` (permission,
+    I/O error), ``try_build_site_payload`` still returns EXIT_IO and
+    does NOT let the exception escape."""
+    from easter_hermes_sorry_skills._patcher_pipeline_apply import (
+        try_build_site_payload,
+    )
+
+    target = tmp_path / "locked.py"
+    target.write_bytes(b"x")
+
+    def fail_read(*_args: object, **_kwargs: object) -> bytes:
+        raise OSError("simulated read failure")
+
+    monkeypatch.setattr(type(target), "read_bytes", fail_read)
+    outcome, payload = try_build_site_payload(target, S1_CAP_SITE)
+    assert payload is None
+    assert outcome is not None
+    assert outcome.exit_code == EXIT_IO
+
+
+def test_build_site_payload_propagates_oserror(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The lower-level ``build_site_payload`` propagates ``OSError`` to
+    its caller (the public translation lives in ``try_build_site_payload``).
+    Callers that already handle ``OSError`` will see the same exception
+    type and can route it the same way they route write errors."""
+    from easter_hermes_sorry_skills._patcher_pipeline_apply import (
+        build_site_payload,
+    )
+
+    target = tmp_path / "vanished.py"
+
+    def fail_read(*_args: object, **_kwargs: object) -> bytes:
+        raise FileNotFoundError(2, "simulated TOCTOU delete")
+
+    monkeypatch.setattr(type(target), "read_bytes", fail_read)
+    with pytest.raises(FileNotFoundError):
+        build_site_payload(target, S1_CAP_SITE)
 
 
 # =====================================================================
@@ -1709,9 +1828,8 @@ def test_text_drift_diagnostic_consumer_reads_sentinel_key() -> None:
     """AC-2.3: ``append_drift_diagnostic`` reads TEXT_DRIFT failures via
     the ``actual_at_line_unknown`` sentinel key (regression guard for
     the consumer-side migration from the literal placeholder). The
-    consumer is exercised without raising (the i18n format string
-    accepts ``{actual}`` but the current TEXT_DRIFT message only uses
-    ``{site_id}``; the test guards the call signature, not the render).
+    i18n format string renders both ``{expected}`` and ``{actual}``
+    placeholders so the operator sees the drifted content.
     """
     from easter_hermes_sorry_skills._patcher_pipeline_emit_helpers import (
         append_drift_diagnostic,
@@ -1728,11 +1846,14 @@ def test_text_drift_diagnostic_consumer_reads_sentinel_key() -> None:
         },
         diagnostics,
     )
-    # The TEXT_DRIFT diagnostic is emitted with the site_id and the
-    # VALIDATION_FAILED follow-up.
+    # The TEXT_DRIFT diagnostic is emitted with the site_id, the
+    # expected/actual drifted content, and the VALIDATION_FAILED
+    # follow-up.
     assert any("S1.cap" in d for d in diagnostics)
     assert any("validation failed" in d for d in diagnostics)
     assert any("text drift" in d for d in diagnostics)
+    assert any("if len(desc) > 60:" in d for d in diagnostics)
+    assert any("<file missing>" in d for d in diagnostics)
 
 
 def test_line_drift_diagnostic_consumer_reads_dynamic_key() -> None:
@@ -1878,6 +1999,35 @@ def test_purge_skills_prompt_snapshot_removes_file(tmp_path: Path) -> None:
     purged2 = purge_skills_prompt_snapshot(tmp_path)
     assert purged2 == snapshot
     assert not snapshot.exists()
+
+
+def test_resolve_skills_prompt_snapshot_path_expands_tilde_in_env(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """resolve_skills_prompt_snapshot_path() must .expanduser().resolve() HERMES_HOME.
+
+    F-27 regression: when HERMES_HOME is set to a literal ``~``-prefixed
+    path, the patcher audit log writes to the resolved absolute path
+    (via _hermes_home_for_audit's .expanduser().resolve()), but the
+    purge resolver returned the literal un-expanded path, causing a
+    silent no-op. This test pins the env-var branch to also expanduser
+    + resolve, matching the audit-log resolver.
+    """
+    from easter_hermes_sorry_skills._patcher_pipeline_purge import (
+        SKILLS_PROMPT_SNAPSHOT_FILENAME,
+        resolve_skills_prompt_snapshot_path,
+    )
+
+    # Redirect HOME so ``~`` resolves to tmp_path (tmp_path on macOS is
+    # under /private/var/... — not under Path.home()), then point
+    # HERMES_HOME at a fresh subdir using the tilde form. The resolver
+    # must call .expanduser().resolve() to land on the absolute path.
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", "~")
+    resolved = resolve_skills_prompt_snapshot_path()
+    assert resolved == (tmp_path / SKILLS_PROMPT_SNAPSHOT_FILENAME).resolve()
+    assert "~" not in str(resolved)
 
 
 def test_apply_purges_skills_cache(

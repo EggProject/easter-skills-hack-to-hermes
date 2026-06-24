@@ -40,14 +40,14 @@ def resolve_skills_prompt_snapshot_path(
     if hermes_home is None:
         env = os.environ.get("HERMES_HOME", "").strip()
         if env:
-            return Path(env) / SKILLS_PROMPT_SNAPSHOT_FILENAME
+            return (Path(env).expanduser().resolve()) / SKILLS_PROMPT_SNAPSHOT_FILENAME
         return Path.home() / ".hermes" / SKILLS_PROMPT_SNAPSHOT_FILENAME
     return Path(hermes_home) / SKILLS_PROMPT_SNAPSHOT_FILENAME
 
 
 def purge_skills_prompt_snapshot(
     hermes_home: Path | None = None,
-) -> Path | None:
+) -> Path:
     """Delete the skills prompt snapshot if it exists.
 
     Returns the absolute path unconditionally; the caller treats a
@@ -64,12 +64,11 @@ def apply_skills_cache_purge_to_result(apply_result: PatcherResult) -> PatcherRe
 
     The given ``apply_result`` (presumably the result of
     :func:`_patcher._apply_sites_pipeline`) has its ``diagnostics`` extended
-    with a one-line note about the purge when a snapshot was actually
-    removed. If no snapshot existed, the result is returned unchanged —
-    the absence of a snapshot is not a noteworthy event for the caller.
+    with a one-line note about the purge. The snapshot path is always
+    returned by :func:`purge_skills_prompt_snapshot`, so the diagnostic is
+    always appended (``unlink(missing_ok=True)`` is a no-op if the file
+    does not exist).
     """
     purged_path = purge_skills_prompt_snapshot()
-    if purged_path is not None:
-        note = f"Purged skills prompt snapshot: {purged_path}"
-        return dataclasses.replace(apply_result, diagnostics=apply_result.diagnostics + (note,))
-    return apply_result
+    note = f"Purged skills prompt snapshot: {purged_path}"
+    return dataclasses.replace(apply_result, diagnostics=apply_result.diagnostics + (note,))

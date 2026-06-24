@@ -142,7 +142,8 @@ def _patch_impl(args: PatchArgs) -> int:
     # refuses to write the no-touch sentinel (resolved path compare).
     target_str = args.target if args.target else str(hermes_agent_path())
     target_path: Path | None = resolve_target(target_str)
-    assert target_path is not None  # narrowed by the default above
+    if target_path is None:
+        sys.exit("target_path must not be None at this point")
 
     # Default: WRITE. ``--dry-run`` switches to audit-only (check=True,
     # apply=False). The patcher does the rest of the validation.

@@ -99,7 +99,11 @@ CROSS_FS_WARN = (
     "fájlrendszeren van / [en] warning: target and tmp live on different "
     "filesystems"
 )
-TEXT_DRIFT = "[hu] szöveg-eltérés a {site_id} helyen / [en] text drift detected at site {site_id}"
+TEXT_DRIFT = (
+    "[hu] szöveg-eltérés a {site_id} helyen: elvárt {expected!r}, "
+    "tényleges {actual!r} / [en] text drift detected at site {site_id}: "
+    "expected {expected!r}, actual {actual!r}"
+)
 
 # Column headers (Hungarian half).
 COL_PROFILE = "profil"
