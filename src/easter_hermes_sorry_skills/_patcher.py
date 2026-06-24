@@ -7,7 +7,7 @@ helpers live in sibling modules to keep each file under the 500-line
 hard cap (plans/10 D1):
 
 - :mod:`._patcher_sites` — Site dataclass, the S1.cap two-anchor
-  atomic pair, the 6 Task E sites, and the shared
+  atomic pair, the 5 Task E sites, and the shared
   ``SKILL_CREATOR_CONSULT_RULE`` constant.
 - :mod:`._patcher_apply` — atomic write (``<file>.patch.tmp`` +
   ``os.replace``), the state / rejected / audit sidecars.
@@ -39,7 +39,7 @@ The patcher:
    and updates ``.patch.state.json``.
 6. Emits a ``.patch.audit.log`` line on every successful ``--force`` run.
 
-See also: plans/04-script-1-patch.md, plans/05-script-1-task-e-toggle.md,
+See also: plans/04-script-1-patch.md,
 plans/08-migration-note-format.md, plans/10-toolchain-and-conventions.md,
 plans/09-test-strategy.md.
 """

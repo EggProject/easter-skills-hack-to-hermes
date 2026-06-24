@@ -4,11 +4,11 @@ TDD tests reference ``easter_hermes_sorry_skills._patcher_sites.Site`` /
 ``Anchor`` / ``S1_CAP_SITE`` / ``ALL_TASK_E_SITES`` / ``E*_SITE`` constants;
 ``_patcher_sites.py`` re-exports them so existing imports continue to work.
 
-The site table is the spec-of-truth (plans/04 §Multi-signal targeting +
-plans/05 §Site table). The two-line ``S1.cap`` is a SINGLE ``site_id``
+The site table is the spec-of-truth (plans/04 §Multi-signal targeting).
+The two-line ``S1.cap`` is a SINGLE ``site_id``
 with two anchors (``a`` + ``b``); both anchors must match for the site
 to be considered patched (partial replacement is drift). Task E sites
-are ADDITIVE-ONLY (plans/05 D1): the patcher inserts a single new line
+are ADDITIVE-ONLY: the patcher inserts a single new line
 immediately after the primary anchor; existing text is preserved verbatim.
 
 Each :class:`Site` carries a ``line_for_state`` (the primary anchor's
@@ -30,7 +30,7 @@ referenced by E0's ``insertion`` / ``expected_replacement`` so the
 unit tests can still assert substring invariants against the patcher's
 view of the value.
 
-See also: plans/04-script-1-patch.md, plans/05-script-1-task-e-toggle.md,
+See also: plans/04-script-1-patch.md,
 plans/10-toolchain-and-conventions.md.
 """
 
@@ -46,7 +46,7 @@ BACKGROUND_REVIEW_REL = Path("agent") / "background_review.py"
 
 # --- shared Task E constant text (written into agent/prompt_builder.py by E0).
 # The plugin does NOT define a Python-level ``SKILL_CREATOR_CONSULT_RULE``
-# binding: the constant lives in the TARGET file (per plans/05 §D2). The
+# binding: the constant lives in the TARGET file. The
 # text below is the canonical wording that E0 inserts verbatim at the top
 # of ``agent/prompt_builder.py``. AC-2.8 unit tests assert substring
 # invariants against this string.
@@ -102,7 +102,7 @@ class Site:
     the S1.cap atomic pair).
 
     ``kind`` is ``"cap"`` (replace pair) or ``"append"`` (additive Task
-    E line, ADDITIVE-ONLY per plans/05 B1.0).
+    E line, ADDITIVE-ONLY).
 
     ``file`` is the path RELATIVE to the --target root.
 
@@ -126,7 +126,7 @@ class Site:
 S1_CAP_LINE_A = 688
 S1_CAP_LINE_B = 689
 E0_LINE = 1
-# AC-2.8: E1/E2/E3 anchor lines are unchanged from plans/05 §B1.2
+# AC-2.8: E1/E2/E3 anchor lines are unchanged
 # because E0's insertion (constant definition) is applied LAST (the
 # patcher sorts sites in DESCENDING line_for_state order), so the
 # original anchors at L158/L179/L1421 are still valid against the

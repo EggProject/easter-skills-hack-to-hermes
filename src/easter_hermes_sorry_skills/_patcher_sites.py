@@ -5,7 +5,7 @@ to keep this module slim (WPS202); tests import the public symbols from
 ``easter_hermes_sorry_skills._patcher_sites`` so we re-export them
 below.
 
-See also: plans/04 §Multi-signal targeting + plans/05 §Site table.
+See also: plans/04 §Multi-signal targeting.
 """
 
 from __future__ import annotations
