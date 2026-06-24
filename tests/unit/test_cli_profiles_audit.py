@@ -356,7 +356,7 @@ def test_audit_default_profile(installed, tmp_path: Path) -> None:
     (profile / "skills").mkdir()
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"])
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     assert len(report["profiles"]) == 1
     assert report["profiles"][0]["profile_name"] == "hermes"
 
@@ -374,7 +374,7 @@ def test_audit_named_profiles(installed, tmp_path: Path) -> None:
         profile_names=["alpha", "beta", "gamma"],
     )
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     names = [row["profile_name"] for row in report["profiles"]]
     assert names == ["alpha", "beta", "gamma"]
 
@@ -386,7 +386,7 @@ def test_audit_empty_profile(installed, tmp_path: Path) -> None:
     # No skills/ subdir.
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"])
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     row = report["profiles"][0]
     assert row["current_installed"] == []
     # Desired: skill-creator is in the desired set.
@@ -410,7 +410,7 @@ def test_audit_drift_detection(installed, tmp_path: Path) -> None:
         disabled_now={"unrelated"},
     )
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     row = report["profiles"][0]
     assert row["current_disabled"] == ["unrelated"]
     assert row["desired_disabled"] == ["unrelated"]
@@ -420,7 +420,8 @@ def test_audit_drift_detection(installed, tmp_path: Path) -> None:
 
 
 def test_audit_json_deterministic(installed, tmp_path: Path) -> None:
-    """Two runs with the same ``--frozen-time`` produce byte-identical JSON."""
+    """Two runs in the same second produce byte-identical JSON
+    (``generated_at`` is rounded to whole seconds)."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     (profile / "skills" / "foo").mkdir()
@@ -432,7 +433,7 @@ def test_audit_json_deterministic(installed, tmp_path: Path) -> None:
             profile_names=["hermes"],
             config_data={"skills": {"disabled": []}},
         )
-        return cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z").to_json_bytes()
+        return cli.run_audit(apply=False).to_json_bytes()
 
     a = _run_once()
     b = _run_once()
@@ -446,7 +447,7 @@ def test_audit_keys_sorted(installed, tmp_path: Path) -> None:
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     report_dict = report.to_dict()
     raw = json.dumps(report_dict, sort_keys=True)
     parsed = json.loads(raw)
@@ -476,12 +477,7 @@ def test_apply_replaces_factory_skill_creator(installed, tmp_path: Path) -> None
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     assert len(log.do_install_calls) == 1
     call = log.do_install_calls[0]
     assert call["identifier"] == "skill-creator"
@@ -506,12 +502,7 @@ def test_apply_does_not_add_openai_to_disabled_list(installed, tmp_path: Path) -
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     # No save_disabled_skills call should ever include "openai".
     for call in log.save_disabled_calls:
         assert "openai" not in call["disabled"]
@@ -530,12 +521,7 @@ def test_apply_does_not_add_skills_to_disabled_list(installed, tmp_path: Path) -
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     for call in log.save_disabled_calls:
         assert "skills" not in call["disabled"]
     for cfg in log.save_config_calls:
@@ -552,12 +538,7 @@ def test_apply_does_not_disable_skill_creator_by_name(installed, tmp_path: Path)
         config_data={"skills": {"disabled": []}},
     )
 
-    report = cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    report = cli.run_audit(apply=True)
     for row in report["profiles"]:
         assert "skill-creator" not in row["desired_disabled"]
 
@@ -572,12 +553,7 @@ def test_apply_installs_skill_creator_when_absent(installed, tmp_path: Path) -> 
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     target = profile / "skills" / "skill-creator" / "SKILL.md"
     assert target.exists()
 
@@ -592,18 +568,8 @@ def test_apply_idempotent_reinstall(installed, tmp_path: Path) -> None:
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
+    cli.run_audit(apply=True)
     assert len(log.do_install_calls) == 2
     for call in log.do_install_calls:
         assert call["force"] is True
@@ -622,12 +588,7 @@ def test_apply_force_reinstall_on_version_drift(installed, tmp_path: Path) -> No
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     assert len(log.do_install_calls) == 1
     assert log.do_install_calls[0]["force"] is True
     # The old content is gone; the new one wins.
@@ -647,12 +608,7 @@ def test_apply_calls_clear_skills_system_prompt_cache(installed, tmp_path: Path)
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     assert len(log.clear_cache_calls) == 2
     for call in log.clear_cache_calls:
         assert call["clear_snapshot"] is True
@@ -671,12 +627,7 @@ def test_apply_cache_clear_raises_continues_with_warning(installed, tmp_path: Pa
     )
     log.clear_cache_raises = RuntimeError("boom")
 
-    report = cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    report = cli.run_audit(apply=True)
     # Both profiles are processed.
     assert len(report["profiles"]) == 2
     # Each profile's row reports the cache-clear failure as a warning.
@@ -700,12 +651,7 @@ def test_apply_hub_install_fails_continues(installed, tmp_path: Path, capsys) ->
     )
     log.do_install_raises = RuntimeError("hub broken")
 
-    report = cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    report = cli.run_audit(apply=True)
     assert len(report["profiles"]) == 2
     # The per-profile errors carry the hub failure.
     for row in report["profiles"]:
@@ -722,12 +668,7 @@ def test_apply_writes_inside_hermes_home_scope(installed, tmp_path: Path) -> Non
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     assert log.do_install_calls
     assert log.do_install_calls[0]["env_mirror"] == str(profile)
 
@@ -743,12 +684,7 @@ def test_apply_save_disabled_skills_positional_args(installed, tmp_path: Path) -
         config_data={"skills": {"disabled": ["unrelated"]}},
     )
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-    )
+    cli.run_audit(apply=True)
     # The call must have used the positional form.
     if log.save_disabled_calls:
         call = log.save_disabled_calls[0]
@@ -825,7 +761,7 @@ def test_walks_profile_dirs_set(installed, tmp_path: Path) -> None:
     (profile / "memories" / "memory.md").write_text("hello")
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     row = report["profiles"][0]
     subdirs = row["subdirs"]
     # Every PROFILE_DIRS entry must be present on the row.
@@ -847,7 +783,7 @@ def test_walks_profile_dirs_set_marks_missing(installed, tmp_path: Path) -> None
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     subdirs = report["profiles"][0]["subdirs"]
     assert subdirs["skills"]["present"] is True
     assert subdirs["memories"]["present"] is False
@@ -861,7 +797,7 @@ def test_gateway_pid_read_as_flat_file(installed, tmp_path: Path) -> None:
     (profile / "gateway.pid").write_text("12345\n")
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     row = report["profiles"][0]
     # No errors parsing the pid file (stat-only).
     assert row["errors"] == []
@@ -879,7 +815,7 @@ def test_gateway_pid_absent_when_missing(installed, tmp_path: Path) -> None:
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     pid_info = report["profiles"][0]["gateway_pid"]
     assert pid_info["present"] is False
     assert pid_info["size"] == 0
@@ -895,7 +831,7 @@ def test_walks_skills_dir_for_skill_md(installed, tmp_path: Path) -> None:
         (skills / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: x\n---\n")
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     installed_now = set(report["profiles"][0]["current_installed"])
     assert installed_now == {"alpha", "beta"}
 
@@ -918,7 +854,7 @@ def test_read_gateway_pid_stat_handles_oserror(installed, tmp_path: Path, monkey
         return real_stat(self, *args, **kwargs)
 
     monkeypatch.setattr(walk_mod.Path, "stat", fake_stat)
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     pid_info = report["profiles"][0]["gateway_pid"]
     assert pid_info["present"] is False
     assert pid_info["size"] == 0
@@ -946,7 +882,7 @@ def test_walk_profile_subdirs_handles_oserror(installed, tmp_path: Path, monkeyp
         yield from real_rglob(self, pattern, case_sensitive=case_sensitive, recurse_symlinks=recurse_symlinks)
 
     monkeypatch.setattr(walk_mod.Path, "rglob", fake_rglob)
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     subdirs = report["profiles"][0]["subdirs"]
     # skills subdir was walked but rglob failed -> size/count zero, present True.
     assert subdirs["skills"]["present"] is True
@@ -973,7 +909,7 @@ def test_walk_profile_subdirs_handles_stat_oserror(installed, tmp_path: Path, mo
         return real_stat(self, *args, **kwargs)
 
     monkeypatch.setattr(walk_mod.Path, "stat", fake_stat)
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     subdirs = report["profiles"][0]["subdirs"]
     # The skills subdir's per-child stat failed, so size=0 but file_count>=1
     # (file_count uses is_file() which goes through .stat -> also raises -> 0).
@@ -997,99 +933,29 @@ def test_help_is_bilingual(installed) -> None:
     assert "Használat (magyar)" in out
     # Mirrored content: every option appears in both halves.
     for opt in (
-        "--apply",
         "--dry-run",
-        "--audit",
-        "--yes",
-        "--skip-install",
         "--verbose",
         "--profile",
-        "--json",
         "--help",
     ):
         assert out.count(opt) >= 2, f"{opt} should appear in both sections"
 
 
 def test_dry_run_default_no_writes(installed, tmp_path: Path) -> None:
-    """Default mode (no ``--apply``) writes zero bytes to any profile."""
+    """``--dry-run`` writes zero bytes to any profile (the only no-write mode)."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    cli.run_audit(apply=False)
     # No do_install calls, no save_config calls.
     assert log.do_install_calls == []
     assert log.save_config_calls == []
 
 
-def test_json_output_path_resolved_under_workdir(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """``--json PATH`` writes the report to PATH (under cwd by default)."""
-    profile = tmp_path / "default"
-    (profile / "skills").mkdir(parents=True)
-    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
-
-    out_path = tmp_path / "report.json"
-    cli.run_audit(
-        apply=False,
-        json_path=out_path,
-        frozen_time="2026-06-17T00:00:00Z",
-    )
-    assert out_path.exists()
-    parsed = json.loads(out_path.read_text())
-    assert parsed["tool"] == "easter-hermes-sorry-skills-profiles"
-
-
-def test_json_output_path_absolute(installed, tmp_path: Path) -> None:
-    """``--json /abs/path`` writes to the absolute path."""
-    profile = tmp_path / "default"
-    (profile / "skills").mkdir(parents=True)
-    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
-
-    out_path = tmp_path / "abs-report.json"
-    cli.run_audit(
-        apply=False,
-        json_path=out_path,
-        frozen_time="2026-06-17T00:00:00Z",
-    )
-    assert out_path.exists()
-
-
 # ---------------------------------------------------------------------------
 # TDD list — safety.
 # ---------------------------------------------------------------------------
-
-
-def test_apply_refuses_real_hermes_home_without_yes(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """When HERMES_HOME resolves to the LIVE ``~/.hermes`` AND ``--yes`` is
-    absent AND stdout is not a TTY → the script aborts with exit 5.
-
-    We exercise the run_audit() refusal path directly (not the click
-    runner) so the test does not depend on Click's TTY auto-detection
-    heuristics. The live install is NEVER touched.
-
-    Host-independent: rebinds ``LIVE_HERMES_HOME`` (in both the
-    source module AND the pipeline's captured reference) to a
-    tmp_path-based fake ``.hermes`` dir, then sets HERMES_HOME to the
-    same path so ``_live_install_refused`` fires regardless of host.
-    """
-    from easter_hermes_sorry_skills import _cli_profiles_pipeline as _pipeline_mod
-    from easter_hermes_sorry_skills import _cli_profiles_profiles as _profiles_mod
-
-    fake_live = tmp_path / ".hermes"
-    fake_live.mkdir()
-    monkeypatch.setattr(_profiles_mod, "LIVE_HERMES_HOME", fake_live)
-    monkeypatch.setattr(_pipeline_mod, "LIVE_HERMES_HOME", fake_live)
-    monkeypatch.setenv("HERMES_HOME", str(fake_live))
-    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    log, cli = installed(profile_paths=[fake_live], profile_names=["hermes"], config_data={})
-    with pytest.raises(SystemExit) as exc_info:
-        cli.run_audit(
-            apply=True,
-            json_path=None,
-            frozen_time="2026-06-17T00:00:00Z",
-            yes=False,
-        )
-    assert exc_info.value.code == 5
 
 
 def test_apply_does_not_touch_hermes_agent(installed, tmp_path: Path, real_hermes_agent_sentinel: str) -> None:
@@ -1100,13 +966,7 @@ def test_apply_does_not_touch_hermes_agent(installed, tmp_path: Path, real_herme
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
 
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=False,
-        yes=True,
-    )
+    cli.run_audit(apply=True)
     # The real_hermes_agent_sentinel fixture's post-assertion (in
     # teardown) checks the sha256 — it has not been called yet here,
     # but it WILL fail at teardown if we touched the file.
@@ -1123,7 +983,7 @@ def test_audit_default_profile_backfills_name(installed, tmp_path: Path) -> None
     profile = tmp_path / "home-root"
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["custom-name"], config_data={})
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     assert report["profiles"][0]["profile_name"] == "custom-name"
 
 
@@ -1133,7 +993,7 @@ def test_audit_no_profiles_returns_empty_report(installed, tmp_path: Path) -> No
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[], profile_names=[], config_data={})
-    report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+    report = cli.run_audit(apply=False)
     assert report["profiles"] == []
 
 
@@ -1148,12 +1008,7 @@ def test_audit_specific_profile(installed, tmp_path: Path) -> None:
         profile_names=["alpha", "beta"],
         config_data={},
     )
-    report = cli.run_audit(
-        apply=False,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        profile="alpha",
-    )
+    report = cli.run_audit(apply=False, profile="alpha")
     names = [row["profile_name"] for row in report["profiles"]]
     assert names == ["alpha"]
 
@@ -1169,7 +1024,7 @@ def test_audit_load_config_failure_recorded(installed, tmp_path: Path) -> None:
     original = hcc.load_config
     hcc.load_config = lambda: (_ for _ in ()).throw(RuntimeError("boom"))
     try:
-        report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+        report = cli.run_audit(apply=False)
     finally:
         hcc.load_config = original
     assert len(report["profiles"]) == 1
@@ -1186,7 +1041,7 @@ def test_audit_get_disabled_failure_recorded(installed, tmp_path: Path) -> None:
     original = asu.get_disabled_skill_names
     asu.get_disabled_skill_names = lambda platform=None: (_ for _ in ()).throw(RuntimeError("boom"))
     try:
-        report = cli.run_audit(apply=False, json_path=None, frozen_time="2026-06-17T00:00:00Z")
+        report = cli.run_audit(apply=False)
     finally:
         asu.get_disabled_skill_names = original
     assert any("get_disabled_skill_names" in e for e in report["profiles"][0]["errors"])
@@ -1214,11 +1069,7 @@ def test_audit_apply_save_disabled_failure_recorded(installed, tmp_path: Path) -
     original = hcsc.save_disabled_skills
     hcsc.save_disabled_skills = _raiser
     try:
-        report = cli.run_audit(
-            apply=True,
-            json_path=None,
-            frozen_time="2026-06-17T00:00:00Z",
-        )
+        report = cli.run_audit(apply=True)
     finally:
         hcsc.save_disabled_skills = original
     assert any("save_disabled_skills" in e for e in report["profiles"][0]["errors"])
@@ -1241,11 +1092,7 @@ def test_audit_apply_save_config_failure_recorded(installed, tmp_path: Path) -> 
     original = hcc.save_config
     hcc.save_config = lambda cfg: (_ for _ in ()).throw(RuntimeError("save_config boom"))
     try:
-        report = cli.run_audit(
-            apply=True,
-            json_path=None,
-            frozen_time="2026-06-17T00:00:00Z",
-        )
+        report = cli.run_audit(apply=True)
     finally:
         hcc.save_config = original
     errors = report["profiles"][0]["errors"]
@@ -1258,27 +1105,13 @@ def test_audit_apply_save_config_failure_recorded(installed, tmp_path: Path) -> 
     assert "save_config" not in report["profiles"][0]["actions_taken"]
 
 
-def test_audit_apply_skip_install(installed, tmp_path: Path) -> None:
-    """``--skip-install`` does not call do_install but still applies other writes."""
-    profile = tmp_path / "default"
-    (profile / "skills").mkdir(parents=True)
-    log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
-    cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        skip_install=True,
-    )
-    assert log.do_install_calls == []
-
-
-def test_audit_audit_only_flag(installed, tmp_path: Path) -> None:
-    """``--audit`` is an explicit no-write alias for the default mode."""
+def test_dry_run_flag_no_writes(installed, tmp_path: Path) -> None:
+    """``--dry-run`` at the CLI level is the only no-write mode."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
     runner = cli.make_cli()
-    result = runner.invoke(cli.app, ["--audit", "--json", str(tmp_path / "r.json")], color=False)
+    result = runner.invoke(cli.app, ["--dry-run"], color=False)
     assert result.exit_code == 0
     assert log.do_install_calls == []
     assert log.save_config_calls == []
@@ -1349,71 +1182,21 @@ def test_audit_save_disabled_skills_succeeds(installed, tmp_path: Path) -> None:
         disabled_now={"openai", "unrelated"},
     )
 
-    report = cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-    )
+    report = cli.run_audit(apply=True)
     assert "save_disabled_skills" in report["profiles"][0]["actions_taken"]
     assert "save_config" in report["profiles"][0]["actions_taken"]
     # ``openai`` was stripped from desired_disabled (S5 regression sentinel).
     assert "openai" not in report["profiles"][0]["desired_disabled"]
 
 
-def test_run_audit_refuses_live_home(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """run_audit() with apply=True, yes=False, and HERMES_HOME=live exits 5.
-
-    Same host-independent LIVE_HERMES_HOME rebinding as the apply
-    counterpart above.
-    """
-    from easter_hermes_sorry_skills import _cli_profiles_pipeline as _pipeline_mod
-    from easter_hermes_sorry_skills import _cli_profiles_profiles as _profiles_mod
-
-    fake_live = tmp_path / ".hermes"
-    fake_live.mkdir()
-    monkeypatch.setattr(_profiles_mod, "LIVE_HERMES_HOME", fake_live)
-    monkeypatch.setattr(_pipeline_mod, "LIVE_HERMES_HOME", fake_live)
-    monkeypatch.setenv("HERMES_HOME", str(fake_live))
-    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    log, cli = installed(profile_paths=[fake_live], profile_names=["hermes"], config_data={})
-    with pytest.raises(SystemExit) as exc_info:
-        cli.run_audit(
-            apply=True,
-            json_path=None,
-            frozen_time="2026-06-17T00:00:00Z",
-            yes=False,
-        )
-    assert exc_info.value.code == 5
-
-
-def test_run_audit_continues_when_not_live(installed, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """When HERMES_HOME is NOT the live install, run_audit() proceeds."""
-    scoped = tmp_path / "scoped-home"
-    scoped.mkdir()
-    (scoped / "skills").mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(scoped))
-    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    log, cli = installed(profile_paths=[scoped], profile_names=["hermes"], config_data={})
-    # Should NOT exit 5.
-    report = cli.run_audit(
-        apply=True,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        yes=False,
-    )
-    assert len(report["profiles"]) == 1
-
-
 # Helper for the LIVE test fixtures
 
 
-def test_now_iso_uses_frozen_time(installed) -> None:
-    """``_now_iso(frozen_time)`` returns the frozen value verbatim."""
+def test_now_iso_returns_system_time(installed) -> None:
+    """``_now_iso()`` returns a real ISO 8601 UTC string with ``Z`` suffix."""
     from easter_hermes_sorry_skills.cli_profiles import _now_iso
 
-    assert _now_iso("2026-06-17T00:00:00Z") == "2026-06-17T00:00:00Z"
-    # When not frozen, the format is a real ISO 8601 UTC string.
-    out = _now_iso(None)
+    out = _now_iso()
     assert out.endswith("Z")
     assert "T" in out
 
@@ -1582,12 +1365,7 @@ def test_audit_verbose_emits_hermes_home_and_resolved_profiles(
     )
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
 
-    cli.run_audit(
-        apply=False,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        verbose=True,
-    )
+    cli.run_audit(apply=False, verbose=True)
 
     captured = capsys.readouterr()
     assert "[verbose] HERMES_HOME=" in captured.err
@@ -1604,11 +1382,7 @@ def test_audit_verbose_false_silent_on_stderr(installed, tmp_path: Path, capsys)
         config_data={"skills": {"disabled": []}},
     )
 
-    cli.run_audit(
-        apply=False,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-    )
+    cli.run_audit(apply=False)
 
     captured = capsys.readouterr()
     assert "[verbose]" not in captured.err
@@ -1630,12 +1404,7 @@ def test_audit_verbose_emits_per_site_summary_on_stdout(
     )
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
 
-    cli.run_audit(
-        apply=False,
-        json_path=None,
-        frozen_time="2026-06-17T00:00:00Z",
-        verbose=True,
-    )
+    cli.run_audit(apply=False, verbose=True)
 
     captured = capsys.readouterr()
     # The bilingual per-site summary still appears (gated on verbose=True).
@@ -1660,32 +1429,31 @@ def test_verbose_flag_emits_diagnostics(installed) -> None:
     assert "[verbose]" in (result.stderr or "")
 
 
-def test_frozen_time_cli_flag_removed(installed) -> None:
-    """``--frozen-time=...`` is no longer a CLI flag (Click exits 2)."""
-    log, cli = installed()
-    runner = cli.make_cli()
-    result = runner.invoke(cli.app, ["--frozen-time=2024-01-01T00:00:00Z"])
-    # Click returns exit code 2 for "no such option".
-    assert result.exit_code == 2
+def test_default_is_write_no_flag_needed(installed, tmp_path: Path) -> None:
+    """Default mode (no flags) is WRITE — the CLI exits 0 and do_install is called.
 
-
-def test_frozen_time_env_var_still_works(
-    installed,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The frozen-time env var still pins the report ``generated_at`` timestamp."""
-    profile = Path("/tmp/env-var-default")
-    profile.mkdir(exist_ok=True)
-    (profile / "skills").mkdir(exist_ok=True)
+    This is the contract: the user no longer has to remember ``--apply``;
+    running the CLI alone is enough to install.
+    """
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
     log, cli = installed(
         profile_paths=[profile],
         profile_names=["hermes"],
         config_data={"skills": {"disabled": []}},
     )
-    monkeypatch.setenv("HERMES_SKILL_CREATOR_FROZEN_TIME", "2024-01-01T00:00:00Z")
-
-    report = cli.run_audit(apply=False, json_path=None)
-    assert report["generated_at"] == "2024-01-01T00:00:00Z"
+    runner = cli.make_cli()
+    result = runner.invoke(cli.app, [], color=False)
+    # Exit 0: the run completed without error.
+    assert result.exit_code == 0, result.output
+    # The write path was exercised: do_install was called once.
+    assert len(log.do_install_calls) == 1
+    call = log.do_install_calls[0]
+    assert call["identifier"] == "skill-creator"
+    # The migrated SKILL.md materializes on disk.
+    installed_path = profile / "skills" / "skill-creator" / "SKILL.md"
+    assert installed_path.exists()
+    assert "migrated" in installed_path.read_text()
 
 
 def test_default_is_write_help_text(installed) -> None:

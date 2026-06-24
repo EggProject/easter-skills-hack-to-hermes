@@ -167,56 +167,38 @@ HU_MESSAGES = MappingProxyType(
     {
         # CLI: easter-hermes-sorry-skills-profiles
         "profiles_help_short": (
-            "Profilonkénti audit/csere a migrált skill-creator skillhez "
+            "Profilonkénti telepítés/csere a migrált skill-creator skillhez "
             "(Script #2). A skill-creator skillet a sík "
             "~/.hermes/skills/skill-creator/ útvonalra telepíti/cseréli "
-            "minden profil alatt. Alap mód: száraz futás; "
-            "a --apply kapcsolóval hajtódnak végre az írások."
+            "minden profil alatt. Alap mód: ÍRÁS; a --dry-run kapcsolóval "
+            "előnézet kapható írás nélkül."
         ),
         "profiles_help_long": (
             "Végigmegy minden Hermes profilon (az alap 'hermes' profil és "
             "minden a hermes_cli.profiles.list_profiles() által visszaadott "
-            "elnevezett profil), és auditálja a profilonkénti skill fát. "
-            "--apply esetén a script meghívja a hermes_cli.skills_hub."
-            "do_install() függvényt, hogy a migrált skill-creator a helyére "
-            "kerüljön a ~/.hermes/skills/skill-creator/ útvonalon, majd törli "
-            "a skill rendszer-prompt gyorsítótárát. A --json PATH kapcsolóval "
-            "a determinisztikus JSON jelentés a PATH helyre íródik. A --yes "
-            "kapcsoló elnyomja az interaktív TTY megerősítést. A script a "
-            "hermes_home_scope() kontextuskezelő alatt fut, tükrözve a "
-            "HERMES_HOME-ot mind az override tokenben, mind az "
+            "elnevezett profil), és telepíti/cseréli a migrált skill-creator "
+            "skillet a ~/.hermes/skills/skill-creator/ útvonalon. A script "
+            "meghívja a hermes_cli.skills_hub.do_install() függvényt az írás "
+            "elvégzésére, majd törli a skill rendszer-prompt gyorsítótárát. "
+            "A script a hermes_home_scope() kontextuskezelő alatt fut, "
+            "tükrözve a HERMES_HOME-ot mind az override tokenben, mind az "
             "os.environ['HERMES_HOME']-ban."
         ),
-        "profiles_opt_apply": (
-            "Módosítások alkalmazása minden profilra (alapértelmezett; ír a "
-            "~/.hermes/skills és minden profilba, ha nincs --profile). "
-            "Kölcsönösen kizáró a --dry-run/--audit kapcsolóval."
-        ),
-        "profiles_opt_audit": ("A --dry-run alias (visszafelé kompatibilitás miatt tartjuk meg)."),
-        "profiles_opt_dry_run": ("Módosítások előnézete írás nélkül. A --apply ellentéte."),
+        "profiles_opt_dry_run": ("Módosítások előnézete írás nélkül. Az alapértelmezett ÍRÁS mód ellentéte."),
         "profiles_opt_verbose": (
-            "Részletes, helyszínenkénti diagnosztika a stderr-re (nem zavarja a stdout / JSON kimenetet)."
+            "Részletes, helyszínenkénti diagnosztika a stderr-re (nem zavarja a stdout kimenetet)."
         ),
         "report_opt_verbose": (
-            "Részletes, cellánkénti diagnosztika a stderr-re "
-            "(minden cella értéke + szekció összegzés). "
-            "Működik --json-nel is (csak stderr)."
+            "Részletes, cellánkénti diagnosztika a stderr-re (minden cella értéke + szekció összegzés)."
         ),
         "profiles_opt_profile": ("A futást egyetlen profilra korlátozza (alap: minden profil)."),
-        "profiles_opt_json": ("A determinisztikus JSON jelentést a PATH helyre írja (alap: ./profile-audit.json)."),
-        "profiles_opt_yes": ("Elnyomja az interaktív TTY megerősítést (CI / nem-TTY futás)."),
-        "profiles_opt_skip_install": ("Csak audit; nem hívja meg a hub telepítőt."),
-        "profiles_opt_frozen_time": ("A jelentés generated_at mezőjét stabil ISO 8601 UTC értékre rögzíti."),
         "profiles_opt_help": ("Megjeleníti ezt a kétnyelvű súgót és kilép."),
         "profiles_section_usage_en": "Usage (English)",
         "profiles_section_usage_hu": "Használat (magyar)",
         # Bilingual runtime messages (Hungarian half)
         "profiles_msg_scanning": "Profilok vizsgálata...",
         "profiles_msg_profile_count": "{n} profil vizsgálandó.",
-        "profiles_msg_applying_default": (
-            "Alapértelmezett mód: módosítások alkalmazása {n} profilra (és ~/.hermes/skills)."
-        ),
-        "profiles_msg_applying": "Profilonkénti alkalmazás...",
+        "profiles_msg_applying": "Profilonkénti telepítés/csere...",
         "profiles_msg_profile_audit": ("profil={name} jelenleg_letiltva={disabled} jelenleg_telepítve={installed}"),
         "profiles_msg_diff": (
             "diff hozzáadott_letiltva={ad} eltávolított_letiltva={rd} "
@@ -226,11 +208,6 @@ HU_MESSAGES = MappingProxyType(
             "profil={name} clear_skills_system_prompt_cache kivételt dobott: {err} (folytatás)"
         ),
         "profiles_msg_hub_error": ("profil={name} hub telepítés sikertelen: {err} (folytatás)."),
-        "profiles_msg_json_written": "Jelentés írva ide: {path}.",
-        "profiles_msg_refuse_no_yes": (
-            "A futás megtagadva az élő HERMES_HOME ellen --yes nélkül. "
-            "Futtassa újra --yes kapcsolóval a megerősítéshez."
-        ),
         "profiles_msg_no_profiles": ("Nem található profil (alap + elnevezett). Nincs mit vizsgálni."),
         "profiles_msg_done": "Kész. Feldolgozott profilok: {n}.",
     }

@@ -57,16 +57,12 @@ def _audit_and_collect_row(
     profile_info: ProfileInfo,
     *,
     apply: bool,
-    skip_install: bool,
-    frozen_time: str | None,
     verbose: bool = False,
 ) -> dict[str, object]:
     """Audit a single profile and backfill profile_name from ProfileInfo."""
     row = _audit_profile(
         profile_info.path,
         apply=apply,
-        skip_install=skip_install,
-        frozen_time=frozen_time,
         bilingual_fn=_bilingual,
     )
     # Backfill the profile_name from the ProfileInfo (in case

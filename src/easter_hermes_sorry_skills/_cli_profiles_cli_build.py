@@ -35,21 +35,14 @@ def _value_flag(cmd: click.Command, flag: str, dest: str, help_key: str, **extra
 
 
 def _with_misc_flags(cmd: click.Command) -> click.Command:
-    """Apply the five boolean flags: --apply / --dry-run / --audit (alias) / --yes / --skip-install."""
-    cmd = _bool_flag(cmd, "--apply", "apply", "profiles_opt_apply")
+    """Apply the one boolean flag: --dry-run."""
     cmd = _bool_flag(cmd, "--dry-run", "dry_run", "profiles_opt_dry_run")
-    # `--audit` is a legacy alias for `--dry-run`: both share dest="dry_run" so
-    # existing invocations of `--audit` keep working alongside the new flag.
-    cmd = _bool_flag(cmd, "--audit", "dry_run", "profiles_opt_audit")
-    cmd = _bool_flag(cmd, "--yes", "yes", "profiles_opt_yes")
-    cmd = _bool_flag(cmd, "--skip-install", "skip_install", "profiles_opt_skip_install")
     return cmd
 
 
-def _with_path_flags(cmd: click.Command) -> click.Command:
-    """Apply the two value flags: --profile / --json."""
+def _with_profile_flag(cmd: click.Command) -> click.Command:
+    """Apply the one value flag: --profile."""
     cmd = _value_flag(cmd, "--profile", "profile", "profiles_opt_profile")
-    cmd = _value_flag(cmd, "--json", "json_path", "profiles_opt_json", type=click.Path())
     return cmd
 
 

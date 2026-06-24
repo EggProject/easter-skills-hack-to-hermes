@@ -31,7 +31,6 @@ class _ApplyCallArgs:
     actions: list[str]
     errors: list[str]
     profile_path: Any
-    skip_install: bool
     bilingual_fn: Any
 
 

@@ -10,8 +10,8 @@ The script is invoked as ``easter-hermes-sorry-skills-profiles`` (declared in
 ``pyproject.toml``). It walks every Hermes profile (the default
 ``hermes`` profile and every named profile returned by
 ``hermes_cli.profiles.list_profiles()``), audits the per-profile
-skills tree, and (with ``--apply``) installs/replaces the migrated
-``skill-creator`` at the flat path ``<HERMES_HOME>/skills/skill-creator/``.
+skills tree, and installs/replaces the migrated ``skill-creator`` at
+the flat path ``<HERMES_HOME>/skills/skill-creator/``.
 
 The replace is in-place: the factory skill-creator (installed from
 ``openai/skills/skill-creator`` per ``hermes_cli/skills_hub.py``) and
@@ -26,8 +26,6 @@ fix.
 Safety:
 - Runs under ``hermes_home_scope(path)`` which mirrors HERMES_HOME in
   BOTH the ``hermes_constants`` override token AND ``os.environ``.
-- Refuses ``--apply`` against the live ``~/.hermes`` unless ``--yes``
-  is passed AND the output is a TTY.
 - All console messages are bilingual (en/hu single line).
 - ``--help`` has two mirrored sections (English / magyar).
 

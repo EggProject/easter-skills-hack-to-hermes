@@ -13,14 +13,13 @@ members), the help-text constants live in ``_cli_profiles_cli_options``
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import click
 
 from easter_hermes_sorry_skills._cli_profiles_cli_build import (
     _with_misc_flags,
-    _with_path_flags,
+    _with_profile_flag,
     _with_verbose_flag,
 )
 from easter_hermes_sorry_skills._cli_profiles_cli_help import build_help_text
@@ -32,28 +31,22 @@ from easter_hermes_sorry_skills._cli_profiles_cli_help import build_help_text
 )
 @click.pass_context
 def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
-    """Per-profile audit/flip for the migrated skill-creator skill (Script #2)."""
+    """Per-profile install/replace for the migrated skill-creator skill (Script #2)."""
     from easter_hermes_sorry_skills.cli_profiles import run_audit
 
     dry_run = bool(kwargs.get("dry_run", False))
-    raw_json_path = kwargs.get("json_path")
-    json_path: Path | None
-    json_path = Path(raw_json_path) if isinstance(raw_json_path, str) else None
     run_audit(
         apply=not dry_run,
         profile=kwargs.get("profile"),
-        json_path=json_path,
         verbose=kwargs.get("verbose", False),
-        skip_install=bool(kwargs.get("skip_install", False)),
-        yes=bool(kwargs.get("yes", False)),
     )
 
 
-# Apply the eight ``click.option`` decorators via three wrapper helpers
+# Apply the three ``click.option`` decorators via three wrapper helpers
 # so the function itself only has two decorators (``@click.command`` +
 # ``@click.pass_context``) — keeps the WPS216 cap of 5 happy.
 main_cmd = _with_misc_flags(main_cmd)
-main_cmd = _with_path_flags(main_cmd)
+main_cmd = _with_profile_flag(main_cmd)
 main_cmd = _with_verbose_flag(main_cmd)
 
 

@@ -47,8 +47,6 @@ def audit_profile(
     profile_path: Path,
     *,
     apply: bool,
-    skip_install: bool,
-    frozen_time: str | None,
     bilingual_fn: Any,
 ) -> dict[str, Any]:
     """Audit (and optionally apply) a single profile.
@@ -75,7 +73,6 @@ def audit_profile(
                 actions=actions,
                 errors=errors,
                 profile_path=profile_path,
-                skip_install=skip_install,
                 bilingual_fn=bilingual_fn,
             )
         )
@@ -166,7 +163,6 @@ def _audit_apply(args: _ApplyCallArgs) -> dict[str, Any]:
         args.disabled_now,
         deps,
         slot=slot,
-        skip_install=args.skip_install,
     )
 
     return args.row
@@ -178,7 +174,6 @@ def _run_apply(
     deps: _ApplyDeps,
     *,
     slot: _ApplySlot,
-    skip_install: bool,
 ) -> None:
     apply_save_disabled(
         _SaveDisabledArgs(
@@ -191,14 +186,13 @@ def _run_apply(
             errors=slot.errors,
         ),
     )
-    if not skip_install:
-        apply_do_install(
-            deps.do_install,
-            slot.row,
-            slot.actions,
-            slot.errors,
-            deps.bilingual_fn,
-        )
+    apply_do_install(
+        deps.do_install,
+        slot.row,
+        slot.actions,
+        slot.errors,
+        deps.bilingual_fn,
+    )
     apply_clear_cache(
         deps.clear_skills_system_prompt_cache,
         slot.row,
