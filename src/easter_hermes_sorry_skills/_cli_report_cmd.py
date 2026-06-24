@@ -6,6 +6,7 @@ Click command definition for the reporter CLI.
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import click
@@ -14,10 +15,12 @@ from easter_hermes_sorry_skills._cli_report_ui import emit_bilingual_help
 from easter_hermes_sorry_skills.i18n import messages_en as EN
 
 _HELP_PARAGRAPH_SEP = "\n\n"
+_SORT_DEFAULT = "tokens"
+_FMT_DEFAULT = "text"
 
 
 def _with_report_options(cmd: click.Command) -> click.Command:
-    """Apply the five reporter ``click.option`` decorators as one wrapper."""
+    """Apply the six reporter ``click.option`` decorators as one wrapper."""
     cmd = click.option("--profile", default=None, help=EN.report_opt_profile)(cmd)
     cmd = click.option(
         "--sort",
@@ -46,6 +49,13 @@ def _with_report_options(cmd: click.Command) -> click.Command:
         default=False,
         help=EN.report_opt_help,
     )(cmd)
+    cmd = click.option(
+        "--verbose",
+        "verbose",
+        is_flag=True,
+        default=False,
+        help=EN.report_opt_verbose,
+    )(cmd)
     return cmd
 
 
@@ -56,32 +66,55 @@ def _with_report_options(cmd: click.Command) -> click.Command:
         "ignore_unknown_options": True,
     },
 )
-def _bare_main(
-    profile: str | None,
-    sort: str,
-    fmt: str,
-    json_path: str | None,
-    show_help: bool,
-) -> None:
+def _bare_main(**kwargs: bool | str | None) -> None:
     """Bilingual EN+HU reporter. See --help for details."""
     from easter_hermes_sorry_skills.cli_report import run as _run
 
+    resolved = _resolve_cli_kwargs(kwargs)
     argv = sys.argv[1:]
-    if show_help:
+    if resolved.show_help:
         emit_bilingual_help()
         sys.exit(0)
-    jp: Path | None = Path(json_path) if json_path else None
     sys.exit(
         _run(
-            profile=profile,
-            sort=sort,
-            fmt=fmt,
-            json_path=jp,
+            profile=resolved.profile,
+            sort=resolved.sort,
+            fmt=resolved.fmt,
+            json_path=resolved.json_path,
+            verbose=resolved.verbose,
             argv=argv,
         ),
     )
 
 
-# Apply the five ``click.option`` decorators via a wrapper helper so the
+@dataclass(frozen=True)
+class _ResolvedCliArgs:
+    """Click-resolved CLI args narrowed to the reporter's expected types."""
+
+    profile: str | None
+    sort: str
+    fmt: str
+    json_path: Path | None
+    show_help: bool
+    verbose: bool
+
+
+def _resolve_cli_kwargs(kwargs: dict[str, bool | str | None]) -> _ResolvedCliArgs:
+    """Narrow click kwargs to typed reporter args (≤5 locals in caller)."""
+    profile = kwargs.get("profile")
+    sort = kwargs.get("sort")
+    fmt = kwargs.get("fmt")
+    json_path_str = kwargs.get("json_path")
+    return _ResolvedCliArgs(
+        profile=profile if isinstance(profile, str) else None,
+        sort=sort if isinstance(sort, str) else _SORT_DEFAULT,
+        fmt=fmt if isinstance(fmt, str) else _FMT_DEFAULT,
+        json_path=Path(json_path_str) if isinstance(json_path_str, str) else None,
+        show_help=bool(kwargs.get("show_help", False)),
+        verbose=bool(kwargs.get("verbose", False)),
+    )
+
+
+# Apply the six ``click.option`` decorators via a wrapper helper so the
 # function itself only has one decorator (WPS216 cap of 5).
 main = _with_report_options(_bare_main)

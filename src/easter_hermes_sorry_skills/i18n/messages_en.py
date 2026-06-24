@@ -47,6 +47,12 @@ REPORT_OPT_JSON = (
     "ha --format=json; egyébként figyelmen kívül hagyva)."
 )
 REPORT_OPT_HELP = "[en] Show bilingual EN+HU help. / [hu] Kétnyelvű EN+HU help megjelenítése."
+REPORT_OPT_VERBOSE = (
+    "[en] Print detailed per-cell diagnostics to stderr "
+    "(every cell value + section summary). / "
+    "[hu] Részletes cella-szintű diagnosztika kiírása stderr-re "
+    "(minden cellaérték + szekció-összefoglaló)."
+)
 
 REPORT_USAGE_HEADER = (
     "[en] Usage: easter-hermes-sorry-skills-report [OPTIONS] / "
@@ -128,6 +134,7 @@ report_opt_sort = REPORT_OPT_SORT
 report_opt_format = REPORT_OPT_FORMAT
 report_opt_json = REPORT_OPT_JSON
 report_opt_help = REPORT_OPT_HELP
+report_opt_verbose = REPORT_OPT_VERBOSE
 report_usage_header = REPORT_USAGE_HEADER
 report_tokenizer_unavailable = REPORT_TOKENIZER_UNAVAILABLE
 report_enabled_detection_unavailable = REPORT_ENABLED_DETECTION_UNAVAILABLE
@@ -176,9 +183,21 @@ EN_MESSAGES = MappingProxyType(
             "mirroring HERMES_HOME in both the override token and "
             "os.environ['HERMES_HOME']."
         ),
-        "profiles_opt_apply": ("Write the audit findings to the target (DEFAULT behavior)."),
-        "profiles_opt_audit": ("Run audit only; do not write (inverse of default)."),
-        "profiles_opt_dry_run": ("Same as --audit (do not write)."),
+        "profiles_opt_apply": (
+            "Apply changes to all profiles (default behavior; writes to "
+            "~/.hermes/skills and every profile when --profile is unset). "
+            "Mutually exclusive with --dry-run/--audit."
+        ),
+        "profiles_opt_audit": ("Alias for --dry-run (kept for backwards compatibility)."),
+        "profiles_opt_dry_run": ("Preview changes without writing. Opposite of --apply."),
+        "profiles_opt_verbose": (
+            "Print detailed per-site diagnostics to stderr (does not pollute stdout / JSON output)."
+        ),
+        "report_opt_verbose": (
+            "Print detailed per-cell diagnostics to stderr "
+            "(every cell value + section summary). "
+            "Works with --json (stderr only)."
+        ),
         "profiles_opt_profile": ("Restrict the run to a single profile (default: every profile)."),
         "profiles_opt_json": ("Write the deterministic JSON report to PATH (default: ./profile-audit.json)."),
         "profiles_opt_yes": ("Suppress the interactive TTY confirmation (CI / non-TTY runs)."),
@@ -190,7 +209,9 @@ EN_MESSAGES = MappingProxyType(
         # Bilingual runtime messages
         "profiles_msg_scanning": "Scanning profiles...",
         "profiles_msg_profile_count": "Found {n} profile(s) to audit.",
-        "profiles_msg_audit_default": ("Default mode: dry-run (use --apply to perform writes)."),
+        "profiles_msg_applying_default": (
+            "Default mode: applying changes to {n} profile(s) (including ~/.hermes/skills)."
+        ),
         "profiles_msg_applying": "Applying per-profile flip...",
         "profiles_msg_profile_audit": ("profile={name} current_disabled={disabled} current_installed={installed}"),
         "profiles_msg_diff": (

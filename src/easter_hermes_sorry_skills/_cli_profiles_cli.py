@@ -20,7 +20,8 @@ import click
 
 from easter_hermes_sorry_skills._cli_profiles_cli_build import (
     _with_misc_flags,
-    _with_path_and_time_flags,
+    _with_path_flags,
+    _with_verbose_flag,
 )
 from easter_hermes_sorry_skills._cli_profiles_cli_help import build_help_text
 
@@ -42,17 +43,18 @@ def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
         apply=not dry_run,
         profile=kwargs.get("profile"),
         json_path=json_path,
-        frozen_time=kwargs.get("frozen_time"),
+        verbose=kwargs.get("verbose", False),
         skip_install=bool(kwargs.get("skip_install", False)),
         yes=bool(kwargs.get("yes", False)),
     )
 
 
-# Apply the seven ``click.option`` decorators via wrapper helpers
+# Apply the eight ``click.option`` decorators via three wrapper helpers
 # so the function itself only has two decorators (``@click.command`` +
 # ``@click.pass_context``) — keeps the WPS216 cap of 5 happy.
 main_cmd = _with_misc_flags(main_cmd)
-main_cmd = _with_path_and_time_flags(main_cmd)
+main_cmd = _with_path_flags(main_cmd)
+main_cmd = _with_verbose_flag(main_cmd)
 
 
 def make_cli() -> Any:

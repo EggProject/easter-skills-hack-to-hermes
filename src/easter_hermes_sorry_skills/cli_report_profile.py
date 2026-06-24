@@ -35,6 +35,7 @@ class ProfileBuildContext:
     sort: str
     platform: str | None
     curator: Any | None
+    verbose: bool
 
 
 @dataclass(frozen=True)
@@ -47,20 +48,10 @@ class _SectionSinks:
 
 def build_profile_sections(
     profile_paths: list[Path],
-    *,
-    fmt: str,
-    sort: str,
-    platform: str | None,
-    curator: Any | None,
+    ctx: ProfileBuildContext,
 ) -> tuple[list[str], list[Any], int | None]:
     """Build text/json sections for all profiles. Error code or None."""
     sinks = _SectionSinks(text_sections=[], json_sections=[])
-    ctx = ProfileBuildContext(
-        fmt=fmt,
-        sort=sort,
-        platform=platform,
-        curator=curator,
-    )
     for prof in profile_paths:
         rc = build_one_profile_section(
             prof,
@@ -91,7 +82,19 @@ def build_one_profile_section(
         click.echo(EN.report_enabled_detection_unavailable, err=True)
         return _ENABLED_DETECTION_RC
     rows = _imps.sort_rows(rows, ctx.sort)
-    section = _imps.make_section(ctx.fmt, prof.name, rows, total)
+    section = _imps.make_section(
+        ctx.fmt,
+        prof.name,
+        rows,
+        total,
+        verbose=ctx.verbose,
+    )
+    if ctx.verbose:
+        skipped_empty = sum(1 for row in rows if row.tokens == 0)
+        click.echo(
+            f"[verbose] section={prof.name} rows={len(rows)} skipped_empty={skipped_empty}",
+            err=True,
+        )
     if ctx.fmt == _imps.FORMAT_TEXT:
         _append_text_section(sinks.text_sections, section)
     else:

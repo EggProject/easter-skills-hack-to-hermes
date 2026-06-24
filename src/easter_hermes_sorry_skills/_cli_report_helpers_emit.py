@@ -19,11 +19,13 @@ from easter_hermes_sorry_skills._cli_report_helpers_consts import (
     TOOL_VERSION,
 )
 from easter_hermes_sorry_skills._reporter import (
+    TEXT_COLUMNS,
     ProfileSection,
     SkillRow,
     format_json,
     format_text,
 )
+from easter_hermes_sorry_skills._reporter_format import _format_value_for_text
 from easter_hermes_sorry_skills.i18n import messages_en as EN
 
 
@@ -34,13 +36,42 @@ def resolve_json_path(fmt: str, json_path: Path | None) -> Path | None:
     return json_path
 
 
+def _emit_verbose_cell(
+    profile: str,
+    section: str,
+    column: str,
+    cell_value: object,
+) -> None:
+    """Emit a per-cell ``[verbose]`` line on stderr."""
+    click.echo(
+        f"[verbose] profile={profile} section={section} cell={column}={cell_value}",
+        err=True,
+    )
+
+
+def _emit_verbose_section(
+    rows: list[SkillRow],
+    *,
+    profile: str,
+    section: str,
+) -> None:
+    """Emit one ``[verbose] cell=...=value`` line per (row, column)."""
+    for row in rows:
+        for column in TEXT_COLUMNS:
+            _emit_verbose_cell(profile, section, column, _format_value_for_text(row, column))
+
+
 def make_section(
     fmt: str,
     name: str,
     rows: list[SkillRow],
     total: int,
+    *,
+    verbose: bool = False,
 ) -> str | ProfileSection:
     """Build a single text section string or json ProfileSection."""
+    if verbose:
+        _emit_verbose_section(rows, profile=name, section=name)
     if fmt == FORMAT_TEXT:
         return format_text(name, rows, total_tokens=total)
     return ProfileSection(

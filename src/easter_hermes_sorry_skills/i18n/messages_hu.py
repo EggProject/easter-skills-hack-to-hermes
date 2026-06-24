@@ -47,6 +47,14 @@ REPORT_OPT_JSON = (
     "(default: ./skill-report.json when --format=json; otherwise ignored)."
 )
 REPORT_OPT_HELP = "[hu] Kétnyelvű EN+HU help megjelenítése. / [en] Show bilingual EN+HU help."
+REPORT_OPT_VERBOSE = (
+    "[hu] Részletes, cellánkénti diagnosztika a stderr-re "
+    "(minden cella értéke + szekció összegzés). "
+    "Működik --json-nel is (csak stderr). / "
+    "[en] Print detailed per-cell diagnostics to stderr "
+    "(every cell value + section summary). "
+    "Works with --json (stderr only)."
+)
 
 REPORT_USAGE_HEADER = (
     "[hu] Használat: easter-hermes-sorry-skills-report [OPTIONS] / "
@@ -129,6 +137,7 @@ report_opt_sort = REPORT_OPT_SORT
 report_opt_format = REPORT_OPT_FORMAT
 report_opt_json = REPORT_OPT_JSON
 report_opt_help = REPORT_OPT_HELP
+report_opt_verbose = REPORT_OPT_VERBOSE
 report_usage_header = REPORT_USAGE_HEADER
 report_tokenizer_unavailable = REPORT_TOKENIZER_UNAVAILABLE
 report_enabled_detection_unavailable = REPORT_ENABLED_DETECTION_UNAVAILABLE
@@ -178,9 +187,21 @@ HU_MESSAGES = MappingProxyType(
             "HERMES_HOME-ot mind az override tokenben, mind az "
             "os.environ['HERMES_HOME']-ban."
         ),
-        "profiles_opt_apply": ("Alapértelmezetten ír (WRITE)."),
-        "profiles_opt_audit": ("Csak audit; NEM ír (a default ellentéte)."),
-        "profiles_opt_dry_run": ("Ugyanaz mint --audit (NEM ír)."),
+        "profiles_opt_apply": (
+            "Módosítások alkalmazása minden profilra (alapértelmezett; ír a "
+            "~/.hermes/skills és minden profilba, ha nincs --profile). "
+            "Kölcsönösen kizáró a --dry-run/--audit kapcsolóval."
+        ),
+        "profiles_opt_audit": ("A --dry-run alias (visszafelé kompatibilitás miatt tartjuk meg)."),
+        "profiles_opt_dry_run": ("Módosítások előnézete írás nélkül. A --apply ellentéte."),
+        "profiles_opt_verbose": (
+            "Részletes, helyszínenkénti diagnosztika a stderr-re (nem zavarja a stdout / JSON kimenetet)."
+        ),
+        "report_opt_verbose": (
+            "Részletes, cellánkénti diagnosztika a stderr-re "
+            "(minden cella értéke + szekció összegzés). "
+            "Működik --json-nel is (csak stderr)."
+        ),
         "profiles_opt_profile": ("A futást egyetlen profilra korlátozza (alap: minden profil)."),
         "profiles_opt_json": ("A determinisztikus JSON jelentést a PATH helyre írja (alap: ./profile-audit.json)."),
         "profiles_opt_yes": ("Elnyomja az interaktív TTY megerősítést (CI / nem-TTY futás)."),
@@ -192,7 +213,9 @@ HU_MESSAGES = MappingProxyType(
         # Bilingual runtime messages (Hungarian half)
         "profiles_msg_scanning": "Profilok vizsgálata...",
         "profiles_msg_profile_count": "{n} profil vizsgálandó.",
-        "profiles_msg_audit_default": ("Alap mód: száraz futás (használja --apply kapcsolót a végrehajtáshoz)."),
+        "profiles_msg_applying_default": (
+            "Alapértelmezett mód: módosítások alkalmazása {n} profilra (és ~/.hermes/skills)."
+        ),
         "profiles_msg_applying": "Profilonkénti alkalmazás...",
         "profiles_msg_profile_audit": ("profil={name} jelenleg_letiltva={disabled} jelenleg_telepítve={installed}"),
         "profiles_msg_diff": (

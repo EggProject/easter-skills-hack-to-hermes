@@ -13,7 +13,7 @@ from easter_hermes_sorry_skills.i18n import messages_en as EN
 from easter_hermes_sorry_skills.i18n import messages_hu as HU
 
 _USAGE_LINE = "  uv run easter-hermes-sorry-skills-report [--profile <name>] [--sort tokens|use_count|last_used_at]"
-_USAGE_CONT = "                                     [--format text|json] [--json PATH] [--help]"
+_USAGE_CONT = "                                     [--format text|json] [--json PATH] [--verbose] [--help]"
 OPTIONS_HEADER_EN = "Options:"
 OPTIONS_HEADER_HU = "Opciok:"
 
@@ -33,6 +33,7 @@ def emit_bilingual_help() -> None:
         f"  --sort <key>        {EN.report_opt_sort}",
         f"  --format <fmt>      {EN.report_opt_format}",
         f"  --json PATH         {EN.report_opt_json}",
+        f"  --verbose           {EN.report_opt_verbose}",
         f"  --help              {EN.report_opt_help}",
     ]
     hu_lines = [
@@ -46,6 +47,7 @@ def emit_bilingual_help() -> None:
         f"  --sort <key>        {HU.report_opt_sort}",
         f"  --format <fmt>      {HU.report_opt_format}",
         f"  --json PATH         {HU.report_opt_json}",
+        f"  --verbose           {HU.report_opt_verbose}",
         f"  --help              {HU.report_opt_help}",
     ]
     click.echo("\n".join(en_lines))

@@ -25,10 +25,15 @@ from easter_hermes_sorry_skills import cli_report_imports as _imps
 from easter_hermes_sorry_skills import cli_report_profile as _profile_mod
 
 # Test contract: the reporter MUST share enabled-detection with Script #2.
-# The ``_imps`` module re-exports the function so callers can rely on it
-# at module level. Tests grep the source for ``get_enabled_skills``
-# (a symbol that resolves to the same callable as Script #2's).
-get_enabled_skills = _imps.get_enabled_skills  # re-export via _imps (test contract requires module-level symbol)
+# Direct import satisfies the AST check (``ImportFrom`` whose module
+# ends with ``_enabled_detection``); the rebind on the next line
+# surfaces the name as an explicit module attribute for mypy + the
+# ``monkeypatch.setattr(cli_report, "get_enabled_skills", ...)`` site.
+from easter_hermes_sorry_skills._enabled_detection import (
+    get_enabled_skills as _enabled_skills_fn,
+)
+
+get_enabled_skills = _enabled_skills_fn
 
 emit_bilingual_help = _imps.emit_bilingual_help
 main = _imps.main
@@ -58,6 +63,7 @@ class ReportInputs:
     json_path: Path | None = None
     platform: str | None = None
     show_help: bool = False
+    verbose: bool = False
     argv: list[str] | None = None
 
 
@@ -88,13 +94,14 @@ def _build_and_emit(
     profile_paths: list[Path],
 ) -> int:
     """Build sections for ``profile_paths`` and emit the final report."""
-    text_sections, json_sections, build_err = _profile_sections(
-        profile_paths,
+    ctx = _profile_mod.ProfileBuildContext(
         fmt=inputs.fmt,
         sort=inputs.sort,
         platform=inputs.platform,
         curator=curator,
+        verbose=inputs.verbose,
     )
+    text_sections, json_sections, build_err = _profile_sections(profile_paths, ctx)
     if build_err is not None:
         return build_err
     _emit_sections(inputs.fmt, json_path, text_sections, json_sections)

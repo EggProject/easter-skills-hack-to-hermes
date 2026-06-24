@@ -7,6 +7,7 @@ the wemake WPS202 cap (<=7 module members).
 from __future__ import annotations
 
 import datetime as _datetime_mod
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,12 +21,20 @@ AuditReport = _bindings.AuditReport
 TOOL_NAME = "easter-hermes-sorry-skills-profiles"
 TOOL_VERSION = "0.1.0"
 LIVE_HERMES_HOME = Path.home() / ".hermes"
+FROZEN_TIME_ENV_KEY = "HERMES_SKILL_CREATOR_FROZEN_TIME"
 
 
 def _now_iso(frozen_time: str | None) -> str:
-    """Return the report timestamp (stable when ``frozen_time`` is set)."""
+    """Return the report timestamp (stable when ``frozen_time`` is set).
+
+    Honors the ``HERMES_SKILL_CREATOR_FROZEN_TIME`` env var as a fallback
+    so deterministic tests can pin the timestamp without a CLI flag.
+    """
     if frozen_time is not None:
         return frozen_time
+    env_frozen = os.environ.get(FROZEN_TIME_ENV_KEY)
+    if env_frozen:
+        return env_frozen
     return _datetime_mod.datetime.now(_datetime_mod.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 

@@ -378,3 +378,23 @@ def test_cli_report_main_entry_invokes_main(monkeypatch) -> None:
     monkeypatch.setattr(cli_report, "main", stub_main)
     cli_report._main_entry()
     assert called["n"] == 1
+
+
+# --- verbose (Phase D) ---
+
+
+def test_verbose_flag_added_to_report(hermes_home: Path) -> None:
+    """``--verbose`` at the report CLI emits ``[verbose]`` diagnostics on stderr."""
+    _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
+    runner = CliRunner()
+    result = runner.invoke(main, ["--verbose"])
+    assert result.exit_code == 0, result.output
+    assert "[verbose]" in result.stderr or "[verbose]" in result.output
+
+
+def test_report_help_lists_verbose() -> None:
+    """The report ``--help`` output mentions ``--verbose`` at least twice (EN+HU)."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--help"])
+    assert result.exit_code == 0, result.output
+    assert result.output.count("--verbose") >= 2

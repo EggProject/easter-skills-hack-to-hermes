@@ -996,7 +996,17 @@ def test_help_is_bilingual(installed) -> None:
     assert "Usage (English)" in out
     assert "Használat (magyar)" in out
     # Mirrored content: every option appears in both halves.
-    for opt in ("--apply", "--profile", "--json", "--yes", "--skip-install", "--help"):
+    for opt in (
+        "--apply",
+        "--dry-run",
+        "--audit",
+        "--yes",
+        "--skip-install",
+        "--verbose",
+        "--profile",
+        "--json",
+        "--help",
+    ):
         assert out.count(opt) >= 2, f"{opt} should appear in both sections"
 
 
@@ -1632,3 +1642,57 @@ def test_audit_verbose_emits_per_site_summary_on_stdout(
     assert "profiles_msg_profile_audit" not in captured.out  # key not in output
     assert "[en]" in captured.out
     assert "[hu]" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# TDD list — CLI surface (Phase D).
+# ---------------------------------------------------------------------------
+
+
+def test_verbose_flag_emits_diagnostics(installed) -> None:
+    """``--verbose`` at the CLI level emits ``[verbose]`` diagnostics to stderr."""
+    log, cli = installed()
+    runner = cli.make_cli()
+    result = runner.invoke(cli.app, ["--verbose"])
+    # The run succeeds (exit 0) and writes a [verbose] line on stderr.
+    assert result.exit_code == 0, result.output
+    # Click's CliRunner routes err=True output to result.stderr (not capsys).
+    assert "[verbose]" in (result.stderr or "")
+
+
+def test_frozen_time_cli_flag_removed(installed) -> None:
+    """``--frozen-time=...`` is no longer a CLI flag (Click exits 2)."""
+    log, cli = installed()
+    runner = cli.make_cli()
+    result = runner.invoke(cli.app, ["--frozen-time=2024-01-01T00:00:00Z"])
+    # Click returns exit code 2 for "no such option".
+    assert result.exit_code == 2
+
+
+def test_frozen_time_env_var_still_works(
+    installed,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The frozen-time env var still pins the report ``generated_at`` timestamp."""
+    profile = Path("/tmp/env-var-default")
+    profile.mkdir(exist_ok=True)
+    (profile / "skills").mkdir(exist_ok=True)
+    log, cli = installed(
+        profile_paths=[profile],
+        profile_names=["hermes"],
+        config_data={"skills": {"disabled": []}},
+    )
+    monkeypatch.setenv("HERMES_SKILL_CREATOR_FROZEN_TIME", "2024-01-01T00:00:00Z")
+
+    report = cli.run_audit(apply=False, json_path=None)
+    assert report["generated_at"] == "2024-01-01T00:00:00Z"
+
+
+def test_default_is_write_help_text(installed) -> None:
+    """The ``--help`` body declares that default mode writes to ``~/.hermes/skills``."""
+    log, cli = installed()
+    runner = cli.make_cli()
+    result = runner.invoke(cli.app, ["--help"])
+    assert result.exit_code == 0
+    out = result.output
+    assert ("writes to ~/.hermes/skills" in out) or ("Alapértelmezetten ír" in out)

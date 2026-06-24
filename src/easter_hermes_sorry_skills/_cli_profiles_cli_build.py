@@ -46,15 +46,14 @@ def _with_misc_flags(cmd: click.Command) -> click.Command:
     return cmd
 
 
-def _with_path_and_time_flags(cmd: click.Command) -> click.Command:
-    """Apply the three value flags: --profile / --json / --frozen-time."""
+def _with_path_flags(cmd: click.Command) -> click.Command:
+    """Apply the two value flags: --profile / --json."""
     cmd = _value_flag(cmd, "--profile", "profile", "profiles_opt_profile")
     cmd = _value_flag(cmd, "--json", "json_path", "profiles_opt_json", type=click.Path())
-    cmd = _value_flag(
-        cmd,
-        "--frozen-time",
-        "frozen_time",
-        "profiles_opt_frozen_time",
-        envvar="HERMES_SKILL_CREATOR_FROZEN_TIME",
-    )
+    return cmd
+
+
+def _with_verbose_flag(cmd: click.Command) -> click.Command:
+    """Apply the boolean --verbose flag."""
+    cmd = _bool_flag(cmd, "--verbose", "verbose", "profiles_opt_verbose")
     return cmd
