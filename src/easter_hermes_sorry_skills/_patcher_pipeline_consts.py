@@ -18,5 +18,12 @@ EXIT_PERMISSION = 3
 EXIT_IO = 4
 
 # Default remediation text for line-drift rejected sidecars (EN/HU).
-REMEDIATION_EN = "Re-run with --force --i-accept-line-drift after reviewing the diff."
-REMEDIATION_HU = "Futtassa újra --force --i-accept-line-drift kapcsolóval a diff átnézése után."
+# Phase 7A.5 removed ``--force --i-accept-line-drift``; drift is now terminal.
+# Recovery: manually fix the drifted line, then re-run without ``--dry-run``.
+REMEDIATION_EN = (
+    "Drift is terminal (EXIT_DRIFT). Manually fix the drifted line, then re-run without --dry-run (default writes)."
+)
+REMEDIATION_HU = (
+    "A drift terminális (EXIT_DRIFT). Javítsd manuálisan az eltérő sort, "
+    "majd futtasd újra --dry-run nélkül (alap: írás)."
+)

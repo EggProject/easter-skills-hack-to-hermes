@@ -30,19 +30,10 @@ from easter_hermes_sorry_skills.i18n.messages_en import (
 # Re-bindings so the ``from _patcher_pipeline import X`` path keeps
 # working for tests that reach for these symbols directly.
 _build_result = _apply_mod.build_result
-_build_site_payload = _apply_mod.build_site_payload
-_io_error_result = _apply_mod.io_error_result
 _apply_one_site = _apply_mod.apply_one_site
-_try_atomic_write = _apply_mod.try_atomic_write
-
-# Backward-compat alias for tests that monkeypatched the per-site emit
-# (the per-site line is now folded into the per-invocation audit line
-# emitted at the end of :func:`apply_sites`).
-_emit_site_audit = _apply_mod.emit_site_audit_stub
 
 audit_log_path = _imps.audit_log_path
 _cross_filesystem = _imps._cross_filesystem
-_now_iso = _imps._now_iso
 STATE_DRIFTED = _imps.STATE_DRIFTED
 STATE_PATCHED = _imps.STATE_PATCHED
 
@@ -85,8 +76,6 @@ class _ApplyLoop:
     """Per-iteration bindings for the descending-line ``apply_sites`` loop."""
 
     inputs: ApplySitesInputs
-    audit_path: Path
-    timestamp: str
     sites_patched: list[str]
     state: dict[str, str]
     diagnostics: list[str]
@@ -144,11 +133,8 @@ def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
 
 def apply_sites(inputs: ApplySitesInputs) -> PatcherResult:
     """Apply sites in DESCENDING line order (insertions don't shift later sites)."""
-    audit_path = inputs.audit_log_path or audit_log_path()
     loop = _ApplyLoop(
         inputs=inputs,
-        audit_path=audit_path,
-        timestamp=_now_iso(),
         sites_patched=inputs.sites_patched,
         state=inputs.state,
         diagnostics=inputs.diagnostics,

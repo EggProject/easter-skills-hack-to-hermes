@@ -12,7 +12,7 @@ from types import MappingProxyType
 # cap is detected as still un-raised in the operator's Hermes checkout.
 ADVISORY_CAP_HU = (
     "[hu] A 60 karakteres skill-leírás-korlát még nincs felemelve a Hermes "
-    "checkoutban. Futtasd a `easter-hermes-sorry-skills-patch` parancsot a "
+    "checkoutban. Futtasd a `easter-hermes-sorry-skills-patch-hermes` parancsot a "
     "felemeléshez."
 )
 
@@ -86,9 +86,6 @@ TARGET_IS_HERMES_AGENT = (
 TARGET_MISSING_SKILL_UTILS = (
     "[hu] a célpontból hiányzik az agent/skill_utils.py: {path} / [en] target missing agent/skill_utils.py: {path}"
 )
-FORCE_REQUIRES_I_ACCEPT = (
-    "[hu] a --force használatához --i-accept-line-drift szükséges / [en] --force requires --i-accept-line-drift"
-)
 LINE_DRIFT = (
     "[hu] sor-eltérés a {site_id} helyen (sor {line}) / [en] line drift detected at site {site_id} (line {line})"
 )
@@ -103,10 +100,6 @@ CROSS_FS_WARN = (
     "filesystems"
 )
 TEXT_DRIFT = "[hu] szöveg-eltérés a {site_id} helyen / [en] text drift detected at site {site_id}"
-MIGRATION_REGENERATED = "[hu] migrációs jegyzet újragenerálva itt: {path} / [en] migration note regenerated at {path}"
-FORCE_CONFIRM_DIFF_HEADER = (
-    "[hu] --force: tervezett diff (unified) ehhez: {sites} / [en] --force: planned diff (unified) for {sites}"
-)
 
 # Column headers (Hungarian half).
 COL_PROFILE = "profil"

@@ -41,7 +41,7 @@ from easter_hermes_sorry_skills._patcher_apply_atomic import (
 REJECTED_SIDECAR = Path(".patch.rejected")
 AUDIT_LOG_NAME = "patch-audit.log"
 AUDIT_LOG_REL = Path(".hermes") / AUDIT_LOG_NAME
-REJECTED_TOOL_NAME = "easter-hermes-sorry-skills-patch"
+REJECTED_TOOL_NAME = "easter-hermes-sorry-skills-patch-hermes"
 REJECTED_TOOL_VERSION = "0.1.0"
 
 

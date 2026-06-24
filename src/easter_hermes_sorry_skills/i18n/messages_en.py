@@ -13,7 +13,7 @@ from types import MappingProxyType
 # cap is detected as still un-raised in the operator's Hermes checkout.
 ADVISORY_CAP_EN = (
     "[en] The 60-character skill-description cap is un-raised in your "
-    "Hermes checkout. Run `easter-hermes-sorry-skills-patch` to raise it."
+    "Hermes checkout. Run `easter-hermes-sorry-skills-patch-hermes` to raise it."
 )
 
 # Script #3 (reporter) messages — bilingual format: [en] text / [hu] text.
@@ -85,9 +85,6 @@ TARGET_IS_HERMES_AGENT = (
 TARGET_MISSING_SKILL_UTILS = (
     "[en] target missing agent/skill_utils.py: {path} / [hu] a célpontból hiányzik az agent/skill_utils.py: {path}"
 )
-FORCE_REQUIRES_I_ACCEPT = (
-    "[en] --force requires --i-accept-line-drift / [hu] a --force használatához --i-accept-line-drift szükséges"
-)
 LINE_DRIFT = (
     "[en] line drift detected at site {site_id} (line {line}) / [hu] sor-eltérés a {site_id} helyen (sor {line})"
 )
@@ -102,10 +99,6 @@ CROSS_FS_WARN = (
     "fájlrendszeren van"
 )
 TEXT_DRIFT = "[en] text drift detected at site {site_id} / [hu] szöveg-eltérés a {site_id} helyen"
-MIGRATION_REGENERATED = "[en] migration note regenerated at {path} / [hu] migrációs jegyzet újragenerálva itt: {path}"
-FORCE_CONFIRM_DIFF_HEADER = (
-    "[en] --force: planned diff (unified) for {sites} / [hu] --force: tervezett diff (unified) ehhez: {sites}"
-)
 
 # Column headers (English half — the Hungarian half lives in messages_hu.py).
 COL_PROFILE = "profile"
