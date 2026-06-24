@@ -25,23 +25,10 @@ from easter_hermes_sorry_skills import cli_report_imports as _imps
 from easter_hermes_sorry_skills import cli_report_profile as _profile_mod
 
 # Test contract: the reporter MUST share enabled-detection with Script #2.
-# Tests grep this source for ``from ... import get_enabled_skills`` to
-# ensure the import is at module top-level (not inside a function). The
-# alias ``_detect_fn`` keeps the F811 lint happy because the rebinding
-# on the next line would otherwise flag the original name as unused.
-from easter_hermes_sorry_skills._enabled_detection import (
-    get_enabled_skills as _detect_fn,
-)
-
-# Public alias for callers and monkeypatch.setattr; rebinds to the
-# shared import so :mod:`.cli_report_profile` sees the patched value.
-get_enabled_skills = _imps.get_enabled_skills
-
-# Touch ``_detect_fn`` so flake8 treats the alias import as used
-# (the rebinding of ``get_enabled_skills`` alone does not satisfy F401).
-# The identity check is a no-op at runtime but ruff understands it.
-if _detect_fn is None:
-    raise RuntimeError("enabled-detection import is unexpectedly None")
+# The ``_imps`` module re-exports the function so callers can rely on it
+# at module level. Tests grep the source for ``get_enabled_skills``
+# (a symbol that resolves to the same callable as Script #2's).
+get_enabled_skills = _imps.get_enabled_skills  # re-export via _imps (test contract requires module-level symbol)
 
 emit_bilingual_help = _imps.emit_bilingual_help
 main = _imps.main

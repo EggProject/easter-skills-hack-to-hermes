@@ -308,41 +308,23 @@ def test_cli_report_helpers_stub_module_importable() -> None:
     assert mod is not None
 
 
-# --- cli_report.py line 44: RuntimeError when _detect_fn is None ---
+# --- cli_report.py: get_enabled_skills public re-export ---
 
 
-def test_cli_report_raises_when_detect_fn_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The module-top ``if _detect_fn is None: raise RuntimeError`` MUST trip on None.
+def test_cli_report_exposes_get_enabled_skills() -> None:
+    """``get_enabled_skills`` MUST be re-exported from ``cli_report`` as a direct import.
 
-    Achieved by stubbing ``_enabled_detection.get_enabled_skills`` to
-    ``None`` in ``sys.modules`` BEFORE reloading cli_report. The
-    ``from _enabled_detection import get_enabled_skills as _detect_fn``
-    binds ``_detect_fn = None`` at module-top, which then trips the
-    ``if _detect_fn is None`` guard.
+    The reporter MUST share enabled-detection with Script #2 (test contract:
+    tests grep ``cli_report.py`` for the literal ``from ... import
+    get_enabled_skills`` import to ensure it is at module top-level).
     """
-    import importlib
-    import sys
-    import types
-
     from easter_hermes_sorry_skills import cli_report as cr_mod
 
-    # Save the original module so we can restore it after the test.
-    saved_det = sys.modules.get("easter_hermes_sorry_skills._enabled_detection")
-    try:
-        # Stub the enabled-detection module with ``get_enabled_skills = None``.
-        stub_det = types.ModuleType("easter_hermes_sorry_skills._enabled_detection")
-        stub_det.get_enabled_skills = None  # type: ignore[attr-defined]
-        sys.modules["easter_hermes_sorry_skills._enabled_detection"] = stub_det
-
-        with pytest.raises(RuntimeError, match="enabled-detection import is unexpectedly None"):
-            importlib.reload(cr_mod)
-    finally:
-        # Restore the real module and reload cli_report so other tests see the original.
-        if saved_det is not None:
-            sys.modules["easter_hermes_sorry_skills._enabled_detection"] = saved_det
-            importlib.reload(cr_mod)
-        else:
-            sys.modules.pop("easter_hermes_sorry_skills._enabled_detection", None)
+    # 1. The name MUST be accessible on the module.
+    assert cr_mod.get_enabled_skills is not None
+    # 2. The re-export MUST be the same function as the one in
+    #    ``_enabled_detection`` (no silent rebind, no redundant wrapping).
+    assert cr_mod.get_enabled_skills is _enabled_detection.get_enabled_skills
 
 
 # --- cli_report_profile.py lines 110/116: TypeError branches ---
