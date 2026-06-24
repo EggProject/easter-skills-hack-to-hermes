@@ -32,6 +32,8 @@ def run_audit(**options: object) -> AuditReport:
         skip_install (bool): Audit only; do not call do_install.
         yes (bool): Suppress the live-install refusal.
         profile (str | None): Optional single profile NAME to restrict.
+        verbose (bool): Emit [verbose] diagnostics to stderr + per-site
+            row summaries (default: False, back-compat).
 
     Returns:
         The AuditReport (also written to json_path if given).
@@ -39,6 +41,7 @@ def run_audit(**options: object) -> AuditReport:
     import click
 
     opts = _extract_audit_options(options)
+    verbose = bool(options.get("verbose", False))
 
     # 0. Live-install refusal (safety contract). The refusal fires
     #    whenever HERMES_HOME resolves to the LIVE install AND --yes is
@@ -48,7 +51,7 @@ def run_audit(**options: object) -> AuditReport:
         click.echo(_bilingual("profiles_msg_refuse_no_yes"))
         sys.exit(5)
 
-    report = _run_audit_phase(opts)
+    report = _run_audit_phase(opts, verbose=verbose)
 
     json_path = opts["json_path"]
     if json_path is not None:

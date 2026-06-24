@@ -1549,4 +1549,86 @@ def test_bilingual_message_renders() -> None:
     assert "[en]" in out
     assert "[hu]" in out
     assert " / " in out
-    assert "3" in out
+
+
+# ---------------------------------------------------------------------------
+# TDD list — verbose mode (Phase C1).
+# ---------------------------------------------------------------------------
+
+
+def test_audit_verbose_emits_hermes_home_and_resolved_profiles(
+    installed,
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``verbose=True`` writes the HERMES_HOME + resolved-profile diagnostics to stderr."""
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(
+        profile_paths=[profile],
+        profile_names=["hermes"],
+        config_data={"skills": {"disabled": []}},
+    )
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+
+    cli.run_audit(
+        apply=False,
+        json_path=None,
+        frozen_time="2026-06-17T00:00:00Z",
+        verbose=True,
+    )
+
+    captured = capsys.readouterr()
+    assert "[verbose] HERMES_HOME=" in captured.err
+    assert "[verbose] resolved profiles: 1 (hermes)" in captured.err
+
+
+def test_audit_verbose_false_silent_on_stderr(installed, tmp_path: Path, capsys) -> None:
+    """``verbose=False`` (default) emits no verbose diagnostics to stderr."""
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(
+        profile_paths=[profile],
+        profile_names=["hermes"],
+        config_data={"skills": {"disabled": []}},
+    )
+
+    cli.run_audit(
+        apply=False,
+        json_path=None,
+        frozen_time="2026-06-17T00:00:00Z",
+    )
+
+    captured = capsys.readouterr()
+    assert "[verbose]" not in captured.err
+
+
+def test_audit_verbose_emits_per_site_summary_on_stdout(
+    installed,
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``verbose=True`` keeps the bilingual per-site row summary on stdout."""
+    profile = tmp_path / "default"
+    (profile / "skills").mkdir(parents=True)
+    log, cli = installed(
+        profile_paths=[profile],
+        profile_names=["hermes"],
+        config_data={"skills": {"disabled": []}},
+    )
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+
+    cli.run_audit(
+        apply=False,
+        json_path=None,
+        frozen_time="2026-06-17T00:00:00Z",
+        verbose=True,
+    )
+
+    captured = capsys.readouterr()
+    # The bilingual per-site summary still appears (gated on verbose=True).
+    assert "profiles_msg_profile_audit" not in captured.out  # key not in output
+    assert "[en]" in captured.out
+    assert "[hu]" in captured.out

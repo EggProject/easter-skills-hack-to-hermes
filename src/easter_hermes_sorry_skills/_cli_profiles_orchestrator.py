@@ -59,6 +59,7 @@ def _audit_and_collect_row(
     apply: bool,
     skip_install: bool,
     frozen_time: str | None,
+    verbose: bool = False,
 ) -> dict[str, object]:
     """Audit a single profile and backfill profile_name from ProfileInfo."""
     row = _audit_profile(
@@ -71,5 +72,6 @@ def _audit_and_collect_row(
     # Backfill the profile_name from the ProfileInfo (in case
     # the path-based name was "hermes" by default).
     row["profile_name"] = profile_info.name
-    _echo_row_summary(row)
+    if verbose:
+        _echo_row_summary(row)
     return row
