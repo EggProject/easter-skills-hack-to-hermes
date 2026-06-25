@@ -1,6 +1,6 @@
 """``rich.console`` stub — see ``tests/stubs/rich/__init__.pyi`` for context."""
 
-from typing import Any, Self
+from typing import Any
 
 class Console:
     def __init__(

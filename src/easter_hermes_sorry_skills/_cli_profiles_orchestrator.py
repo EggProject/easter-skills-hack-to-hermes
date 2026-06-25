@@ -1,73 +1,43 @@
-"""Audit pipeline helpers for the ``cli_profiles`` CLI.
+"""Audit pipeline helpers for the ``cli_profiles`` CLI (READ-ONLY).
 
-Moved out of the top-level ``cli_profiles`` module to keep that
-module under the wemake WPS202 cap (<=7 module members).
+Phase 8: the orchestrator no longer drives the apply pipeline. It only
+forwards the per-profile scan result into the table renderer's payload
+shape. The read-only row collector builds the per-profile summary dict
+(``enabled_skills`` + token rollups) consumed by
+``_cli_profiles_table.render_all_profiles``.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
-
-import click
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from hermes_cli.profiles import ProfileInfo
 
 from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
 
-_audit_profile = _bindings._audit_profile
-AuditReport = _bindings.AuditReport
+_build_bilingual = _bindings._build_bilingual
 
 
 def _bilingual(key: str, **format_kwargs: object) -> str:
     """Build a ``[en] ... / [hu] ...`` line for the given message key."""
-    return _bindings._build_bilingual(_bindings.EN, _bindings.HU, key, **format_kwargs)
+    return _build_bilingual(_bindings.EN, _bindings.HU, key, **format_kwargs)
 
 
-def _echo_row_summary(row: dict[str, object]) -> None:
-    """Echo the per-profile audit summary + diff in bilingual form."""
-    click.echo(
-        _bilingual(
-            "profiles_msg_profile_audit",
-            name=row["profile_name"],
-            disabled=_join_or_dash(cast(list[str], row["current_disabled"])),
-            installed=_join_or_dash(cast(list[str], row["current_installed"])),
-        )
-    )
-    diff_row = cast(dict[str, list[str]], row["diff"])
-    click.echo(
-        _bilingual(
-            "profiles_msg_diff",
-            ad=_join_or_dash(diff_row["added_disabled"]),
-            rd=_join_or_dash(diff_row["removed_disabled"]),
-            ai=_join_or_dash(diff_row["added_installed"]),
-            ri=_join_or_dash(diff_row["removed_installed"]),
-        )
-    )
-
-
-def _join_or_dash(names: list[str]) -> str:
-    """Join a list of names with commas, or ``-`` for empty/None."""
-    if not names:
-        return "-"
-    return ",".join(names)
-
-
-def _audit_and_collect_row(
+def _audit_and_collect_row_readonly(
     profile_info: ProfileInfo,
     *,
-    apply: bool,
     verbose: bool = False,
+    as_json: bool = False,
 ) -> dict[str, object]:
-    """Audit a single profile and backfill profile_name from ProfileInfo."""
-    row = _audit_profile(
-        profile_info.path,
-        apply=apply,
-        bilingual_fn=_bilingual,
-    )
-    # Backfill the profile_name from the ProfileInfo (in case
-    # the path-based name was "hermes" by default).
-    row["profile_name"] = profile_info.name
-    if verbose:
-        _echo_row_summary(row)
-    return row
+    """Build the per-profile summary dict for the table renderer.
+
+    Phase 8 is READ-ONLY: the dict is the payload that
+    ``_cli_profiles_table._profile_entry`` consumes to populate the
+    per-profile JSON block. The ``verbose`` and ``as_json`` kwargs are
+    accepted for API symmetry with the previous (WRITE) implementation;
+    neither has any effect on the returned payload.
+    """
+    return {
+        "profile_name": profile_info.name,
+    }

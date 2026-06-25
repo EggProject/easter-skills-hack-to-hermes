@@ -10,7 +10,10 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from easter_hermes_sorry_skills._cli_profiles_skill import EnabledSkillRow
 
 
 @dataclass(frozen=True)
@@ -23,12 +26,19 @@ class AuditReport:
 
     The class is dict-like (``report["profiles"]``) for ergonomic
     tests; ``to_dict()`` returns the canonical shape.
+
+    Phase 8 READ-ONLY: ``enabled_skills`` and ``summary`` carry the
+    per-profile payload the table renderer consumes; both default to
+    empty so older call sites that build a report without scan data
+    keep working.
     """
 
     tool: str
     version: str
     generated_at: str
     profiles: list[dict[str, Any]] = field(default_factory=list)
+    enabled_skills: list[EnabledSkillRow] = field(default_factory=list)
+    summary: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Return the dict shape, sorting the profiles by ``profile_name`` (D7)."""

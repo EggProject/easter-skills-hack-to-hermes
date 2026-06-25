@@ -9,6 +9,10 @@ members), the help-text constants live in ``_cli_profiles_cli_options``
 + ``_cli_profiles_cli_flags``, the bilingual help renderer lives in
 ``_cli_profiles_cli_help``, and the click-option decorators live in
 ``_cli_profiles_cli_build``. Only ``main_cmd`` + ``make_cli`` live here.
+
+Phase 8 (READ-ONLY): the CLI exposes ``--profile`` + ``--verbose`` +
+``--json`` + ``--help`` only. There is no ``--apply`` / ``--dry-run``
+split — the runner is a read-only report.
 """
 
 from __future__ import annotations
@@ -31,14 +35,16 @@ from easter_hermes_sorry_skills._cli_profiles_cli_help import build_help_text
 )
 @click.pass_context
 def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
-    """Per-profile install/replace for the migrated skill-creator skill (Script #2)."""
+    """Per-profile read-only report for the migrated skill-creator skill (Script #2)."""
     from easter_hermes_sorry_skills.cli_profiles import run_audit
 
-    dry_run = bool(kwargs.get("dry_run", False))
+    as_json = bool(kwargs.get("json", False))
+    profile_value = kwargs.get("profile")
+    profile_arg: str | None = profile_value if isinstance(profile_value, str) else None
     run_audit(
-        apply=not dry_run,
-        profile=kwargs.get("profile"),
-        verbose=kwargs.get("verbose", False),
+        profile=profile_arg,
+        verbose=bool(kwargs.get("verbose", False)),
+        as_json=as_json,
     )
 
 

@@ -6,6 +6,6 @@ project uses ``rich`` only in the optional rich-table renderer for the
 ``mypy --strict`` can resolve the imports under ``TYPE_CHECKING``.
 """
 
-from typing import Any
+from . import console, table
 
 __all__ = ["console", "table"]

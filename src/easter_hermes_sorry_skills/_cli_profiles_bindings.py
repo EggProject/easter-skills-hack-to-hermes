@@ -12,9 +12,6 @@ orchestrator stays slim.
 from __future__ import annotations
 
 from easter_hermes_sorry_skills import (
-    _cli_profiles_audit as _audit_mod,
-)
-from easter_hermes_sorry_skills import (
     _cli_profiles_bilingual as _bilingual_mod,
 )
 from easter_hermes_sorry_skills import (
@@ -24,29 +21,26 @@ from easter_hermes_sorry_skills import (
     _cli_profiles_cli_help as _cli_help_mod,
 )
 from easter_hermes_sorry_skills import (
-    _cli_profiles_diff as _diff_mod,
-)
-from easter_hermes_sorry_skills import (
     _cli_profiles_report as _report_mod,
 )
 from easter_hermes_sorry_skills import (
-    _cli_profiles_walk as _walk_mod,
+    _cli_profiles_skill as _skill_mod,
+)
+from easter_hermes_sorry_skills import (
+    _cli_profiles_table as _table_mod,
 )
 from easter_hermes_sorry_skills.i18n import messages_en as _messages_en_mod
 from easter_hermes_sorry_skills.i18n import messages_hu as _messages_hu_mod
 
 # Re-bindings matching the previous top-level names exposed by the
 # orchestrator (kept for backward compat with tests + external callers).
-_audit_profile = _audit_mod.audit_profile
 _build_bilingual = _bilingual_mod.build_bilingual
-diff_sets = _diff_mod.diff_sets
-walk_skills = _diff_mod.walk_skills
-walk_profile_subdirs = _walk_mod.walk_profile_subdirs
-read_gateway_pid_stat = _walk_mod.read_gateway_pid_stat
-PROFILE_DIRS = _walk_mod.PROFILE_DIRS
 _build_help_text = _cli_help_mod.build_help_text
 main_cmd = _cli_mod.main_cmd
 _make_cli = _cli_mod.make_cli
 AuditReport = _report_mod.AuditReport
+EnabledSkillRow = _skill_mod.EnabledSkillRow
+build_profile_table = _table_mod.build_profile_table
+render_all_profiles = _table_mod.render_all_profiles
 EN = _messages_en_mod.EN_MESSAGES
 HU = _messages_hu_mod.HU_MESSAGES

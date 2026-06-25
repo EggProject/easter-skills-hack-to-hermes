@@ -1,33 +1,49 @@
-"""Top-level run_audit entry point for the ``cli_profiles`` CLI.
+"""Top-level run_audit entry point for the ``cli_profiles`` CLI (READ-ONLY).
 
-Moved out of ``_cli_profiles_orchestrator`` to keep that module under
-the wemake WPS202 cap (<=7 module members).
+Phase 8 collapses the audit/apply split into a single read-only scan.
+The CLI never writes; ``run_audit`` builds the per-profile renderable
+entries (text tables or a JSON dump) and returns them to the caller
+without ever touching the live ``~/.hermes`` install.
 """
 
 from __future__ import annotations
 
-from easter_hermes_sorry_skills import _cli_profiles_bindings as _bindings
+from rich.console import Console
+from rich.table import Table
+
 from easter_hermes_sorry_skills import _cli_profiles_pipeline as _pipeline
+from easter_hermes_sorry_skills import _cli_profiles_table as _table_mod
 
-_bilingual = _pipeline._bilingual
-_extract_audit_options = _pipeline._extract_audit_options
 _run_audit_phase = _pipeline._run_audit_phase
-AuditReport = _bindings.AuditReport
+render_all_profiles = _table_mod.render_all_profiles
+
+_ProfileRenderable = tuple[str, Table, dict[str, object]]
 
 
-def run_audit(**options: object) -> AuditReport:
-    """Run the per-profile audit/flip.
+def run_audit(
+    *,
+    profile: str | None = None,
+    verbose: bool = False,
+    as_json: bool = False,
+) -> list[_ProfileRenderable]:
+    """Run the read-only per-profile audit.
 
-    Accepted keyword options:
-        apply (bool): Perform the writes (--dry-run inverts this).
-        profile (str | None): Optional single profile NAME to restrict.
-        verbose (bool): Emit [verbose] diagnostics to stderr + per-site
-            row summaries (default: False, back-compat).
+    Args:
+        profile: optional profile NAME to restrict the run to. ``None``
+            audits every profile returned by ``hermes_cli.profiles.list_profiles``.
+        verbose: emit ``[verbose]`` diagnostics to stderr.
+        as_json: when True, ``render_all_profiles`` dumps the per-profile
+            rows as JSON; otherwise it prints rich tables.
 
     Returns:
-        The AuditReport.
+        The list of ``(profile_name, Table, summary)`` tuples produced
+        by the pipeline.
     """
-    opts = _extract_audit_options(options)
-    verbose = bool(options.get("verbose", False))
-
-    return _run_audit_phase(opts, verbose=verbose)
+    entries = _run_audit_phase(
+        {"profile": profile},
+        verbose=verbose,
+        as_json=as_json,
+    )
+    console = Console()
+    render_all_profiles(entries, as_json=as_json, console=console)
+    return entries
