@@ -21,7 +21,6 @@ coverage.xml
 
 # Build / dist
 build/
-dist/
 *.egg-info/
 *.egg
 
