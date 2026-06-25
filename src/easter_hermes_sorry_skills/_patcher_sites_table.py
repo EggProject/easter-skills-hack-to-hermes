@@ -54,7 +54,7 @@ _CONSULT_RULE_TEXT = (
     "When creating or editing a skill — "
     "use skill-creator. "
     "Persist with skill_manage. "
-    "Small targeted fixes stay patch-first."
+    "Small targeted fixes (one-file, < ~20 lines, no schema change) stay patch-first."
 )
 
 # Top-of-file insertion (constant definition) for the E0 site. E0 anchors
