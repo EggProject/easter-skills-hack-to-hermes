@@ -34,12 +34,13 @@ echo ">>> Building easter-hermes-sorry-skills v${VERSION}"
 
 mkdir -p dist/
 
-# --- Lépés 1: uv sync + saját csomag nem-editable telepítése ---
+# --- Lépés 1: uv sync + saját csomag nem-editable telepítése + shiv telepítés ---
 if [ "${ONLY_TAR}" = 0 ]; then
-    echo ">>> [1/3] uv sync --locked"
+    echo ">>> [1/4] uv sync --locked"
     uv sync --locked
-    echo ">>> [1/3] uv pip install . --no-editable --reinstall --no-deps"
+    echo ">>> [2/4] uv pip install . --no-editable --reinstall --no-deps + 'shiv>=1.0,<2.0' (build-time tool)"
     uv pip install . --no-editable --reinstall --no-deps
+    uv pip install 'shiv>=1.0,<2.0'
 fi
 
 # --- Lépés 2: shiv build (.pyz) ---
@@ -47,9 +48,15 @@ if [ "${ONLY_TAR}" = 0 ]; then
     PYTHON="$(command -v python3)"
     PY_VERSION="$("${PYTHON}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
     SITE_PACKAGES=".venv/lib/python${PY_VERSION}/site-packages"
+    SHIV="${PWD}/.venv/bin/shiv"
 
-    echo ">>> [2/3] shiv --site-packages ${SITE_PACKAGES} --python ${PYTHON} --output-file dist/easter-hermes-sorry-skills.pyz --reproducible ."
-    shiv \
+    if [ ! -x "${SHIV}" ]; then
+        echo "ERROR: ${SHIV} not found. A 'shiv' telepítése sikertelen volt (Lépés 2 alpont 1)." >&2
+        exit 1
+    fi
+
+    echo ">>> [3/4] shiv --site-packages ${SITE_PACKAGES} --python ${PYTHON} --output-file dist/easter-hermes-sorry-skills.pyz --reproducible ."
+    "${SHIV}" \
         --site-packages "${SITE_PACKAGES}" \
         --python "${PYTHON}" \
         --output-file "dist/easter-hermes-sorry-skills.pyz" \
@@ -66,7 +73,7 @@ if [ "${ONLY_SHIV}" = 0 ]; then
     fi
 
     TARBALL="dist/easter-hermes-sorry-skills-v${VERSION}.tar.gz"
-    echo ">>> [3/3] tar -czf ${TARBALL} dist/easter-hermes-sorry-skills.pyz scripts/ README.md README.hu.md"
+    echo ">>> [4/4] tar -czf ${TARBALL} dist/easter-hermes-sorry-skills.pyz scripts/ README.md README.hu.md"
     tar -czf "${TARBALL}" \
         dist/easter-hermes-sorry-skills.pyz \
         scripts/build-release.sh \
