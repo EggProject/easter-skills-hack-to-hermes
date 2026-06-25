@@ -555,7 +555,7 @@ def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
     # And the canonical wording appears verbatim in the file.
     assert "use skill-creator" in text
     assert "Persist with skill_manage" in text
-    assert "Small targeted fixes stay patch-first." in text
+    assert "one-file, < ~20 lines, no schema change" in text
 
 
 def test_e4_e5_share_constant_after_patch(hermes_checkout: Path) -> None:
@@ -587,7 +587,7 @@ def test_skill_creator_consult_rule_constant() -> None:
     # patch-first preference for small fixes.
     assert "use skill-creator" in _CONSULT_RULE_TEXT
     assert "Persist with skill_manage" in _CONSULT_RULE_TEXT
-    assert "Small targeted fixes stay patch-first." in _CONSULT_RULE_TEXT
+    assert "one-file, < ~20 lines, no schema change" in _CONSULT_RULE_TEXT
     assert "skill-creator" in _CONSULT_RULE_TEXT  # ensure skill-creator mentioned
     # E0 is a top-of-file patch site anchored on the L1 docstring of
     # ``agent/prompt_builder.py``; its insertion payload contains the
