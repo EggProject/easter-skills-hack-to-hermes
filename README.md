@@ -110,6 +110,41 @@ uv run --locked mypy src                      # type-check only
 CI runs the same `uv sync --all-extras --dev` step (`.github/workflows/ci.yml`),
 so a passing local pre-commit run guarantees a passing CI run for the same code.
 
+## Release build
+
+When the code that goes into the release artifact changes (Python source under `src/` or dependencies in `pyproject.toml` / `uv.lock`), you need to rebuild the release artifact:
+
+```bash
+scripts/build-release.sh
+```
+
+This script performs 3 steps:
+
+1. **`uv sync --locked`** — installs dependencies from `uv.lock` into `.venv/`
+2. **`shiv`** — bundles `.venv/lib/python3.14/site-packages/` into `dist/easter-hermes-sorry-skills.pyz` (a single-file standalone zipapp, PEP 441)
+3. **`tar -czf`** — packs `dist/*.pyz` + `scripts/` + `README*` into `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz`
+
+### Distribution
+
+The resulting `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` is a self-contained release artifact. Users download it, extract it, and run the wrapper scripts **without installing anything** (no `uv sync`, no `pip install`):
+
+```bash
+tar -xzf easter-hermes-sorry-skills-v0.1.0.tar.gz
+cd easter-hermes-sorry-skills-v0.1.0/
+bash scripts/easter-hermes-sorry-skills-install-profiles.sh [args...]
+```
+
+The only requirement on the user's machine is **Python 3.14+** (the `.pyz` shebang points to the system's `python3`).
+
+### Build flags
+
+`scripts/build-release.sh` supports optional flags:
+
+- `--only-shiv` — only build the `.pyz` (skip `tar.gz`)
+- `--only-tar` — only build the `tar.gz` (assumes `.pyz` exists)
+
+To clean the `dist/` folder before a rebuild, run `rm -rf dist/` manually (the `--clean` flag was intentionally not added to keep the script non-destructive).
+
 ## License
 
 Proprietary. See [pyproject.toml:7](pyproject.toml). Internal Hermes Skills

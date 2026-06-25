@@ -115,6 +115,41 @@ A CI ugyanazt az `uv sync --all-extras --dev` lépést futtatja
 (`.github/workflows/ci.yml`), így a helyi pre-commit átfutás garantálja, hogy
 ugyanaz a kód átmegy a CI-on is.
 
+## Release build
+
+Amikor a release artifact-ba kerülő kód változik (Python forrás az `src/` mappában vagy függőségek a `pyproject.toml` / `uv.lock` fájlokban), újra kell építeni a release artifact-ot:
+
+```bash
+scripts/build-release.sh
+```
+
+A script 3 lépést végez:
+
+1. **`uv sync --locked`** — a függőségek telepítése az `uv.lock` alapján a `.venv/` mappába
+2. **`shiv`** — a `.venv/lib/python3.14/site-packages/` becsomagolása a `dist/easter-hermes-sorry-skills.pyz` fájlba (single-file standalone zipapp, PEP 441)
+3. **`tar -czf`** — a `dist/*.pyz` + `scripts/` + `README*` becsomagolása a `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` fájlba
+
+### Terjesztés
+
+Az elkészült `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` egy ön-teljes release artifact. A felhasználók letöltik, kibontják, és **install nélkül** futtatják a wrapper scripteket (nincs `uv sync`, nincs `pip install`):
+
+```bash
+tar -xzf easter-hermes-sorry-skills-v0.1.0.tar.gz
+cd easter-hermes-sorry-skills-v0.1.0/
+bash scripts/easter-hermes-sorry-skills-install-profiles.sh [args...]
+```
+
+Az egyetlen követelmény a felhasználó gépén: **Python 3.14+** (a `.pyz` shebang a rendszer `python3`-ra mutat).
+
+### Build flag-ek
+
+A `scripts/build-release.sh` a következő opcionális flag-eket támogatja:
+
+- `--only-shiv` — csak a `.pyz` build (kihagyja a `tar.gz`-t)
+- `--only-tar` — csak a `tar.gz` (feltételezi, hogy a `.pyz` már létezik)
+
+A `dist/` mappa törléséhez rebuild előtt futtasd manuálisan: `rm -rf dist/` (a `--clean` flag szándékosan nem került a scriptbe, hogy ne legyen destruktív).
+
 ## Licenc
 
 Proprietary. Lásd [pyproject.toml:7](pyproject.toml). A Hermes Skills Hack belső
