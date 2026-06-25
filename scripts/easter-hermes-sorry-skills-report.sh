@@ -3,6 +3,17 @@
 # See README.md "Release build" section for how to build the .pyz.
 set -euo pipefail
 
+# --- Help flag: saját usage kiírása és exit 0 (a .pyz PATH feloldása ELŐTT) ---
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo "Usage: $(basename "${BASH_SOURCE[0]}") [args...]"
+    echo ""
+    echo "Wrapper around the easter-hermes-sorry-skills-report entry point in dist/easter-hermes-sorry-skills.pyz"
+    echo ""
+    echo "The .pyz is built by scripts/build-release.sh (see README 'Release build' section)."
+    echo "If dist/easter-hermes-sorry-skills.pyz is missing, run scripts/build-release.sh first."
+    exit 0
+fi
+
 # --- .pyz path feloldása (dev-mode VAGY release-mode) ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
