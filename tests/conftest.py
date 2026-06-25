@@ -1,9 +1,9 @@
-"""tests/conftest.py — shared fixtures for the hermes-skill-creator-plugin test suite.
+"""tests/conftest.py — shared fixtures for the easter-hermes-sorry-skills-plugin test suite.
 
 Merged conftest (Phase 7 / PR #5): combines:
   - main's hermes_home / hermes_checkout / skill_creator_home / real_hermes_agent_sentinel
   - branch's SKILL_UTILS_PATCHED / SKILL_UTILS_BODY / PROMPT_BUILDER_PATCHED /
-    BACKGROUND_REVIEW_PATCHED / SKILL_MANAGER_TOOL_PATCHED / SKILLS_DOC_BODY /
+    BACKGROUND_REVIEW_PATCHED /
     worktree / frozen_time / assert_hermes_agent_untouched (function)
   - hermes_checkout is overridden to lay down the padded branch content
     inside main's hermes_home so both main-tests AND branch-tests pass.
@@ -30,7 +30,7 @@ from typing import ParamSpec, TypeVar
 
 import pytest
 
-from hermes_skill_creator_plugin._safety import assert_hermes_agent_untouched
+from easter_hermes_sorry_skills._safety import assert_hermes_agent_untouched
 from tests.fixtures.minimal_hermes.seed_minimal import (
     MINIMAL_HERMES_FILES,
     seed_minimal,
@@ -182,7 +182,7 @@ def _build_prompt_builder_padded() -> str:
     # AC-2.8: L1 docstring anchors E0 (which inserts the
     # ``SKILL_CREATOR_CONSULT_RULE`` definition immediately after).
     # Real Hermes's ``prompt_builder.py`` already has a docstring at L1
-    # and the E1/E2/E3 anchors at L179/L158/L1421, so the padding
+    # and the E1/E2 anchors at L179/L158 (E3 was removed 2026-06-23), so the padding
     # below preserves those line numbers (the fixture mirrors the
     # real layout: docstring + blank + padding + anchors).
     lines.append('"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""\n')
@@ -195,7 +195,9 @@ def _build_prompt_builder_padded() -> str:
     lines.append('    "Skills that aren\'t maintained become liabilities."\n')
     for i in range(180, 1421):
         lines.append(f"# padding {i}\n")
-    lines.append('            "After difficult/iterative tasks, offer to save as a skill. "\n')
+    # E3 anchor (L1421) was removed 2026-06-23 — the loop below still
+    # pads every line individually to preserve the fixture's total
+    # line count.
     for i in range(1422, 1440):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
@@ -213,7 +215,7 @@ def _build_background_review_padded() -> str:
     lines: list[str] = []
     # AC-2.8: L1 docstring anchors E4b. Real Hermes's
     # ``background_review.py`` already has a docstring at L1 and the
-    # E4/E5 anchors at L105/L192, so the padding below preserves those
+    # E4/E5 anchors at L105/L194, so the padding below preserves those
     # line numbers (mirrors the real layout: docstring + blank +
     # padding + anchors).
     lines.append('"""Background review (test fixture stand-in for agent/background_review.py)."""\n')
@@ -234,62 +236,6 @@ def _build_background_review_padded() -> str:
 
 
 BACKGROUND_REVIEW_PATCHED = _build_background_review_padded()
-
-
-SKILL_MANAGER_TOOL_BODY = '''\
-"""Skill manager (test fixture stand-in for tools/skill_manager_tool.py)."""
-'''
-
-
-def _build_skill_manager_tool_padded() -> str:
-    lines: list[str] = []
-    for i in range(1, 1099):
-        lines.append(f"# padding {i}\n")
-    lines.append("SKILL_MANAGE_SCHEMA = {\n")
-    lines.append('    "name": "skill_manage",\n')
-    lines.append('    "description": (\n')
-    for i in range(1102, 1129):
-        lines.append(f'        "padding line {i} of description. "\n')
-    lines.append('        "pitfalls come up; pin only guards against irrecoverable loss."\n')
-    lines.append("    ),\n")
-    for i in range(1131, 1150):
-        lines.append(f"# padding {i}\n")
-    return "".join(lines)
-
-
-SKILL_MANAGER_TOOL_PATCHED = _build_skill_manager_tool_padded()
-
-
-SKILLS_DOC_BODY = """\
-# Skills
-
-## Agent-Managed Skills (skill_manage tool)
-
-The agent can create, update, and delete its own skills via the
-`skill_manage` tool. This is the agent's **procedural memory** — when it
-figures out a non-trivial workflow, it saves the approach as a skill for
-future reuse.
-
-### When the Agent Creates Skills
-"""
-
-
-def _build_skills_doc_padded() -> str:
-    lines: list[str] = []
-    for i in range(1, 378):
-        lines.append(f"<!-- padding {i} -->\n")
-    lines.append("## Agent-Managed Skills (skill_manage tool)\n")
-    lines.append("\n")
-    lines.append(
-        "The agent can create, update, and delete its own skills via the "
-        "`skill_manage` tool. This is the agent's **procedural memory** — "
-        "when it figures out a non-trivial workflow, it saves the approach "
-        "as a skill for future reuse.\n"
-    )
-    return "".join(lines)
-
-
-SKILLS_DOC_PATCHED = _build_skills_doc_padded()
 
 
 # --- main (B-plugin) fixtures ---------------------------------------------
@@ -394,16 +340,10 @@ def hermes_checkout(hermes_home: Path) -> Generator[Path]:
     """
     checkout = hermes_home
     (checkout / "agent").mkdir(parents=True, exist_ok=True)
-    (checkout / "tools").mkdir(parents=True, exist_ok=True)
     (checkout / "hermes_cli").mkdir(parents=True, exist_ok=True)
-    (checkout / "website" / "docs" / "user-guide" / "features").mkdir(parents=True, exist_ok=True)
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
     (checkout / "agent" / "prompt_builder.py").write_text(PROMPT_BUILDER_PATCHED, encoding="utf-8")
     (checkout / "agent" / "background_review.py").write_text(BACKGROUND_REVIEW_PATCHED, encoding="utf-8")
-    (checkout / "tools" / "skill_manager_tool.py").write_text(SKILL_MANAGER_TOOL_PATCHED, encoding="utf-8")
-    (checkout / "website" / "docs" / "user-guide" / "features" / "skills.md").write_text(
-        SKILLS_DOC_PATCHED, encoding="utf-8"
-    )
     # Lay down the 6-file MINIMAL_HERMES_FILES layout (idempotent — seed_minimal
     # overwrites existing files).
     seed_minimal(checkout)
@@ -431,7 +371,7 @@ def frozen_time(monkeypatch: pytest.MonkeyPatch) -> str:
 
 @pytest.fixture
 def worktree(tmp_path: Path) -> Generator[Path]:
-    """A bare tmp worktree root for --emit-migration-note output."""
+    """A bare tmp worktree root used as a scratch output directory in tests."""
     wt = tmp_path / "worktree"
     wt.mkdir()
     yield wt
@@ -451,9 +391,6 @@ __all__ = [
     "SKILL_UTILS_BODY",
     "PROMPT_BUILDER_PATCHED",
     "BACKGROUND_REVIEW_PATCHED",
-    "SKILL_MANAGER_TOOL_PATCHED",
-    "SKILLS_DOC_BODY",
-    "SKILLS_DOC_PATCHED",
     "assert_hermes_agent_untouched",
     "assert_hermes_agent_untouched_sentinel",
     "hermes_home",

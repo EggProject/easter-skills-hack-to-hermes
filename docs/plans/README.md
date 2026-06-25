@@ -7,7 +7,7 @@
 - [`02-architecture.md`](02-architecture.md) — 02 — Architecture, Component Diagram, Data Flow
 - [`03-plugin-spec.md`](03-plugin-spec.md) — 03 — Hermes Plugin Spec (§5.1, 60→1024 Cap Raise)
 - [`04-script-1-patch.md`](04-script-1-patch.md) — 04 — Script #1 (cap-raise patch; --target REQUIRED)
-- [`05-script-1-task-e-toggle.md`](05-script-1-task-e-toggle.md) — 05 — Task E toggle (7 sites, byte-accurate anchors)
+- _(`05-script-1-task-e-toggle.md` deleted 2026-06-23 — Task E feature removed entirely; restored 2026-06-23 from `cc06903`.)_
 - [`06-script-2-profiles.md`](06-script-2-profiles.md) — 06 — Script #2 (per-profile audit/flip; hermes_home_scope)
 - [`07-skill-creator-migration.md`](07-skill-creator-migration.md) — 07 — Migrated skill (T3 18 rows; tool-name mapping; HERMES_SESSION+CLAUDECODE strip)
 - [`08-migration-note-format.md`](08-migration-note-format.md) — 08 — MIGRATION (3-file split)
@@ -33,3 +33,14 @@ All 14 plan files (00–13) are emitted. Every file is under 500 lines; see `00-
 - Q5: MIGRATION 3-file split → confirmed (E5).
 - Q9: active-cap detection at install → refuse + bilingual error (confirmed E9).
 - Q2 / Q3 / Q6 / Q7 / Q8 / Q10 / Q11: defaults accepted; pending Phase 5 re-verify.
+
+## Audit trail
+
+- **2026-06-23 (Task E refined)** — On top of the "Task E restored" commit, this commit drops E6 (`E6.skill_manage_schema_desc` — the `skill_manage` tool schema-description append) and E7 (`E7.skills_doc_section` — the user-guide `skills.md` blockquote append). Rationale: E6 was redundant with the system-prompt injection (the model already knew `skill_manage` is the writer from E1/E2/E4/E5); E7 was a user-doc append with **zero model impact** (the model never reads `skills.md`). The patcher now has 5 active Task E sites (E0, E1, E2, E4b, E4, E5) + S1.cap. Additionally: the patch command now purges Hermes' on-disk skills prompt snapshot (`~/.hermes/.skills_prompt_snapshot.json`, overridable via `HERMES_HOME` env var) at the end of a successful `--apply`. The disk cache tracks only `SKILL.md`/`DESCRIPTION.md` mtimes and would otherwise keep serving the pre-patch skills prompt indefinitely. Per-site idempotency tests added (parametrized over `ALL_TASK_E_SITES + S1.cap`).
+- **2026-06-23 (Task E restored)** — The Task E feature was over-removed in commit `9cd3b90`; restored in this refactor from `cc06903` (commit `cc06903`'s simplified Task E with the new `Közepes` rule text: 'When creating or editing a skill — use skill-creator. Persist with skill_manage. Small targeted fixes stay patch-first.'). 5 Task E sites (final state after the E6/E7 drop in the next entry): E0 (constant definition in prompt_builder.py), E1 (MEMORY_GUIDANCE concat), E2 (SKILLS_GUIDANCE concat), E4b (import in background_review.py), E4 + E5 (background review prompt concat). NO flags (Task E always runs). Migration note generation code stays deleted (MIGRATION.hermes-patch.md no longer generated).
+- **2026-06-23** — Refactor (commit on branch `refactor/rename-and-easter`):
+  - Renamed package `hermes_skill_creator_plugin` → `easter_hermes_sorry_skills`
+  - Simplified `_CONSULT_RULE_TEXT` (removed `skill-creator` install-detection conditional)
+  - Removed `E3.build_skills_prompt` site entirely (active sites are now 8 at this commit (E6, E7 dropped later — see the "Task E refined" entry above): E0, E4b, E1, E2, E4, E5, E6, E7)
+  - **Exempt from rename** (frozen as design specs from the original Phase 5 work):
+    - All files under `docs/plans/` (12 plan docs) — preserved as historical spec; the rename is operational only.

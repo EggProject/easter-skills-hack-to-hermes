@@ -1,4 +1,4 @@
-"""Unit tests for ``hermes_skill_creator_plugin._scope`` (TDD test list, plan 06).
+"""Unit tests for ``easter_hermes_sorry_skills._scope`` (TDD test list, plan 06).
 
 TDD list (plan 06 §TDD test list → hermes_home_scope):
 - test_set_hermes_home_override_called
@@ -14,7 +14,7 @@ The dual-mirror contract: ``hermes_home_scope(path)`` sets BOTH
 (try/finally), even when an exception propagates.
 
 The tests inject a fake ``hermes_constants`` module via ``monkeypatch``
-into ``hermes_skill_creator_plugin._scope`` so they do NOT depend on the
+into ``easter_hermes_sorry_skills._scope`` so they do NOT depend on the
 real ``hermes_constants`` being importable. This is consistent with the
 project rule that Script #2 tests run against tmp_path fixtures only and
 must never touch the live ``~/.hermes`` install.
@@ -113,7 +113,7 @@ def scope_module(fake_hermes_constants: types.ModuleType, monkeypatch: pytest.Mo
     # Ensure hermes_constants is the fake before importing _scope.
     import importlib
 
-    mod_name = "hermes_skill_creator_plugin._scope"
+    mod_name = "easter_hermes_sorry_skills._scope"
     if mod_name in sys.modules:
         return importlib.reload(sys.modules[mod_name])
     return importlib.import_module(mod_name)

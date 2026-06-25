@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import importlib
 
-from hermes_skill_creator_plugin._cli_report_helpers_paths import (
+from easter_hermes_sorry_skills._cli_report_helpers_paths import (
     UNAVAILABLE_DESC_FMT,
     _fallback_description,
 )
-from hermes_skill_creator_plugin._enabled_detection_platform import (
+from easter_hermes_sorry_skills._enabled_detection_platform import (
     _dict_blocks,
 )
 
@@ -32,7 +32,7 @@ def test_plugin_subprocess_module_exposes_canonical_helper_path() -> None:
     grep from the plugin marker to the single source of truth.
     """
     module = importlib.import_module(
-        "hermes_skill_creator_plugin._subprocess",
+        "easter_hermes_sorry_skills._subprocess",
     )
     assert module._CANONICAL_HELPER_MODULE == "skills.skill_creator._subprocess"
 

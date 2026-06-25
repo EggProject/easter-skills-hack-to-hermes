@@ -20,12 +20,11 @@
 
 | # | File | Covers | Status | Budget | Actual |
 | --- | --- | --- | --- | --- | --- |
-| 00 | `00-index.md` | This file | [emitted] | 130 | 113 |
+| 00 | `00-index.md` | This file | [emitted] | 130 | 112 |
 | 01 | `01-overview.md` | Mission, deliverables, ACs (1.x–6.x) | [emitted] | 150 | 142 |
 | 02 | `02-architecture.md` | Component diagram, data flow, sequence, safety | [emitted] | 250 | 241 |
 | 03 | `03-plugin-spec.md` | §5.1 plugin (no runtime monkey-patch; static-AST advisory; manifest parser test) | [emitted] | 280 | 267 |
 | 04 | `04-script-1-patch.md` | §5.2 Script #1 (cap raise S1.cap line 688 in agent/skill_utils.py; --target REQUIRED; --force) | [emitted] | 400 | 249 |
-| 05 | `05-script-1-task-e-toggle.md` | §6.E Task E toggle (7 sites) | [emitted] | 250 | 183 |
 | 06 | `06-script-2-profiles.md` | §5.3 Script #2 (per-profile audit/flip; hermes_home_scope w/ real API) | [emitted] | 300 | 283 |
 | 07 | `07-skill-creator-migration.md` | §5.4 Migrated skill (T3 18 rows; tool-name mapping full; HERMES_SESSION+CLAUDECODE strip) | [emitted] | 450 | 263 |
 | 08 | `08-migration-note-format.md` | §5.5 MIGRATION (3-file split) | [emitted] | 220 | 213 |
@@ -34,9 +33,9 @@
 | 11 | `11-sub-agent-delegation-map.md` | Phase 5 sub-agent routing | [emitted] | 200 | 157 |
 | 12 | `12-risks-and-open-questions.md` | Q1–Q9, residual risks R1–R6, escalation log | [emitted] | 210 | 204 |
 | 13 | `13-script-3-report.md` | Script #3 (extra-brief feature WE requested: profile-level skill token + usage reporter; READ-ONLY) — NOTE: §5.7 in the original brief is the continuously-maintained Todo list, NOT this deliverable | [emitted] | 400 | 307 |
-| | **Total** | | | **3350** | **3350** |
+| | **Total** | | | 3100 | **3166** |
 
-Sum 3350 < 4500 (sum of budgets 3980; per-file budgets raised as needed for the PR-A register-spec expansion). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
+Sum 3166 < 4500 (sum of budgets 3730; per-file budgets raised as needed for the PR-A register-spec expansion). Every file < 500 lines. Enforced by pre-commit hook `tools/check_line_count.py`.
 
 ## Hard constraints (HARD)
 

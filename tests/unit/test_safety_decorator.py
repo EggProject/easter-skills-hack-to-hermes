@@ -1,4 +1,4 @@
-"""Unit tests for hermes_skill_creator_plugin._safety.
+"""Unit tests for easter_hermes_sorry_skills._safety.
 
 The decorator must pytest.skip when HERMES_HOME resolves to the live install
 and the live install path exists; otherwise pass through.
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_skill_creator_plugin._safety import (
+from easter_hermes_sorry_skills._safety import (
     _LIVE_HERMES_AGENT,
     HERMES_HOME,
     _current_hermes_home,
@@ -48,7 +48,7 @@ def test_decorator_skips_when_hermes_home_resolves_to_live(monkeypatch: pytest.M
     # Make _LIVE_HERMES_AGENT.resolve() == _current_hermes_home().resolve()
     # by patching the module's _LIVE_HERMES_AGENT to a tmp_path that we
     # ALSO set as HERMES_HOME (so they match).
-    from hermes_skill_creator_plugin import _safety as safety
+    from easter_hermes_sorry_skills import _safety as safety
 
     fake = tmp_path / "fake-live"
     fake.mkdir()

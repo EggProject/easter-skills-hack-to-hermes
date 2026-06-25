@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_skill_creator_plugin import cli_report
+from easter_hermes_sorry_skills import cli_report
 from tests.report._fixtures import _write_profile
 
 
@@ -90,7 +90,7 @@ def test_report_no_write_calls_in_source() -> None:
     import ast
     from pathlib import Path
 
-    from hermes_skill_creator_plugin import cli_report
+    from easter_hermes_sorry_skills import cli_report
 
     src = Path(cli_report.__file__).read_text(encoding="utf-8")
     tree = ast.parse(src)
@@ -140,7 +140,7 @@ def test_report_no_subprocess_for_writes() -> None:
     import ast
     from pathlib import Path
 
-    from hermes_skill_creator_plugin import cli_report
+    from easter_hermes_sorry_skills import cli_report
 
     src = Path(cli_report.__file__).read_text(encoding="utf-8")
     tree = ast.parse(src)

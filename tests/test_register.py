@@ -1,4 +1,4 @@
-"""tests/test_register.py — TDD tests for src/hermes_skill_creator_plugin/__init__.py.
+"""tests/test_register.py — TDD tests for src/easter_hermes_sorry_skills/__init__.py.
 
 Plan file: docs/plans/03-plugin-spec.md
 ACs covered: AC-1.2
@@ -24,11 +24,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hermes_skill_creator_plugin import _advisory as _advisory_mod
-from hermes_skill_creator_plugin import _register
-from hermes_skill_creator_plugin._register import register
-from hermes_skill_creator_plugin.i18n.messages_en import ADVISORY_CAP_EN
-from hermes_skill_creator_plugin.i18n.messages_hu import ADVISORY_CAP_HU
+from easter_hermes_sorry_skills import _advisory as _advisory_mod
+from easter_hermes_sorry_skills import _register
+from easter_hermes_sorry_skills._register import register
+from easter_hermes_sorry_skills.i18n.messages_en import ADVISORY_CAP_EN
+from easter_hermes_sorry_skills.i18n.messages_hu import ADVISORY_CAP_HU
 
 
 class _RegisterCtx(Protocol):
@@ -51,7 +51,7 @@ def _make_ctx() -> MagicMock:
 
 
 def test_register_callable_in_package_init() -> None:
-    """`from hermes_skill_creator_plugin import register` resolves to a callable
+    """`from easter_hermes_sorry_skills import register` resolves to a callable
     taking a single `ctx` argument (the load model: one register(ctx) in __init__.py)."""
     assert callable(register)
     sig = inspect.signature(register)
@@ -107,7 +107,7 @@ def test_register_silent_when_cap_patched(tmp_path: Path, monkeypatch: pytest.Mo
     )
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".hermes_skill_creator_advisory_seen"
+    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
     monkeypatch.setenv("HERMES_HOME", str(home))
 
@@ -139,7 +139,7 @@ def test_register_emits_advisory_when_cap_unpatched(tmp_path: Path, monkeypatch:
     )
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".hermes_skill_creator_advisory_seen"
+    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
     monkeypatch.setenv("HERMES_HOME", str(home))
 
@@ -165,7 +165,7 @@ def test_register_silent_when_target_unknown(tmp_path: Path, monkeypatch: pytest
     target.mkdir(parents=True, exist_ok=True)
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".hermes_skill_creator_advisory_seen"
+    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
     monkeypatch.setenv("HERMES_HOME", str(home))
 
@@ -226,7 +226,7 @@ def test_register_emits_advisory_with_default_marker_when_home_unset(
     assert ADVISORY_CAP_HU in log_message
     # Marker MUST land under the expanduser-resolved default home, NOT
     # under any caller-supplied HERMES_HOME (which is unset here).
-    default_marker = default_home / ".hermes" / "hermes-agent" / ".hermes_skill_creator_advisory_seen"
+    default_marker = default_home / ".hermes" / "hermes-agent" / ".easter_hermes_sorry_skills_advisory_seen"
     assert default_marker.exists()
     assert default_marker.read_text(encoding="utf-8") == "advisory shown\n"
 

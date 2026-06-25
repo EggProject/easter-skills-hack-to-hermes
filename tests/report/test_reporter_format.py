@@ -1,6 +1,6 @@
 """tests/report/test_reporter_format.py
 
-TDD: tests for hermes_skill_creator_plugin._reporter (formatting, sorting, n/a).
+TDD: tests for easter_hermes_sorry_skills._reporter (formatting, sorting, n/a).
 """
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ import json
 
 import pytest
 
-from hermes_skill_creator_plugin import _reporter
-from hermes_skill_creator_plugin._reporter import (
+from easter_hermes_sorry_skills import _reporter
+from easter_hermes_sorry_skills._reporter import (
     DOCUMENTED_USAGE_FIELDS,
     TEXT_COLUMNS,
     ProfileSection,

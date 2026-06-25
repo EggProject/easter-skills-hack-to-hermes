@@ -4,7 +4,7 @@ two top-level sections (`Usage (English)` and `Használat (magyar)`) with
 mirrored content.
 
 Walks every `print(...)` and `logger.{info,warning,error}(...)` call in
-`src/hermes_skill_creator_plugin/` and asserts the format string matches
+`src/easter_hermes_sorry_skills/` and asserts the format string matches
 `^\[en\] .+ / \[hu\] .+$`. Also walks Click commands' docstrings to
 assert the two-section structure.
 

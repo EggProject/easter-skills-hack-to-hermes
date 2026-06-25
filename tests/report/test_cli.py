@@ -13,8 +13,8 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from hermes_skill_creator_plugin import cli_report
-from hermes_skill_creator_plugin.cli_report import HELP_EN_HEADER, HELP_HU_HEADER, main
+from easter_hermes_sorry_skills import cli_report
+from easter_hermes_sorry_skills.cli_report import HELP_EN_HEADER, HELP_HU_HEADER, main
 from tests.report._fixtures import _write_profile
 
 # --- help + bilingual ---
@@ -151,7 +151,7 @@ def test_json_format_shape(hermes_home: Path) -> None:
     )
     assert rc == 0
     obj = json.loads(out_path.read_text(encoding="utf-8"))
-    assert obj["tool"] == "hermes-skill-creator-report"
+    assert obj["tool"] == "easter-hermes-sorry-skills-report"
     assert "profiles" in obj
     assert obj["profiles"][0]["profile_name"] == "hermes"
 
@@ -330,7 +330,7 @@ def test_report_usage_does_not_invent_fields() -> None:
     import re
     from pathlib import Path
 
-    from hermes_skill_creator_plugin import _reporter, cli_report
+    from easter_hermes_sorry_skills import _reporter, cli_report
 
     pat = re.compile(r"\b(last_used|last_viewed|last_patched|use_count|view_count|patch_count)\b")
     bad: list[str] = []
@@ -352,7 +352,7 @@ def test_report_uses_at_suffixed_timestamps() -> None:
     import re
     from pathlib import Path
 
-    from hermes_skill_creator_plugin import _reporter, cli_report
+    from easter_hermes_sorry_skills import _reporter, cli_report
 
     for mod in (_reporter, cli_report):
         src = Path(mod.__file__).read_text(encoding="utf-8")
@@ -368,7 +368,7 @@ def test_report_uses_at_suffixed_timestamps() -> None:
 
 def test_cli_report_main_entry_invokes_main(monkeypatch) -> None:
     """Calling the _main_entry function exercises the standalone CLI path."""
-    from hermes_skill_creator_plugin import cli_report
+    from easter_hermes_sorry_skills import cli_report
 
     called = {"n": 0}
 
@@ -378,3 +378,23 @@ def test_cli_report_main_entry_invokes_main(monkeypatch) -> None:
     monkeypatch.setattr(cli_report, "main", stub_main)
     cli_report._main_entry()
     assert called["n"] == 1
+
+
+# --- verbose (Phase D) ---
+
+
+def test_verbose_flag_added_to_report(hermes_home: Path) -> None:
+    """``--verbose`` at the report CLI emits ``[verbose]`` diagnostics on stderr."""
+    _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
+    runner = CliRunner()
+    result = runner.invoke(main, ["--verbose"])
+    assert result.exit_code == 0, result.output
+    assert "[verbose]" in result.stderr or "[verbose]" in result.output
+
+
+def test_report_help_lists_verbose() -> None:
+    """The report ``--help`` output mentions ``--verbose`` at least twice (EN+HU)."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--help"])
+    assert result.exit_code == 0, result.output
+    assert result.output.count("--verbose") >= 2
