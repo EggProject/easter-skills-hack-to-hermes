@@ -164,23 +164,23 @@ EN_MESSAGES = MappingProxyType(
     {
         # CLI: easter-hermes-sorry-skills-profiles
         "profiles_help_short": (
-            "Per-profile install/replace for the migrated skill-creator "
-            "skill (Script #2). Installs the skill-creator skill at the "
-            "flat ~/.hermes/skills/skill-creator/ path under each profile. "
-            "Default mode is WRITE; pass --dry-run to preview without writing."
+            "Per-profile READ-ONLY audit for the migrated skill-creator "
+            "skill (Script #2). The script never writes — it inspects the "
+            "skills tree at ~/.hermes/skills/skill-creator/ under each "
+            "profile and prints a bilingual EN/HU report. Pass --json for "
+            "machine-readable output."
         ),
         "profiles_help_long": (
             "Walks every Hermes profile (the default 'hermes' profile and "
             "every named profile returned by hermes_cli.profiles."
-            "list_profiles()) and installs/replaces the migrated "
-            "skill-creator skill at ~/.hermes/skills/skill-creator/. The "
-            "script calls hermes_cli.skills_hub.do_install() to perform "
-            "the write, then clears the skills system-prompt cache. The "
+            "list_profiles()) and audits the skills tree at "
+            "~/.hermes/skills/skill-creator/. The script is strictly "
+            "READ-ONLY: no files are written, no configs are mutated. The "
             "script runs under the hermes_home_scope() context manager, "
             "mirroring HERMES_HOME in both the override token and "
             "os.environ['HERMES_HOME']."
         ),
-        "profiles_opt_dry_run": ("Preview changes without writing. Opposite of the default WRITE mode."),
+        "profiles_opt_json": ("Emit the report as machine-readable JSON to stdout (for tooling/pipelines)."),
         "profiles_opt_verbose": ("Print detailed per-site diagnostics to stderr (does not pollute stdout output)."),
         "report_opt_verbose": ("Print detailed per-cell diagnostics to stderr (every cell value + section summary)."),
         "profiles_opt_profile": ("Restrict the run to a single profile (default: every profile)."),

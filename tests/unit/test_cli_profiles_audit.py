@@ -923,7 +923,11 @@ def test_walk_profile_subdirs_handles_stat_oserror(installed, tmp_path: Path, mo
 
 
 def test_help_is_bilingual(installed) -> None:
-    """``--help`` contains both the English and Hungarian sections."""
+    """``--help`` contains both the English and Hungarian sections.
+
+    Phase 8 flag set: --profile, --verbose, --json, --help. ``--dry-run`` is
+    gone (the CLI is READ-ONLY by design — there is no apply/dry-run split).
+    """
     log, cli = installed()
     runner = cli.make_cli()
     result = runner.invoke(cli.app, ["--help"])
@@ -933,12 +937,14 @@ def test_help_is_bilingual(installed) -> None:
     assert "Használat (magyar)" in out
     # Mirrored content: every option appears in both halves.
     for opt in (
-        "--dry-run",
-        "--verbose",
         "--profile",
+        "--verbose",
+        "--json",
         "--help",
     ):
         assert out.count(opt) >= 2, f"{opt} should appear in both sections"
+    # --dry-run is gone (READ-ONLY CLI): it must not appear in --help.
+    assert "--dry-run" not in out, "--dry-run removed in Phase 8 (READ-ONLY)"
 
 
 def test_dry_run_default_no_writes(installed, tmp_path: Path) -> None:
@@ -1106,15 +1112,14 @@ def test_audit_apply_save_config_failure_recorded(installed, tmp_path: Path) -> 
 
 
 def test_dry_run_flag_no_writes(installed, tmp_path: Path) -> None:
-    """``--dry-run`` at the CLI level is the only no-write mode."""
+    """``--dry-run`` was removed in Phase 8 (READ-ONLY CLI). Click rejects it."""
     profile = tmp_path / "default"
     (profile / "skills").mkdir(parents=True)
     log, cli = installed(profile_paths=[profile], profile_names=["hermes"], config_data={})
     runner = cli.make_cli()
     result = runner.invoke(cli.app, ["--dry-run"], color=False)
-    assert result.exit_code == 0
-    assert log.do_install_calls == []
-    assert log.save_config_calls == []
+    # Click rejects the unknown option with exit code 2.
+    assert result.exit_code != 0
 
 
 def test_walk_skills_skips_files(fake_agent_module, tmp_path: Path) -> None:
@@ -1457,10 +1462,15 @@ def test_default_is_write_no_flag_needed(installed, tmp_path: Path) -> None:
 
 
 def test_default_is_write_help_text(installed) -> None:
-    """The ``--help`` body declares that default mode writes to ``~/.hermes/skills``."""
+    """The ``--help`` body declares that default mode is READ-ONLY (Phase 8).
+
+    Phase 7G defaulted to WRITE; Phase 8 flips to READ-ONLY — no writes,
+    no apply/dry-run split. The ``--json`` flag is the only output-format
+    switch.
+    """
     log, cli = installed()
     runner = cli.make_cli()
     result = runner.invoke(cli.app, ["--help"])
     assert result.exit_code == 0
     out = result.output
-    assert ("writes to ~/.hermes/skills" in out) or ("Alapértelmezetten ír" in out)
+    assert ("READ-ONLY" in out) or ("CSAK OLVAS" in out)

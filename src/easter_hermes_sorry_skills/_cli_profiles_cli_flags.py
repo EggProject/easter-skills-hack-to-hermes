@@ -8,14 +8,14 @@ import anything runtime-heavy.
 from __future__ import annotations
 
 _EN_OPTIONS: tuple[tuple[str, str], ...] = (
-    ("--dry-run", "profiles_opt_dry_run"),
     ("--verbose", "profiles_opt_verbose"),
+    ("--json", "profiles_opt_json"),
     ("--profile NAME", "profiles_opt_profile"),
     ("--help", "profiles_opt_help"),
 )
 _HU_OPTIONS: tuple[tuple[str, str], ...] = (
-    ("--dry-run", "profiles_opt_dry_run"),
     ("--verbose", "profiles_opt_verbose"),
+    ("--json", "profiles_opt_json"),
     ("--profile NÉV", "profiles_opt_profile"),
     ("--help", "profiles_opt_help"),
 )

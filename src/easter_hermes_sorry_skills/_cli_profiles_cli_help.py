@@ -39,7 +39,7 @@ def _build_en_help() -> str:
         f"{_opts_mod.HELP_EN_HEADER}\n"
         f"{_opts_mod.EN_USAGE_BAR}\n\n"
         f"{EN['profiles_help_long']}\n\n"
-        "Default: writes to ~/.hermes/skills and to all profiles.\n\n"
+        "Default: READ-ONLY audit; audits every profile. Pass --json for machine output.\n\n"
         f"{_opts_mod.EN_SECTION}\n"
         f"{_format_options_block(_flags_mod._EN_OPTIONS, EN)}"
     )
@@ -52,7 +52,7 @@ def _build_hu_help() -> str:
         f"{_opts_mod.HELP_HU_HEADER}\n"
         f"{_opts_mod.HU_USAGE_BAR}\n\n"
         f"{HU['profiles_help_long']}\n\n"
-        "Alapértelmezett: ír a ~/.hermes/skills és minden profilba.\n\n"
+        "Alapértelmezett: CSAK OLVASÁS audit; minden profilt vizsgál. A --json gépi kimenetet ad.\n\n"
         f"{_opts_mod.HU_SECTION}\n"
         f"{_format_options_block(_flags_mod._HU_OPTIONS, HU)}"
     )

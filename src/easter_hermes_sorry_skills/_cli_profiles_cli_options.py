@@ -18,10 +18,10 @@ HELP_HU_HEADER = "Használat (magyar):"
 EN_SECTION = "Options:"
 HU_SECTION = "Kapcsolók:"
 EN_USAGE_BAR = (
-    "  easter-hermes-sorry-skills-profiles [--dry-run] [--verbose]\n"
+    "  easter-hermes-sorry-skills-profiles [--verbose] [--json]\n"
     "                                  [--profile NAME] [--help]"
 )
 HU_USAGE_BAR = (
-    "  easter-hermes-sorry-skills-profiles [--dry-run] [--verbose]\n"
+    "  easter-hermes-sorry-skills-profiles [--verbose] [--json]\n"
     "                                  [--profile NÉV] [--help]"
 )

@@ -167,24 +167,25 @@ HU_MESSAGES = MappingProxyType(
     {
         # CLI: easter-hermes-sorry-skills-profiles
         "profiles_help_short": (
-            "Profilonkénti telepítés/csere a migrált skill-creator skillhez "
-            "(Script #2). A skill-creator skillet a sík "
-            "~/.hermes/skills/skill-creator/ útvonalra telepíti/cseréli "
-            "minden profil alatt. Alap mód: ÍRÁS; a --dry-run kapcsolóval "
-            "előnézet kapható írás nélkül."
+            "Profilonkénti CSAK OLVASÁS audit a migrált skill-creator "
+            "skillhez (Script #2). A script soha nem ír — a "
+            "~/.hermes/skills/skill-creator/ útvonalat vizsgálja minden "
+            "profil alatt, és kétnyelvű EN/HU riportot ír. A --json "
+            "kapcsolóval géppel olvasható kimenetet kaphatunk."
         ),
         "profiles_help_long": (
             "Végigmegy minden Hermes profilon (az alap 'hermes' profil és "
             "minden a hermes_cli.profiles.list_profiles() által visszaadott "
-            "elnevezett profil), és telepíti/cseréli a migrált skill-creator "
-            "skillet a ~/.hermes/skills/skill-creator/ útvonalon. A script "
-            "meghívja a hermes_cli.skills_hub.do_install() függvényt az írás "
-            "elvégzésére, majd törli a skill rendszer-prompt gyorsítótárát. "
+            "elnevezett profil), és auditálja a skill fát a "
+            "~/.hermes/skills/skill-creator/ útvonalon. A script szigorúan "
+            "CSAK OLVAS: nem ír semmilyen fájlt, nem módosít konfigurációt. "
             "A script a hermes_home_scope() kontextuskezelő alatt fut, "
             "tükrözve a HERMES_HOME-ot mind az override tokenben, mind az "
             "os.environ['HERMES_HOME']-ban."
         ),
-        "profiles_opt_dry_run": ("Módosítások előnézete írás nélkül. Az alapértelmezett ÍRÁS mód ellentéte."),
+        "profiles_opt_json": (
+            "A riport kiírása géppel olvasható JSON formátumban a stdout-ra (tooling/pipeline-okhoz)."
+        ),
         "profiles_opt_verbose": (
             "Részletes, helyszínenkénti diagnosztika a stderr-re (nem zavarja a stdout kimenetet)."
         ),

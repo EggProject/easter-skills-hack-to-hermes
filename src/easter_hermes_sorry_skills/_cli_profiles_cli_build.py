@@ -34,9 +34,9 @@ def _value_flag(cmd: click.Command, flag: str, dest: str, help_key: str, **extra
     )(cmd)
 
 
-def _with_misc_flags(cmd: click.Command) -> click.Command:
-    """Apply the one boolean flag: --dry-run."""
-    cmd = _bool_flag(cmd, "--dry-run", "dry_run", "profiles_opt_dry_run")
+def _with_json_flag(cmd: click.Command) -> click.Command:
+    """Apply the boolean --json flag (machine-readable JSON output)."""
+    cmd = _bool_flag(cmd, "--json", "json", "profiles_opt_json")
     return cmd
 
 

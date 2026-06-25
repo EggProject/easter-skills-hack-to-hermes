@@ -18,7 +18,7 @@ from typing import Any
 import click
 
 from easter_hermes_sorry_skills._cli_profiles_cli_build import (
-    _with_misc_flags,
+    _with_json_flag,
     _with_profile_flag,
     _with_verbose_flag,
 )
@@ -45,9 +45,9 @@ def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
 # Apply the three ``click.option`` decorators via three wrapper helpers
 # so the function itself only has two decorators (``@click.command`` +
 # ``@click.pass_context``) — keeps the WPS216 cap of 5 happy.
-main_cmd = _with_misc_flags(main_cmd)
-main_cmd = _with_profile_flag(main_cmd)
 main_cmd = _with_verbose_flag(main_cmd)
+main_cmd = _with_json_flag(main_cmd)
+main_cmd = _with_profile_flag(main_cmd)
 
 
 def make_cli() -> Any:
