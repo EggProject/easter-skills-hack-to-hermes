@@ -18,3 +18,16 @@ setup() {
     run grep -qF 'from easter_hermes_sorry_skills.cli_profiles import main' scripts/easter-hermes-sorry-skills-install-profiles.sh
     [ "$status" -eq 0 ]
 }
+
+@test "install-profiles: end-to-end --help behaviour" {
+    run ./scripts/easter-hermes-sorry-skills-install-profiles.sh --help
+    if [ -f "./dist/easter-hermes-sorry-skills.pyz" ]; then
+        # .pyz exists (local dev / release-mode): wrapper invokes Click
+        [ "$status" -eq 0 ]
+        [[ "$output" == *"Usage"* ]]
+    else
+        # No .pyz (CI sandbox / dev-mode hiányzó artifact): wrapper fallback error
+        [ "$status" -eq 127 ]
+        [[ "$output" == *"No such file or directory"* ]]
+    fi
+}

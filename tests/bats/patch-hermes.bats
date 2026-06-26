@@ -19,3 +19,16 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
+@test "patch: end-to-end --help behaviour" {
+    run ./scripts/easter-hermes-sorry-skills-patch-hermes.sh --help
+    if [ -f "./dist/easter-hermes-sorry-skills.pyz" ]; then
+        # .pyz exists (local dev / release-mode): wrapper invokes Click
+        [ "$status" -eq 0 ]
+        [[ "$output" == *"Usage"* ]]
+    else
+        # No .pyz (CI sandbox / dev-mode hiányzó artifact): wrapper fallback error
+        [ "$status" -eq 127 ]
+        [[ "$output" == *"No such file or directory"* ]]
+    fi
+}
+
