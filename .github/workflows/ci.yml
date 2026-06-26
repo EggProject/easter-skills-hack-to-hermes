@@ -49,7 +49,21 @@ jobs:
         # with shebang '#!/opt/homebrew/bin/python3'. CI Ubuntu can't execute
         # that interpreter, so we rebuild the .pyz locally for the bats tests.
         # build-release.sh --only-shiv skips the tar.gz step (Phase 20 build).
-        run: bash scripts/build-release.sh --only-shiv
+        # Use `uv pip install` (additive) instead of `uv sync` to avoid
+        # pruning the dev extras (pre-commit, ruff, etc.). Then run shiv
+        # directly with the same flags build-release.sh uses (Phase 20).
+        run: |
+          uv pip install --quiet 'shiv>=1.0,<2.0'
+          PYTHON="$(command -v python3)"
+          PY_VERSION="$("${PYTHON}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+          SITE_PACKAGES=".venv/lib/python${PY_VERSION}/site-packages"
+          "${PWD}/.venv/bin/shiv" \
+              --site-packages "${SITE_PACKAGES}" \
+              --python "${PYTHON}" \
+              --output-file "dist/easter-hermes-sorry-skills.pyz" \
+              --reproducible \
+              --compressed \
+              .
 
       - name: Run pre-commit (all hooks)
         run: uv run pre-commit run --all-files --show-diff-on-failure
