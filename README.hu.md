@@ -2,7 +2,7 @@
 
 > 🇬🇧 **[English version →](README.md)**
 
-[![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red.svg)](#licenc)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Language: EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
 [![Language: HU](https://img.shields.io/badge/lang-HU-blue.svg)](README.hu.md)
 [![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](pyproject.toml)
@@ -30,16 +30,24 @@ A csomag három, operátor felé néző CLI entry pointot szállít
 ## Gyors indulás
 
 ```sh
-# 1. Install runtime + dev + extras (locked to uv.lock)
+# 1. Telepítsd a csomagot (3 mód: development / release artifact / Hermes plugin)
+#    Lásd: docs/installation.md
 uv sync --locked --all-extras --dev
-
-# 2. Telepítsd az egységes pre-commit kaput (ruff + black + mypy + wemake + pytest)
 uv run --locked pre-commit install
 
-# 3. Alkalmazd a 8 patch-et a Hermes checkout-odon (S1.cap + 6 Task E site)
-uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run   # előbb audit
-uv run --locked easter-hermes-sorry-skills-patch-hermes              # utána alkalmaz
+# 2. Patch audit (dry-run)
+uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run
+
+# 3. Patch apply
+uv run --locked easter-hermes-sorry-skills-patch-hermes
+
+# 4. Smoke test
+uv run --locked easter-hermes-sorry-skills-install-profiles
+uv run --locked easter-hermes-sorry-skills-report
 ```
+
+Részletes telepítési útmutató: [docs/installation.md](docs/installation.md).
+Részletes használati útmutató: [docs/usage.md](docs/usage.md).
 
 Telepítés után a három CLI a `PATH`-odon lesz:
 
@@ -51,11 +59,18 @@ Telepítés után a három CLI a `PATH`-odon lesz:
 
 | Téma | Link |
 |---|---|
-| 🛠️ Patch-ek (S1.cap + Task E site-ok) | **[Patch-ek](docs/patches.hu.md)** |
-| 📖 Skill-creator (migrált) | **[Skill-creator](docs/skill-creator.hu.md)** |
-| 📦 Szkriptek (a három CLI) | **[Szkriptek](docs/scripts.hu.md)** |
-| 🚀 Migrációs napló (claude → hermes) | **[Migráció](docs/migration.hu.md)** |
-| 🔧 Fejlesztés (uv + pre-commit) | **[Fejlesztés](docs/development.hu.md)** |
+| Telepítés (3 mód) | [docs/installation.md](docs/installation.md) |
+| Telepítés: development | [docs/installation-dev.md](docs/installation-dev.md) |
+| Telepítés: release artifact | [docs/installation-release.md](docs/installation-release.md) |
+| Telepítés: Hermes plugin | [docs/installation-hermes.md](docs/installation-hermes.md) |
+| Verifikáció + életciklus | [docs/installation-verify.md](docs/installation-verify.md) |
+| Használat (gyors indulás + workflow-k) | [docs/usage.md](docs/usage.md) |
+| Gyakori workflow-k + hibaelhárítás | [docs/workflows.md](docs/workflows.md) |
+| Patch-ek (S1.cap + Task E site-ok) | [docs/patches.md](docs/patches.md) |
+| Skill-creator (migrált) | [docs/skill-creator.md](docs/skill-creator.md) |
+| Szkriptek (a három CLI) | [docs/scripts.md](docs/scripts.md) |
+| Migrációs napló (claude → hermes) | [docs/migration.md](docs/migration.md) |
+| Fejlesztés (uv + pre-commit) | [docs/development.md](docs/development.md) |
 
 ## Szkriptek áttekintése
 
@@ -152,9 +167,14 @@ A `dist/` mappa törléséhez rebuild előtt futtasd manuálisan: `rm -rf dist/`
 
 ## Licenc
 
-Proprietary. Lásd [pyproject.toml:7](pyproject.toml). A Hermes Skills Hack belső
-szállítmánya. A hack-csapaton kívüli terjesztés tilos, kivéve az operátor
-kifejezett jóváhagyásával.
+Kettős licencelés:
+
+- A [LICENSE](LICENSE) fájl a kanonikus **MIT Licenc** (Copyright © 2026
+  eggproject Kft.) — ez a hiteles licenc a nyílt forráskódú terjesztéshez.
+- A `pyproject.toml:7` `license = { text = "Proprietary" }` mező az operátor
+  által kezelt marker a belső Hermes Hack csomagoláshoz és terjesztés-
+  felügyelethez. NEM külön licenc; az MIT szöveg szabályozza a forráskód
+  minden felhasználását ebben a repository-ban.
 
 ## Közreműködés
 
