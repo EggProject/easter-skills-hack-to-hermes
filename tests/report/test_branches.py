@@ -244,7 +244,7 @@ def test_main_help_via_click(monkeypatch) -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["--help"])
     assert result.exit_code == 0
-    assert "Usage (English):" in result.output
+    assert "Per-profile READ-ONLY" in result.output
 
 
 def test_main_no_args_runs_default(monkeypatch, hermes_home: Path) -> None:

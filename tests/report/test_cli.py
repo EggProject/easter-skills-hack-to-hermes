@@ -22,13 +22,19 @@ from tests.report._fixtures import _write_profile
 
 def test_help_is_bilingual() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, ["--help"])
-    assert result.exit_code == 0
-    assert HELP_EN_HEADER in result.output
-    assert HELP_HU_HEADER in result.output
-    # Each option appears in both halves.
+    en_result = runner.invoke(main, ["--help"])
+    assert en_result.exit_code == 0
+    assert HELP_EN_HEADER in en_result.output
+    assert HELP_HU_HEADER not in en_result.output
     for opt in ("--profile", "--sort", "--format", "--json"):
-        assert opt in result.output
+        assert opt in en_result.output
+
+    hu_result = runner.invoke(main, ["--lang", "hu", "--help"])
+    assert hu_result.exit_code == 0
+    assert HELP_HU_HEADER in hu_result.output
+    assert HELP_EN_HEADER not in hu_result.output
+    for opt in ("--profile", "--sort", "--format", "--json"):
+        assert opt in hu_result.output
 
 
 def test_console_log_lines_match_bilingual_regex() -> None:
@@ -393,8 +399,8 @@ def test_verbose_flag_added_to_report(hermes_home: Path) -> None:
 
 
 def test_report_help_lists_verbose() -> None:
-    """The report ``--help`` output mentions ``--verbose`` at least twice (EN+HU)."""
+    """The report ``--help`` output mentions ``--verbose`` once (single language)."""
     runner = CliRunner()
     result = runner.invoke(main, ["--help"])
     assert result.exit_code == 0, result.output
-    assert result.output.count("--verbose") >= 2
+    assert result.output.count("--verbose") >= 1

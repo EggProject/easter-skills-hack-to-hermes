@@ -523,22 +523,31 @@ def test_audit_specific_profile(installed, tmp_path: Path) -> None:
 
 
 def test_help_is_bilingual(installed) -> None:
-    """``--help`` contains both the English and Hungarian sections.
+    """``--help`` follows the ``--lang`` option (default ``en``).
 
     Phase 8 flag set: ``--profile``, ``--verbose``, ``--json``, ``--help``.
     ``--dry-run`` and ``--apply`` are gone (READ-ONLY CLI).
+
+    Replaces the pre-``--lang`` bilingual-by-default contract: the help
+    text is now a single language driven by the ``--lang {en,hu}``
+    option on the CLI.
     """
     log, cli = installed()
     runner = cli.make_cli()
-    result = runner.invoke(cli.app, ["--help"])
-    assert result.exit_code == 0
-    out = result.output
-    assert "Usage (English)" in out
-    assert "Használat (magyar)" in out
-    for opt in ("--profile", "--verbose", "--json", "--help"):
-        assert out.count(opt) >= 2, f"{opt} should appear in both sections"
-    assert "--dry-run" not in out
-    assert "--apply" not in out
+    # ``--help`` (no ``--lang``) renders the English section only.
+    result_en = runner.invoke(cli.app, ["--help"])
+    assert result_en.exit_code == 0
+    out_en = result_en.output
+    assert "Usage (English)" in out_en
+    assert "Használat (magyar)" not in out_en
+    assert "--dry-run" not in out_en
+    assert "--apply" not in out_en
+    # ``--lang hu --help`` flips the help text to Hungarian only.
+    result_hu = runner.invoke(cli.app, ["--lang", "hu", "--help"])
+    assert result_hu.exit_code == 0
+    out_hu = result_hu.output
+    assert "Használat (magyar)" in out_hu
+    assert "Usage (English)" not in out_hu
 
 
 def test_bilingual_message_renders() -> None:

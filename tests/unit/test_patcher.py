@@ -789,17 +789,28 @@ def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_her
         assert pattern.match(d), f"non-bilingual diagnostic: {d!r}"
 
 
-def test_help_is_bilingual() -> None:
-    """--help output contains both 'Usage (English)' and 'Használat (magyar)'."""
+def test_help_is_lang_aware() -> None:
+    """``--help`` shows HELP_EN by default; ``--lang hu`` shows HELP_HU.
+
+    Replaces the pre-``--lang`` ``test_help_is_bilingual`` contract: the
+    help text is no longer bilingual-concatenated, but selected via the
+    ``--lang {en,hu}`` option on the CLI.
+    """
     from click.testing import CliRunner
 
     from easter_hermes_sorry_skills.cli_patch import main as cli_main
 
     runner = CliRunner()
+    # Default: English only.
     result = runner.invoke(cli_main, ["--help"])
     assert result.exit_code == 0
     assert "Usage (English)" in result.output
+    assert "Használat (magyar)" not in result.output
+    # ``--lang hu`` flips the help text to Hungarian only.
+    result = runner.invoke(cli_main, ["--lang", "hu", "--help"])
+    assert result.exit_code == 0
     assert "Használat (magyar)" in result.output
+    assert "Usage (English)" not in result.output
 
 
 # --- idempotency / coverage -----------------------------------------------

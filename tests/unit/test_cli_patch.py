@@ -21,12 +21,29 @@ from easter_hermes_sorry_skills.cli_patch import HELP_EN, HELP_HU, main
 # --- --help --------------------------------------------------------------
 
 
-def test_help_sections_present() -> None:
+def test_help_default_is_english() -> None:
+    """Default ``--help`` (no ``--lang``) renders HELP_EN only."""
     runner = CliRunner()
     r = runner.invoke(main, ["--help"])
     assert r.exit_code == 0
     assert "Usage (English)" in r.output
+    assert "Használat (magyar)" not in r.output
+
+
+def test_help_lang_hu_renders_hungarian() -> None:
+    """``--lang hu --help`` renders HELP_HU only."""
+    runner = CliRunner()
+    r = runner.invoke(main, ["--lang", "hu", "--help"])
+    assert r.exit_code == 0
     assert "Használat (magyar)" in r.output
+    assert "Usage (English)" not in r.output
+
+
+def test_help_lists_lang_option() -> None:
+    """``--lang`` shows up in the auto-generated Options block."""
+    runner = CliRunner()
+    r = runner.invoke(main, ["--help"])
+    assert "--lang [en|hu]" in r.output
 
 
 def test_help_options_mirrored() -> None:

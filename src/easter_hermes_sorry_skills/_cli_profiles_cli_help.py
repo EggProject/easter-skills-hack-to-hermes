@@ -1,63 +1,33 @@
-"""Bilingual help-text rendering helpers for the profiles CLI surface.
+"""Short description body for the profiles CLI surface.
 
 Extracted from ``_cli_profiles_cli.py`` to keep that module under wemake
-WPS202 (≤7 module members). The helpers here read the option-pair
-tables and the per-language constants via direct attribute access to
-the sub-modules (``_cli_profiles_cli_options`` / ``_cli_profiles_cli_flags``)
-rather than via local re-binding, so this module's own surface stays
-small.
+WPS202 (≤7 module members). Click's auto-generated ``Usage:`` and
+``Options:`` blocks (which now include ``--lang`` itself) render
+alongside this body via ``_LangAwareCommand.format_help_text``, so
+this helper only returns the short description per language — it must
+NOT include its own ``Usage:`` / ``Options:`` sections.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 
-from easter_hermes_sorry_skills import _cli_profiles_cli_flags as _flags_mod
-from easter_hermes_sorry_skills import _cli_profiles_cli_options as _opts_mod
-from easter_hermes_sorry_skills.i18n.messages_en import EN_MESSAGES as EN
-from easter_hermes_sorry_skills.i18n.messages_hu import HU_MESSAGES as HU
+def build_help_text(lang: str = "en") -> str:
+    r"""Build the short description body for the profiles ``--help``.
 
-
-def _format_options_block(
-    options: tuple[tuple[str, str], ...],
-    messages: Mapping[str, str],
-) -> str:
-    """Render an options block: ``  FLAG  description`` per line."""
-    parts = [_format_option_line(flag, messages[key]) for flag, key in options]
-    return "".join(parts)
-
-
-def _format_option_line(flag: str, description: str) -> str:
-    r"""Format a single ``  FLAG  description\n`` option line."""
-    return f"  {flag}{description}\n"
-
-
-def _build_en_help() -> str:
-    """Build the English --help text body."""
+    Pass ``lang="en"`` (default) for the English description or
+    ``lang="hu"`` for the Hungarian description. The ``--lang`` Click
+    option drives which single-language body is rendered by
+    ``_LangAwareCommand.format_help_text``.
+    """
+    if lang == "hu":
+        return (
+            "Profilonkénti CSAK OLVASÁS audit a migrált skill-creator skillhez "
+            "(Script #2). A script soha nem ír — a ~/.hermes/skills/skill-creator/ "
+            "útvonalat vizsgálja minden profil alatt, és kétnyelvű EN/HU riportot ír."
+        )
     return (
-        f"{EN['profiles_help_short']}\n\n"
-        f"{_opts_mod.HELP_EN_HEADER}\n"
-        f"{_opts_mod.EN_USAGE_BAR}\n\n"
-        f"{EN['profiles_help_long']}\n\n"
-        "Default: READ-ONLY audit; audits every profile. Pass --json for machine output.\n\n"
-        f"{_opts_mod.EN_SECTION}\n"
-        f"{_format_options_block(_flags_mod._EN_OPTIONS, EN)}"
+        "Per-profile READ-ONLY audit for the migrated skill-creator skill (Script "
+        "#2). The script never writes — it inspects the skills tree at "
+        "~/.hermes/skills/skill-creator/ under each profile and prints a bilingual "
+        "EN/HU report."
     )
-
-
-def _build_hu_help() -> str:
-    """Build the Hungarian --help text body."""
-    return (
-        f"{HU['profiles_help_short']}\n\n"
-        f"{_opts_mod.HELP_HU_HEADER}\n"
-        f"{_opts_mod.HU_USAGE_BAR}\n\n"
-        f"{HU['profiles_help_long']}\n\n"
-        "Alapértelmezett: CSAK OLVASÁS audit; minden profilt vizsgál. A --json gépi kimenetet ad.\n\n"
-        f"{_opts_mod.HU_SECTION}\n"
-        f"{_format_options_block(_flags_mod._HU_OPTIONS, HU)}"
-    )
-
-
-def build_help_text() -> str:
-    """Build the bilingual --help text (two mirrored sections)."""
-    return f"{_build_en_help()}\n{_build_hu_help()}"

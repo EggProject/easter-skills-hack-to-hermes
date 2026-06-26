@@ -29,13 +29,46 @@ from easter_hermes_sorry_skills._cli_profiles_cli_build import (
 from easter_hermes_sorry_skills._cli_profiles_cli_help import build_help_text
 
 
-@click.command(
-    help=build_help_text(),
-    context_settings={"help_option_names": ["-h", "--help"]},
-)
+class _LangAwareCommand(click.Command):
+    """Click command whose ``--help`` text follows the ``--lang`` option.
+
+    ``--lang`` is declared ``is_eager`` so Click parses it before the
+    built-in ``--help`` flag fires. When the user only passes ``--help``
+    (no ``--lang``), ``ctx.params['lang']`` is ``None`` because Click
+    short-circuits before defaults are applied — fall back to the
+    English section in that case.
+
+    We override :meth:`format_help_text` rather than :meth:`get_help` so
+    that Click's auto-generated ``Options:`` block (which now includes
+    ``--lang`` itself) still renders alongside the static help body.
+    """
+
+    def format_help_text(
+        self,
+        ctx: click.Context,
+        formatter: click.HelpFormatter,
+    ) -> None:
+        lang = ctx.params.get("lang")
+        text = build_help_text("hu" if lang == "hu" else _LANG_EN)
+        if text:
+            formatter.write_paragraph()
+            with formatter.indentation():
+                formatter.write_text(text)
+
+
+# Module-level constant so WPS226 (string-literal-over-use) stays happy
+# across the class + function + click.option trio below.
+_LANG_EN = "en"
+
+
 @click.pass_context
-def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
-    """Per-profile read-only report for the migrated skill-creator skill (Script #2)."""
+def main_cmd(
+    ctx: click.Context,
+    /,
+    lang: str = _LANG_EN,
+    **kwargs: bool | str | None,
+) -> None:
+    """Per-profile read-only report for the migrated skill-creator."""
     from easter_hermes_sorry_skills.cli_profiles import run_audit
 
     as_json = bool(kwargs.get("json", False))
@@ -48,9 +81,26 @@ def main_cmd(ctx: click.Context, /, **kwargs: bool | str | None) -> None:
     )
 
 
-# Apply the three ``click.option`` decorators via three wrapper helpers
-# so the function itself only has two decorators (``@click.command`` +
-# ``@click.pass_context``) — keeps the WPS216 cap of 5 happy.
+# Apply the ``@click.command`` + ``@click.option --lang`` decorators via
+# reassignment (the entry-point contract used by ``cli_patch``) so the
+# function body itself only carries one decorator — keeps the WPS216
+# cap of 5 happy.
+main_cmd = click.command(
+    cls=_LangAwareCommand,
+    help=build_help_text(_LANG_EN),
+    context_settings={"help_option_names": ["-h", "--help"]},
+)(main_cmd)
+main_cmd = click.option(
+    "--lang",
+    type=click.Choice(["en", "hu"]),
+    default=_LANG_EN,
+    is_eager=True,
+    expose_value=True,
+    help="Help language (en or hu)",
+)(main_cmd)
+
+# Apply the three feature ``click.option`` decorators via three wrapper
+# helpers (json/profile/verbose).
 main_cmd = _with_verbose_flag(main_cmd)
 main_cmd = _with_json_flag(main_cmd)
 main_cmd = _with_profile_flag(main_cmd)

@@ -8,61 +8,126 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 
 import click
 
-from easter_hermes_sorry_skills._cli_report_ui import emit_bilingual_help
-from easter_hermes_sorry_skills.i18n import messages_en as EN
+from easter_hermes_sorry_skills._cli_report_helpers_consts import (
+    _EN_DESCRIPTIONS,
+    HELP_EN_HEADER,
+    LANG_EN,
+    LANG_OPT_DESC_EN,
+    help_header,
+    options_header,
+    resolve_descriptions,
+    resolve_lang_opt_desc,
+)
 
-_HELP_PARAGRAPH_SEP = "\n\n"
 _SORT_DEFAULT = "tokens"
 _FMT_DEFAULT = "text"
 
 
+class _LangAwareCommand(click.Command):
+    """Click command whose ``--help`` text follows the ``--lang`` option.
+
+    ``--lang`` is declared ``is_eager`` so Click parses it before the
+    built-in ``--help`` flag fires. When the user only passes ``--help``
+    (no ``--lang``), ``ctx.params['lang']`` defaults to ``"en"`` so the
+    English branch wins.
+
+    Overrides both ``format_help_text`` (for the short description) and
+    ``format_options`` (for the per-option description lines) so the
+    whole ``--help`` output is in the requested single language — no
+    bilingual ``[en] X / [hu] Y`` interleaving.
+    """
+
+    def format_help_text(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        formatter.write(help_header(ctx.params.get("lang", LANG_EN)))
+
+    def format_options(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        lang = ctx.params.get("lang", LANG_EN)
+        lang_opt_desc = resolve_lang_opt_desc(lang)
+        descriptions = resolve_descriptions(lang)
+
+        with formatter.section(options_header(lang)):
+            self._write_option_lines(formatter, ctx, descriptions, lang_opt_desc)
+
+    def _write_option_lines(
+        self,
+        formatter: click.HelpFormatter,
+        ctx: click.Context,
+        descriptions: MappingProxyType[str, str],
+        lang_opt_desc: str,
+    ) -> None:
+        """Emit one ``  --flag  description`` line per option."""
+        for entry in self.get_params(ctx):
+            if entry.name is None:
+                continue
+            if entry.name == "lang":
+                opt_label = "--lang"
+                description = lang_opt_desc
+            else:
+                opt_label = entry.opts[0] if entry.opts else f"--{entry.name}"
+                description = descriptions.get(opt_label, "")
+            if description:
+                formatter.write_text(f"  {opt_label}  {description}")
+
+
 def _with_report_options(cmd: click.Command) -> click.Command:
-    """Apply the six reporter ``click.option`` decorators as one wrapper."""
-    cmd = click.option("--profile", default=None, help=EN.report_opt_profile)(cmd)
+    """Apply the seven reporter ``click.option`` decorators as one wrapper.
+
+    ``--help`` is intentionally NOT registered here — Click handles the
+    native ``--help`` flag (printing ``Usage:``, ``Options:`` and exiting
+    with code 0) via ``_LangAwareCommand.format_help_text`` +
+    ``_LangAwareCommand.format_options``.
+    """
+    cmd = click.option(
+        "--lang",
+        type=click.Choice([LANG_EN, "hu"]),
+        default=LANG_EN,
+        is_eager=True,
+        expose_value=True,
+        help=LANG_OPT_DESC_EN,
+    )(cmd)
+    cmd = click.option(
+        "--profile",
+        default=None,
+        help=_EN_DESCRIPTIONS["--profile"],
+    )(cmd)
     cmd = click.option(
         "--sort",
         type=click.Choice(["tokens", "use_count", "last_used_at"]),
         default="tokens",
-        help=EN.report_opt_sort,
+        help=_EN_DESCRIPTIONS["--sort"],
     )(cmd)
     cmd = click.option(
         "--format",
         "fmt",
         type=click.Choice(["text", "json"]),
         default="text",
-        help=EN.report_opt_format,
+        help=_EN_DESCRIPTIONS["--format"],
     )(cmd)
     cmd = click.option(
         "--json",
         "json_path",
         type=click.Path(),
         default=None,
-        help=EN.report_opt_json,
-    )(cmd)
-    cmd = click.option(
-        "--help",
-        "show_help",
-        is_flag=True,
-        default=False,
-        help=EN.report_opt_help,
+        help=_EN_DESCRIPTIONS["--json"],
     )(cmd)
     cmd = click.option(
         "--verbose",
         "verbose",
         is_flag=True,
         default=False,
-        help=EN.report_opt_verbose,
+        help=_EN_DESCRIPTIONS["--verbose"],
     )(cmd)
     return cmd
 
 
 @click.command(
-    help=f"{EN.report_help_short}{_HELP_PARAGRAPH_SEP}{EN.report_help_long}",
+    cls=_LangAwareCommand,
+    help=HELP_EN_HEADER,
     context_settings={
-        "help_option_names": [],
         "ignore_unknown_options": True,
     },
 )
@@ -72,9 +137,6 @@ def _bare_main(**kwargs: bool | str | None) -> None:
 
     resolved = _resolve_cli_kwargs(kwargs)
     argv = sys.argv[1:]
-    if resolved.show_help:
-        emit_bilingual_help()
-        sys.exit(0)
     sys.exit(
         _run(
             profile=resolved.profile,
@@ -95,7 +157,6 @@ class _ResolvedCliArgs:
     sort: str
     fmt: str
     json_path: Path | None
-    show_help: bool
     verbose: bool
 
 
@@ -110,11 +171,10 @@ def _resolve_cli_kwargs(kwargs: dict[str, bool | str | None]) -> _ResolvedCliArg
         sort=sort if isinstance(sort, str) else _SORT_DEFAULT,
         fmt=fmt if isinstance(fmt, str) else _FMT_DEFAULT,
         json_path=Path(json_path_str) if isinstance(json_path_str, str) else None,
-        show_help=bool(kwargs.get("show_help", False)),
         verbose=bool(kwargs.get("verbose", False)),
     )
 
 
-# Apply the six ``click.option`` decorators via a wrapper helper so the
+# Apply the seven ``click.option`` decorators via a wrapper helper so the
 # function itself only has one decorator (WPS216 cap of 5).
 main = _with_report_options(_bare_main)
