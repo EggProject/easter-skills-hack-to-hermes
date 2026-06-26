@@ -49,61 +49,49 @@ from easter_hermes_sorry_skills._patcher import (
 from easter_hermes_sorry_skills.cli_patch_git import git_head as _git_head
 from easter_hermes_sorry_skills.cli_patch_options import _add_click_option
 
-HELP_EN = """\
-Usage (English):
-  uv run easter-hermes-sorry-skills-patch-hermes [--dry-run] [--target <dir>]
-  uv run easter-hermes-sorry-skills-patch-hermes --help
+HELP_EN = (
+    "Patcher applies:\n"
+    "  S1.cap   replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH\n"
+    "  Task E   5 prompt-injection sites (consult rule for skill-creator)\n"
+    "           applied by default, no flag.\n"
+    "\n"
+    "After a successful write, the on-disk skills prompt snapshot is purged to "
+    "force a cold rebuild."
+)
 
-Patcher applies:
-  S1.cap  replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH
-  Task E  5 prompt-injection sites (consult rule for skill-creator)
-          applied by default, no flag
-          After a successful write, the on-disk skills prompt snapshot
-          is purged to force a cold rebuild.
-
-Options:
-  --target DIR                 User-owned Hermes checkout.
-                               Defaults to ~/.hermes/hermes-agent,
-                               which is REFUSED (resolve() comparison,
-                               exit code 4). Pass an explicit path to
-                               patch a different checkout.
-  --dry-run                    Audit only; no writes. Default: WRITES.
-  --verbose                    Print bilingual per-site diagnostics.
-  --help                       Show this help.
-
-Exit codes: 0 OK / 1 validation / 2 drift / 3 permission / 4 I/O /
-            5 user-abort.
-"""
-
-HELP_HU = """\
-Használat (magyar):
-  uv run easter-hermes-sorry-skills-patch-hermes [--dry-run] [--target <mappa>]
-  uv run easter-hermes-sorry-skills-patch-hermes --help
-
-A patcher a kovetkezoket vegzi:
-  S1.cap  a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli
-  Task E  5 prompt-injection hely (skill-creator tanacsado szabaly)
-          alapertelmezetten fut, nincs flag
-          Sikeres iras utan a skills-prompt snapshot torolve lesz
-          a hideg-rebuildhoz.
-
-Opciok:
-  --target DIR                 Felhasznaloi tulajdonu Hermes checkout.
-                               Alapertelmezett: ~/.hermes/hermes-agent,
-                               amit a patcher MEGTAGAD (resolve()
-                               osszehasonlitas, 4-es kilepesi kod).
-                               Adj meg explicit utat egy masik
-                               checkout patchelesehez.
-  --dry-run                    Csak audit; nem ir. Alapertelmezett: IR.
-  --verbose                    Bilingual per-hely diagnosztikat nyomtat.
-  --help                       Ezt a sugot mutatja.
-
-Kilepesi kodok: 0 OK / 1 validacio / 2 drift / 3 jogosultsag / 4 I/O /
-                5 user-abort.
-"""
+HELP_HU = (
+    "A patcher a kovetkezoket vegzi:\n"
+    "  S1.cap   a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli\n"
+    "  Task E   5 prompt-injection hely (skill-creator tanacsado szabaly)\n"
+    "           alapertelmezetten fut, nincs flag.\n"
+    "\n"
+    "Sikeres write utan az on-disk skills prompt snapshot torlodik a cold rebuild-hoz."
+)
 
 
 # --- the click command ----------------------------------------------------
+
+
+class _LangAwareCommand(click.Command):
+    """Click command whose ``--help`` text follows the ``--lang`` option.
+
+    ``--lang`` is declared ``is_eager`` so Click parses it before the
+    built-in ``--help`` flag fires. When the user only passes ``--help``
+    (no ``--lang``), ``ctx.params['lang']`` is ``None`` because Click
+    short-circuits before defaults are applied — fall back to ``HELP_EN``
+    in that case.
+
+    We override :meth:`format_help_text` rather than :meth:`get_help` so
+    that Click's auto-generated ``Options:`` block (which now includes
+    ``--lang`` itself) still renders alongside the static help body.
+    """
+
+    def format_help_text(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        text = HELP_HU if ctx.params.get("lang") == "hu" else HELP_EN
+        if text:
+            formatter.write_paragraph()
+            with formatter.indentation():
+                formatter.write_text(text)
 
 
 def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
@@ -179,10 +167,19 @@ def main(ctx: click.Context, /, **_kwargs: object) -> None:
 
 # Apply click options to ``main`` directly (the entry-point contract).
 main = click.command(
-    help=f"{HELP_EN}\n{HELP_HU}",
+    cls=_LangAwareCommand,
+    help=HELP_EN,
     context_settings={"help_option_names": ["-h", "--help"]},
 )(main)
 
+main = click.option(
+    "--lang",
+    type=click.Choice(["en", "hu"]),
+    default="en",
+    is_eager=True,
+    expose_value=True,
+    help="Help language (en or hu)",
+)(main)
 
 main = _add_click_option(main, "--target", default_val=None)
 main = _add_click_option(main, "--dry-run", is_flag_val=True, default_val=False)
