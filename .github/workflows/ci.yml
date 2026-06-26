@@ -44,6 +44,13 @@ jobs:
         # for the sh wrappers. If a future Ubuntu release restores kcov, the
         # kcov step can be re-added (see removed step below for reference).
 
+      - name: Build .pyz for bats behavioural tests (Linux-compatible)
+        # The committed dist/easter-hermes-sorry-skills.pyz was built on macOS
+        # with shebang '#!/opt/homebrew/bin/python3'. CI Ubuntu can't execute
+        # that interpreter, so we rebuild the .pyz locally for the bats tests.
+        # build-release.sh --only-shiv skips the tar.gz step (Phase 20 build).
+        run: bash scripts/build-release.sh --only-shiv
+
       - name: Run pre-commit (all hooks)
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
