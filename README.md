@@ -2,7 +2,7 @@
 
 > [Magyar verzió](README.hu.md)
 
-[![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red.svg)](#license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Language: EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
 [![Language: HU](https://img.shields.io/badge/lang-HU-blue.svg)](README.hu.md)
 [![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](pyproject.toml)
@@ -29,16 +29,24 @@ plus the bilingual message catalog at `src/easter_hermes_sorry_skills/i18n/`.
 ## Quick start
 
 ```sh
-# 1. Install runtime + dev + extras (locked to uv.lock)
+# 1. Install the package (3 modes: development / release artifact / Hermes plugin)
+#    See: docs/installation.md
 uv sync --locked --all-extras --dev
-
-# 2. Install the unified pre-commit gate (ruff + black + mypy + wemake + pytest)
 uv run --locked pre-commit install
 
-# 3. Apply the 8 patches to your Hermes checkout (S1.cap + 6 Task E sites)
-uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run   # audit first
-uv run --locked easter-hermes-sorry-skills-patch-hermes              # then apply
+# 2. Patch audit (dry-run)
+uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run
+
+# 3. Patch apply
+uv run --locked easter-hermes-sorry-skills-patch-hermes
+
+# 4. Smoke test
+uv run --locked easter-hermes-sorry-skills-install-profiles
+uv run --locked easter-hermes-sorry-skills-report
 ```
+
+Detailed installation guide: [docs/installation.md](docs/installation.md).
+Detailed usage guide: [docs/usage.md](docs/usage.md).
 
 After install the three CLIs are on your `PATH`:
 
@@ -50,6 +58,13 @@ After install the three CLIs are on your `PATH`:
 
 | Topic | Link |
 |---|---|
+| Installation (3 modes) | [docs/installation.md](docs/installation.md) |
+| Installation: development | [docs/installation-dev.md](docs/installation-dev.md) |
+| Installation: release artifact | [docs/installation-release.md](docs/installation-release.md) |
+| Installation: Hermes plugin | [docs/installation-hermes.md](docs/installation-hermes.md) |
+| Verification + lifecycle | [docs/installation-verify.md](docs/installation-verify.md) |
+| Usage (quick start + workflows) | [docs/usage.md](docs/usage.md) |
+| Common workflows + troubleshooting | [docs/workflows.md](docs/workflows.md) |
 | Patches (S1.cap + Task E sites) | [docs/patches.md](docs/patches.md) |
 | Skill-creator (migrated) | [docs/skill-creator.md](docs/skill-creator.md) |
 | Scripts (the three CLIs) | [docs/scripts.md](docs/scripts.md) |
@@ -147,9 +162,15 @@ To clean the `dist/` folder before a rebuild, run `rm -rf dist/` manually (the `
 
 ## License
 
-Proprietary. See [pyproject.toml:7](pyproject.toml). Internal Hermes Skills
-Hack deliverable. Not for redistribution outside the hack team without explicit
-operator approval.
+Dual-licensed:
+
+- The [LICENSE](LICENSE) file is the canonical **MIT License** (Copyright © 2026
+  eggproject Kft.) — this is the authoritative license for open-source
+  redistribution.
+- The `pyproject.toml:7` `license = { text = "Proprietary" }` field is the
+  operator-managed marker for internal Hermes Hack packaging and distribution
+  control. It is NOT a separate license; the MIT text governs all use of the
+  source code in this repository.
 
 ## Contributing
 
