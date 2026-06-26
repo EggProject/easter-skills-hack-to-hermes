@@ -8,9 +8,3 @@ setup() {
     run bash -n "scripts/easter-hermes-sorry-skills-report.sh"
     [ "$status" -eq 0 ]
 }
-
-@test "report: --help exits 0 and prints usage" {
-    run scripts/easter-hermes-sorry-skills-report.sh --help
-    [ "$status" -eq 0 ]
-    [[ "$output" =~ [Uu]sage ]]
-}

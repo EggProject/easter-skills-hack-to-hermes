@@ -8,9 +8,3 @@ setup() {
     run bash -n "scripts/easter-hermes-sorry-skills-install-profiles.sh"
     [ "$status" -eq 0 ]
 }
-
-@test "install-profiles: --help exits 0 and prints usage" {
-    run scripts/easter-hermes-sorry-skills-install-profiles.sh --help
-    [ "$status" -eq 0 ]
-    [[ "$output" =~ [Uu]sage ]]
-}

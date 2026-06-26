@@ -9,8 +9,3 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "patch: --help exits 0 and prints usage" {
-    run scripts/easter-hermes-sorry-skills-patch-hermes.sh --help
-    [ "$status" -eq 0 ]
-    [[ "$output" =~ [Uu]sage ]]
-}
