@@ -804,13 +804,13 @@ def test_help_is_lang_aware() -> None:
     # Default: English only.
     result = runner.invoke(cli_main, ["--help"])
     assert result.exit_code == 0
-    assert "Usage (English)" in result.output
-    assert "Használat (magyar)" not in result.output
+    assert "Patcher applies:" in result.output
+    assert "A patcher a kovetkezoket vegzi" not in result.output
     # ``--lang hu`` flips the help text to Hungarian only.
     result = runner.invoke(cli_main, ["--lang", "hu", "--help"])
     assert result.exit_code == 0
-    assert "Használat (magyar)" in result.output
-    assert "Usage (English)" not in result.output
+    assert "A patcher a kovetkezoket vegzi" in result.output
+    assert "Patcher applies:" not in result.output
 
 
 # --- idempotency / coverage -----------------------------------------------

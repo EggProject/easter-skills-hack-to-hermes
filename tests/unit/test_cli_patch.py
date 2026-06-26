@@ -16,7 +16,7 @@ from easter_hermes_sorry_skills._patcher import (
     EXIT_OK,
     STATE_SIDECAR,
 )
-from easter_hermes_sorry_skills.cli_patch import HELP_EN, HELP_HU, main
+from easter_hermes_sorry_skills.cli_patch import main
 
 # --- --help --------------------------------------------------------------
 
@@ -26,8 +26,8 @@ def test_help_default_is_english() -> None:
     runner = CliRunner()
     r = runner.invoke(main, ["--help"])
     assert r.exit_code == 0
-    assert "Usage (English)" in r.output
-    assert "Használat (magyar)" not in r.output
+    assert "Patcher applies:" in r.output
+    assert "A patcher a kovetkezoket vegzi" not in r.output
 
 
 def test_help_lang_hu_renders_hungarian() -> None:
@@ -35,8 +35,8 @@ def test_help_lang_hu_renders_hungarian() -> None:
     runner = CliRunner()
     r = runner.invoke(main, ["--lang", "hu", "--help"])
     assert r.exit_code == 0
-    assert "Használat (magyar)" in r.output
-    assert "Usage (English)" not in r.output
+    assert "A patcher a kovetkezoket vegzi" in r.output
+    assert "Patcher applies:" not in r.output
 
 
 def test_help_lists_lang_option() -> None:
@@ -48,14 +48,17 @@ def test_help_lists_lang_option() -> None:
 
 def test_help_options_mirrored() -> None:
     """Each option in HELP_EN must also appear in HELP_HU."""
+    runner = CliRunner()
     options = [
         "--target",
         "--dry-run",
         "--verbose",
     ]
+    en_output = runner.invoke(main, ["--lang", "en", "--help"]).output
+    hu_output = runner.invoke(main, ["--lang", "hu", "--help"]).output
     for opt in options:
-        assert opt in HELP_EN, f"missing in HELP_EN: {opt}"
-        assert opt in HELP_HU, f"missing in HELP_HU: {opt}"
+        assert opt in en_output, f"missing in EN --help output: {opt}"
+        assert opt in hu_output, f"missing in HU --help output: {opt}"
 
 
 # --- --target required (exit 4) -----------------------------------------

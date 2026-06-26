@@ -538,16 +538,16 @@ def test_help_is_bilingual(installed) -> None:
     result_en = runner.invoke(cli.app, ["--help"])
     assert result_en.exit_code == 0
     out_en = result_en.output
-    assert "Usage (English)" in out_en
-    assert "Használat (magyar)" not in out_en
+    assert "Per-profile READ-ONLY" in out_en
+    assert "Profilonkénti CSAK OLVASÁS" not in out_en
     assert "--dry-run" not in out_en
     assert "--apply" not in out_en
     # ``--lang hu --help`` flips the help text to Hungarian only.
     result_hu = runner.invoke(cli.app, ["--lang", "hu", "--help"])
     assert result_hu.exit_code == 0
     out_hu = result_hu.output
-    assert "Használat (magyar)" in out_hu
-    assert "Usage (English)" not in out_hu
+    assert "Profilonkénti CSAK OLVASÁS" in out_hu
+    assert "Per-profile READ-ONLY" not in out_hu
 
 
 def test_bilingual_message_renders() -> None:
