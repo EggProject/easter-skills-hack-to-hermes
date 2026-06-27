@@ -110,6 +110,25 @@ TEXT_DRIFT = (
     "elvárt {expected!r}, tényleges {actual!r}"
 )
 
+# Dry-run plan output (EN half — bilingual single-string format).
+# Single-string bilingual format: "[en] ... / [hu] ...".
+DRY_RUN_PLAN_HEADER = "[en] plan for {target}: / [hu] terv a {target} útvonalra:"
+DRY_RUN_PREFLIGHT_WARNING = (
+    "[en] WARNING: target is the live hermes-agent checkout, "
+    "no patches will be applied / "
+    "[hu] FIGYELEM: a target az élő hermes-agent checkout, "
+    "nem történik patch"
+)
+DRY_RUN_PATCH_LINE = "[en] would patch: {file_path} (site {site_id}) / [hu] patchelné: {file_path} ({site_id} site)"
+DRY_RUN_DIFF_LINE_OLD = "[en]   line {line}: - {old} / [hu]   line {line}: - {old}"
+DRY_RUN_DIFF_LINE_NEW = "[en]   line {line}: + {new} / [hu]   line {line}: + {new}"
+DRY_RUN_PLAN_SUMMARY = "[en] {count} patch(es) would be applied / [hu] {count} patch kerülne alkalmazásra"
+DRY_RUN_NOT_APPLIED = (
+    "[en] WARNING: --dry-run mode, {count} patches were NOT applied / "
+    "[hu] FIGYELEM: --dry-run módban vagyunk, {count} patch NEM történt meg"
+)
+DRY_RUN_APPLIED = "[en] {count} patches applied / [hu] {count} patch alkalmazva"
+
 # Column headers (English half — the Hungarian half lives in messages_hu.py).
 COL_PROFILE = "profile"
 COL_NAME = "name"

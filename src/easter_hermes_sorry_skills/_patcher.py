@@ -52,6 +52,7 @@ from pathlib import Path
 from easter_hermes_sorry_skills import _patcher_imports as _imps
 from easter_hermes_sorry_skills import _patcher_internals as _patcher_internals
 from easter_hermes_sorry_skills import _patcher_pipeline_types as _pipeline_types
+from easter_hermes_sorry_skills import _patcher_plan_output as _plan_output
 from easter_hermes_sorry_skills import _patcher_sites as _sites
 from easter_hermes_sorry_skills._patcher_pipeline import (
     ApplySitesInputs,
@@ -225,6 +226,12 @@ def _drive_pipeline(
     # sites are NOT re-applied.
     sites = all_sites
     if inputs.dry_run:
+        # Emit the bilingual plan BEFORE the EXIT_OK result builder so
+        # the operator sees the planned changes plus the
+        # ``--dry-run mode, N patches were NOT applied`` tail.
+        state.diagnostics.extend(
+            _plan_output._emit_plan(target_path, sites, validation, mode="dry_run"),
+        )
         return _ok_check_result_pipeline(
             OkCheckInputs(
                 sites=sites,
@@ -237,6 +244,12 @@ def _drive_pipeline(
                 write_state_fn=write_state,
             ),
         )
+    # Apply path: emit the same bilingual plan (now followed by the
+    # ``N patches applied`` tail) BEFORE the apply loop so the
+    # operator sees the planned changes alongside the apply summary.
+    state.diagnostics.extend(
+        _plan_output._emit_plan(target_path, sites, validation, mode="apply"),
+    )
     return apply_skills_cache_purge_to_result(
         _apply_sites_pipeline(
             ApplySitesInputs(

@@ -62,13 +62,20 @@ def _check_preflight(
     # ``--force`` and ``--i-accept-line-drift`` were removed from
     # ``PatchRunInputs`` (Phase 7A.5). Preflight rule 4 ("force without
     # i_accept_line_drift -> EXIT_USER_ABORT") was dropped along with
-    # those flags; ``run_preflight`` now accepts only ``target``.
-    # ``inputs.dry_run`` is handled later in ``_drive_pipeline`` and
-    # does not affect preflight refusal rules.
-    preflight = _run_preflight(inputs.target)
+    # those flags; ``run_preflight`` now accepts only ``target`` plus
+    # the ``dry_run`` keyword (used to soften the hermes-agent refusal
+    # under audit-only runs).
+    preflight = _run_preflight(inputs.target, dry_run=inputs.dry_run)
     if preflight is None:
         return None
-    return _empty_result([*state.diagnostics, preflight[1]], preflight[0])
+    if preflight.severity == "warning":
+        # Soft safety: append the bilingual WARNING diagnostic and let
+        # the pipeline continue. ``EXIT_OK`` here means the run
+        # succeeded as a dry-run audit; the actual exit code for an
+        # apply run is determined downstream by ``_drive_pipeline``.
+        state.diagnostics.append(preflight.diagnostic)
+        return None
+    return _empty_result([*state.diagnostics, preflight.diagnostic], preflight.exit_code)
 
 
 def _check_circular_import(
