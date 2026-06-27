@@ -89,6 +89,41 @@ Mind a három entry point a `pyproject.toml:34-36` sorban van deklarálva. Mindi
   Megmutatja, mely skill-ek vannak jelenleg engedélyezve, és hogyan néz ki a
   napi költségfelület. Nincs írás, nincs config-flippelés.
 
+### `--dry-run` és a dry-run terv
+
+Az `easter-hermes-sorry-skills-patch-hermes --dry-run` az összes tervezett
+patch-et auditálja anélkül, hogy egyetlen byte-ot is írna a célpontra. A
+kimenet egy kétnyelvű (EN/HU) **terv**, amelyet az operátor az apply
+előtt olvas el:
+
+```text
+[en] plan for /path/to/target:
+[hu] terv a /path/to/target útvonalra:
+[en] would patch: agent/skill_utils.py (site S1.cap)
+[hu] patchelné: agent/skill_utils.py (S1.cap site)
+  line 688: - régi sor tartalma
+  line 688: + új sor tartalma
+[en] 8 patch(es) would be applied / [hu] 8 patch kerülne alkalmazásra
+[en] WARNING: --dry-run mode, 8 patches were NOT applied /
+[hu] FIGYELEM: --dry-run módban vagyunk, 8 patch NEM történt meg
+```
+
+Az apply mód ugyanazt a tervet adja ki, de a záró sor átvált a
+kétnyelvű „alkalmazva" üzenetre a dry-run figyelmeztetés helyett:
+
+```text
+[en] 8 patches applied / [hu] 8 patch alkalmazva
+```
+
+**Lágy safety.** A `~/.hermes/hermes-agent` checkout a patcher
+no-touch sentinelje. Az apply mód (`--dry-run` nélkül) KEMÉNYEN
+megtagadja `EXIT_IO` kóddal és kétnyelvű diagnosztikával. A dry-run
+mód LÁGYÍTJA a megtagadást: a patcher kétnyelvű WARNING-ot ad ki,
+kiírja a tervet, és továbbhalad, hogy az operátor az apply előtt
+megnézhesse a tervezett változtatásokat. A célfájl hash-e
+byte-azonos marad (a `test_cli_dry_run_no_writes_to_target`
+egységteszt ellenőrzi).
+
 Mind a három CLI kétnyelvű (EN/HU) konzol-kimenetet ad
 (`i18n/messages_en.py`, `i18n/messages_hu.py`); a `--help` tükrözött angol /
 magyar szekciókat tartalmaz.

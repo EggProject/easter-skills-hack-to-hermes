@@ -87,6 +87,40 @@ through `uv run --locked` so `uv.lock` stays authoritative.
   which skills are currently enabled and what the daily cost surface looks
   like. NO writes, NO config flips.
 
+### `--dry-run` and the dry-run plan
+
+`easter-hermes-sorry-skills-patch-hermes --dry-run` audits every planned
+patch without writing a single byte to the target. The output is a
+bilingual EN/HU **plan** the operator reads before deciding to apply:
+
+```text
+[en] plan for /path/to/target:
+[hu] terv a /path/to/target útvonalra:
+[en] would patch: agent/skill_utils.py (site S1.cap)
+[hu] patchelné: agent/skill_utils.py (S1.cap site)
+  line 688: - old line content
+  line 688: + new line content
+[en] 8 patch(es) would be applied / [hu] 8 patch kerülne alkalmazásra
+[en] WARNING: --dry-run mode, 8 patches were NOT applied /
+[hu] FIGYELEM: --dry-run módban vagyunk, 8 patch NEM történt meg
+```
+
+Apply mode emits the same plan body, but the trailing tail switches to
+the bilingual "applied" message instead of the dry-run warning:
+
+```text
+[en] 8 patches applied / [hu] 8 patch alkalmazva
+```
+
+**Soft safety.** The hermes-agent checkout (`~/.hermes/hermes-agent`) is
+the no-touch sentinel for the patcher. Apply mode (`--dry-run` not set)
+HARD-refuses it with `EXIT_IO` and a bilingual diagnostic. Dry-run
+mode SOFTENS the refusal: the patcher emits a bilingual WARNING,
+prints the plan, and proceeds so the operator can audit the planned
+changes before deciding to apply. The target file hash stays
+byte-identical (verified by the `test_cli_dry_run_no_writes_to_target`
+unit test).
+
 All three CLIs emit bilingual EN/HU console output (`i18n/messages_en.py`,
 `i18n/messages_hu.py`); `--help` carries mirrored English / magyar sections.
 
