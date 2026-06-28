@@ -133,19 +133,19 @@ def _build_background_review_padded() -> str:
     # padding + anchors).
     lines.append('"""Background memory/skill review — fork the agent to evaluate the turn.\n')
     lines.append("\n")
-    for i in range(1, 228):
+    for i in range(1, 227):
         lines.append(f"# padding {i}\n")
     lines.append('    "session artifact. If the proposed name only makes sense for "\n')
-    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n\n")
-    lines.append('"\n')
+    lines.append(
+        '    "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n",
+    )
     lines.append('    "User-preference embedding (important): when the user expressed a "\n')
-    for i in range(233, 315):
+    for i in range(232, 316):
         lines.append(f"# padding {i}\n")
     lines.append('    "artifact. If the name only fits today\'s task, fall back to (1), "\n')
-    lines.append('    "(2), or (3).\n\n')
-    lines.append('"\n')
+    lines.append(r'    "(2), or (3).\n\n"' "\n")
     lines.append('    "User-preference embedding: when the user complains about how "\n')
-    for i in range(320, 350):
+    for i in range(319, 350):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
 

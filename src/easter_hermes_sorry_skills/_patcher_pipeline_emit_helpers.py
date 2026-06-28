@@ -7,6 +7,7 @@ per-invocation diff-sha combiner) extracted to keep
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from easter_hermes_sorry_skills._i18n_pick import pick
@@ -25,6 +26,24 @@ def _pick_text_drift_actual(failure: dict[str, Any]) -> str:
     """
     actual_at_unknown = failure.get("actual_at_line_unknown", "")
     return str(actual_at_unknown)
+
+
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _squash_payload(text: str) -> str:
+    r"""Sortörések, tabulátorok és ANSI escape-ek cseréje szóközre.
+
+    A drift üzenetek egysoros, olvasható formátumához: a control
+    karaktereket (\x00-\x1f, \x7f) szóközre cseréljük, és a hosszú
+    szöveget 80 karakterre vágjuk ... toldalékkal.
+    """
+    ellipsis = "..."
+    max_len = 80
+    squashed = _CONTROL_CHARS_RE.sub(" ", text)
+    if len(squashed) > max_len:
+        return squashed[: max_len - len(ellipsis)] + ellipsis
+    return squashed
 
 
 def append_drift_diagnostic(
@@ -50,8 +69,8 @@ def append_drift_diagnostic(
         diagnostics.append(
             msgs.TEXT_DRIFT.format(
                 site_id=failure["site_id"],
-                expected=failure.get("expected", ""),
-                actual=_pick_text_drift_actual(failure),
+                expected=_squash_payload(failure.get("expected", "")),
+                actual=_squash_payload(_pick_text_drift_actual(failure)),
             ),
         )
     diagnostics.append(msgs.VALIDATION_FAILED.format(site_id=failure["site_id"]))

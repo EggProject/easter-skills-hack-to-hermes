@@ -69,13 +69,13 @@ KIND_CAP = "cap"
 # Compact newline-literal aliases used by the Task E insertion strings.
 # Extracted into named constants so wemake WPS342 (implicit raw string)
 # does not flag the multi-`\n` patterns inside the Site() calls below.
-_NL2 = "\n\n"
+_NL2 = r"\n\n"
 _E4_LINE_A = '    "session artifact. If the proposed name only makes sense for "\n'
-_E4_LINE_B = "    \"today's task, it's wrong — fall back to (1), (2), or (3).\n\n\"\n"
+_E4_LINE_B = '    "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n"
 _E4_LINE_C = '    "User-preference embedding (important): when the user expressed a "\n'
 _E4_TEXT = _E4_LINE_A + _E4_LINE_B + _E4_LINE_C
 _E5_LINE_A = '    "artifact. If the name only fits today\'s task, fall back to (1), "\n'
-_E5_LINE_B = '    "(2), or (3).\n\n"\n'
+_E5_LINE_B = r'    "(2), or (3).\n\n"' "\n"
 _E5_LINE_C = '    "User-preference embedding: when the user complains about how "\n'
 _E5_TEXT = _E5_LINE_A + _E5_LINE_B + _E5_LINE_C
 
@@ -140,8 +140,8 @@ E2_LINE = 158
 E4B_LINE = 1
 # Same descending-order logic for E4/E5 in ``agent/background_review.py``
 # (E4b applies last, so L230/L317 anchors remain valid).
-E4_LINE = 230
-E5_LINE = 317
+E4_LINE = 229
+E5_LINE = 316
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
 # (agent/background_review.py). The patcher matches these against the
