@@ -92,21 +92,33 @@ MEMORY_GUIDANCE = (
 
 def _build_prompt_builder_padded() -> str:
     lines: list[str] = []
-    # AC-2.8: L1 docstring anchors E0 (which inserts the
-    # ``SKILL_CREATOR_CONSULT_RULE`` definition immediately after).
-    # Real Hermes's ``prompt_builder.py`` already has a docstring at L1
-    # and the E1/E2 anchors at L179/L158 (E3 was removed 2026-06-23), so the padding
-    # below preserves those line numbers (the fixture mirrors the
-    # real layout: docstring + blank + padding + anchors).
+    # AC-2.8: the L1/L2 docstring (open + close) anchors E0 (which
+    # inserts the ``SKILL_CREATOR_CONSULT_RULE`` definition immediately
+    # AFTER the closing ``"""`` so the constant lives at module scope).
+    # Real Hermes's ``prompt_builder.py`` has a multi-line docstring
+    # with a real closing ``"""``; this fixture mirrors that shape so
+    # ``ast.parse()`` accepts the post-patch file. The E1/E2 anchor
+    # lines at L179/L158 are wrapped in real ``MEMORY_GUIDANCE = (...)``
+    # / ``SKILLS_GUIDANCE = (...)`` tuple literals so the indented
+    # anchor strings are syntactically valid at module scope once the
+    # docstring is closed (matching real Hermes's structure).
     lines.append('"""System prompt assembly -- identity, platform hints, skills index, context files.\n')
-    lines.append("\n")
-    for i in range(1, 156):
+    lines.append('"""\n')
+    # E2 anchor must stay at L158 (existing test contract): insert the
+    # MEMORY_GUIDANCE opener at L157, E2 anchor at L158, close at L159.
+    for i in range(1, 155):
         lines.append(f"# padding {i}\n")
+    lines.append("MEMORY_GUIDANCE = (\n")
     lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
-    for i in range(159, 179):
+    lines.append(")  # end MEMORY_GUIDANCE\n")
+    # E1 anchor must stay at L179 (existing test contract): SKILLS_GUIDANCE
+    # opener at L178, E1 anchor at L179, close at L180.
+    for i in range(159, 177):
         lines.append(f"# padding {i}\n")
+    lines.append("SKILLS_GUIDANCE = (\n")
     lines.append('    "Skills that aren\'t maintained become liabilities."\n')
-    for i in range(180, 1421):
+    lines.append(")\n")
+    for i in range(181, 1421):
         lines.append(f"# padding {i}\n")
     # E3 anchor (L1421) was removed 2026-06-23 — the loop below still
     # pads every line individually to preserve the fixture's total
@@ -126,26 +138,40 @@ BACKGROUND_REVIEW_BODY = '''\
 
 def _build_background_review_padded() -> str:
     lines: list[str] = []
-    # AC-2.8: L1 docstring anchors E4b. Real Hermes's
-    # ``background_review.py`` already has a docstring at L1 and the
-    # E4/E5 anchors at L230/L317, so the padding below preserves those
-    # line numbers (mirrors the real layout: docstring + blank +
-    # padding + anchors).
+    # AC-2.8: the L1/L2 docstring (open + close) anchors E4b (which
+    # inserts the ``from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE``
+    # import line immediately AFTER the closing ``"""`` so the import
+    # lives at module scope). Real Hermes's ``background_review.py``
+    # has a multi-line docstring with a real closing ``"""``; this
+    # fixture mirrors that shape so ``ast.parse()`` accepts the
+    # post-patch file. The E4/E5 3-line anchor blocks at L229/L316 are
+    # wrapped in real ``_SKILL_REVIEW_PROMPT = (...)`` /
+    # ``_COMBINED_REVIEW_PROMPT = (...)`` tuple literals so the
+    # indented anchor strings are syntactically valid at module scope
+    # once the docstring is closed (matching real Hermes's structure).
     lines.append('"""Background memory/skill review — fork the agent to evaluate the turn.\n')
-    lines.append("\n")
-    for i in range(1, 227):
+    lines.append('"""\n')
+    # E4 anchor (3-line block starting at L229, inside _SKILL_REVIEW_PROMPT
+    # tuple). Opener at L228, anchor at L229..L231, closer at L232.
+    for i in range(1, 226):
         lines.append(f"# padding {i}\n")
-    lines.append('    "session artifact. If the proposed name only makes sense for "\n')
+    lines.append("_SKILL_REVIEW_PROMPT = (\n")
+    lines.append('    + "session artifact. If the proposed name only makes sense for "\n')
     lines.append(
-        '    "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n",
+        '    + "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n",
     )
-    lines.append('    "User-preference embedding (important): when the user expressed a "\n')
-    for i in range(232, 316):
+    lines.append('    + "User-preference embedding (important): when the user expressed a "\n')
+    lines.append(")\n")
+    # E5 anchor (3-line block starting at L316, inside _COMBINED_REVIEW_PROMPT
+    # tuple). Opener at L315, anchor at L316..L318, closer at L319.
+    for i in range(232, 314):
         lines.append(f"# padding {i}\n")
-    lines.append('    "artifact. If the name only fits today\'s task, fall back to (1), "\n')
-    lines.append(r'    "(2), or (3).\n\n"' "\n")
-    lines.append('    "User-preference embedding: when the user complains about how "\n')
-    for i in range(319, 350):
+    lines.append("_COMBINED_REVIEW_PROMPT = (\n")
+    lines.append('    + "artifact. If the name only fits today\'s task, fall back to (1), "\n')
+    lines.append(r'    + "(2), or (3).\n\n"' "\n")
+    lines.append('    + "User-preference embedding: when the user complains about how "\n')
+    lines.append(")\n")
+    for i in range(320, 350):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
 

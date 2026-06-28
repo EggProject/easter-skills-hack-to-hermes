@@ -58,12 +58,13 @@ _CONSULT_RULE_TEXT = (
 )
 
 # Top-of-file insertion (constant definition) for the E0 site. E0 anchors
-# on the L1 docstring of ``agent/prompt_builder.py`` and appends this
-# block immediately after, so the constant is at module level. The
-# L1 docstring is a multi-line opening line (no closing ``"""`` on the
-# anchor line), so the insertion payload itself must close the
-# docstring first (``"""\n``) before emitting the constant definition.
-_CONSULT_RULE_DEFINITION = f'"""\n\nSKILL_CREATOR_CONSULT_RULE = (\n    {_CONSULT_RULE_TEXT!r}\n)\n'
+# on the CLOSING ``"""`` line (L2) of the multi-line docstring at the
+# top of ``agent/prompt_builder.py`` and appends this block immediately
+# AFTER the closing ``"""`` so the constant lives at module scope.
+# Append-before shape: the docstring's opening line (L1) and closing
+# line (L2, the anchor) stay untouched; only lines after L2 receive
+# the inserted constant.
+_CONSULT_RULE_DEFINITION = f"\nSKILL_CREATOR_CONSULT_RULE = (\n    {_CONSULT_RULE_TEXT!r}\n)\n"
 
 # --- site ``kind`` constants (WPS226 — reused > 3 times) -------------------
 KIND_APPEND = "append"
@@ -73,13 +74,21 @@ KIND_CAP = "cap"
 # Extracted into named constants so wemake WPS342 (implicit raw string)
 # does not flag the multi-`\n` patterns inside the Site() calls below.
 _NL2 = r"\n\n"
-_E4_LINE_A = '    "session artifact. If the proposed name only makes sense for "\n'
-_E4_LINE_B = '    "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n"
-_E4_LINE_C = '    "User-preference embedding (important): when the user expressed a "\n'
+# E4/E5 anchor blocks use EXPLICIT ``+`` between the implicit-concat
+# fragments (instead of bare adjacency) so the patched file parses
+# cleanly when the E4/E5 insertion lands between the first and
+# second anchor lines (the patcher does ``lines.insert(idx + 1,
+# insertion)``). With bare adjacency, the inserted expression breaks
+# the implicit-concat and Python raises ``SyntaxError`` ("perhaps you
+# forgot a comma?"). The explicit ``+`` keeps each fragment as a
+# self-contained string-concat operand.
+_E4_LINE_A = '    + "session artifact. If the proposed name only makes sense for "\n'
+_E4_LINE_B = '    + "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n"
+_E4_LINE_C = '    + "User-preference embedding (important): when the user expressed a "\n'
 _E4_TEXT = _E4_LINE_A + _E4_LINE_B + _E4_LINE_C
-_E5_LINE_A = '    "artifact. If the name only fits today\'s task, fall back to (1), "\n'
-_E5_LINE_B = r'    "(2), or (3).\n\n"' "\n"
-_E5_LINE_C = '    "User-preference embedding: when the user complains about how "\n'
+_E5_LINE_A = '    + "artifact. If the name only fits today\'s task, fall back to (1), "\n'
+_E5_LINE_B = r'    + "(2), or (3).\n\n"' "\n"
+_E5_LINE_C = '    + "User-preference embedding: when the user complains about how "\n'
 _E5_TEXT = _E5_LINE_A + _E5_LINE_B + _E5_LINE_C
 
 
@@ -130,29 +139,34 @@ class Site:
 # --- canonical line-number constants (plans/04 §Multi-signal) -------------
 S1_CAP_LINE_A = 716
 S1_CAP_LINE_B = 717
-E0_LINE = 1
+E0_LINE = 2
 # AC-2.8: E1/E2/E3 anchor lines are unchanged
 # because E0's insertion (constant definition) is applied LAST (the
 # patcher sorts sites in DESCENDING line_for_state order), so the
 # original anchors at L158/L179/L1421 are still valid against the
 # pre-E0 file state. Real Hermes's prompt_builder.py and the test
-# fixture mirror each other: both have a docstring at L1 + blank at
-# L2 + the E1/E2/E3 anchors at L179/L158/L1421.
+# fixture mirror each other: both have a multi-line docstring (open
+# + blank + close on L1/L2/L3, fixture closes on L2) + the E1/E2/E3
+# anchors at L179/L158/L1421.
 E1_LINE = 179
 E2_LINE = 158
-E4B_LINE = 1
+E4B_LINE = 2
 # Same descending-order logic for E4/E5 in ``agent/background_review.py``
-# (E4b applies last, so L230/L317 anchors remain valid).
+# (E4b applies last, so L229/L316 anchors remain valid).
 E4_LINE = 229
 E5_LINE = 316
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
-# (agent/background_review.py). The patcher matches these against the
-# target's L1 docstring; the canonical text below mirrors the test
-# fixtures in ``tests/conftest.py``. In production, the docstring text
-# may differ; the site TEXT_DRIFTs and aborts so the operator can review.
-_E0_ANCHOR_TEXT = '"""System prompt assembly -- identity, platform hints, skills index, context files.'
-_E4B_ANCHOR_TEXT = '"""Background memory/skill review — fork the agent to evaluate the turn.'
+# (agent/background_review.py). Both anchor on the CLOSING ``"""``
+# line of the multi-line docstring at L2; the patcher inserts the
+# payload (constant / import) immediately after the closing line so
+# the code lands at module scope. The canonical anchor text below
+# mirrors the test fixtures in ``tests/conftest.py``. In production,
+# the closing ``"""`` may carry trailing whitespace; the patcher's
+# anchor match is exact-bytes, so a drifted closing line is detected
+# and the site TEXT_DRIFTs and aborts so the operator can review.
+_E0_ANCHOR_TEXT = '"""'
+_E4B_ANCHOR_TEXT = '"""'
 
 # --- the S1.cap site (two-anchor atomic pair) -----------------------------
 
@@ -207,19 +221,20 @@ S1_CAP_SITE_FALLBACK = Site(
 # --- the 6 Task E sites ---------------------------------------------------
 
 # E0 inserts the SKILL_CREATOR_CONSULT_RULE constant definition at the
-# top of agent/prompt_builder.py (immediately after the L1 docstring).
-# This is the single source of truth for the constant's wording; E1-E3
-# reference the literal name SKILL_CREATOR_CONSULT_RULE which resolves
-# at module level once E0 has been applied. The patcher applies sites
-# in DESCENDING line order so E0 (L1) runs last and its insertion
-# doesn't shift higher-line anchors.
+# top of agent/prompt_builder.py (immediately after the closing ``"""``
+# line of the L1/L2 multi-line docstring). This is the single source
+# of truth for the constant's wording; E1-E3 reference the literal name
+# SKILL_CREATOR_CONSULT_RULE which resolves at module level once E0
+# has been applied. The patcher applies sites in DESCENDING line order
+# so E0 (L2) runs last and its insertion doesn't shift higher-line
+# anchors.
 E0_CONSULT_RULE_DEF = Site(
     site_id="E0.consult_rule_def",
     file_path=PROMPT_BUILDER_REL,
     anchors=(Anchor(line=E0_LINE, text=_E0_ANCHOR_TEXT),),
     insertion=_CONSULT_RULE_DEFINITION,
     # Idempotency: the constant definition is present iff the marker
-    # assignment line appears verbatim after the L1 anchor.
+    # assignment line appears verbatim after the L2 anchor.
     expected_replacement="SKILL_CREATOR_CONSULT_RULE = (",
     kind=KIND_APPEND,
     line_for_state=E0_LINE,
@@ -228,12 +243,15 @@ E0_CONSULT_RULE_DEF = Site(
 # E4b inserts the top-of-file import of SKILL_CREATOR_CONSULT_RULE
 # from agent.prompt_builder into agent/background_review.py so the
 # E4 and E5 sites can use the constant name (the name resolves via
-# the import at runtime).
+# the import at runtime). Append-before shape: the anchor is the
+# closing ``"""`` line (L2) of the multi-line docstring at the top
+# of ``agent/background_review.py``; the import is appended AFTER
+# the closing ``"""`` so the import lives at module scope.
 E4B_CONSULT_RULE_IMPORT = Site(
     site_id="E4b.consult_rule_import",
     file_path=BACKGROUND_REVIEW_REL,
     anchors=(Anchor(line=E4B_LINE, text=_E4B_ANCHOR_TEXT),),
-    insertion='"""\nfrom agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE\n',
+    insertion="from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE\n",
     expected_replacement="from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE",
     kind=KIND_APPEND,
     line_for_state=E4B_LINE,
@@ -283,14 +301,19 @@ E4_SKILL_REVIEW_PROMPT = Site(
             text=_E4_TEXT,
         ),
     ),
-    # E4/E5 insert a SINGLE source line that ends with a LITERAL
-    # ``'\n\n'`` Python string literal. The ``!r`` is load-bearing:
-    # without it the f-string inlines actual newlines and the
-    # insertion spans 3 source lines, breaking the layout asserted
-    # by ``test_e4_skill_review_prompt_appends_only`` and
-    # ``test_e5_combined_review_prompt_appends_only``.
-    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
-    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
+    # E4/E5 insert a SINGLE source line that begins with ``+ ``
+    # (explicit concat operator) so the patched tuple body parses
+    # cleanly with the multi-line anchor block. The line ends with a
+    # LITERAL ``'\n\n'`` Python string literal; the ``!r`` is
+    # load-bearing: without it the f-string inlines actual newlines
+    # and the insertion spans 3 source lines, breaking the layout
+    # asserted by ``test_e4_skill_review_prompt_appends_only`` and
+    # ``test_e5_combined_review_prompt_appends_only``. The ``+``
+    # prefix is required because the anchor block uses explicit
+    # ``+`` between string fragments (not bare adjacency), so the
+    # inserted expression must also start with ``+`` to chain.
+    insertion=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
+    expected_replacement=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
     kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
@@ -304,8 +327,8 @@ E5_COMBINED_REVIEW_PROMPT = Site(
             text=_E5_TEXT,
         ),
     ),
-    insertion=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
-    expected_replacement=f"    SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
+    insertion=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
+    expected_replacement=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
     kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )
