@@ -20,7 +20,6 @@ import pytest
 from click.testing import CliRunner
 
 from easter_hermes_sorry_skills._patcher import (
-    EXIT_IO,
     EXIT_OK,
 )
 from easter_hermes_sorry_skills.cli_patch import main
@@ -102,20 +101,12 @@ def test_cli_target_required_emits_warning_in_selected_language(
     assert other_lang_text not in combined
 
 
-def test_cli_apply_target_hermes_agent_refused() -> None:
-    """Apply mode still hard-refuses the live hermes-agent checkout.
-
-    Apply mode (``dry_run=False``) preserves the original hard refusal
-    with ``EXIT_IO`` and a diagnostic that names the no-touch sentinel.
-    """
-    runner = CliRunner()
-    r = runner.invoke(
-        main,
-        ["--lang", "en", "--target", str(Path.home() / ".hermes" / "hermes-agent")],
-    )
-    assert r.exit_code == EXIT_IO
-    combined = r.output + (r.stderr or "")
-    assert "hermes-agent" in combined
+# REMOVED (user-requested preflight protection removal): apply mode
+# (dry_run=False) no longer hard-refuses the live hermes-agent
+# checkout — the operator is the authority on which checkout to
+# patch. The previous test ``test_cli_apply_target_hermes_agent_refused``
+# asserted EXIT_IO for ``--target ~/.hermes/hermes-agent``; that
+# refusal is now gone.
 
 
 @pytest.mark.parametrize(

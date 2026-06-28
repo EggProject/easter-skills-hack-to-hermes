@@ -55,7 +55,6 @@ CIRCULAR_IMPORT_PREFLIGHT = (
 
 # Patcher diagnostics.
 TARGET_REQUIRED = "--target is required"
-TARGET_IS_HERMES_AGENT = "refusing to patch the live hermes-agent checkout: {resolved}"
 TARGET_MISSING_SKILL_UTILS = "target missing agent/skill_utils.py: {path}"
 LINE_DRIFT = "line drift detected at site {site_id} (line {line})"
 VALIDATION_FAILED = "validation failed at site {site_id}"

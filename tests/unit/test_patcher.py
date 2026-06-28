@@ -325,14 +325,17 @@ def test_target_resolves_to_hermes_agent_refused(
 ) -> None:
     """Soft safety: ``--dry-run`` + hermes-agent target -> WARNING + EXIT_OK (or drift).
 
-    Before the soft-safety change this test asserted ``EXIT_IO`` for
-    ANY ``--target ~/.hermes/hermes-agent`` invocation. After the
-    change, ``--dry-run`` SOFTENS the refusal: the preflight emits
-    the single-language WARNING diagnostic and the pipeline proceeds.
+    ``--dry-run`` SOFTENS the refusal: the preflight emits the
+    single-language WARNING diagnostic and the pipeline proceeds.
     The exit code depends on what the post-preflight pipeline finds —
     for the synthetic hermes-agent path on a developer machine the
     validation typically detects TEXT_DRIFT and returns ``EXIT_DRIFT``
     (2), but the soft-safety diagnostic is always present.
+
+    Apply mode (``dry_run=False``) no longer refuses the live
+    hermes-agent target — the operator is the authority on which
+    checkout to patch (per user-requested preflight protection
+    removal).
 
     The WARNING diagnostic is selected via :func:`_i18n_pick.pick(lang)`
     from the language-specific module: ``en`` -> English WARNING line,
@@ -349,15 +352,6 @@ def test_target_resolves_to_hermes_agent_refused(
     # (proves the preflight short-circuit fired and did NOT hard-
     # refuse with EXIT_IO).
     assert any(expected_warning in d for d in r.diagnostics)
-    # Apply mode (dry_run=False) still HARD-refuses with EXIT_IO.
-    r_apply = run_patch(
-        PatchRunInputs(
-            target=hermes_agent_path(),
-            dry_run=False,
-            lang=lang,
-        ),
-    )
-    assert r_apply.exit_code == EXIT_IO
 
 
 def test_target_missing_agent_skill_utils_exits_4(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:

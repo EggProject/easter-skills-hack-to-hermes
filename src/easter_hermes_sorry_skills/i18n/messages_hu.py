@@ -62,7 +62,6 @@ CIRCULAR_IMPORT_PREFLIGHT = (
 
 # Patcher diagnostics.
 TARGET_REQUIRED = "a --target megadása kötelező"
-TARGET_IS_HERMES_AGENT = "az élő hermes-agent checkout patchelése megtagadva: {resolved}"
 TARGET_MISSING_SKILL_UTILS = "a célpontból hiányzik az agent/skill_utils.py: {path}"
 LINE_DRIFT = "sor-eltérés a {site_id} helyen (sor {line})"
 VALIDATION_FAILED = "az érvényesítés sikertelen a {site_id} helyen"
