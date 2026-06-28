@@ -47,6 +47,7 @@ from easter_hermes_sorry_skills._patcher import (
     site_already_patched,
     site_in_state,
 )
+from easter_hermes_sorry_skills._patcher_pipeline_emit_helpers import _squash_payload
 from easter_hermes_sorry_skills._patcher_sites_table import _CONSULT_RULE_TEXT
 from tests.conftest import (
     BACKGROUND_REVIEW_PATCHED,
@@ -2072,3 +2073,41 @@ def test_idempotency_per_site(
     assert site.site_id in r2.sites_already, reapply_msg
     already_msgs = [d for d in r2.diagnostics if site.site_id in d]
     assert already_msgs, f"no diagnostic naming {site.site_id} on reapply: {r2.diagnostics}"
+
+
+# --- _squash_payload: control-char strip + 80-char truncation ------------
+
+
+def test_squash_payload_replaces_control_chars_with_space() -> None:
+    """_squash_payload strips \\n, \\t, \\r, ANSI escapes (\\x1b) by
+    replacing them with a single space. The 80-char truncation does not
+    fire because the input is short.
+    """
+    assert _squash_payload("foo\nbar\tbaz\rbaz\x1b[31mred\x1b[0m") == "foo bar baz baz [31mred [0m"
+
+
+def test_squash_payload_truncates_at_80_chars_with_ellipsis() -> None:
+    """Inputs at exactly 80 chars pass through unchanged; inputs of 81+
+    chars are truncated to 77 chars + "..." (total 80)."""
+    exactly_eighty = "a" * 80
+    assert _squash_payload(exactly_eighty) == exactly_eighty
+
+    eighty_one = "a" * 81
+    squashed = _squash_payload(eighty_one)
+    assert squashed == "a" * 77 + "..."
+    assert len(squashed) == 80
+
+
+def test_squash_payload_preserves_unicode_chars() -> None:
+    """Unicode outside \\x00-\\x1f\\x7f is preserved verbatim. The
+    regex strips ASCII control chars only, so accented letters,
+    em-dashes, and CJK glyphs pass through.
+    """
+    assert _squash_payload("café résumé") == "café résumé"
+    assert _squash_payload("hello — world") == "hello — world"
+    assert _squash_payload("日本語") == "日本語"
+
+
+def test_squash_payload_empty_string_returns_empty() -> None:
+    """An empty string stays empty — no control chars, no truncation."""
+    assert _squash_payload("") == ""
