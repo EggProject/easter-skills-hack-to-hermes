@@ -12,5 +12,6 @@
   },
   "known_legacy_fields_NOT_used": ["last_used", "last_view", "last_patch"],
   "n_a_uses_persisted_flag": true,
-  "usage_report_returns_persisted_flag": true
+  "usage_report_returns_persisted_flag": true,
+  "last_reverified_within_7d_gate": "2026-06-28"
 }

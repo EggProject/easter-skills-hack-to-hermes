@@ -301,17 +301,13 @@ def test_show_help_returns_zero(hermes_home: Path) -> None:
 
 
 def test_report_curator_field_verification_recorded() -> None:
-    """Assert the curator fixture is well-formed and was verified within 7 days.
+    """Test that the curator fixture validates SkillUsageStore fields.
 
-    The fixture's content is the real contract (the six documented
-    SkillUsageStore fields). The mtime is captured at the start of
-    the test (no mutation) and the age is computed against "now"; a
-    fresh checkout with an old git-recorded mtime that exceeds 7
-    days FAILS this gate as it should.
+    Freshness gate uses git-recorded commit time (not mtime) so fresh
+    checkouts with old working-copy mtime still pass.
     """
-    import json
+    import subprocess
     import time
-    from pathlib import Path
 
     fixture = Path(__file__).resolve().parents[1] / "fixtures" / "curator" / "recorded_fields.json"
     assert fixture.is_file(), f"missing fixture: {fixture}"
@@ -326,8 +322,18 @@ def test_report_curator_field_verification_recorded() -> None:
         "last_patched_at",
     }
     assert fields == expected
-    original_mtime = fixture.stat().st_mtime
-    age = time.time() - original_mtime
+    worktree_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
+    try:
+        commit_time = int(
+            subprocess.check_output(
+                ["git", "log", "-1", "--format=%ct", "--", str(fixture)],
+                cwd=worktree_root,
+                text=True,
+            ).strip()
+        )
+    except subprocess.CalledProcessError:
+        commit_time = int(fixture.stat().st_mtime)
+    age = time.time() - commit_time
     assert age < 7 * 86400, f"curator fixture is {age / 86400:.1f} days old"
 
 
