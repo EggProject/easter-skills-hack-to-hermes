@@ -81,6 +81,10 @@ SKILL_UTILS_PATCHED = _build_skill_utils_padded()
 PROMPT_BUILDER_BODY = '''\
 """System prompt assembly -- identity, platform hints, skills index, context files."""
 
+All functions are stateless. AIAgent._build_system_prompt() calls these to
+assemble pieces, then combines them with memory and ephemeral prompts.
+"""
+
 # --- MEMORY_GUIDANCE (E2 anchor is L158) ---
 MEMORY_GUIDANCE = (
     "If you've discovered a new way to do something, "
@@ -92,17 +96,22 @@ MEMORY_GUIDANCE = (
 
 def _build_prompt_builder_padded() -> str:
     lines: list[str] = []
-    # AC-2.8: the L1/L2 docstring (open + close) anchors E0 (which
-    # inserts the ``SKILL_CREATOR_CONSULT_RULE`` definition immediately
-    # AFTER the closing ``"""`` so the constant lives at module scope).
-    # Real Hermes's ``prompt_builder.py`` has a multi-line docstring
-    # with a real closing ``"""``; this fixture mirrors that shape so
-    # ``ast.parse()`` accepts the post-patch file. The E1/E2 anchor
-    # lines at L179/L158 are wrapped in real ``MEMORY_GUIDANCE = (...)``
+    # AC-2.8: the L1..L5 docstring (open + blank + body + body +
+    # close) anchors E0 (which inserts the
+    # ``SKILL_CREATOR_CONSULT_RULE`` definition immediately AFTER
+    # the closing ``"""`` at L5 so the constant lives at module
+    # scope). Real Hermes's ``prompt_builder.py`` has a 5-line
+    # multi-line docstring (opening + blank + 2 body lines +
+    # closing); this fixture mirrors that shape so ``ast.parse()``
+    # accepts the post-patch file. The E1/E2 anchor lines at
+    # L179/L158 are wrapped in real ``MEMORY_GUIDANCE = (...)``
     # / ``SKILLS_GUIDANCE = (...)`` tuple literals so the indented
-    # anchor strings are syntactically valid at module scope once the
-    # docstring is closed (matching real Hermes's structure).
+    # anchor strings are syntactically valid at module scope once
+    # the docstring is closed (matching real Hermes's structure).
     lines.append('"""System prompt assembly -- identity, platform hints, skills index, context files.\n')
+    lines.append("\n")
+    lines.append("All functions are stateless. AIAgent._build_system_prompt() calls these to\n")
+    lines.append("assemble pieces, then combines them with memory and ephemeral prompts.\n")
     lines.append('"""\n')
     # E2 anchor must stay at L158 (existing test contract): insert the
     # MEMORY_GUIDANCE opener at L157, E2 anchor at L158, close at L159.
@@ -133,27 +142,60 @@ PROMPT_BUILDER_PATCHED = _build_prompt_builder_padded()
 
 BACKGROUND_REVIEW_BODY = '''\
 """Background memory/skill review — fork the agent to evaluate the turn."""
+
+After every turn, ``AIAgent.run_conversation`` may call
+:func:`spawn_background_review` to fire off a daemon thread that replays
+the conversation snapshot in a forked :class:`AIAgent` and asks itself
+"should any skill/memory be saved or updated?".  Writes go straight to
+the memory + skill stores.  Main conversation and prompt cache are never
+touched.
+
+The fork inherits the parent's live runtime (provider, model, base_url,
+credentials, cached system prompt) so it hits the same prefix cache and
+uses the same auth.  It runs with a tool whitelist limited to memory and
+skill management tools; everything else is denied at runtime.
+
+See the ``hermes-agent-dev`` skill (``references/self-improvement-loop.md``)
+for invariants and PR review criteria.
 '''
 
 
 def _build_background_review_padded() -> str:
     lines: list[str] = []
-    # AC-2.8: the L1/L2 docstring (open + close) anchors E4b (which
-    # inserts the ``from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE``
-    # import line immediately AFTER the closing ``"""`` so the import
-    # lives at module scope). Real Hermes's ``background_review.py``
-    # has a multi-line docstring with a real closing ``"""``; this
-    # fixture mirrors that shape so ``ast.parse()`` accepts the
-    # post-patch file. The E4/E5 3-line anchor blocks at L229/L316 are
-    # wrapped in real ``_SKILL_REVIEW_PROMPT = (...)`` /
+    # AC-2.8: the L1..L17 docstring (open + blank + 14 body lines +
+    # close) anchors E4b (which inserts the
+    # ``from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE``
+    # import line immediately AFTER the closing ``"""`` at L17 so
+    # the import lives at module scope). Real Hermes's
+    # ``background_review.py`` has a 17-line multi-line docstring;
+    # this fixture mirrors that shape so ``ast.parse()`` accepts
+    # the post-patch file. The E4/E5 3-line anchor blocks at
+    # L244/L331 are wrapped in real
+    # ``_SKILL_REVIEW_PROMPT = (...)`` /
     # ``_COMBINED_REVIEW_PROMPT = (...)`` tuple literals so the
-    # indented anchor strings are syntactically valid at module scope
-    # once the docstring is closed (matching real Hermes's structure).
+    # indented anchor strings are syntactically valid at module
+    # scope once the docstring is closed (matching real Hermes's
+    # structure).
     lines.append('"""Background memory/skill review — fork the agent to evaluate the turn.\n')
+    lines.append("\n")
+    lines.append("After every turn, ``AIAgent.run_conversation`` may call\n")
+    lines.append(":func:`spawn_background_review` to fire off a daemon thread that replays\n")
+    lines.append("the conversation snapshot in a forked :class:`AIAgent` and asks itself\n")
+    lines.append('"should any skill/memory be saved or updated?".  Writes go straight to\n')
+    lines.append("the memory + skill stores.  Main conversation and prompt cache are never\n")
+    lines.append("touched.\n")
+    lines.append("\n")
+    lines.append("The fork inherits the parent's live runtime (provider, model, base_url,\n")
+    lines.append("credentials, cached system prompt) so it hits the same prefix cache and\n")
+    lines.append("uses the same auth.  It runs with a tool whitelist limited to memory and\n")
+    lines.append("skill management tools; everything else is denied at runtime.\n")
+    lines.append("\n")
+    lines.append("See the ``hermes-agent-dev`` skill (``references/self-improvement-loop.md``)\n")
+    lines.append("for invariants and PR review criteria.\n")
     lines.append('"""\n')
-    # E4 anchor (3-line block starting at L229, inside _SKILL_REVIEW_PROMPT
-    # tuple). Opener at L228, anchor at L229..L231, closer at L232.
-    for i in range(1, 226):
+    # E4 anchor (3-line block starting at L244, inside _SKILL_REVIEW_PROMPT
+    # tuple). Opener at L243, anchor at L244..L246, closer at L247.
+    for i in range(1, 241):
         lines.append(f"# padding {i}\n")
     lines.append("_SKILL_REVIEW_PROMPT = (\n")
     lines.append('    + "session artifact. If the proposed name only makes sense for "\n')
@@ -162,16 +204,16 @@ def _build_background_review_padded() -> str:
     )
     lines.append('    + "User-preference embedding (important): when the user expressed a "\n')
     lines.append(")\n")
-    # E5 anchor (3-line block starting at L316, inside _COMBINED_REVIEW_PROMPT
-    # tuple). Opener at L315, anchor at L316..L318, closer at L319.
-    for i in range(232, 314):
+    # E5 anchor (3-line block starting at L331, inside _COMBINED_REVIEW_PROMPT
+    # tuple). Opener at L330, anchor at L331..L333, closer at L334.
+    for i in range(248, 329):
         lines.append(f"# padding {i}\n")
     lines.append("_COMBINED_REVIEW_PROMPT = (\n")
     lines.append('    + "artifact. If the name only fits today\'s task, fall back to (1), "\n')
     lines.append(r'    + "(2), or (3).\n\n"' "\n")
     lines.append('    + "User-preference embedding: when the user complains about how "\n')
     lines.append(")\n")
-    for i in range(320, 350):
+    for i in range(335, 365):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
 

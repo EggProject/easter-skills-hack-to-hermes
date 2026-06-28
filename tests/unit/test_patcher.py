@@ -611,50 +611,50 @@ def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
 
 
 def test_e0_anchors_on_closing_triple_double_quote() -> None:
-    r"""AC-2.8: E0 anchors on the CLOSING triple-double-quote line (L2)
-    of the multi-line docstring at the top of ``agent/prompt_builder.py``.
+    r"""AC-2.8: E0 anchors on the CLOSING triple-double-quote line of
+    the multi-line docstring at the top of ``agent/prompt_builder.py``.
 
-    The fixture mirrors real Hermes: L1 opens the docstring, L2 closes
-    it. The patcher inserts the constant definition AFTER the closing
-    triple-double-quote (append-before shape) so the code lands at
-    module scope and the original closing triple-double-quote stays
-    untouched. No closing-triple-double-quote prefix is needed in the
-    insertion payload because the fixture itself terminates the
-    docstring at L2.
+    The fixture mirrors real Hermes: L1 opens the docstring, L2 is a
+    blank line, L3..L4 are body text, L5 closes it. The patcher inserts
+    the constant definition AFTER the closing triple-double-quote
+    (append-before shape) so the code lands at module scope and the
+    original closing triple-double-quote stays untouched. No
+    closing-triple-double-quote prefix is needed in the insertion
+    payload because the fixture itself terminates the docstring at L5.
     """
-    # Anchor is the closing-triple-double-quote line at L2.
+    # Anchor is the closing-triple-double-quote line at L5.
     anchor = E0_CONSULT_RULE_DEF.primary_anchor()
-    assert anchor.line == 2
+    assert anchor.line == 5
     assert anchor.text == '"""', (
         "E0 anchor must be the closing triple-double-quote of the "
         "L1 docstring (real Hermes has a multi-line docstring with a "
-        "real closing line at L2)."
+        "real closing line at L5)."
     )
     # Insertion is the constant definition only — no closing-quote prefix.
     insertion = E0_CONSULT_RULE_DEF.insertion
     assert not insertion.startswith('"""'), (
         "E0 insertion must NOT start with a closing triple-double-quote; "
-        "the fixture's L2 anchor already terminates the docstring."
+        "the fixture's L5 anchor already terminates the docstring."
     )
     assert "SKILL_CREATOR_CONSULT_RULE = (" in insertion
 
 
 def test_e4b_anchors_on_closing_triple_double_quote() -> None:
-    r"""AC-2.8: E4b anchors on the CLOSING triple-double-quote line (L2)
-    of the multi-line docstring at the top of ``agent/background_review.py``.
+    r"""AC-2.8: E4b anchors on the CLOSING triple-double-quote line of
+    the multi-line docstring at the top of ``agent/background_review.py``.
 
-    Same root-cause as E0: the fixture has L1 (opening) + L2 (closing)
-    docstring; the import line is appended AFTER the closing
-    triple-double-quote (append-before shape) so the import lands at
-    module scope.
+    Same root-cause as E0: the fixture has a multi-line docstring with
+    the closing triple-double-quote at L17; the import line is appended
+    AFTER the closing triple-double-quote (append-before shape) so the
+    import lands at module scope.
     """
     anchor = E4B_CONSULT_RULE_IMPORT.primary_anchor()
-    assert anchor.line == 2
-    assert anchor.text == '"""', "E4B anchor must be the closing triple-double-quote of the L1 docstring."
+    assert anchor.line == 17
+    assert anchor.text == '"""', "E4B anchor must be the closing triple-double-quote of the multi-line docstring."
     insertion = E4B_CONSULT_RULE_IMPORT.insertion
     assert not insertion.startswith('"""'), (
         "E4B insertion must NOT start with a closing triple-double-quote; "
-        "the fixture's L2 anchor already terminates the docstring."
+        "the fixture's closing-triple-double-quote anchor already terminates the docstring."
     )
     assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in insertion
 

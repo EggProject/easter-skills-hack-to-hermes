@@ -139,32 +139,49 @@ class Site:
 # --- canonical line-number constants (plans/04 §Multi-signal) -------------
 S1_CAP_LINE_A = 716
 S1_CAP_LINE_B = 717
-E0_LINE = 2
-# AC-2.8: E1/E2/E3 anchor lines are unchanged
-# because E0's insertion (constant definition) is applied LAST (the
-# patcher sorts sites in DESCENDING line_for_state order), so the
-# original anchors at L158/L179/L1421 are still valid against the
-# pre-E0 file state. Real Hermes's prompt_builder.py and the test
-# fixture mirror each other: both have a multi-line docstring (open
-# + blank + close on L1/L2/L3, fixture closes on L2) + the E1/E2/E3
-# anchors at L179/L158/L1421.
-E1_LINE = 179
-E2_LINE = 158
-E4B_LINE = 2
+# E0 anchors on the CLOSING ``"""`` of the multi-line docstring at
+# the top of ``agent/prompt_builder.py``. Real Hermes's docstring
+# spans L1 (opening) + L2 (blank) + L3..L4 (body) + L5 (closing),
+# so the closing triple-double-quote lives at L5 — NOT L2. The
+# patcher's anchor match is byte-exact (after splitlines() the
+# closing line is the bare ``"""`` literal), so the anchor text
+# matches the real closing line and only the line number had to
+# drift from 2 -> 5 to follow the real upstream layout.
+E0_LINE = 5
+# AC-2.8: E1/E2 anchor lines are shifted by +3 from the previous
+# fixture (which had a 2-line L1/L2 docstring) to follow the real
+# Hermes layout (5-line L1..L5 docstring). The E0 insertion
+# (constant definition) is applied LAST (the patcher sorts sites
+# in DESCENDING line_for_state order), so the original E1/E2
+# anchors remain valid against the pre-E0 file state.
+E1_LINE = 182
+E2_LINE = 161
+# E4b anchors on the CLOSING ``"""`` of the multi-line docstring at
+# the top of ``agent/background_review.py``. Real Hermes's
+# docstring spans L1 (opening) + L2 (blank) + L3..L16 (body) +
+# L17 (closing), so the closing triple-double-quote lives at L17 —
+# NOT L2. Same byte-exact matching rationale as E0 above.
+E4B_LINE = 17
 # Same descending-order logic for E4/E5 in ``agent/background_review.py``
-# (E4b applies last, so L229/L316 anchors remain valid).
-E4_LINE = 229
-E5_LINE = 316
+# (E4b applies last, so the E4/E5 anchors remain valid against the
+# pre-E4b file state). The docstring at the top of
+# ``background_review.py`` spans L1..L17 in real Hermes (opening +
+# blank + 14 body lines + closing), so E4 and E5 anchor lines
+# shifted by +15 (the extra 15 docstring lines added to the
+# fixture to mirror real Hermes).
+E4_LINE = 259
+E5_LINE = 345
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
 # (agent/background_review.py). Both anchor on the CLOSING ``"""``
-# line of the multi-line docstring at L2; the patcher inserts the
-# payload (constant / import) immediately after the closing line so
-# the code lands at module scope. The canonical anchor text below
-# mirrors the test fixtures in ``tests/conftest.py``. In production,
-# the closing ``"""`` may carry trailing whitespace; the patcher's
-# anchor match is exact-bytes, so a drifted closing line is detected
-# and the site TEXT_DRIFTs and aborts so the operator can review.
+# line of a multi-line docstring; the patcher inserts the payload
+# (constant / import) immediately after the closing line so the
+# code lands at module scope. The canonical anchor text below
+# mirrors the test fixtures in ``tests/conftest.py`` and the real
+# upstream hermes closing lines (byte-exact after ``splitlines()``
+# strips the trailing newline: each closing line is the bare
+# ``"""`` literal). A drifted closing line is detected and the
+# site TEXT_DRIFTs and aborts so the operator can review.
 _E0_ANCHOR_TEXT = '"""'
 _E4B_ANCHOR_TEXT = '"""'
 
