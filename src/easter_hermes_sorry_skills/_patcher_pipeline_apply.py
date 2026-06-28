@@ -5,8 +5,8 @@ WPS202 (≤7 module members). Holds the per-site payload reader, the
 atomic-write error-translation helper, and the ``PatcherResult`` builder
 variants.
 
-Result builders (``build_result``, ``build_result_with_rejected``,
-``io_error_result``) live in ``_patcher_pipeline_results``.
+Result builders (``build_result``, ``io_error_result``) live in
+``_patcher_pipeline_results``.
 """
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ from easter_hermes_sorry_skills._patcher_sites import Site
 # Re-bindings for backward compat (existing callers and test patches
 # resolve through these names).
 build_result = _results_mod.build_result
-build_result_with_rejected = _results_mod.build_result_with_rejected
 io_error_result = _results_mod.io_error_result
 
 

@@ -19,6 +19,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Protocol
 
+from easter_hermes_sorry_skills._i18n_pick import pick
+
 # Local cap constant — same as tools/skills_tool.py: MAX_DESCRIPTION_LENGTH.
 # We keep a local copy to avoid an agent<->tools circular import (the same
 # direction-check the cap-raise patch in 04 uses).
@@ -32,9 +34,6 @@ _TOKENIZER_FAILURE_EXCEPTIONS: tuple[type[BaseException], ...] = (
     ValueError,
     RuntimeError,
     OSError,
-)
-_FALLBACK_WARNING_MESSAGE = (
-    "[en] tokenizer unavailable, falling back to chars/4 / [hu] a tokenizer nem elérhető, chars/4 becslés"
 )
 
 
@@ -95,6 +94,7 @@ def estimate_tokens(
     *,
     tokenizer: TokenizerProtocol | None = None,
     warning: Callable[[str], None] | None = None,
+    lang: str = "en",
 ) -> int:
     """Tokenize `f"{name} {description}"` via the model's tokenizer.
 
@@ -113,8 +113,10 @@ def estimate_tokens(
             `encode(str) -> Iterable[int]` method). When None or raising, the
             chars/4 fallback is used.
         warning: optional callback invoked ONCE per process when the
-            fallback is used (a single-line bilingual warning). State is
-            tracked at module level so callers do not have to thread a flag.
+            fallback is used (a single-language line via pick(lang)). State
+            is tracked at module level so callers do not have to thread a flag.
+        lang: language code for the warning emission (default "en"; "hu"
+            picks the Hungarian message). Ignored when warning is None.
 
     Returns:
         Non-negative int. Token count of the rendered name+description string.
@@ -124,6 +126,6 @@ def estimate_tokens(
     if token_count is None:
         if warning is not None and not _warning_state[_WARNING_EMITTED_KEY]:
             _warning_state[_WARNING_EMITTED_KEY] = True
-            warning(_FALLBACK_WARNING_MESSAGE)
+            warning(pick(lang).FALLBACK_WARNING)
         return chars_div_four(rendered)
     return token_count

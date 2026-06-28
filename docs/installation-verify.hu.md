@@ -18,7 +18,6 @@ exit kóddal kell kilépnie.
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes --version
-uv run --locked easter-hermes-sorry-skills-install-profiles --version
 uv run --locked easter-hermes-sorry-skills-report --version
 
 uv run --locked pre-commit run --files pyproject.toml
@@ -32,15 +31,12 @@ A pre-commit lépés után minden `git commit` futtatja a
 
 ```bash
 easter-hermes-sorry-skills-patch-hermes --version
-easter-hermes-sorry-skills-install-profiles --version
 easter-hermes-sorry-skills-report --version
 
 easter-hermes-sorry-skills-patch-hermes --help --lang en
 easter-hermes-sorry-skills-patch-hermes --help --lang hu
-easter-hermes-sorry-skills-install-profiles --help --lang en
 easter-hermes-sorry-skills-report --help --lang en
 
-easter-hermes-sorry-skills-install-profiles
 easter-hermes-sorry-skills-report --format text
 
 python3 -m zipfile -l dist/easter-hermes-sorry-skills.pyz | head
@@ -69,7 +65,7 @@ nem-nullával lép ki, vagy a `.pyz` zip listájából hiányzik a
 `site-packages/`, a telepítés hibás; NE lépj tovább a
 [docs/usage.hu.md](usage.hu.md)-ra; helyette menj az alábbi
 hibakezelési táblázathoz. A megfelelő `bats` ellenőrzések a
-`tests/bats/{patch-hermes,install-profiles,report}.bats` fájlokban
+`tests/bats/{patch-hermes,report}.bats` fájlokban
 találhatók.
 
 ---
@@ -140,7 +136,7 @@ rm -rf .venv
 rm -rf ~/bin/easter-hermes-sorry-skills-* ~/bin/easter-hermes-sorry-skills.pyz
 # Vagy rendszerszintű telepítés esetén:
 sudo rm -f /usr/local/bin/easter-hermes-sorry-skills.pyz
-sudo rm -f /usr/local/bin/easter-hermes-sorry-skills-{patch-hermes,install-profiles,report}.sh
+sudo rm -f /usr/local/bin/easter-hermes-sorry-skills-{patch-hermes,report}.sh
 
 # 3. Hermes plugin: a symlink + plugin fa törlése
 rm -f  ~/.hermes/skills/skill-creator                                # a symlink

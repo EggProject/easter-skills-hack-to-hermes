@@ -77,7 +77,6 @@ if [ "${ONLY_SHIV}" = 0 ]; then
     tar -czf "${TARBALL}" \
         dist/easter-hermes-sorry-skills.pyz \
         scripts/build-release.sh \
-        scripts/easter-hermes-sorry-skills-install-profiles.sh \
         scripts/easter-hermes-sorry-skills-patch-hermes.sh \
         scripts/easter-hermes-sorry-skills-report.sh \
         README.md \

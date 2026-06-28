@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from easter_hermes_sorry_skills import _patcher_imports as _imps
+from easter_hermes_sorry_skills._i18n_pick import pick
 from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_preflight import run_preflight as _run_preflight
 
@@ -65,12 +66,12 @@ def _check_preflight(
     # those flags; ``run_preflight`` now accepts only ``target`` plus
     # the ``dry_run`` keyword (used to soften the hermes-agent refusal
     # under audit-only runs).
-    preflight = _run_preflight(inputs.target, dry_run=inputs.dry_run)
+    preflight = _run_preflight(inputs.target, dry_run=inputs.dry_run, lang=inputs.lang)
     if preflight is None:
         return None
     if preflight.severity == "warning":
-        # Soft safety: append the bilingual WARNING diagnostic and let
-        # the pipeline continue. ``EXIT_OK`` here means the run
+        # Soft safety: append the WARNING diagnostic and let the
+        # pipeline continue. ``EXIT_OK`` here means the run
         # succeeded as a dry-run audit; the actual exit code for an
         # apply run is determined downstream by ``_drive_pipeline``.
         state.diagnostics.append(preflight.diagnostic)
@@ -81,18 +82,21 @@ def _check_preflight(
 def _check_circular_import(
     target_path: Path,
     state: _PatchBodyState,
+    lang: str = "en",
 ) -> _CircularImportInfo:
     """AC-2.11: return ``_CircularImportInfo(detected=True)`` when the
     cycle pre-flight fires. The orchestrator swaps S1.cap for
     S1.cap_fallback (which uses a local ``_MAX_DESCRIPTION_LENGTH = 1024``)
     instead of aborting the run.
+
+    ``lang`` selects the single-language i18n module via
+    :func:`easter_hermes_sorry_skills._i18n_pick.pick`; defaults to
+    ``"en"``.
     """
     skill_utils = target_path / _imps.TOOLS_SKILL_UTILS_REL
     if not _imps.file_has_circular_import(skill_utils):
         return _NO_CIRCULAR_IMPORT
-    from easter_hermes_sorry_skills.i18n.messages_en import CIRCULAR_IMPORT_PREFLIGHT
-
-    state.diagnostics.append(CIRCULAR_IMPORT_PREFLIGHT)
+    state.diagnostics.append(pick(lang).CIRCULAR_IMPORT_PREFLIGHT)
     return _CircularImportInfo(detected=True)
 
 

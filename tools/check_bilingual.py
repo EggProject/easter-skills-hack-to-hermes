@@ -1,21 +1,26 @@
-r"""check_bilingual.py — enforce that all console messages are bilingual
-(en/hu on a single line: '[en] ... / [hu] ...') and that --help output uses
-two top-level sections (`Usage (English)` and `Használat (magyar)`) with
-mirrored content.
+r"""check_bilingual.py — enforce single-language console messages.
 
-Walks every `print(...)` and `logger.{info,warning,error}(...)` call in
-`src/easter_hermes_sorry_skills/` and asserts the format string matches
-`^\[en\] .+ / \[hu\] .+$`. Also walks Click commands' docstrings to
-assert the two-section structure.
+The code uses single-language console messages; the bilingual ``[en] / [hu]``
+strings live exclusively in ``src/.../i18n/`` helpers (``messages_en.py``,
+``messages_hu.py``). This meta-tool walks ``src/``, ``scripts/`` and
+``skills/`` and asserts NO console message or help text contains a literal
+``[en]`` or ``[hu]`` prefix — unless the file is under an ``i18n`` path
+part (the i18n helpers own those tokens by design).
+
+Walked console-output calls: ``print``, ``click.echo``, and
+``logger.{info,warning,error,debug,critical}``.
 
 TDD test cases (mirror of tests/meta/test_meta_check_bilingual.py):
 
-  test_console_message_with_both_locales_passes
-  test_console_message_missing_hu_fails
-  test_console_message_missing_en_fails
-  test_console_message_with_hu_on_separate_line_fails
-  test_click_echo_calls_in_src_have_bilingual_argument
-  test_help_text_has_english_and_magyar_sections
+  test_console_message_single_language_passes
+  test_console_message_with_en_prefix_fails
+  test_console_message_with_hu_prefix_fails
+  test_console_message_with_both_prefixes_fails
+  test_i18n_helper_with_prefix_passes
+  test_click_echo_with_en_prefix_fails
+  test_help_text_with_en_prefix_fails
+  test_help_text_with_hu_prefix_fails
+  test_help_text_in_i18n_helper_passes
   test_check_runs_clean_on_this_worktree_skeleton
 """
 
@@ -33,17 +38,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIRS = ("src", "scripts", "skills")
 PREVIEW_CHARS = 80  # magic number: chars shown in human messages.
 
-# `print` and `logger.{info,warning,error}` calls.
+# Console-output functions whose static-string literal must be free of
+# `[en]` / `[hu]` prefixes. click.echo is included: single-language
+# enforcement applies to every console channel.
 CONSOLE_FUNCS = frozenset(
-    {"print", "info", "warning", "error", "debug", "critical"},
+    {"print", "echo", "info", "warning", "error", "debug", "critical"},
 )
-# The bilingual surface: `[en] <any content> / [hu] <any content>`.
-# Non-greedy `+?` keeps the en-side tight so the FIRST `/ [hu]` separator wins.
-# `\S` after each marker requires non-empty content on both sides — a bare
-# `[en] / [hu]` (zero-length message) is not a real bilingual message.
-BILINGUAL_RE = re.compile(r"\[en\]\s*\S.*?/ \[hu\]\s*\S")
-HELP_EN_SECTION = "Usage (English)"
-HELP_HU_SECTION = "Használat (magyar)"
+# Forbidden prefix tokens. The pattern matches `[en]` / `[hu]` as whole
+# bracketed tokens — not partial matches inside a word.
+PREFIX_RE = re.compile(r"\[(en|hu)\]")
+# i18n helpers (`src/.../i18n/messages_en.py`, `messages_hu.py`) own the
+# bilingual literals by design and are exempt from both checks.
+I18N_DIR = "i18n"
 SKIP_DIRS = (".venv", ".git", "__pycache__")
 
 
@@ -58,6 +64,11 @@ class Finding(NamedTuple):
 def _is_skipped(parts: tuple[str, ...]) -> bool:
     """True when any path part matches a skip-list directory name."""
     return any(part in SKIP_DIRS for part in parts)
+
+
+def _is_i18n(parts: tuple[str, ...]) -> bool:
+    """True when any path part is the i18n helper directory."""
+    return I18N_DIR in parts
 
 
 def _collect_python_files(d: Path) -> list[Path]:
@@ -134,7 +145,7 @@ def _parse_tree(p: Path) -> ast.AST | None:
 
 
 def _inspect_call(call: ast.Call) -> Finding | None:
-    """Return a Finding if `call` is a non-bilingual console message."""
+    """Return a Finding if `call` is a console message containing a `[en]`/`[hu]` prefix."""
     name = _func_name(call)
     if name not in CONSOLE_FUNCS:
         return None
@@ -142,19 +153,22 @@ def _inspect_call(call: ast.Call) -> Finding | None:
         return None
     value = _string_value(call.args[0])
     if value is None:
-        return None  # dynamic — caller must use bilingual format at runtime
-    if BILINGUAL_RE.search(value):
+        return None  # dynamic — caller must enforce single-language at runtime
+    match = PREFIX_RE.search(value)
+    if match is None:
         return None
     preview = value[:PREVIEW_CHARS]
     return Finding(
-        path=call.lineno and Path(""),  # placeholder; filled by caller
+        path=Path(""),  # placeholder; filled by caller
         lineno=call.lineno,
-        message=f"console message lacks bilingual format: {preview!r}",
+        message=f"console message contains forbidden `{match.group(0)}` prefix: {preview!r}",
     )
 
 
 def _inspect_file(p: Path) -> list[Finding]:
-    """Walk a single Python file and return its bilingual findings."""
+    """Walk a single Python file and return its single-language findings."""
+    if _is_i18n(p.parts):
+        return []  # i18n helpers own the bilingual literals
     tree = _parse_tree(p)
     if tree is None:
         return []
@@ -167,52 +181,35 @@ def _inspect_file(p: Path) -> list[Finding]:
 
 
 def check_console_messages(root: Path) -> list[Finding]:
-    """Walk every .py file and assert console messages are bilingual."""
+    """Walk every .py file and assert console messages are single-language."""
     findings: list[Finding] = []
     for p in _iter_python_files(root):
         findings.extend(_inspect_file(p))
     return findings
 
 
-def _help_section_state(text: str) -> tuple[bool, bool]:
-    """Return (has_en, has_hu) for the docstring section markers."""
-    has_en = HELP_EN_SECTION in text
-    has_hu = HELP_HU_SECTION in text
-    return has_en, has_hu
-
-
-def _missing_section_finding(
-    p: Path,
-    present: str,
-    missing: str,
-) -> Finding:
-    """Build a finding for a help-text missing the other language section."""
-    msg = f"help text has `{present}` but is missing `{missing}`"
-    return Finding(path=p, lineno=1, message=msg)
-
-
 def _inspect_help_text(p: Path) -> list[Finding]:
-    """Return findings for one file's help-text section coverage."""
+    """Return findings for a file's help-text / module-docstring prefix tokens."""
+    if _is_i18n(p.parts):
+        return []  # i18n helpers own the bilingual literals
     try:
         text = p.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
-    has_en, has_hu = _help_section_state(text)
-    if not has_en and not has_hu:
-        return []  # not a help docstring — skip
-    if has_en and not has_hu:
-        return [
-            _missing_section_finding(p, HELP_EN_SECTION, HELP_HU_SECTION),
-        ]
-    if has_hu and not has_en:
-        return [
-            _missing_section_finding(p, HELP_HU_SECTION, HELP_EN_SECTION),
-        ]
-    return []
+    match = PREFIX_RE.search(text)
+    if match is None:
+        return []
+    return [
+        Finding(
+            path=p,
+            lineno=1,
+            message=f"help text contains forbidden `{match.group(0)}` prefix",
+        ),
+    ]
 
 
 def check_help_text(root: Path) -> list[Finding]:
-    """Assert Click docstrings contain English + Hungarian sections."""
+    """Assert no source file's help text contains a `[en]`/`[hu]` prefix."""
     findings: list[Finding] = []
     for p in _iter_python_files(root):
         findings.extend(_inspect_help_text(p))
@@ -255,11 +252,12 @@ def main(argv: Iterable[str] | None = None) -> int:
         summary = (
             "[check_bilingual] "
             f"{len(findings)} finding(s) — "
-            "console messages must be `[en] ... / [hu] ...` on a single line."
+            "console messages must not contain `[en]` / `[hu]` prefixes "
+            "(use the i18n helpers)."
         )
         _emit_error(summary)
         return 1
-    _emit_ok("[check_bilingual] OK (en/hu single-line + two-section help)")
+    _emit_ok("[check_bilingual] OK (single-language console messages, no i18n prefixes)")
     return 0
 
 

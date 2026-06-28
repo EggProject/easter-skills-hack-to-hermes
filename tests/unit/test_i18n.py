@@ -1,200 +1,76 @@
-"""tests/unit/test_i18n.py — Regression tests for bilingual i18n messages.
+"""tests/unit/test_i18n.py — Regression tests for single-language i18n modules.
 
-These tests guard against the LOW-1 finding flagged by the security-auditor:
-the ``[en] `` / ``[hu] `` halves of every bilingual single-string message in
-``messages_en.py`` / ``messages_hu.py`` must each contain ONLY the language
-they claim to (the ``[en]`` half may not contain Hungarian text, and vice
-versa). A swap of the two halves — like the one in ``DRY_RUN_NOT_APPLIED``
-prior to the fix — silently corrupts the audit trail of bilingual output
-because the marker is in the wrong half.
-
-Pattern reference: plans/10-toolchain-and-conventions.md:
-  - ``messages_en.py`` uses ``"[en] <text> / [hu] <text>"`` format
-  - ``messages_hu.py`` uses ``"[hu] <text> / [en] <text>"`` format
-  - In both files, the half whose leading marker matches the file's leading
-    marker MUST be written in that language.
+Single-language contract (no bilingual in-line format):
+  - ``messages_en`` contains only plain English text.
+  - ``messages_hu`` contains only plain Hungarian text.
+  - No constant may contain ``[en]``/``[hu]`` markers or the
+    ``/ [en]``/``/ [hu]`` bilingual separator.
 """
 
 from __future__ import annotations
 
-import re
-
-import pytest
-
+from easter_hermes_sorry_skills import _i18n_pick
 from easter_hermes_sorry_skills.i18n import messages_en, messages_hu
 
-# Markers used to find the [en] / [hu] halves inside a single bilingual string.
-_EN_HALF = re.compile(r"^\[en\]\s*(?P<body>.+?)\s*/\s*\[hu\]\s*(?P<rest>.+)$", re.DOTALL)
-_HU_HALF = re.compile(r"^\[hu\]\s*(?P<body>.+?)\s*/\s*\[en\]\s*(?P<rest>.+)$", re.DOTALL)
-
-# Strings that MUST NOT appear in the English half (Hungarian markers/words).
-_HU_FORBIDDEN_SUBSTRINGS = (
-    "FIGYELEM",
-    "figyelmeztetés",
-    "módban",
-    "terv",
-    "alkalmazva",
-    "patchelné",
-    "sor-eltérés",
-    "megtagadva",
-    "kötelező",
-    "sikertelen",
-    "körkörös",
-    "engedélyezett",
-    "figyelmen kívül",
-)
-
-# Hungarian diacritics that MUST NOT appear in the English half. If any of
-# these show up in an "[en] " block, the half was written in Hungarian.
+# Hungarian diacritics that MUST NOT appear in the English module.
 _HU_DIACRITICS = ("é", "á", "ő", "ű", "ö", "ü", "ó")
 
-# Strings that MUST NOT appear in the Hungarian half (English markers/words).
-_EN_FORBIDDEN_SUBSTRINGS = (
-    "WARNING",
-    "would patch",
-    "would be applied",
-    "were NOT applied",
-    "patches were NOT",
-    "patches applied",
-    "already patched",
-    "patched successfully",
-    "permission denied",
-    "I/O error",
-    "different filesystems",
-    "text drift",
-    "line drift",
-    "circular import",
-    "refusing to patch",
-    "is required",
-    "missing",
-)
+
+def _all_string_constants(module: object) -> list[tuple[str, str]]:
+    """Return every uppercase string constant defined on ``module``."""
+    result: list[tuple[str, str]] = []
+    for name in vars(module):
+        if not name.isupper():
+            continue
+        value = getattr(module, name)
+        if isinstance(value, str):
+            result.append((name, value))
+    return result
 
 
-def _en_half(text: str) -> str:
-    """Return the substring that follows the leading ``[en] `` marker.
-
-    Raises ``ValueError`` if ``text`` does not start with ``[en] ``.
-    """
-    match = _EN_HALF.match(text)
-    if match is None:
-        raise ValueError(f"text does not start with [en] / [hu] format: {text!r}")
-    return match.group("body")
+def test_messages_en_is_plain_english() -> None:
+    """Every messages_en.* constant must be plain English text."""
+    for name, value in _all_string_constants(messages_en):
+        assert "[hu]" not in value, f"messages_en.{name} contains [hu] substring: {value!r}"
+        assert "[en]" not in value, f"messages_en.{name} contains [en] marker: {value!r}"
+        for ch in _HU_DIACRITICS:
+            assert ch not in value, f"messages_en.{name} contains Hungarian diacritic {ch!r}: {value!r}"
 
 
-def _hu_half(text: str) -> str:
-    """Return the substring that follows the leading ``[hu] `` marker."""
-    match = _HU_HALF.match(text)
-    if match is None:
-        raise ValueError(f"text does not start with [hu] / [en] format: {text!r}")
-    return match.group("body")
+def test_messages_hu_is_plain_hungarian() -> None:
+    """Every messages_hu.* constant must be plain Hungarian text."""
+    for name, value in _all_string_constants(messages_hu):
+        assert "[en]" not in value, f"messages_hu.{name} contains [en] substring: {value!r}"
+        assert "[hu]" not in value, f"messages_hu.{name} contains [hu] marker: {value!r}"
 
 
-# ---------------------------------------------------------------------------
-# Names of every bilingual single-string constant added/changed on the
-# fix/dry-run-soft-safety-and-plan branch. The test parametrizes over this
-# list so adding a new bilingual constant is a one-line update.
-# ---------------------------------------------------------------------------
-_BILINGUAL_CONSTANTS = (
-    "DRY_RUN_PLAN_HEADER",
-    "DRY_RUN_PREFLIGHT_WARNING",
-    "DRY_RUN_PATCH_LINE",
-    "DRY_RUN_DIFF_LINE_OLD",
-    "DRY_RUN_DIFF_LINE_NEW",
-    "DRY_RUN_PLAN_SUMMARY",
-    "DRY_RUN_NOT_APPLIED",
-    "DRY_RUN_APPLIED",
-)
+def test_advisory_cap_exists_in_both_modules() -> None:
+    """Both modules must export ADVISORY_CAP."""
+    assert hasattr(messages_en, "ADVISORY_CAP"), "messages_en.ADVISORY_CAP is missing"
+    assert hasattr(messages_hu, "ADVISORY_CAP"), "messages_hu.ADVISORY_CAP is missing"
+    assert isinstance(messages_en.ADVISORY_CAP, str)
+    assert isinstance(messages_hu.ADVISORY_CAP, str)
 
 
-@pytest.mark.parametrize("name", _BILINGUAL_CONSTANTS)
-def test_messages_en_dry_run_constants_match_bilingual_shape(name: str) -> None:
-    """Every DRY_RUN_* constant in messages_en.py must parse as
-    ``[en] <english> / [hu] <hungarian>``."""
-    value = getattr(messages_en, name)
-    assert isinstance(value, str)
-    # Round-trip through _en_half to confirm the shape is valid.
-    body = _en_half(value)
-    assert body, f"{name} has empty [en] half"
+def test_pick_returns_correct_module() -> None:
+    """pick(lang) returns the right module for each input."""
+    assert _i18n_pick.pick("en") is messages_en
+    assert _i18n_pick.pick("hu") is messages_hu
+    assert _i18n_pick.pick("") is messages_en
+    assert _i18n_pick.pick("xx") is messages_en
 
 
-@pytest.mark.parametrize("name", _BILINGUAL_CONSTANTS)
-def test_messages_hu_dry_run_constants_match_bilingual_shape(name: str) -> None:
-    """Every DRY_RUN_* constant in messages_hu.py must parse as
-    ``[hu] <hungarian> / [en] <english>``."""
-    value = getattr(messages_hu, name)
-    assert isinstance(value, str)
-    body = _hu_half(value)
-    assert body, f"{name} has empty [hu] half"
+def test_no_bilingual_format_in_modules() -> None:
+    """No constant in either module may contain the bilingual-format separator."""
+    for module in (messages_en, messages_hu):
+        for name, value in _all_string_constants(module):
+            assert "/ [hu]" not in value, f"{module.__name__}.{name} contains '/ [hu]' substring: {value!r}"
+            assert "/ [en]" not in value, f"{module.__name__}.{name} contains '/ [en]' substring: {value!r}"
 
 
-@pytest.mark.parametrize("name", _BILINGUAL_CONSTANTS)
-def test_messages_en_dry_run_english_half_is_english(name: str) -> None:
-    """The [en] half of every messages_en.DRY_RUN_* constant must not
-    contain Hungarian diacritics or Hungarian markers/words."""
-    value = getattr(messages_en, name)
-    body = _en_half(value)
-    for ch in _HU_DIACRITICS:
-        assert ch not in body, f"{name}: [en] half contains Hungarian diacritic {ch!r}: {value!r}"
-    for forbidden in _HU_FORBIDDEN_SUBSTRINGS:
-        assert forbidden not in body, f"{name}: [en] half contains Hungarian substring {forbidden!r}: {value!r}"
-
-
-@pytest.mark.parametrize("name", _BILINGUAL_CONSTANTS)
-def test_messages_en_dry_run_hungarian_half_is_hungarian(name: str) -> None:
-    """The [hu] half of every messages_en.DRY_RUN_* constant must not
-    contain English-only markers/words."""
-    value = getattr(messages_en, name)
-    match = _EN_HALF.match(value)
-    assert match is not None
-    hu_body = match.group("rest")
-    for forbidden in _EN_FORBIDDEN_SUBSTRINGS:
-        assert forbidden not in hu_body, f"{name}: [hu] half contains English substring {forbidden!r}: {value!r}"
-
-
-@pytest.mark.parametrize("name", _BILINGUAL_CONSTANTS)
-def test_messages_hu_dry_run_hungarian_half_is_hungarian(name: str) -> None:
-    """The [hu] half of every messages_hu.DRY_RUN_* constant must not
-    contain English-only markers/words."""
-    value = getattr(messages_hu, name)
-    body = _hu_half(value)
-    for forbidden in _EN_FORBIDDEN_SUBSTRINGS:
-        assert forbidden not in body, f"{name}: [hu] half contains English substring {forbidden!r}: {value!r}"
-
-
-@pytest.mark.parametrize("name", _BILINGUAL_CONSTANTS)
-def test_messages_hu_dry_run_english_half_is_english(name: str) -> None:
-    """The [en] half of every messages_hu.DRY_RUN_* constant must not
-    contain Hungarian diacritics or Hungarian markers/words."""
-    value = getattr(messages_hu, name)
-    match = _HU_HALF.match(value)
-    assert match is not None
-    en_body = match.group("rest")
-    for ch in _HU_DIACRITICS:
-        assert ch not in en_body, f"{name}: [en] half contains Hungarian diacritic {ch!r}: {value!r}"
-    for forbidden in _HU_FORBIDDEN_SUBSTRINGS:
-        assert forbidden not in en_body, f"{name}: [en] half contains Hungarian substring {forbidden!r}: {value!r}"
-
-
-# ---------------------------------------------------------------------------
-# LOW-1 regression: the specific constant that was swapped.
-# ---------------------------------------------------------------------------
-def test_messages_en_dry_run_not_applied_has_english_first_half() -> None:
-    """Regression for LOW-1: ``messages_en.DRY_RUN_NOT_APPLIED`` must
-    start with an English ``[en] WARNING: ...`` half, NOT a Hungarian
-    ``[en] FIGYELEM: ...`` half."""
-    value = messages_en.DRY_RUN_NOT_APPLIED
-    body = _en_half(value)
-    assert "WARNING" in body, f"[en] half must contain English marker WARNING: {value!r}"
-    assert "FIGYELEM" not in body, f"[en] half must NOT contain Hungarian marker FIGYELEM: {value!r}"
-    assert "módban" not in body, f"[en] half must NOT contain Hungarian 'módban': {value!r}"
-
-
-def test_messages_hu_dry_run_not_applied_has_hungarian_first_half() -> None:
-    """Regression for LOW-1: ``messages_hu.DRY_RUN_NOT_APPLIED`` must
-    start with a Hungarian ``[hu] FIGYELEM: ...`` half, NOT an English
-    ``[hu] WARNING: ...`` half."""
-    value = messages_hu.DRY_RUN_NOT_APPLIED
-    body = _hu_half(value)
-    assert "FIGYELEM" in body, f"[hu] half must contain Hungarian marker FIGYELEM: {value!r}"
-    assert "WARNING" not in body, f"[hu] half must NOT contain English marker WARNING: {value!r}"
-    assert "patches were NOT" not in body, f"[hu] half must NOT contain English 'patches were NOT': {value!r}"
+def test_no_brackets_in_modules() -> None:
+    """No constant may contain a [en] or [hu] marker."""
+    for module in (messages_en, messages_hu):
+        for name, value in _all_string_constants(module):
+            assert "[en]" not in value, f"{module.__name__}.{name} contains '[en]' marker: {value!r}"
+            assert "[hu]" not in value, f"{module.__name__}.{name} contains '[hu]' marker: {value!r}"

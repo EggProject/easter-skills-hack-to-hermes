@@ -18,7 +18,6 @@ must exit `0`.
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes --version
-uv run --locked easter-hermes-sorry-skills-install-profiles --version
 uv run --locked easter-hermes-sorry-skills-report --version
 
 uv run --locked pre-commit run --files pyproject.toml
@@ -32,15 +31,12 @@ After the pre-commit step, every `git commit` runs the gate defined in
 
 ```bash
 easter-hermes-sorry-skills-patch-hermes --version
-easter-hermes-sorry-skills-install-profiles --version
 easter-hermes-sorry-skills-report --version
 
 easter-hermes-sorry-skills-patch-hermes --help --lang en
 easter-hermes-sorry-skills-patch-hermes --help --lang hu
-easter-hermes-sorry-skills-install-profiles --help --lang en
 easter-hermes-sorry-skills-report --help --lang en
 
-easter-hermes-sorry-skills-install-profiles
 easter-hermes-sorry-skills-report --format text
 
 python3 -m zipfile -l dist/easter-hermes-sorry-skills.pyz | head
@@ -67,7 +63,7 @@ sections, and exits each command with `0`. If any command exits
 non-zero or the `.pyz` is missing `site-packages/` in the zip listing,
 the install is broken; do NOT proceed to [docs/usage.md](usage.md);
 instead go to the troubleshooting table below. The matching `bats`
-checks live at `tests/bats/{patch-hermes,install-profiles,report}.bats`.
+checks live at `tests/bats/{patch-hermes,report}.bats`.
 
 ---
 
@@ -137,7 +133,7 @@ rm -rf .venv
 rm -rf ~/bin/easter-hermes-sorry-skills-* ~/bin/easter-hermes-sorry-skills.pyz
 # Or, for a system-wide install:
 sudo rm -f /usr/local/bin/easter-hermes-sorry-skills.pyz
-sudo rm -f /usr/local/bin/easter-hermes-sorry-skills-{patch-hermes,install-profiles,report}.sh
+sudo rm -f /usr/local/bin/easter-hermes-sorry-skills-{patch-hermes,report}.sh
 
 # 3. Hermes plugin: drop the symlink + plugin tree
 rm -f  ~/.hermes/skills/skill-creator                                # the symlink

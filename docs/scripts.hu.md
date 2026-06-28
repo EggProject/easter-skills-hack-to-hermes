@@ -3,9 +3,9 @@
 > [English](scripts.md) · [Magyar verzió](scripts.hu.md)
 > [Vissza a README-hez](../README.hu.md)
 
-Ez az oldal az `easter-hermes-sorry-skills` csomaghoz szállított három Python CLI-t és három shell wrapper-t dokumentálja. A CLI-k console-script entry pointként vannak deklarálva a `pyproject.toml:33-36` sorban; a shell wrapper-ek kényelmi indítók, amelyek a venv-et feloldják `exec` előtt.
+Ez az oldal az `easter-hermes-sorry-skills` csomaghoz szállított két Python CLI-t és két shell wrapper-t dokumentálja. A CLI-k console-script entry pointként vannak deklarálva a `pyproject.toml:33-36` sorban; a shell wrapper-ek kényelmi indítók, amelyek a venv-et feloldják `exec` előtt.
 
-Mindhárom CLI kétnyelvű `--help` szöveget ír ki (angol + magyar), és szándékosan vékony: minden flag egy típusos dataclassba folyik (`PatchArgs` az #1-hez, `ReportInputs` a #3-hoz; a #2 a `run_audit(...)` függvényen keresztül hívódik); a click dekorátor csak az argv-ot parseolja.
+Mindkét CLI kétnyelvű `--help` szöveget ír ki (angol + magyar), és szándékosan vékony: minden flag egy típusos dataclassba folyik (`PatchArgs` az #1-hez, `ReportInputs` a #2-höz); a click dekorátor csak az argv-ot parseolja.
 
 ---
 
@@ -59,51 +59,7 @@ A `_patcher_consts.py:13-18` fájlban definiálva:
 
 ---
 
-## #2 `easter-hermes-sorry-skills-install-profiles`
-
-Profilonkénti READ-ONLY audit a migrált skill-creator skillhez. Végigmegy
-minden Hermes profilon (alapértelmezett `hermes` + minden nevesített profil
-a `hermes_cli.profiles.list_profiles()` listájából), auditálja minden
-profil enabled-skills fáját, és jelentést ad ki. Nincs `--apply` /
-`--dry-run` szétválasztás — a runner read-only.
-
-### Szinopszis
-
-```text
-easter-hermes-sorry-skills-install-profiles [--profile NAME] [--verbose] [--json] [--help]
-```
-
-### Flag-ek
-
-| Flag | Típus | Alapértelmezett | Hatás |
-|---|---|---|---|
-| `--profile NAME` | sztring | (minden profil auditálása) | Az auditot egy megadott profilra korlátozza. |
-| `--verbose` | flag | `false` | Bőbeszédű folyamat-kimenet (kétnyelvű). |
-| `--json` | flag | `false` (rich text táblák) | Géppel olvasható JSON-t ad ki a rich text táblák helyett. |
-| `--help` / `-h` | flag | `false` | Kétnyelvű (EN + HU) súgót mutat. |
-
-### Példa
-
-```bash
-$ easter-hermes-sorry-skills-install-profiles
-[en] auditing default profile…
-[hu] alapertelmezett profil audit…
-[en] profile=hermes enabled_skills=4 disabled_skills=2
-[hu] profil=hermes engedelyezett=4 tiltott=2
-$ echo $?
-0
-```
-
-### Exit kódok
-
-| Kód | Jelentés |
-|---|---|
-| `0` | Az audit lefutott (függetlenül attól, hogy talált-e driftet). |
-| nem nulla | Váratlan hiba a profil-feloldás vagy a renderelés közben. |
-
----
-
-## #3 `easter-hermes-sorry-skills-report`
+## #2 `easter-hermes-sorry-skills-report`
 
 Read-only operátori nézet: "mi van most élesítve, és mennyibe kerül?"
 Jelenti az engedélyezett skilleket profilonként, token becslésekkel,
@@ -153,7 +109,7 @@ $ echo $?
 
 ## Shell wrapper-ek
 
-Három 15 soros bash wrapper a `scripts/` alatt biztosít stabil
+Két 15 soros bash wrapper a `scripts/` alatt biztosít stabil
 `./scripts/<név>.sh` belépési pontot, függetlenül attól, hogy a projekt
 `.venv`-en vagy `PATH`-on keresztül van-e telepítve. Minden wrapper
 `set -euo pipefail`-t használ, `cd "$(git rev-parse --show-toplevel)"`-t
@@ -163,8 +119,7 @@ nem található (az üzenet az operátornak szól: `uv sync --locked --all-extra
 | Wrapper | Megfelelő CLI |
 |---|---|
 | `scripts/easter-hermes-sorry-skills-patch-hermes.sh` | #1 CLI |
-| `scripts/easter-hermes-sorry-skills-install-profiles.sh` | #2 CLI |
-| `scripts/easter-hermes-sorry-skills-report.sh` | #3 CLI |
+| `scripts/easter-hermes-sorry-skills-report.sh` | #2 CLI |
 
 ### Wrapper kontraktus
 
@@ -190,9 +145,7 @@ $ ./scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 
 - `src/easter_hermes_sorry_skills/cli_patch.py`, `_patcher_consts.py`
   (Script #1 + exit kódok)
-- `src/easter_hermes_sorry_skills/cli_profiles.py`, `_cli_profiles_cli.py`
-  (Script #2)
 - `src/easter_hermes_sorry_skills/cli_report.py`, `_cli_report_cmd.py`,
   `_cli_report_helpers_consts.py`, `_cli_report_helpers_parse.py`
-  (Script #3)
-- `pyproject.toml:33-36` (entry pointok); `scripts/*.sh` (három wrapper)
+  (Script #2)
+- `pyproject.toml:33-36` (entry pointok); `scripts/*.sh` (két wrapper)

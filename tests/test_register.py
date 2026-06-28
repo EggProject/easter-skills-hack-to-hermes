@@ -10,7 +10,7 @@ TDD list (from plan §TDD test list / register(ctx) wiring):
   test_register_silent_when_cap_patched
   test_register_emits_advisory_when_cap_unpatched
   test_register_silent_when_target_unknown
-  test_advisory_log_contains_en_and_hu
+  test_register_emits_advisory_every_time
 """
 
 from __future__ import annotations
@@ -24,11 +24,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from easter_hermes_sorry_skills import _advisory as _advisory_mod
 from easter_hermes_sorry_skills import _register
+from easter_hermes_sorry_skills._i18n_pick import pick
 from easter_hermes_sorry_skills._register import register
-from easter_hermes_sorry_skills.i18n.messages_en import ADVISORY_CAP_EN
-from easter_hermes_sorry_skills.i18n.messages_hu import ADVISORY_CAP_HU
 
 
 class _RegisterCtx(Protocol):
@@ -52,12 +50,13 @@ def _make_ctx() -> MagicMock:
 
 def test_register_callable_in_package_init() -> None:
     """`from easter_hermes_sorry_skills import register` resolves to a callable
-    taking a single `ctx` argument (the load model: one register(ctx) in __init__.py)."""
+    taking `ctx` and `lang` arguments (the load model: register(ctx, lang))."""
     assert callable(register)
     sig = inspect.signature(register)
     params = list(sig.parameters.values())
-    assert len(params) == 1, f"register(ctx) must take exactly one argument; got params={[p.name for p in params]}"
-    assert params[0].name == "ctx"
+    param_names = [p.name for p in params]
+    expected = ["ctx", "lang"]
+    assert param_names == expected, f"register must take exactly {expected}; got params={param_names}"
 
 
 def test_register_calls_ctx_register_hook_once() -> None:
@@ -87,7 +86,7 @@ def test_register_does_not_call_ctx_register_skill() -> None:
 
 def test_register_silent_when_cap_patched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Fixture: target_dir has patched agent/skill_utils.py. No advisory log,
-    no marker write, register returns cleanly."""
+    register returns cleanly."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
@@ -105,22 +104,18 @@ def test_register_silent_when_cap_patched(tmp_path: Path, monkeypatch: pytest.Mo
         # fmt: on
         encoding="utf-8",
     )
-    home = tmp_path / "home"
-    home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
-    monkeypatch.setenv("HERMES_HOME", str(home))
 
     ctx = _make_ctx()
     register(ctx)
 
     ctx.log.assert_not_called()
-    assert not marker.exists()
 
 
-def test_register_emits_advisory_when_cap_unpatched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fixture: target_dir has unpatched agent/skill_utils.py. First call emits
-    the bilingual advisory and writes the marker; second call is silent."""
+@pytest.mark.parametrize("lang", ["en", "hu"])
+def test_register_emits_advisory_when_cap_unpatched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lang: str) -> None:
+    """Fixture: target_dir has unpatched agent/skill_utils.py. register emits
+    the PLAIN language-specific advisory (no [en].../[hu]... bilingual format)."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
@@ -137,58 +132,34 @@ def test_register_emits_advisory_when_cap_unpatched(tmp_path: Path, monkeypatch:
         # fmt: on
         encoding="utf-8",
     )
-    home = tmp_path / "home"
-    home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
-    monkeypatch.setenv("HERMES_HOME", str(home))
 
     ctx = _make_ctx()
-    register(ctx)
+    register(ctx, lang=lang)
 
     assert ctx.log.call_count == 1
     log_message = ctx.log.call_args[0][0]
-    assert ADVISORY_CAP_EN in log_message
-    assert ADVISORY_CAP_HU in log_message
-    assert marker.exists()
-    assert marker.read_text(encoding="utf-8") == "advisory shown\n"
-
-    # Second call: marker exists -> no log, no rewrite.
-    ctx2 = _make_ctx()
-    register(ctx2)
-    ctx2.log.assert_not_called()
+    # PLAIN english or PLAIN hungarian — NO "[en] ... / [hu] ..." format.
+    assert log_message == pick(lang).ADVISORY_CAP
 
 
 def test_register_silent_when_target_unknown(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Missing target_dir / agent/skill_utils.py -> no advisory, no marker write."""
+    """Missing target_dir / agent/skill_utils.py -> no advisory."""
     target = tmp_path / "checkout"
     target.mkdir(parents=True, exist_ok=True)
-    home = tmp_path / "home"
-    home.mkdir(parents=True, exist_ok=True)
-    marker = home / ".easter_hermes_sorry_skills_advisory_seen"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
-    monkeypatch.setenv("HERMES_HOME", str(home))
 
     ctx = _make_ctx()
     register(ctx)
 
     ctx.log.assert_not_called()
-    assert not marker.exists()
 
 
-def test_register_emits_advisory_with_default_marker_when_home_unset(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Fixture: HERMES_HOME is UNSET, target_dir has unpatched skill_utils.py.
-    Exercises the ``if not home:`` fallback in ``_advisory_marker_path``
-    (line 41) which resolves the marker to ``~/.hermes/hermes-agent`` via
-    ``os.path.expanduser``. The advisory is still emitted and the marker
-    is written under the resolved default home.
-
-    CI runs on a fresh Ubuntu runner with no ``HERMES_HOME`` and no live
-    ``~/.hermes/hermes-agent``, so this branch is the one that the gate
-    actually exercises; without this test the fallback line is uncovered.
-    """
+@pytest.mark.parametrize("lang", ["en", "hu"])
+def test_register_emits_advisory_every_time(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lang: str) -> None:
+    """The register logs the advisory EVERY TIME the cap is un-raised. There is
+    no marker-file gating: two back-to-back register() calls on the same target
+    both emit ctx.log exactly once each (no second-call silencing)."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
@@ -205,39 +176,18 @@ def test_register_emits_advisory_with_default_marker_when_home_unset(
         # fmt: on
         encoding="utf-8",
     )
-    # Default home (no live install) so the expanduser fallback lands in
-    # a writable, isolated tmp_path subtree instead of touching the host.
-    default_home = tmp_path / "default-home"
     monkeypatch.setenv("HERMES_HERMES_AGENT_TARGET", str(target))
-    monkeypatch.delenv("HERMES_HOME", raising=False)
-    monkeypatch.setenv("HOME", str(default_home))
-    # Pre-create the parent dirs so ``Path.write_text`` inside emit_advisory
-    # can land the marker file. ``emit_advisory`` swallows OSError, so a
-    # missing parent dir would make the marker-write branch appear covered
-    # while silently no-oping — pre-creating keeps the assertion honest.
-    (default_home / ".hermes" / "hermes-agent").mkdir(parents=True, exist_ok=True)
 
-    ctx = _make_ctx()
-    register(ctx)
+    ctx1 = _make_ctx()
+    register(ctx1, lang=lang)
+    ctx2 = _make_ctx()
+    register(ctx2, lang=lang)
 
-    assert ctx.log.call_count == 1
-    log_message = ctx.log.call_args[0][0]
-    assert ADVISORY_CAP_EN in log_message
-    assert ADVISORY_CAP_HU in log_message
-    # Marker MUST land under the expanduser-resolved default home, NOT
-    # under any caller-supplied HERMES_HOME (which is unset here).
-    default_marker = default_home / ".hermes" / "hermes-agent" / ".easter_hermes_sorry_skills_advisory_seen"
-    assert default_marker.exists()
-    assert default_marker.read_text(encoding="utf-8") == "advisory shown\n"
-
-
-def test_advisory_log_contains_en_and_hu() -> None:
-    """Static check: both bilingual halves are present in the i18n constants
-    AND the constant pair contains the language tag prefixes."""
-    assert ADVISORY_CAP_EN.startswith("[en]")
-    assert ADVISORY_CAP_HU.startswith("[hu]")
-    assert "60" in ADVISORY_CAP_EN
-    assert "60" in ADVISORY_CAP_HU
+    assert ctx1.log.call_count == 1
+    assert ctx2.log.call_count == 1
+    expected = pick(lang).ADVISORY_CAP
+    assert ctx1.log.call_args[0][0] == expected
+    assert ctx2.log.call_args[0][0] == expected
 
 
 # ---------------------------------------------------------------------------
@@ -251,7 +201,7 @@ def test_register_module_does_not_call_setattr() -> None:
     prompt_builder. Per the plan: NO setattr, NO runtime monkey-patch."""
     import ast as _ast
 
-    init_path = Path(_advisory_mod.__file__).resolve().parent / "__init__.py"
+    init_path = Path(_register.__file__).resolve().parent / "__init__.py"
     register_path = Path(_register.__file__).resolve()
     for path in (init_path, register_path):
         mod = _ast.parse(path.read_text(encoding="utf-8"))

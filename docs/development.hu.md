@@ -14,7 +14,7 @@ A tesztkészlet négy rétegre van bontva. Minden rétegnek egy felelőssége é
 - `tests/unit/` — 11 Python unit teszt (`pytest`). Lefedi a `cli_patch`-et, a profiles CLI-t, a patcher-t, a safety dekorátort, a scope-ot, a conftest sentinelt és a subprocess placeholdert.
 - `tests/report/` — 9 reporter teszt + `_fixtures.py`. Lefedi a `cli_report`-ot, a reporter formátumot, a token-számolást, a verbose módot, valamint a readonly + branch felületeket.
 - `tests/meta/` — 3 meta-teszt a `tools/` helperjeihez. Lefedi a `check_bilingual.py`-t, a `check_line_count.py`-t és a meta conftest-et.
-- `tests/bats/` — 3 bash smoke teszt (`patch-hermes.bats`, `install-profiles.bats`, `report.bats`). Végigmegy a shell wrapper-eken.
+- `tests/bats/` — bash smoke tesztek (`patch-hermes.bats`, `report.bats`). Végigmegy a shell wrapper-eken.
 
 A felső szintű tesztek (`test_register.py`, `test_advisory.py`, `test_i18n_bilingual.py`) a `tests/conftest.py` összevont fixture fájl mellett élnek. A conftest a következő fixture-öket biztosítja: `hermes_home`, `hermes_checkout`, `skill_creator_home` és `real_hermes_agent_sentinel`. Import-időben előre regisztrálja a `hermes_cli.profiles` és `hermes_cli.skills_config` stub modulokat, hogy a `tests/unit/*.py` a valódi Hermes futtatókörnyezet nélkül is importálhassa a tesztelt gyártási kódot.
 

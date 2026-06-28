@@ -40,6 +40,7 @@ from pathlib import Path
 
 import click
 
+from easter_hermes_sorry_skills._cli_report_helpers_consts import LANG_EN
 from easter_hermes_sorry_skills._patcher import (
     PatcherResult,
     PatchRunInputs,
@@ -94,7 +95,17 @@ class _LangAwareCommand(click.Command):
                 formatter.write_text(text)
 
 
-def _emit_diagnostics(patcher_result: PatcherResult, *, verbose: bool) -> None:
+def _emit_diagnostics(
+    patcher_result: PatcherResult,
+    *,
+    verbose: bool,
+    lang: str = LANG_EN,
+) -> None:
+    """Echo each patcher diagnostic.
+
+    ``lang`` is plumbed for future single-language emission (the
+    patcher currently emits bilingual strings regardless of ``lang``).
+    """
     for diagnostic in patcher_result.diagnostics:
         if verbose:
             click.echo(f"[verbose] {diagnostic}")
@@ -107,12 +118,16 @@ class PatchArgs:
     """Parsed CLI args for ``easter-hermes-sorry-skills-patch-hermes``.
 
     One field per click option. The click wrapper translates argv into
-    an instance and hands it to :func:`_patch_impl`.
+    an instance and hands it to :func:`_patch_impl`. ``lang`` threads
+    the ``--lang`` selection through the CLI struct so it is available
+    for downstream emitters (the patcher pipeline will consume it once
+    its i18n refactor lands).
     """
 
     target: str | None
     dry_run: bool
     verbose: bool
+    lang: str = LANG_EN
 
 
 def resolve_target(target_str: str | None) -> Path | None:
@@ -125,6 +140,10 @@ def _patch_impl(args: PatchArgs) -> int:
     Returns the exit code; the click wrapper raises ``SystemExit`` so
     that test code can call this directly without click's process-exit
     side-effects.
+
+    ``args.lang`` threads the ``--lang`` selection through the CLI
+    struct and is forwarded to :class:`PatchRunInputs.lang` so the
+    patcher pipeline emits single-language diagnostics.
     """
     # ``--target`` defaults to ``hermes_agent_path()``; the patcher
     # refuses to write the no-touch sentinel (resolved path compare).
@@ -143,10 +162,14 @@ def _patch_impl(args: PatchArgs) -> int:
             dry_run=dry_run,
             verbose=args.verbose,
             git_head=_git_head(target_path),
+            lang=args.lang,
         ),
     )
 
-    _emit_diagnostics(patcher_result, verbose=args.verbose)
+    # ``args.lang`` is the ``--lang`` selection plumbed through the
+    # CLI struct; the patcher consumes it for single-language
+    # emission via :class:`PatchRunInputs.lang`.
+    _emit_diagnostics(patcher_result, verbose=args.verbose, lang=args.lang)
     return patcher_result.exit_code
 
 
@@ -160,6 +183,7 @@ def main(ctx: click.Context, /, **_kwargs: object) -> None:
                 target=opts.get("target"),
                 dry_run=bool(opts.get("dry_run", False)),
                 verbose=bool(opts.get("verbose", False)),
+                lang=str(opts.get("lang", "en")),
             ),
         ),
     )

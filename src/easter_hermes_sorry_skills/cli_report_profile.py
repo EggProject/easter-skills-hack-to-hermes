@@ -15,7 +15,8 @@ import click
 
 from easter_hermes_sorry_skills import cli_report as _cli_report_mod
 from easter_hermes_sorry_skills import cli_report_imports as _imps
-from easter_hermes_sorry_skills.i18n import messages_en as EN
+from easter_hermes_sorry_skills._cli_report_helpers_emit import _VerboseEmit
+from easter_hermes_sorry_skills._i18n_pick import pick
 
 _ENABLED_DETECTION_RC = 6
 
@@ -49,6 +50,7 @@ class _SectionSinks:
 def build_profile_sections(
     profile_paths: list[Path],
     ctx: ProfileBuildContext,
+    lang: str = "en",
 ) -> tuple[list[str], list[Any], int | None]:
     """Build text/json sections for all profiles. Error code or None."""
     sinks = _SectionSinks(text_sections=[], json_sections=[])
@@ -57,6 +59,7 @@ def build_profile_sections(
             prof,
             ctx=ctx,
             sinks=sinks,
+            lang=lang,
         )
         if rc is not None:
             return sinks.text_sections, sinks.json_sections, rc
@@ -68,6 +71,7 @@ def build_one_profile_section(
     *,
     ctx: ProfileBuildContext,
     sinks: _SectionSinks,
+    lang: str = "en",
 ) -> int | None:
     """Append one profile's section; return 6 on detection error, else None."""
     try:
@@ -79,7 +83,7 @@ def build_one_profile_section(
             enabled_skills_fn=_resolve_get_enabled_skills(),
         )
     except _imps.EnabledDetectionUnavailable:
-        click.echo(EN.report_enabled_detection_unavailable, err=True)
+        click.echo(pick(lang).report_enabled_detection_unavailable, err=True)
         return _ENABLED_DETECTION_RC
     rows = _imps.sort_rows(rows, ctx.sort)
     section = _imps.make_section(
@@ -87,7 +91,7 @@ def build_one_profile_section(
         prof.name,
         rows,
         total,
-        verbose=ctx.verbose,
+        verbose=_VerboseEmit(enabled=ctx.verbose, lang=lang),
     )
     if ctx.verbose:
         skipped_empty = sum(1 for row in rows if row.tokens == 0)

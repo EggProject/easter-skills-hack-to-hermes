@@ -34,7 +34,6 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target ~/work/hermes-fork
 
 # 1.4  Smoke test — a skill látható minden Hermes profilban?
-uv run --locked easter-hermes-sorry-skills-install-profiles
 uv run --locked easter-hermes-sorry-skills-report --format text
 
 # 1.5  Indítsd újra a Hermest, majd ellenőrizd a migrált skill triggerelődését
@@ -133,7 +132,6 @@ azután lát.
 | `.venv` sérült vagy `uv run --locked` import hibákkal elszáll | `rm -rf .venv && uv sync --locked --all-extras --dev`. `uv.lock` eltérés esetén előbb `uv lock` és audit |
 | A `--lang hu` nem váltja át az alapértelmezett help szekciót | A release artifact a `--lang` bevezetése előtt épült (`76b7cc3` commit, PR #47). Újraépítés: `scripts/build-release.sh` |
 | `Skill 'X' already exists` hiba `ln -sfn` regisztrációnál | `rm -f "${HOME}/.hermes/skills/X"`, majd hozd létre újra a szimbolikus linket |
-| Az `install-profiles` `skill-creator: not enabled in profile <name>` üzenetet ad | Engedélyezd a `~/.hermes/<profile>/skills.yaml` fájlban, majd futtasd újra: `install-profiles --profile <name>` |
 | A `report --json` nem nullával lép ki, `Invalid --sort value` üzenettel | Érvényes `--sort` értékek: `tokens`, `use_count`, `last_used_at`. Lásd [scripts.hu.md](scripts.hu.md) |
 | A kétnyelvű `[hu]` sorok hiányoznak a kimenetből | `uv sync --locked --all-extras --dev`; NE szerkeszd kézzel a `messages_en.py` / `messages_hu.py` fájlokat |
 

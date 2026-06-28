@@ -3,15 +3,15 @@
 > [English](scripts.md) · [Magyar verzió](scripts.hu.md)
 > [Back to README](../README.md)
 
-This page documents the three Python CLIs and three shell wrappers shipped
+This page documents the two Python CLIs and two shell wrappers shipped
 with `easter-hermes-sorry-skills`. The CLIs are declared as console-script
 entry points in `pyproject.toml:33-36`; the shell wrappers are convenience
 launchers that resolve the venv before execing the entry point.
 
-All three CLIs print bilingual `--help` text (English + Hungarian). All
-three are intentionally thin: every flag flows through to a typed
-dataclass (`PatchArgs` for #1, `ReportInputs` for #3; #2 is invoked via
-`run_audit(...)`) and the click decorator only parses argv.
+Both CLIs print bilingual `--help` text (English + Hungarian). Both
+are intentionally thin: every flag flows through to a typed
+dataclass (`PatchArgs` for #1, `ReportInputs` for #2) and the click
+decorator only parses argv.
 
 ---
 
@@ -64,51 +64,7 @@ Defined in `_patcher_consts.py:13-18`:
 
 ---
 
-## #2 `easter-hermes-sorry-skills-install-profiles`
-
-Per-profile READ-ONLY audit of the migrated skill-creator skill. Walks
-every Hermes profile (the default `hermes` profile plus every named
-profile from `hermes_cli.profiles.list_profiles()`), audits each
-profile's enabled-skills tree, and emits a report. There is no
-`--apply` / `--dry-run` split — the runner is read-only by design.
-
-### Synopsis
-
-```text
-easter-hermes-sorry-skills-install-profiles [--profile NAME] [--verbose] [--json] [--help]
-```
-
-### Flags
-
-| Flag | Type | Default | Effect |
-|---|---|---|---|
-| `--profile NAME` | string | (audit all profiles) | Restrict the audit to one named profile. |
-| `--verbose` | flag | `false` | Verbose progress output (bilingual). |
-| `--json` | flag | `false` (rich text tables) | Emit machine-readable JSON instead of the rich text tables. |
-| `--help` / `-h` | flag | `false` | Show bilingual EN + HU help. |
-
-### Example
-
-```bash
-$ easter-hermes-sorry-skills-install-profiles
-[en] auditing default profile…
-[hu] alapertelmezett profil audit…
-[en] profile=hermes enabled_skills=4 disabled_skills=2
-[hu] profil=hermes engedelyezett=4 tiltott=2
-$ echo $?
-0
-```
-
-### Exit codes
-
-| Code | Meaning |
-|---|---|
-| `0` | Audit completed (whether or not any drift was found). |
-| non-zero | Unexpected error during profile resolution or rendering. |
-
----
-
-## #3 `easter-hermes-sorry-skills-report`
+## #2 `easter-hermes-sorry-skills-report`
 
 Read-only operator view: "what is on right now, and what does it cost?"
 Reports enabled skills per profile with token estimates, use counts, and
@@ -158,7 +114,7 @@ $ echo $?
 
 ## Shell wrappers
 
-Three 15-line bash wrappers under `scripts/` provide a stable
+Two 15-line bash wrappers under `scripts/` provide a stable
 "`./scripts/<name>.sh`" entry point regardless of whether the project
 is installed via the `.venv` or via `PATH`. Every wrapper uses
 `set -euo pipefail`, runs `cd "$(git rev-parse --show-toplevel)"`,
@@ -169,8 +125,7 @@ found (the message tells the operator to run
 | Wrapper | Maps to |
 |---|---|
 | `scripts/easter-hermes-sorry-skills-patch-hermes.sh` | CLI #1 |
-| `scripts/easter-hermes-sorry-skills-install-profiles.sh` | CLI #2 |
-| `scripts/easter-hermes-sorry-skills-report.sh` | CLI #3 |
+| `scripts/easter-hermes-sorry-skills-report.sh` | CLI #2 |
 
 ### Wrapper contract
 
@@ -195,6 +150,5 @@ $ ./scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 ## Sources verified
 
 - `src/easter_hermes_sorry_skills/cli_patch.py`, `_patcher_consts.py` (Script #1 + exit codes)
-- `src/easter_hermes_sorry_skills/cli_profiles.py`, `_cli_profiles_cli.py` (Script #2)
-- `src/easter_hermes_sorry_skills/cli_report.py`, `_cli_report_cmd.py`, `_cli_report_helpers_consts.py`, `_cli_report_helpers_parse.py` (Script #3)
-- `pyproject.toml:33-36` (entry points); `scripts/*.sh` (three wrappers)
+- `src/easter_hermes_sorry_skills/cli_report.py`, `_cli_report_cmd.py`, `_cli_report_helpers_consts.py`, `_cli_report_helpers_parse.py` (Script #2)
+- `pyproject.toml:33-36` (entry points); `scripts/*.sh` (two wrappers)

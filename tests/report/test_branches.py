@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from click.testing import CliRunner
 
 from easter_hermes_sorry_skills import cli_report
@@ -268,9 +269,25 @@ def test_main_with_unknown_flag_passes_through(monkeypatch, hermes_home: Path) -
 # --- warning callback wiring (D6 spec mandate) ---
 
 
-def test_emit_tokenizer_warning_is_bilingual() -> None:
-    """The wired callback MUST emit a single bilingual line (en/hu on one line)."""
+@pytest.mark.parametrize(
+    ("lang", "expected_text"),
+    [
+        ("en", "tokenizer unavailable"),
+        ("hu", "a tokenizer nem elérhető"),
+    ],
+)
+def test_emit_tokenizer_warning_emits_single_language_internal(
+    lang: str,
+    expected_text: str,
+) -> None:
+    """The internal _tokenizer warning callback MUST receive a single-language line.
+
+    After the i18n refactor, estimate_tokens forwards ``pick(lang).FALLBACK_WARNING``
+    to the user-supplied callback (single-language string, NOT the legacy
+    ``[en]/[hu]`` bilingual markers).
+    """
     from easter_hermes_sorry_skills import _tokenizer
+    from easter_hermes_sorry_skills._i18n_pick import pick
 
     captured: list[str] = []
 
@@ -278,10 +295,34 @@ def test_emit_tokenizer_warning_is_bilingual() -> None:
         captured.append(msg)
 
     _tokenizer.reset_warning_state()
-    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=_capture)
+    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=_capture, lang=lang)
     assert len(captured) == 1
     line = captured[0]
-    assert "[en]" in line and "[hu]" in line, f"non-bilingual warning: {line!r}"
+    assert expected_text in line, f"missing language-specific warning text: {line!r}"
+    assert line == pick(lang).FALLBACK_WARNING
+    # Legacy bilingual markers MUST NOT appear in the single-language emission.
+    assert "[en]" not in line and "[hu]" not in line
+
+
+@pytest.mark.parametrize("lang", ["en", "hu"])
+def test_emit_tokenizer_warning_emits_single_language(lang: str, capsys: pytest.CaptureFixture[str]) -> None:
+    """Single-language parametrization: emit_tokenizer_warning must produce lang-aware output.
+
+    The internal _tokenizer callback receives the bilingual fallback constant.
+    The production callback (cli_report.emit_tokenizer_warning) ignores that
+    arg and emits pick(lang).report_tokenizer_unavailable on stderr instead.
+    """
+    from easter_hermes_sorry_skills._cli_report_helpers_parse import (
+        emit_tokenizer_warning,
+    )
+    from easter_hermes_sorry_skills._i18n_pick import pick
+
+    emit_tokenizer_warning("", lang=lang)
+    captured = capsys.readouterr()
+    expected = pick(lang).report_tokenizer_unavailable
+    assert expected in captured.err
+    # EN and HU must produce different emissions (single-lang parametrization).
+    assert pick("en").report_tokenizer_unavailable != pick("hu").report_tokenizer_unavailable
 
 
 def test_cli_report_wires_warning_callback(monkeypatch, hermes_home: Path) -> None:

@@ -30,7 +30,6 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target ~/work/hermes-fork
 
 # 1.4  Smoke test — confirm the skill is visible to every Hermes profile
-uv run --locked easter-hermes-sorry-skills-install-profiles
 uv run --locked easter-hermes-sorry-skills-report --format text
 
 # 1.5  Restart Hermes, then verify the migrated skill triggers
@@ -124,7 +123,6 @@ engineer sees on day-2+.
 | `.venv` corrupt or `uv run --locked` fails with import errors | `rm -rf .venv && uv sync --locked --all-extras --dev`. On `uv.lock` mismatch, `uv lock` and audit first |
 | `--lang hu` does not switch the default help section | Release artifact built before `--lang` landed (commit `76b7cc3`, PR #47). Rebuild: `scripts/build-release.sh` |
 | `Skill 'X' already exists` when registering via `ln -sfn` | `rm -f "${HOME}/.hermes/skills/X"`, then re-create the symlink |
-| `install-profiles` reports `skill-creator: not enabled in profile <name>` | Enable in `~/.hermes/<profile>/skills.yaml`, re-run `install-profiles --profile <name>` |
 | `report --json` exits non-zero with `Invalid --sort value` | Valid `--sort`: `tokens`, `use_count`, `last_used_at`. See [scripts.md](scripts.md) |
 | Bilingual `[hu]` lines missing from output | `uv sync --locked --all-extras --dev`; do NOT hand-edit `messages_en.py` / `messages_hu.py` |
 

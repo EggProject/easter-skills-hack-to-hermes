@@ -15,15 +15,16 @@ import click
 
 from easter_hermes_sorry_skills._cli_report_helpers_consts import (
     FORMAT_KEYS,
+    LANG_EN,
     REJECTED_FLAGS,
     SORT_KEYS,
 )
-from easter_hermes_sorry_skills.i18n import messages_en as EN
+from easter_hermes_sorry_skills._i18n_pick import pick
 
 
-def emit_tokenizer_warning(_msg: str) -> None:
+def emit_tokenizer_warning(_msg: str, lang: str = LANG_EN) -> None:
     """Bilingual warning callback for tokenizer. See cli_report."""
-    click.echo(EN.report_tokenizer_unavailable, err=True)
+    click.echo(pick(lang).report_tokenizer_unavailable, err=True)
 
 
 def now_iso() -> str:
@@ -34,17 +35,21 @@ def now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def reject_unwanted_flags(argv: list[str]) -> int | None:
+def reject_unwanted_flags(argv: list[str], lang: str = LANG_EN) -> int | None:
     """Return reject_flag code if argv contains a rejected flag, else None."""
     sep = "="
     for arg in argv:
-        reject_code = _reject_for_arg(arg, sep)
+        reject_code = _reject_for_arg(arg, sep, lang=lang)
         if reject_code is not None:
             return reject_code
     return None
 
 
-def _reject_for_arg(arg: str, sep: str) -> int | None:
+def _reject_for_arg(
+    arg: str,
+    sep: str,
+    lang: str = LANG_EN,
+) -> int | None:
     """Return the reject flag code for ``arg`` when it matches a rejected flag."""
     for prefix, key in REJECTED_FLAGS.items():
         with_eq = prefix + sep
@@ -53,16 +58,20 @@ def _reject_for_arg(arg: str, sep: str) -> int | None:
                 reject_flag as _reject,
             )
 
-            return _reject(key)
+            return _reject(key, lang=lang)
     return None
 
 
-def validate_sort_and_fmt(sort: str, fmt: str) -> int | None:
+def validate_sort_and_fmt(
+    sort: str,
+    fmt: str,
+    lang: str = LANG_EN,
+) -> int | None:
     """Return 2 when sort/fmt invalid, else None."""
     if sort not in SORT_KEYS:
-        click.echo(EN.report_opt_sort, err=True)
+        click.echo(pick(lang).report_opt_sort, err=True)
         return 2
     if fmt not in FORMAT_KEYS:
-        click.echo(EN.report_opt_format, err=True)
+        click.echo(pick(lang).report_opt_format, err=True)
         return 2
     return None

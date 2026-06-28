@@ -47,93 +47,6 @@ sys.path = [p for p in sys.path if p != str(_SRC)]
 sys.path.insert(0, str(_SRC))
 
 
-# ---------------------------------------------------------------------------
-# Pre-register ``hermes_cli.profiles`` stub so ``from hermes_cli.profiles
-# import ProfileInfo`` (used by ``cli_profiles.py`` at module load time)
-# succeeds during test collection, BEFORE any per-test ``installed`` fixture
-# monkey-patches a richer substitute. The test fixture will overwrite this
-# with a fake that also includes ``list_profiles``.
-# ---------------------------------------------------------------------------
-
-
-def _ensure_hermes_cli_profiles_stub() -> None:
-    """Register a minimal ``hermes_cli`` package + ``hermes_cli.profiles``
-    + ``hermes_cli.skills_config`` modules if absent.
-
-    The hermes_cli package is not installed in the test environment; tests
-    that need it install fakes via the ``installed`` fixture. However,
-    ``cli_profiles.py`` performs ``from hermes_cli.profiles import
-    ProfileInfo`` and ``from hermes_cli.skills_config import
-    save_disabled_skills`` at module load (so the types are bound for
-    ``TYPE_CHECKING`` and runtime annotations), which happens at test
-    collection — before any fixture can run. We pre-register stubs here
-    that expose ``ProfileInfo`` as a permissive ``object`` subclass with
-    the three fields the source code references (name, path, is_default)
-    and ``save_disabled_skills`` as a no-op.
-    """
-    import types
-
-    if "hermes_cli" not in sys.modules:
-        hermes_cli_mod = types.ModuleType("hermes_cli")
-        hermes_cli_mod.__path__ = []  # mark as package
-        sys.modules["hermes_cli"] = hermes_cli_mod
-
-    hermes_cli_mod = sys.modules["hermes_cli"]
-
-    if "hermes_cli.profiles" not in sys.modules:
-
-        class _StubProfileInfo:
-            """Minimal stand-in for ``hermes_cli.profiles.ProfileInfo``."""
-
-            __slots__ = ("name", "path", "is_default")
-
-        profiles_stub = types.ModuleType("hermes_cli.profiles")
-        profiles_stub.ProfileInfo = _StubProfileInfo
-        profiles_stub.list_profiles = lambda: []
-        sys.modules["hermes_cli.profiles"] = profiles_stub
-        hermes_cli_mod.profiles = profiles_stub
-
-    if "hermes_cli.skills_config" not in sys.modules:
-        skills_config_stub = types.ModuleType("hermes_cli.skills_config")
-        skills_config_stub.save_disabled_skills = lambda *_a, **_kw: None
-        sys.modules["hermes_cli.skills_config"] = skills_config_stub
-        hermes_cli_mod.skills_config = skills_config_stub
-
-
-_ensure_hermes_cli_profiles_stub()
-
-
-def _ensure_agent_stub() -> None:
-    """Register a minimal ``agent`` + ``agent.skill_utils`` module if absent.
-
-    ``cli_profiles.py`` performs ``from agent.skill_utils import
-    get_disabled_skill_names`` at module load (the unused-import silencer
-    is mandated by the test contract which greps the source). Without
-    this stub the import fails at test collection time, before any
-    per-test fixture can run.
-    """
-    import types
-
-    if "agent.skill_utils" in sys.modules:
-        return
-    agent_mod = sys.modules.get("agent")
-    if agent_mod is None:
-        agent_mod = types.ModuleType("agent")
-        sys.modules["agent"] = agent_mod
-
-    skill_utils = types.ModuleType("agent.skill_utils")
-
-    def get_disabled_skill_names(*_args: object, **_kwargs: object) -> list[str]:
-        return []
-
-    skill_utils.get_disabled_skill_names = get_disabled_skill_names
-    sys.modules["agent.skill_utils"] = skill_utils
-    agent_mod.skill_utils = skill_utils
-
-
-_ensure_agent_stub()
-
-
 # --- branch (workstream-C) padded anchor constants ------------------------
 
 SKILL_UTILS_BODY = '''\
@@ -156,7 +69,7 @@ def extract_skill_description(frontmatter: Dict[str, Any]) -> str:
 
 def _build_skill_utils_padded() -> str:
     lines: list[str] = []
-    for i in range(1, 677):
+    for i in range(1, 705):
         lines.append(f"# padding line {i}\n")
     lines.append(SKILL_UTILS_BODY)
     return "".join(lines)
@@ -166,7 +79,7 @@ SKILL_UTILS_PATCHED = _build_skill_utils_padded()
 
 
 PROMPT_BUILDER_BODY = '''\
-"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""
+"""System prompt assembly -- identity, platform hints, skills index, context files."""
 
 # --- MEMORY_GUIDANCE (E2 anchor is L158) ---
 MEMORY_GUIDANCE = (
@@ -185,7 +98,7 @@ def _build_prompt_builder_padded() -> str:
     # and the E1/E2 anchors at L179/L158 (E3 was removed 2026-06-23), so the padding
     # below preserves those line numbers (the fixture mirrors the
     # real layout: docstring + blank + padding + anchors).
-    lines.append('"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""\n')
+    lines.append('"""System prompt assembly -- identity, platform hints, skills index, context files.\n')
     lines.append("\n")
     for i in range(1, 156):
         lines.append(f"# padding {i}\n")
@@ -207,7 +120,7 @@ PROMPT_BUILDER_PATCHED = _build_prompt_builder_padded()
 
 
 BACKGROUND_REVIEW_BODY = '''\
-"""Background review (test fixture stand-in for agent/background_review.py)."""
+"""Background memory/skill review — fork the agent to evaluate the turn."""
 '''
 
 
@@ -215,22 +128,24 @@ def _build_background_review_padded() -> str:
     lines: list[str] = []
     # AC-2.8: L1 docstring anchors E4b. Real Hermes's
     # ``background_review.py`` already has a docstring at L1 and the
-    # E4/E5 anchors at L105/L194, so the padding below preserves those
+    # E4/E5 anchors at L230/L317, so the padding below preserves those
     # line numbers (mirrors the real layout: docstring + blank +
     # padding + anchors).
-    lines.append('"""Background review (test fixture stand-in for agent/background_review.py)."""\n')
+    lines.append('"""Background memory/skill review — fork the agent to evaluate the turn.\n')
     lines.append("\n")
-    for i in range(1, 103):
+    for i in range(1, 228):
         lines.append(f"# padding {i}\n")
-    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n")
-    lines.append("\n")
+    lines.append('    "session artifact. If the proposed name only makes sense for "\n')
+    lines.append("    \"today's task, it's wrong — fall back to (1), (2), or (3).\n\n")
     lines.append('"\n')
-    for i in range(106, 192):
+    lines.append('    "User-preference embedding (important): when the user expressed a "\n')
+    for i in range(233, 315):
         lines.append(f"# padding {i}\n")
-    lines.append('    "(2), or (3).\n')
-    lines.append("\n")
+    lines.append('    "artifact. If the name only fits today\'s task, fall back to (1), "\n')
+    lines.append('    "(2), or (3).\n\n')
     lines.append('"\n')
-    for i in range(193, 220):
+    lines.append('    "User-preference embedding: when the user complains about how "\n')
+    for i in range(320, 350):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
 

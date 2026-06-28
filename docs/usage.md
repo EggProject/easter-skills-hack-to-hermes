@@ -34,7 +34,6 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target /path/to/user-hermes
 
 # 4. Smoke test — verify the skill is visible to Hermes
-uv run --locked easter-hermes-sorry-skills-install-profiles
 uv run --locked easter-hermes-sorry-skills-report
 ```
 
@@ -60,10 +59,6 @@ shell-wrapper contract live in [docs/scripts.md](scripts.md).
   (S1.cap + 5 Task E sites + skills-cache purge) to a user-owned Hermes
   checkout. Writes by default; pass `--dry-run` to audit only. Refuses
   to touch `~/.hermes/hermes-agent` (the upstream repo).
-- `easter-hermes-sorry-skills-install-profiles` — Read-only per-profile
-  audit of the migrated `skill-creator` skill across every Hermes
-  profile. Rich text tables by default; pass `--json` for
-  machine-readable output.
 - `easter-hermes-sorry-skills-report` — Read-only operator view: enabled
   skills per profile with token estimates, use counts, and last-used
   timestamps. NO writes except an operator-chosen `--json PATH`;

@@ -91,7 +91,6 @@ A `chmod +x` nem szükséges: az `.sh` fájlok az executable bit-tel együtt
 ```bash
 # 1. A wrapper feloldja a .pyz-t és 0-val lép ki
 easter-hermes-sorry-skills-patch-hermes --version
-easter-hermes-sorry-skills-install-profiles --version
 easter-hermes-sorry-skills-report --version
 
 # 2. A kétnyelvű help kiírja az EN és HU szekciót
