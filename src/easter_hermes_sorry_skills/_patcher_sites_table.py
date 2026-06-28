@@ -156,12 +156,21 @@ E0_LINE = 5
 # anchors remain valid against the pre-E0 file state.
 E1_LINE = 179
 E2_LINE = 158
-# E4b anchors on the CLOSING ``"""`` of the multi-line docstring at
-# the top of ``agent/background_review.py``. Real Hermes's
-# docstring spans L1 (opening) + L2 (blank) + L3..L16 (body) +
-# L17 (closing), so the closing triple-double-quote lives at L17 —
-# NOT L2. Same byte-exact matching rationale as E0 above.
-E4B_LINE = 17
+# E4b anchors on the ``from __future__ import annotations`` line at
+# L19 of ``agent/background_review.py`` (NOT the L17 closing
+# triple-double-quote). Real Hermes's docstring spans L1 (opening)
+# + L2 (blank) + L3..L16 (body) + L17 (closing) + L18 (blank) +
+# L19 (``from __future__ import annotations``). PEP 563 requires
+# ``from __future__ import annotations`` to be the FIRST non-docstring
+# statement at module scope — preceding it with any other import
+# statement raises ``SyntaxError`` at compile time (``ast.parse`` is
+# lenient and accepts the broken ordering, but real CPython refuses).
+# Anchoring on L17 docstring closer pushed the E4b insertion to L18
+# (the new import), demoting ``from __future__`` to L20 and breaking
+# PEP 563. Anchoring on the byte-exact L19 line preserves PEP 563
+# ordering: the patcher inserts AFTER L19, so the import lands at L20
+# and ``from __future__`` stays the first module-scope statement.
+E4B_LINE = 19
 # Same descending-order logic for E4/E5 in ``agent/background_review.py``
 # (E4b applies last, so the E4/E5 anchors remain valid against the
 # pre-E4b file state). The docstring at the top of
@@ -183,7 +192,18 @@ E5_LINE = 316
 # ``"""`` literal). A drifted closing line is detected and the
 # site TEXT_DRIFTs and aborts so the operator can review.
 _E0_ANCHOR_TEXT = '"""'
-_E4B_ANCHOR_TEXT = '"""'
+# E4b anchors on the ``from __future__ import annotations`` line
+# (PEP 563 ordering). The canonical anchor text mirrors the real
+# upstream hermes L19 line in ``agent/background_review.py``
+# (byte-exact after ``splitlines()`` strips the trailing newline:
+# the line is the literal ``from __future__ import annotations``
+# string). Anchoring on this byte-exact line preserves PEP 563
+# ordering: the E4b insertion lands AFTER the anchor at L20, leaving
+# ``from __future__ import annotations`` at L19 (the first module-
+# scope statement). The conftest fixture
+# ``_build_background_review_padded`` mirrors this layout exactly
+# (L19 = ``from __future__ import annotations\n``).
+_E4B_ANCHOR_TEXT = "from __future__ import annotations\n"
 
 # --- the S1.cap site (two-anchor atomic pair) -----------------------------
 

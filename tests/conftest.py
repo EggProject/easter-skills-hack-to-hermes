@@ -60,7 +60,7 @@ def extract_skill_description(frontmatter: Dict[str, Any]) -> str:
     raw_desc = frontmatter.get("description", "")
     if not raw_desc:
         return ""
-    desc = str(raw_desc).strip().strip('\'"')
+    desc = str(raw_desc).strip().strip("'\\\"")
     if len(desc) > 60:
         return desc[:57] + "..."
     return desc
@@ -193,9 +193,20 @@ def _build_background_review_padded() -> str:
     lines.append("See the ``hermes-agent-dev`` skill (``references/self-improvement-loop.md``)\n")
     lines.append("for invariants and PR review criteria.\n")
     lines.append('"""\n')
+    # PEP 563: ``from __future__ import annotations`` MUST be the first
+    # non-docstring statement at module scope. Real Hermes's
+    # ``background_review.py`` has this line at L19 (L18 blank, L19 the
+    # import). The E4b patcher anchor is this byte-exact L19 line; the
+    # insertion lands at L20 so PEP 563 ordering is preserved. The E4
+    # padding loop below starts at range(1, 208) (3 fewer padding
+    # lines than the previous L17-anchor layout) so the E4 anchor block
+    # (L229..L231) stays at the same line numbers downstream — the
+    # fixture's E4/E5 anchors and the real upstream lines are aligned.
+    lines.append("\n")  # L18 blank
+    lines.append("from __future__ import annotations\n")  # L19
     # E4 anchor (3-line block starting at L229, inside _SKILL_REVIEW_PROMPT
     # tuple). Opener at L228, anchor at L229..L231, closer at L232.
-    for i in range(1, 211):
+    for i in range(1, 209):
         lines.append(f"# padding {i}\n")
     lines.append("_SKILL_REVIEW_PROMPT = (\n")
     lines.append('    "session artifact. If the proposed name only makes sense for "\n')

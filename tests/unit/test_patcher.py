@@ -542,14 +542,19 @@ def test_task_e_current_text_is_unique_in_source() -> None:
     """05 §Anchor-hygiene — each Task E primary anchor is one or more
     physical lines and yields exactly 1 hit in its site table.
 
-    AC-2.8 / cap-style fix: E0 and E4b anchor on the CLOSING
-    triple-double-quote line (L2 of the multi-line docstring at the
-    top of the target file). That closing line is 3 characters; the
-    multi-signal targeting is the LINE NUMBER (1-based, exact match),
-    not the anchor text length. The 8-char minimum applies to the
+    AC-2.8 / cap-style fix: E0 anchors on the CLOSING
+    triple-double-quote line (L5 of the multi-line docstring at the
+    top of ``prompt_builder.py``); E4b anchors on the
+    ``from __future__ import annotations`` line at L19 of
+    ``background_review.py`` (PEP 563 ordering — anchoring on the
+    L17 closing-quote would push the E4b insertion to L18 and
+    demote ``from __future__`` to L20, breaking PEP 563). Both
+    anchors are byte-exact physical lines identified by their
+    line number (1-based). The 8-char minimum applies to the
     OTHER Task E sites whose anchor text is a meaningful code
-    fragment; E0/E4b's anchor is a single structural delimiter
-    identified by its position, not by content.
+    fragment; E0's anchor is a single structural delimiter
+    identified by its position, not by content; E4b's anchor is
+    the byte-exact ``from __future__ import annotations`` line.
     """
     for site in ALL_TASK_E_SITES:
         # The primary anchor is exactly the bytes of one or more
@@ -558,13 +563,23 @@ def test_task_e_current_text_is_unique_in_source() -> None:
         # real newline characters) are matched against consecutive
         # file lines by ``locate_anchor``.
         anchor = site.primary_anchor()
-        if site.site_id in {"E0.consult_rule_def", "E4b.consult_rule_import"}:
-            # E0/E4b anchor on the closing-triple-double-quote line
+        if site.site_id == "E0.consult_rule_def":
+            # E0 anchors on the closing-triple-double-quote line
             # (structural delimiter identified by position, not content).
             # fmt: off
             assert (
                 anchor.text == '"""'
             ), f"site {site.site_id} anchor must be the closing triple-double-quote line of the L1 docstring."
+            # fmt: on
+        elif site.site_id == "E4b.consult_rule_import":
+            # E4b anchors on the byte-exact ``from __future__ import
+            # annotations`` line at L19 (PEP 563 ordering). The anchor
+            # text is the full line including the trailing newline
+            # (byte-exact match against the real upstream hermes L19).
+            # fmt: off
+            assert (
+                anchor.text == "from __future__ import annotations\n"
+            ), f"site {site.site_id} anchor must be the byte-exact ``from __future__ import annotations`` line at L19."
             # fmt: on
         else:
             # fmt: off
@@ -647,23 +662,26 @@ def test_e0_anchors_on_closing_triple_double_quote() -> None:
     assert "SKILL_CREATOR_CONSULT_RULE = (" in insertion
 
 
-def test_e4b_anchors_on_closing_triple_double_quote() -> None:
-    r"""AC-2.8: E4b anchors on the CLOSING triple-double-quote line of
-    the multi-line docstring at the top of ``agent/background_review.py``.
+def test_e4b_anchors_on_from_future_line() -> None:
+    r"""AC-2.8: E4b anchors on the ``from __future__ import annotations``
+    line at L19 of ``agent/background_review.py`` (NOT the L17 closing
+    triple-double-quote).
 
-    Same root-cause as E0: the fixture has a multi-line docstring with
-    the closing triple-double-quote at L17; the import line is appended
-    AFTER the closing triple-double-quote (append-before shape) so the
-    import lands at module scope.
+    PEP 563: ``from __future__ import annotations`` MUST be the first
+    non-docstring statement at module scope. Preceding it with any
+    other import statement raises ``SyntaxError`` at compile time
+    (``ast.parse`` is lenient and accepts the broken ordering, but real
+    CPython refuses). The previous anchor-on-L17 closing-quote layout
+    pushed the E4b insertion to L18 (the new import), demoting
+    ``from __future__`` to L20 and breaking PEP 563. The fix anchors
+    on the byte-exact L19 line so the E4b insertion lands at L20 and
+    ``from __future__`` stays the first module-scope statement.
     """
     anchor = E4B_CONSULT_RULE_IMPORT.primary_anchor()
-    assert anchor.line == 17
-    assert anchor.text == '"""', "E4B anchor must be the closing triple-double-quote of the multi-line docstring."
+    assert anchor.line == 19
+    msg = "E4B anchor must be the byte-exact ``from __future__ import annotations`` line at L19 (PEP 563 ordering)."
+    assert anchor.text == "from __future__ import annotations\n", msg
     insertion = E4B_CONSULT_RULE_IMPORT.insertion
-    assert not insertion.startswith('"""'), (
-        "E4B insertion must NOT start with a closing triple-double-quote; "
-        "the fixture's closing-triple-double-quote anchor already terminates the docstring."
-    )
     assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in insertion
 
 
@@ -2297,13 +2315,18 @@ def test_squash_payload_empty_string_returns_empty() -> None:
 def test_apply_against_real_upstream_hermes_files(tmp_path: Path) -> None:
     """Byte-exact anchor restoration against REAL upstream hermes files.
 
-    Regression for the 99b4e8f + 3b40b6a + 1c5972d fix sequence.
-    Copies REAL ~/.hermes/hermes-agent/agent/{prompt_builder,background_review}.py
-    into a tmp checkout, runs the patcher, asserts ast.parse accepts
-    the post-patch files and SKILL_CREATOR_CONSULT_RULE resolves.
+    Regression for the 99b4e8f + 3b40b6a + 1c5972d + f8157ce fix
+    sequence. Copies REAL ~/.hermes/hermes-agent/agent/{prompt_builder,
+    background_review}.py into a tmp checkout, runs the patcher,
+    asserts ``compile()`` accepts the post-patch files
+    (catches PEP 563 — ``ast.parse`` is lenient, ``compile`` is not)
+    AND that a real hermes venv subprocess import of the patched
+    files resolves ``SKILL_CREATOR_CONSULT_RULE`` in
+    ``_SKILL_REVIEW_PROMPT`` and ``_COMBINED_REVIEW_PROMPT``.
     Skips when the live install is not present.
     """
     import ast
+    import subprocess
 
     live = Path.home() / ".hermes" / "hermes-agent"
     pb_src = live / "agent" / "prompt_builder.py"
@@ -2323,10 +2346,51 @@ def test_apply_against_real_upstream_hermes_files(tmp_path: Path) -> None:
     r = run_patch(PatchRunInputs(target=checkout, dry_run=False))
     assert r.exit_code == EXIT_OK, f"patcher drift: {r.diagnostics}"
 
-    ast.parse(pb_dst.read_text(encoding="utf-8"))
-    ast.parse(br_dst.read_text(encoding="utf-8"))
+    # compile() catches PEP 563 violations that ast.parse misses
+    # (ast.parse is lenient and accepts ``from __future__ import
+    # annotations`` not being first; CPython's compile() is strict
+    # and raises SyntaxError).
     pb_text = pb_dst.read_text(encoding="utf-8")
-    assert "SKILL_CREATOR_CONSULT_RULE = (" in pb_text
     br_text = br_dst.read_text(encoding="utf-8")
+    compile(pb_text, str(pb_dst), "exec")
+    compile(br_text, str(br_dst), "exec")
+    ast.parse(pb_text)
+    ast.parse(br_text)
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in pb_text
     assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in br_text
     assert br_text.count("SKILL_CREATOR_CONSULT_RULE") >= 3
+
+    # Real hermes venv subprocess import: load prompt_builder +
+    # background_review under the real hermes python and assert
+    # SKILL_CREATOR_CONSULT_RULE appears in _SKILL_REVIEW_PROMPT and
+    # _COMBINED_REVIEW_PROMPT. Skips when the real hermes venv is not
+    # present.
+    hermes_python = Path("/Users/kiscsicska/.hermes/hermes-agent/venv/bin/python")
+    if not hermes_python.is_file():
+        pytest.skip("real hermes venv python not present")
+    args = [
+        str(hermes_python),
+        "-c",
+        'import sys; sys.path.insert(0, "' + str(checkout) + '"); '
+        "from agent import prompt_builder; "
+        "from agent import background_review; "
+        "assert prompt_builder.SKILL_CREATOR_CONSULT_RULE; "
+        "assert background_review._SKILL_REVIEW_PROMPT; "
+        "assert background_review._COMBINED_REVIEW_PROMPT; "
+        "assert 'skill-creator' in background_review._SKILL_REVIEW_PROMPT; "
+        "assert 'skill-creator' in background_review._COMBINED_REVIEW_PROMPT; "
+        'print("FULL_HERMES_IMPORT_OK")',
+    ]
+    result = subprocess.run(args, capture_output=True, text=True, cwd=str(checkout))
+    if result.returncode != 0 or "FULL_HERMES_IMPORT_OK" not in result.stdout:
+        # If the failure is an ImportError for a name not in our minimal
+        # SKILL_UTILS_PATCHED fixture, skip — the fixture is intentionally
+        # stripped down (only S1.cap site is exercised at unit-test time).
+        # The compile() check above already catches the PEP 563 regression.
+        if "ImportError" in result.stderr and "from 'agent.skill_utils'" in result.stderr:
+            pytest.skip(
+                "real hermes prompt_builder.py transitively imports names not "
+                "in SKILL_UTILS_PATCHED fixture (intentionally minimal). "
+                "compile() check above already catches the PEP 563 regression."
+            )
+        raise AssertionError(f"real hermes import failed: stdout={result.stdout!r} stderr={result.stderr!r}")
