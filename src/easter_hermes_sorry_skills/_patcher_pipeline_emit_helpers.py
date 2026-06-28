@@ -29,6 +29,9 @@ def _pick_text_drift_actual(failure: dict[str, Any]) -> str:
 
 
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+_SQUASH_MAX_LEN = 80
+_SQUASH_ELLIPSIS = "..."
+_SQUASH_TRUNCATE_AT = _SQUASH_MAX_LEN - len(_SQUASH_ELLIPSIS)
 
 
 def _squash_payload(text: str) -> str:
@@ -38,11 +41,9 @@ def _squash_payload(text: str) -> str:
     karaktereket (\x00-\x1f, \x7f) szóközre cseréljük, és a hosszú
     szöveget 80 karakterre vágjuk ... toldalékkal.
     """
-    ellipsis = "..."
-    max_len = 80
     squashed = _CONTROL_CHARS_RE.sub(" ", text)
-    if len(squashed) > max_len:
-        return squashed[: max_len - len(ellipsis)] + ellipsis
+    if len(squashed) > _SQUASH_MAX_LEN:
+        return squashed[:_SQUASH_TRUNCATE_AT] + _SQUASH_ELLIPSIS
     return squashed
 
 

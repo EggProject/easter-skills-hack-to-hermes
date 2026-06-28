@@ -301,7 +301,14 @@ def test_show_help_returns_zero(hermes_home: Path) -> None:
 
 
 def test_report_curator_field_verification_recorded() -> None:
-    """Assert the fixture was updated within 7 days of HEAD and is well-formed."""
+    """Assert the curator fixture is well-formed and was verified within 7 days.
+
+    The fixture's content is the real contract (the six documented
+    SkillUsageStore fields). The mtime is captured at the start of
+    the test (no mutation) and the age is computed against "now"; a
+    fresh checkout with an old git-recorded mtime that exceeds 7
+    days FAILS this gate as it should.
+    """
     import json
     import time
     from pathlib import Path
@@ -319,8 +326,8 @@ def test_report_curator_field_verification_recorded() -> None:
         "last_patched_at",
     }
     assert fields == expected
-    mtime = fixture.stat().st_mtime
-    age = time.time() - mtime
+    original_mtime = fixture.stat().st_mtime
+    age = time.time() - original_mtime
     assert age < 7 * 86400, f"curator fixture is {age / 86400:.1f} days old"
 
 
