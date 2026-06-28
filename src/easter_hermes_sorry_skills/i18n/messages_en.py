@@ -64,11 +64,14 @@ OK_PATCHED = "OK: site {site_id} patched successfully"
 PERMISSION_DENIED = "permission denied writing {path}"
 IO_ERROR = "I/O error writing {path}: {error}"
 CROSS_FS_WARN = "warning: target and tmp live on different filesystems"
-TEXT_DRIFT = "text drift detected at site {site_id}: expected {expected!r}, actual {actual!r}"
+TEXT_DRIFT = "text drift detected at site {site_id}: expected {expected}, actual {actual}"
 
 # Dry-run plan output (plain English).
 DRY_RUN_PLAN_HEADER = "plan for {target}:"
-DRY_RUN_PREFLIGHT_WARNING = "WARNING: target is the live hermes-agent checkout, no patches will be applied"
+DRY_RUN_PREFLIGHT_WARNING = (
+    "WARNING: target is the live hermes-agent checkout (the default), no patches will be applied.\n"
+    "  Pass --target <path> to validate a different checkout."
+)
 DRY_RUN_PATCH_LINE = "would patch: {file_path} (site {site_id})"
 DRY_RUN_DIFF_LINE_OLD = "  line {line}: - {old}"
 DRY_RUN_DIFF_LINE_NEW = "  line {line}: + {new}"

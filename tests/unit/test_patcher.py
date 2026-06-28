@@ -313,8 +313,8 @@ def test_target_required_exits_4(
 @pytest.mark.parametrize(
     ("lang", "expected_warning"),
     [
-        ("en", "WARNING: target is the live hermes-agent checkout, no patches will be applied"),
-        ("hu", "FIGYELEM: a target az élő hermes-agent checkout, nem történik patch"),
+        ("en", "WARNING: target is the live hermes-agent checkout (the default), no patches will be applied"),
+        ("hu", "FIGYELEM: a target az élő hermes-agent checkout (alapértelmezett), nem történik patch"),
     ],
 )
 def test_target_resolves_to_hermes_agent_refused(
@@ -499,12 +499,11 @@ def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
-    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3)."
+    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
     # The consult-rule insertion sits immediately before the 3-line
     # anchor block (one line above the first anchor line).
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
-    assert lines[anchor_idx + 1] == ""
-    assert lines[anchor_idx + 2] == '"'
+    assert lines[anchor_idx + 1] == '    "User-preference embedding (important): when the user expressed a "'
 
 
 def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
@@ -520,15 +519,14 @@ def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    # E5's anchor `(2), or (3).` is a substring of E4's anchor; find
+    # E5's anchor `(2), or (3).\n\n"` is a substring of E4's anchor; find
     # the EXACT line (E5's anchor text).
-    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).')
-    assert lines[anchor_idx] == '    "(2), or (3).'
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).\\n\\n"')
+    assert lines[anchor_idx] == '    "(2), or (3).\\n\\n"'
     # The consult-rule insertion sits immediately before the 3-line
     # anchor block (one line above the first anchor line).
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
-    assert lines[anchor_idx + 1] == ""
-    assert lines[anchor_idx + 2] == '"'
+    assert lines[anchor_idx + 1] == '    "User-preference embedding: when the user complains about how "'
 
 
 def test_task_e_current_text_is_unique_in_source() -> None:

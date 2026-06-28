@@ -71,11 +71,14 @@ OK_PATCHED = "OK: a {site_id} hely sikeresen javítva"
 PERMISSION_DENIED = "írási engedély megtagadva: {path}"
 IO_ERROR = "I/O hiba a {path} írásakor: {error}"
 CROSS_FS_WARN = "figyelmeztetés: a cél és az ideiglenes könyvtár különböző fájlrendszeren van"
-TEXT_DRIFT = "szöveg-eltérés a {site_id} helyen: elvárt {expected!r}, tényleges {actual!r}"
+TEXT_DRIFT = "szöveg-eltérés a {site_id} helyen: elvárt {expected}, tényleges {actual}"
 
 # Dry-run plan output (plain Hungarian).
 DRY_RUN_PLAN_HEADER = "terv a {target} útvonalra:"
-DRY_RUN_PREFLIGHT_WARNING = "FIGYELEM: a target az élő hermes-agent checkout, nem történik patch"
+DRY_RUN_PREFLIGHT_WARNING = (
+    "FIGYELEM: a target az élő hermes-agent checkout (alapértelmezett), nem történik patch.\n"
+    "  Ha más checkoutra akarsz validálni, add meg a --target <path> flaget."
+)
 DRY_RUN_PATCH_LINE = "patchelné: {file_path} ({site_id} site)"
 DRY_RUN_DIFF_LINE_OLD = "  line {line}: - {old}"
 DRY_RUN_DIFF_LINE_NEW = "  line {line}: + {new}"
