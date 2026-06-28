@@ -3,16 +3,16 @@
 Extracted from :mod:`._patcher` to keep the orchestrator under
 wemake WPS202 (module members <= 7).
 
-The preflight encodes the three refusal rules:
+The preflight encodes the two refusal rules:
 
 1. No ``--target`` provided -> exit code 4 (``EXIT_IO``) with severity
    ``"error"``.
-2. Target resolves to ``~/.hermes/hermes-agent`` -> severity
-   ``"warning"`` with exit code ``EXIT_OK`` when ``dry_run=True`` (soft
-   safety — the patcher continues so the operator sees the planned
-   changes before deciding whether to apply); severity ``"error"`` with
-   exit code ``EXIT_IO`` when ``dry_run=False`` (apply mode still
-   refuses the live checkout).
+2. Target resolves to ``~/.hermes/hermes-agent`` AND ``dry_run=True`` ->
+   severity ``"warning"`` with exit code ``EXIT_OK`` (soft safety — the
+   patcher continues so the operator sees the planned changes before
+   deciding whether to apply). Apply mode (``dry_run=False``) no
+   longer refuses the live hermes-agent checkout; the operator is the
+   authority on which checkout to patch.
 3. ``agent/skill_utils.py`` missing under the target -> exit code 4
    (``EXIT_IO``) with severity ``"error"``.
 
@@ -59,11 +59,13 @@ def run_preflight(
 ) -> PreflightOutcome | None:
     """Return a :class:`PreflightOutcome` on refusal, ``None`` to continue.
 
-    Encodes the refusal rules: no target, target is the hermes-agent
-    checkout, missing skill_utils. The hermes-agent rule is SOFT
-    (severity ``"warning"``, exit_code ``EXIT_OK``) under ``--dry-run``
-    so the operator can audit the planned patches before applying.
-    The other two rules are always HARD (severity ``"error"``,
+    Encodes the refusal rules: no target, missing skill_utils. The
+    hermes-agent rule is SOFT (severity ``"warning"``, exit_code
+    ``EXIT_OK``) under ``--dry-run`` so the operator can audit the
+    planned patches before applying; apply mode (``dry_run=False``) does
+    NOT short-circuit on the hermes-agent target — the operator is the
+    authority on which checkout to patch. The no-target and
+    missing-skill-utils rules are always HARD (severity ``"error"``,
     exit_code ``EXIT_IO``).
 
     ``lang`` selects the single-language i18n module via
@@ -79,18 +81,11 @@ def run_preflight(
             severity="error",
         )
     target_path = Path(target).resolve()
-    if is_hermes_agent(target_path):
-        if dry_run:
-            return PreflightOutcome(
-                exit_code=EXIT_OK,
-                diagnostic=msgs.DRY_RUN_PREFLIGHT_WARNING,
-                severity="warning",
-            )
-        msg = msgs.TARGET_IS_HERMES_AGENT.format(resolved=str(target_path))
+    if dry_run and is_hermes_agent(target_path):
         return PreflightOutcome(
-            exit_code=EXIT_IO,
-            diagnostic=msg,
-            severity="error",
+            exit_code=EXIT_OK,
+            diagnostic=msgs.DRY_RUN_PREFLIGHT_WARNING,
+            severity="warning",
         )
     skill_utils = target_path / TOOLS_SKILL_UTILS_REL
     if not skill_utils.exists():
