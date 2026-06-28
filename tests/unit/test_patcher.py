@@ -18,6 +18,7 @@ verifies the decorator itself fires when the live file is mutated.
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import os
 import stat
@@ -28,6 +29,7 @@ import pytest
 from easter_hermes_sorry_skills._patcher import (
     ALL_TASK_E_SITES,
     E0_CONSULT_RULE_DEF,
+    E4B_CONSULT_RULE_IMPORT,
     EXIT_DRIFT,
     EXIT_IO,
     EXIT_OK,
@@ -451,7 +453,10 @@ def test_e1_skills_guidance_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    # Find the E1 anchor in the post-patch file.
+    # Find the E1 anchor in the post-patch file dynamically — the
+    # patcher sorts sites in descending line order so the anchor
+    # shifts down by the number of earlier-line insertions that
+    # land above it (E0 + E4b = +2 lines).
     anchor_idx = next(i for i, ln in enumerate(lines) if "aren't maintained become liabilities" in ln)
     assert lines[anchor_idx] == '    "Skills that aren\'t maintained become liabilities."'
     # The next line is the appended consult-rule line (constant name).
@@ -474,15 +479,15 @@ def test_e2_memory_guidance_appends_only(hermes_checkout: Path) -> None:
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     anchor_idx = next(i for i, ln in enumerate(lines) if "necessary later, save it as a skill" in ln)
-    assert lines[anchor_idx] == '    "necessary later, save it as a skill with the skill tool.\\n"'
+    assert lines[anchor_idx] == r'    "necessary later, save it as a skill with the skill tool.\n"'
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
 
 
 def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E4 anchor preserved verbatim and
-    the consult-rule line precedes it (the patcher inserts BEFORE the
-    multi-line 3-line anchor block; the rule + the 3 anchor lines
-    remain in order).
+    the consult-rule line precedes it (the patcher inserts BETWEEN
+    the first and second lines of the multi-line 3-line anchor block;
+    the rule + the 3 anchor lines remain in order).
     """
     r = run_patch(
         PatchRunInputs(
@@ -493,11 +498,19 @@ def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
+    # Find the E4 anchor (the middle fragment of the 3-line block) in the
+    # post-patch file dynamically — the patcher sorts sites in descending
+    # line order so anchor positions shift by the number of earlier-line
+    # insertions (E0 + E4b + E1 + E2 = +4 lines below the E4 anchor).
     anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
+    # AC-2.8 / cap-style fix: E4 anchor lines use bare-adjacency implicit
+    # concat (real upstream does NOT prefix fragments with ``+``); the
+    # parens-wrapped insertion lands between fragment 1 and fragment 2
+    # without breaking the implicit-concat syntax.
     assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
-    # The consult-rule insertion sits immediately before the 3-line
-    # anchor block (one line above the first anchor line).
-    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
+    # The consult-rule insertion sits immediately before the second
+    # anchor fragment (one line above).
+    assert "+ (SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
     assert lines[anchor_idx + 1] == '    "User-preference embedding (important): when the user expressed a "'
 
 
@@ -514,19 +527,34 @@ def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    # E5's anchor `(2), or (3).\n\n"` is a substring of E4's anchor; find
-    # the EXACT line (E5's anchor text).
+    # E5's anchor `(2), or (3).\n\n"` is a substring of E4's anchor;
+    # find the EXACT line dynamically (anchor shifts down by earlier-line
+    # insertions — same shifting as E4).
     anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).\\n\\n"')
     assert lines[anchor_idx] == '    "(2), or (3).\\n\\n"'
-    # The consult-rule insertion sits immediately before the 3-line
-    # anchor block (one line above the first anchor line).
-    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
+    # The consult-rule insertion sits immediately before the second
+    # anchor fragment (one line above).
+    assert "+ (SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
     assert lines[anchor_idx + 1] == '    "User-preference embedding: when the user complains about how "'
 
 
 def test_task_e_current_text_is_unique_in_source() -> None:
     """05 §Anchor-hygiene — each Task E primary anchor is one or more
     physical lines and yields exactly 1 hit in its site table.
+
+    AC-2.8 / cap-style fix: E0 anchors on the CLOSING
+    triple-double-quote line (L5 of the multi-line docstring at the
+    top of ``prompt_builder.py``); E4b anchors on the
+    ``from __future__ import annotations`` line at L19 of
+    ``background_review.py`` (PEP 563 ordering — anchoring on the
+    L17 closing-quote would push the E4b insertion to L18 and
+    demote ``from __future__`` to L20, breaking PEP 563). Both
+    anchors are byte-exact physical lines identified by their
+    line number (1-based). The 8-char minimum applies to the
+    OTHER Task E sites whose anchor text is a meaningful code
+    fragment; E0's anchor is a single structural delimiter
+    identified by its position, not by content; E4b's anchor is
+    the byte-exact ``from __future__ import annotations`` line.
     """
     for site in ALL_TASK_E_SITES:
         # The primary anchor is exactly the bytes of one or more
@@ -535,11 +563,30 @@ def test_task_e_current_text_is_unique_in_source() -> None:
         # real newline characters) are matched against consecutive
         # file lines by ``locate_anchor``.
         anchor = site.primary_anchor()
-        # fmt: off
-        assert (
-            len(anchor.text) >= 8
-        ), f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
-        # fmt: on
+        if site.site_id == "E0.consult_rule_def":
+            # E0 anchors on the closing-triple-double-quote line
+            # (structural delimiter identified by position, not content).
+            # fmt: off
+            assert (
+                anchor.text == '"""'
+            ), f"site {site.site_id} anchor must be the closing triple-double-quote line of the L1 docstring."
+            # fmt: on
+        elif site.site_id == "E4b.consult_rule_import":
+            # E4b anchors on the byte-exact ``from __future__ import
+            # annotations`` line at L19 (PEP 563 ordering). The anchor
+            # text is the full line including the trailing newline
+            # (byte-exact match against the real upstream hermes L19).
+            # fmt: off
+            assert (
+                anchor.text == "from __future__ import annotations\n"
+            ), f"site {site.site_id} anchor must be the byte-exact ``from __future__ import annotations`` line at L19."
+            # fmt: on
+        else:
+            # fmt: off
+            assert (
+                len(anchor.text) >= 8
+            ), f"site {site.site_id} anchor must be >= 8 chars per plans/04 D5, got {len(anchor.text)}"
+            # fmt: on
         # The insertion is a single NEW line (additive-only).
         assert site.insertion.endswith("\n")
 
@@ -584,6 +631,164 @@ def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
     assert "use skill-creator" in text
     assert "Persist with skill_manage" in text
     assert "one-file, < ~20 lines, no schema change" in text
+
+
+def test_e0_anchors_on_closing_triple_double_quote() -> None:
+    r"""AC-2.8: E0 anchors on the CLOSING triple-double-quote line of
+    the multi-line docstring at the top of ``agent/prompt_builder.py``.
+
+    The fixture mirrors real Hermes: L1 opens the docstring, L2 is a
+    blank line, L3..L4 are body text, L5 closes it. The patcher inserts
+    the constant definition AFTER the closing triple-double-quote
+    (append-before shape) so the code lands at module scope and the
+    original closing triple-double-quote stays untouched. No
+    closing-triple-double-quote prefix is needed in the insertion
+    payload because the fixture itself terminates the docstring at L5.
+    """
+    # Anchor is the closing-triple-double-quote line at L5.
+    anchor = E0_CONSULT_RULE_DEF.primary_anchor()
+    assert anchor.line == 5
+    assert anchor.text == '"""', (
+        "E0 anchor must be the closing triple-double-quote of the "
+        "L1 docstring (real Hermes has a multi-line docstring with a "
+        "real closing line at L5)."
+    )
+    # Insertion is the constant definition only — no closing-quote prefix.
+    insertion = E0_CONSULT_RULE_DEF.insertion
+    assert not insertion.startswith('"""'), (
+        "E0 insertion must NOT start with a closing triple-double-quote; "
+        "the fixture's L5 anchor already terminates the docstring."
+    )
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in insertion
+
+
+def test_e4b_anchors_on_from_future_line() -> None:
+    r"""AC-2.8: E4b anchors on the ``from __future__ import annotations``
+    line at L19 of ``agent/background_review.py`` (NOT the L17 closing
+    triple-double-quote).
+
+    PEP 563: ``from __future__ import annotations`` MUST be the first
+    non-docstring statement at module scope. Preceding it with any
+    other import statement raises ``SyntaxError`` at compile time
+    (``ast.parse`` is lenient and accepts the broken ordering, but real
+    CPython refuses). The previous anchor-on-L17 closing-quote layout
+    pushed the E4b insertion to L18 (the new import), demoting
+    ``from __future__`` to L20 and breaking PEP 563. The fix anchors
+    on the byte-exact L19 line so the E4b insertion lands at L20 and
+    ``from __future__`` stays the first module-scope statement.
+    """
+    anchor = E4B_CONSULT_RULE_IMPORT.primary_anchor()
+    assert anchor.line == 19
+    msg = "E4B anchor must be the byte-exact ``from __future__ import annotations`` line at L19 (PEP 563 ordering)."
+    assert anchor.text == "from __future__ import annotations\n", msg
+    insertion = E4B_CONSULT_RULE_IMPORT.insertion
+    assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in insertion
+
+
+def test_e0_post_patch_prompt_builder_parses() -> None:
+    r"""AC-2.8: ``ast.parse()`` accepts the post-patch ``prompt_builder.py``.
+
+    Regression test for the previous 99b4e8f fix: closing the
+    docstring immediately after the L1 anchor pushed the indented
+    E1/E2 anchor lines into module scope, where they were syntactically
+    invalid (4-space indented string literals at module scope).
+
+    This test patches the conftest fixture and asserts the patched
+    source parses cleanly. The fixture's anchor lines are wrapped in
+    ``MEMORY_GUIDANCE = (...)`` / ``SKILLS_GUIDANCE = (...)`` tuple
+    literals so the indented anchor strings are syntactically valid at
+    module scope once the docstring is closed.
+    """
+    from easter_hermes_sorry_skills._patcher_pipeline_emit import mutate_lines_for_site
+
+    patched = "".join(mutate_lines_for_site(E0_CONSULT_RULE_DEF, PROMPT_BUILDER_PATCHED))
+    # ast.parse must not raise SyntaxError.
+    ast.parse(patched)
+    # The constant definition is bound at module scope.
+    tree = ast.parse(patched)
+    binding = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "SKILL_CREATOR_CONSULT_RULE" for target in node.targets
+            )
+        ),
+        None,
+    )
+    assert binding is not None, (
+        "post-patch prompt_builder.py must bind SKILL_CREATOR_CONSULT_RULE "
+        "at module scope (regression: 99b4e8f left it inside the docstring)."
+    )
+
+
+def test_e4b_post_patch_background_review_parses() -> None:
+    """AC-2.8: ast.parse() accepts the post-patch background_review.py.
+
+    Regression test for the previous 99b4e8f fix: closing the docstring
+    immediately after the L1 anchor pushed subsequent code into the
+    docstring (the closing triple-double-quote from the insertion was
+    followed by the original unterminated opening triple-double-quote
+    line at L1, leaving the rest of the file stranded inside a
+    still-open docstring literal).
+    """
+    from easter_hermes_sorry_skills._patcher_pipeline_emit import mutate_lines_for_site
+
+    patched = "".join(mutate_lines_for_site(E4B_CONSULT_RULE_IMPORT, BACKGROUND_REVIEW_PATCHED))
+    # ast.parse must not raise SyntaxError.
+    ast.parse(patched)
+
+
+def test_post_patch_prompt_builder_and_background_review_both_parse() -> None:
+    r"""AC-2.8: end-to-end parseability after Task E sites apply.
+
+    Runs ``mutate_lines_for_site`` for every Task E site against the
+    conftest fixtures and asserts the post-patch sources both parse
+    cleanly via ``ast.parse()``. Catches the class of drift where
+    the patcher writes syntactically invalid Python (the 99b4e8f
+    insertion left the file with an unterminated triple-quoted string
+    literal, which Python raises as ``SyntaxError`` at parse time).
+    """
+    from easter_hermes_sorry_skills._patcher_pipeline_emit import mutate_lines_for_site
+
+    pb_text = PROMPT_BUILDER_PATCHED
+    br_text = BACKGROUND_REVIEW_PATCHED
+    # Apply Task E sites in DESCENDING line order (matches the
+    # patcher's pipeline ordering).
+    sorted_sites = sorted(ALL_TASK_E_SITES, key=lambda s: s.line_for_state, reverse=True)
+    for site in sorted_sites:
+        # Map file_path to the right buffer
+        if str(site.file_path).endswith("prompt_builder.py"):
+            pb_text = "".join(mutate_lines_for_site(site, pb_text))
+        elif str(site.file_path).endswith("background_review.py"):
+            br_text = "".join(mutate_lines_for_site(site, br_text))
+    ast.parse(pb_text)
+    ast.parse(br_text)
+
+
+def test_prompt_builder_fixture_parses_pre_patch() -> None:
+    """AC-2.8: the conftest PROMPT_BUILDER_PATCHED fixture itself
+    parses cleanly as Python BEFORE the patcher runs.
+
+    Catches fixture regression: if a future change drops the closing
+    triple-double-quote line or removes the tuple wrappers around the
+    E1/E2 anchor lines, the fixture becomes invalid Python and the
+    post-patch parseability test above cannot be trusted.
+    """
+    ast.parse(PROMPT_BUILDER_PATCHED)
+
+
+def test_background_review_fixture_parses_pre_patch() -> None:
+    """AC-2.8: the conftest BACKGROUND_REVIEW_PATCHED fixture itself
+    parses cleanly as Python BEFORE the patcher runs.
+
+    Catches fixture regression: if a future change drops the closing
+    triple-double-quote line or removes the tuple wrappers around the
+    E4/E5 anchor lines, the fixture becomes invalid Python and the
+    post-patch parseability test above cannot be trusted.
+    """
+    ast.parse(BACKGROUND_REVIEW_PATCHED)
 
 
 def test_e4_e5_share_constant_after_patch(hermes_checkout: Path) -> None:
@@ -2105,3 +2310,87 @@ def test_squash_payload_preserves_unicode_chars() -> None:
 def test_squash_payload_empty_string_returns_empty() -> None:
     """An empty string stays empty — no control chars, no truncation."""
     assert _squash_payload("") == ""
+
+
+def test_apply_against_real_upstream_hermes_files(tmp_path: Path) -> None:
+    """Byte-exact anchor restoration against REAL upstream hermes files.
+
+    Regression for the 99b4e8f + 3b40b6a + 1c5972d + f8157ce fix
+    sequence. Copies REAL ~/.hermes/hermes-agent/agent/{prompt_builder,
+    background_review}.py into a tmp checkout, runs the patcher,
+    asserts ``compile()`` accepts the post-patch files
+    (catches PEP 563 — ``ast.parse`` is lenient, ``compile`` is not)
+    AND that a real hermes venv subprocess import of the patched
+    files resolves ``SKILL_CREATOR_CONSULT_RULE`` in
+    ``_SKILL_REVIEW_PROMPT`` and ``_COMBINED_REVIEW_PROMPT``.
+    Skips when the live install is not present.
+    """
+    import ast
+    import subprocess
+
+    live = Path.home() / ".hermes" / "hermes-agent"
+    pb_src = live / "agent" / "prompt_builder.py"
+    br_src = live / "agent" / "background_review.py"
+    if not (pb_src.is_file() and br_src.is_file()):
+        pytest.skip("real upstream hermes files not present")
+
+    checkout = tmp_path / "real-upstream-checkout"
+    (checkout / "agent").mkdir(parents=True)
+    pb_dst = checkout / "agent" / "prompt_builder.py"
+    br_dst = checkout / "agent" / "background_review.py"
+    skill_dst = checkout / "agent" / "skill_utils.py"
+    pb_dst.write_bytes(pb_src.read_bytes())
+    br_dst.write_bytes(br_src.read_bytes())
+    skill_dst.write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
+
+    r = run_patch(PatchRunInputs(target=checkout, dry_run=False))
+    assert r.exit_code == EXIT_OK, f"patcher drift: {r.diagnostics}"
+
+    # compile() catches PEP 563 violations that ast.parse misses
+    # (ast.parse is lenient and accepts ``from __future__ import
+    # annotations`` not being first; CPython's compile() is strict
+    # and raises SyntaxError).
+    pb_text = pb_dst.read_text(encoding="utf-8")
+    br_text = br_dst.read_text(encoding="utf-8")
+    compile(pb_text, str(pb_dst), "exec")
+    compile(br_text, str(br_dst), "exec")
+    ast.parse(pb_text)
+    ast.parse(br_text)
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in pb_text
+    assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in br_text
+    assert br_text.count("SKILL_CREATOR_CONSULT_RULE") >= 3
+
+    # Real hermes venv subprocess import: load prompt_builder +
+    # background_review under the real hermes python and assert
+    # SKILL_CREATOR_CONSULT_RULE appears in _SKILL_REVIEW_PROMPT and
+    # _COMBINED_REVIEW_PROMPT. Skips when the real hermes venv is not
+    # present.
+    hermes_python = Path("/Users/kiscsicska/.hermes/hermes-agent/venv/bin/python")
+    if not hermes_python.is_file():
+        pytest.skip("real hermes venv python not present")
+    args = [
+        str(hermes_python),
+        "-c",
+        'import sys; sys.path.insert(0, "' + str(checkout) + '"); '
+        "from agent import prompt_builder; "
+        "from agent import background_review; "
+        "assert prompt_builder.SKILL_CREATOR_CONSULT_RULE; "
+        "assert background_review._SKILL_REVIEW_PROMPT; "
+        "assert background_review._COMBINED_REVIEW_PROMPT; "
+        "assert 'skill-creator' in background_review._SKILL_REVIEW_PROMPT; "
+        "assert 'skill-creator' in background_review._COMBINED_REVIEW_PROMPT; "
+        'print("FULL_HERMES_IMPORT_OK")',
+    ]
+    result = subprocess.run(args, capture_output=True, text=True, cwd=str(checkout))
+    if result.returncode != 0 or "FULL_HERMES_IMPORT_OK" not in result.stdout:
+        # If the failure is an ImportError for a name not in our minimal
+        # SKILL_UTILS_PATCHED fixture, skip — the fixture is intentionally
+        # stripped down (only S1.cap site is exercised at unit-test time).
+        # The compile() check above already catches the PEP 563 regression.
+        if "ImportError" in result.stderr and "from 'agent.skill_utils'" in result.stderr:
+            pytest.skip(
+                "real hermes prompt_builder.py transitively imports names not "
+                "in SKILL_UTILS_PATCHED fixture (intentionally minimal). "
+                "compile() check above already catches the PEP 563 regression."
+            )
+        raise AssertionError(f"real hermes import failed: stdout={result.stdout!r} stderr={result.stderr!r}")
