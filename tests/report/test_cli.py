@@ -331,8 +331,10 @@ def test_report_curator_field_verification_recorded() -> None:
                 text=True,
             ).strip()
         )
-    except subprocess.CalledProcessError:
-        commit_time = int(fixture.stat().st_mtime)
+    except (subprocess.CalledProcessError, ValueError):
+        # Fallback: empty stdout (untracked file / fresh fixture never committed)
+        # or non-zero exit -> use working-copy mtime as conservative age estimate.
+        commit_time = fixture.stat().st_mtime
     age = time.time() - commit_time
     assert age < 7 * 86400, f"curator fixture is {age / 86400:.1f} days old"
 
