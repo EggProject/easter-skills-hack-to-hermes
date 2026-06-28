@@ -586,6 +586,56 @@ def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
     assert "one-file, < ~20 lines, no schema change" in text
 
 
+def test_e0_insertion_closes_docstring_first() -> None:
+    r"""AC-2.8: E0 anchors on the L1 docstring of ``agent/prompt_builder.py``.
+
+    The fixture mirrors reality: L1 is the OPENING line of a multi-line
+    docstring (no closing triple-double-quote on that line). The
+    patcher inserts the constant definition AFTER the anchor, so the
+    insertion payload itself must CLOSE the docstring first. Otherwise
+    the inserted code lands inside the still-open docstring and Python
+    silently hides the constant (the file parses, but
+    ``SKILL_CREATOR_CONSULT_RULE`` is never bound at module level).
+    """
+    insertion = E0_CONSULT_RULE_DEF.insertion
+    # The docstring must be closed BEFORE the constant definition
+    # begins; a closing triple-double-quote must appear before the
+    # assignment.
+    assert insertion.startswith('"""'), (
+        "E0 insertion must start with a closing triple-double-quote "
+        "to terminate the multi-line docstring opened by the L1 anchor."
+    )
+    assign_idx = insertion.find("SKILL_CREATOR_CONSULT_RULE = (")
+    assert assign_idx != -1
+    assert 0 < assign_idx, (
+        "E0 insertion places the constant assignment INSIDE the "
+        "docstring; the closing triple-double-quote must precede it."
+    )
+
+
+def test_e4b_insertion_closes_docstring_first() -> None:
+    r"""AC-2.8: E4b anchors on the L1 docstring of ``agent/background_review.py``.
+
+    Same root-cause as E0: the fixture's L1 is the OPENING line of a
+    multi-line docstring. The patcher inserts the import line AFTER the
+    anchor, so the insertion payload itself must CLOSE the docstring
+    first. Otherwise the import lands inside the docstring and Python
+    raises SyntaxError at parse time (the test fixture has padding
+    text after the opening line, so the unterminated docstring swallows
+    the import and breaks the file's syntactic structure).
+    """
+    from easter_hermes_sorry_skills._patcher import E4B_CONSULT_RULE_IMPORT
+
+    insertion = E4B_CONSULT_RULE_IMPORT.insertion
+    assert insertion.startswith('"""'), (
+        "E4B insertion must start with a closing triple-double-quote "
+        "to terminate the multi-line docstring opened by the L1 anchor."
+    )
+    import_idx = insertion.find("from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE")
+    assert import_idx != -1
+    assert 0 < import_idx, "E4B insertion places import inside docstring"
+
+
 def test_e4_e5_share_constant_after_patch(hermes_checkout: Path) -> None:
     """AC-2.8 / plans/05 §B1.2: E4 and E5 reference the literal
     ``SKILL_CREATOR_CONSULT_RULE`` name and rely on the E4b import to

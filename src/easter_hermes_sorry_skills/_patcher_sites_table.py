@@ -59,8 +59,11 @@ _CONSULT_RULE_TEXT = (
 
 # Top-of-file insertion (constant definition) for the E0 site. E0 anchors
 # on the L1 docstring of ``agent/prompt_builder.py`` and appends this
-# block immediately after, so the constant is at module level.
-_CONSULT_RULE_DEFINITION = f"\nSKILL_CREATOR_CONSULT_RULE = (\n    {_CONSULT_RULE_TEXT!r}\n)\n"
+# block immediately after, so the constant is at module level. The
+# L1 docstring is a multi-line opening line (no closing ``"""`` on the
+# anchor line), so the insertion payload itself must close the
+# docstring first (``"""\n``) before emitting the constant definition.
+_CONSULT_RULE_DEFINITION = f'"""\n\nSKILL_CREATOR_CONSULT_RULE = (\n    {_CONSULT_RULE_TEXT!r}\n)\n'
 
 # --- site ``kind`` constants (WPS226 — reused > 3 times) -------------------
 KIND_APPEND = "append"
@@ -230,7 +233,7 @@ E4B_CONSULT_RULE_IMPORT = Site(
     site_id="E4b.consult_rule_import",
     file_path=BACKGROUND_REVIEW_REL,
     anchors=(Anchor(line=E4B_LINE, text=_E4B_ANCHOR_TEXT),),
-    insertion="from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE\n",
+    insertion='"""\nfrom agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE\n',
     expected_replacement="from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE",
     kind=KIND_APPEND,
     line_for_state=E4B_LINE,
