@@ -453,7 +453,10 @@ def test_e1_skills_guidance_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    # Find the E1 anchor in the post-patch file.
+    # Find the E1 anchor in the post-patch file dynamically — the
+    # patcher sorts sites in descending line order so the anchor
+    # shifts down by the number of earlier-line insertions that
+    # land above it (E0 + E4b = +2 lines).
     anchor_idx = next(i for i, ln in enumerate(lines) if "aren't maintained become liabilities" in ln)
     assert lines[anchor_idx] == '    "Skills that aren\'t maintained become liabilities."'
     # The next line is the appended consult-rule line (constant name).
@@ -476,7 +479,7 @@ def test_e2_memory_guidance_appends_only(hermes_checkout: Path) -> None:
     text = (hermes_checkout / "agent" / "prompt_builder.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     anchor_idx = next(i for i, ln in enumerate(lines) if "necessary later, save it as a skill" in ln)
-    assert lines[anchor_idx] == '    "necessary later, save it as a skill with the skill tool.\\n"'
+    assert lines[anchor_idx] == r'    "necessary later, save it as a skill with the skill tool.\n"'
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
 
 
@@ -495,16 +498,20 @@ def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
+    # Find the E4 anchor (the middle fragment of the 3-line block) in the
+    # post-patch file dynamically — the patcher sorts sites in descending
+    # line order so anchor positions shift by the number of earlier-line
+    # insertions (E0 + E4b + E1 + E2 = +4 lines below the E4 anchor).
     anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
-    # AC-2.8 / cap-style fix: E4 anchor lines use explicit ``+`` between
-    # strings (not bare adjacency) so the inserted expression at
-    # idx+1 lands between fragment 1 and fragment 2 without breaking
-    # the implicit-concat syntax.
-    assert lines[anchor_idx] == "    + \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
+    # AC-2.8 / cap-style fix: E4 anchor lines use bare-adjacency implicit
+    # concat (real upstream does NOT prefix fragments with ``+``); the
+    # parens-wrapped insertion lands between fragment 1 and fragment 2
+    # without breaking the implicit-concat syntax.
+    assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3).\\n\\n\""
     # The consult-rule insertion sits immediately before the second
     # anchor fragment (one line above).
-    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
-    assert lines[anchor_idx + 1] == '    + "User-preference embedding (important): when the user expressed a "'
+    assert "+ (SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
+    assert lines[anchor_idx + 1] == '    "User-preference embedding (important): when the user expressed a "'
 
 
 def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
@@ -521,13 +528,14 @@ def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     text = (hermes_checkout / "agent" / "background_review.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     # E5's anchor `(2), or (3).\n\n"` is a substring of E4's anchor;
-    # find the EXACT line (E5's anchor text, now with ``+`` prefix).
-    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    + "(2), or (3).\\n\\n"')
-    assert lines[anchor_idx] == '    + "(2), or (3).\\n\\n"'
+    # find the EXACT line dynamically (anchor shifts down by earlier-line
+    # insertions — same shifting as E4).
+    anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).\\n\\n"')
+    assert lines[anchor_idx] == '    "(2), or (3).\\n\\n"'
     # The consult-rule insertion sits immediately before the second
     # anchor fragment (one line above).
-    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
-    assert lines[anchor_idx + 1] == '    + "User-preference embedding: when the user complains about how "'
+    assert "+ (SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
+    assert lines[anchor_idx + 1] == '    "User-preference embedding: when the user complains about how "'
 
 
 def test_task_e_current_text_is_unique_in_source() -> None:
@@ -2284,3 +2292,41 @@ def test_squash_payload_preserves_unicode_chars() -> None:
 def test_squash_payload_empty_string_returns_empty() -> None:
     """An empty string stays empty — no control chars, no truncation."""
     assert _squash_payload("") == ""
+
+
+def test_apply_against_real_upstream_hermes_files(tmp_path: Path) -> None:
+    """Byte-exact anchor restoration against REAL upstream hermes files.
+
+    Regression for the 99b4e8f + 3b40b6a + 1c5972d fix sequence.
+    Copies REAL ~/.hermes/hermes-agent/agent/{prompt_builder,background_review}.py
+    into a tmp checkout, runs the patcher, asserts ast.parse accepts
+    the post-patch files and SKILL_CREATOR_CONSULT_RULE resolves.
+    Skips when the live install is not present.
+    """
+    import ast
+
+    live = Path.home() / ".hermes" / "hermes-agent"
+    pb_src = live / "agent" / "prompt_builder.py"
+    br_src = live / "agent" / "background_review.py"
+    if not (pb_src.is_file() and br_src.is_file()):
+        pytest.skip("real upstream hermes files not present")
+
+    checkout = tmp_path / "real-upstream-checkout"
+    (checkout / "agent").mkdir(parents=True)
+    pb_dst = checkout / "agent" / "prompt_builder.py"
+    br_dst = checkout / "agent" / "background_review.py"
+    skill_dst = checkout / "agent" / "skill_utils.py"
+    pb_dst.write_bytes(pb_src.read_bytes())
+    br_dst.write_bytes(br_src.read_bytes())
+    skill_dst.write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
+
+    r = run_patch(PatchRunInputs(target=checkout, dry_run=False))
+    assert r.exit_code == EXIT_OK, f"patcher drift: {r.diagnostics}"
+
+    ast.parse(pb_dst.read_text(encoding="utf-8"))
+    ast.parse(br_dst.read_text(encoding="utf-8"))
+    pb_text = pb_dst.read_text(encoding="utf-8")
+    assert "SKILL_CREATOR_CONSULT_RULE = (" in pb_text
+    br_text = br_dst.read_text(encoding="utf-8")
+    assert "from agent.prompt_builder import SKILL_CREATOR_CONSULT_RULE" in br_text
+    assert br_text.count("SKILL_CREATOR_CONSULT_RULE") >= 3

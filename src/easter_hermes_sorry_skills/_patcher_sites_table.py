@@ -82,13 +82,13 @@ _NL2 = r"\n\n"
 # the implicit-concat and Python raises ``SyntaxError`` ("perhaps you
 # forgot a comma?"). The explicit ``+`` keeps each fragment as a
 # self-contained string-concat operand.
-_E4_LINE_A = '    + "session artifact. If the proposed name only makes sense for "\n'
-_E4_LINE_B = '    + "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n"
-_E4_LINE_C = '    + "User-preference embedding (important): when the user expressed a "\n'
+_E4_LINE_A = '    "session artifact. If the proposed name only makes sense for "\n'
+_E4_LINE_B = '    "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n"
+_E4_LINE_C = '    "User-preference embedding (important): when the user expressed a "\n'
 _E4_TEXT = _E4_LINE_A + _E4_LINE_B + _E4_LINE_C
-_E5_LINE_A = '    + "artifact. If the name only fits today\'s task, fall back to (1), "\n'
-_E5_LINE_B = r'    + "(2), or (3).\n\n"' "\n"
-_E5_LINE_C = '    + "User-preference embedding: when the user complains about how "\n'
+_E5_LINE_A = '    "artifact. If the name only fits today\'s task, fall back to (1), "\n'
+_E5_LINE_B = r'    "(2), or (3).\n\n"' "\n"
+_E5_LINE_C = '    "User-preference embedding: when the user complains about how "\n'
 _E5_TEXT = _E5_LINE_A + _E5_LINE_B + _E5_LINE_C
 
 
@@ -154,8 +154,8 @@ E0_LINE = 5
 # (constant definition) is applied LAST (the patcher sorts sites
 # in DESCENDING line_for_state order), so the original E1/E2
 # anchors remain valid against the pre-E0 file state.
-E1_LINE = 182
-E2_LINE = 161
+E1_LINE = 179
+E2_LINE = 158
 # E4b anchors on the CLOSING ``"""`` of the multi-line docstring at
 # the top of ``agent/background_review.py``. Real Hermes's
 # docstring spans L1 (opening) + L2 (blank) + L3..L16 (body) +
@@ -169,8 +169,8 @@ E4B_LINE = 17
 # blank + 14 body lines + closing), so E4 and E5 anchor lines
 # shifted by +15 (the extra 15 docstring lines added to the
 # fixture to mirror real Hermes).
-E4_LINE = 259
-E5_LINE = 345
+E4_LINE = 229
+E5_LINE = 316
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
 # (agent/background_review.py). Both anchor on the CLOSING ``"""``
@@ -329,8 +329,8 @@ E4_SKILL_REVIEW_PROMPT = Site(
     # prefix is required because the anchor block uses explicit
     # ``+`` between string fragments (not bare adjacency), so the
     # inserted expression must also start with ``+`` to chain.
-    insertion=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
-    expected_replacement=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
+    insertion=f"    + (SKILL_CREATOR_CONSULT_RULE + {_NL2!r}) +\n",
+    expected_replacement=f"    + (SKILL_CREATOR_CONSULT_RULE + {_NL2!r}) +",
     kind=KIND_APPEND,
     line_for_state=E4_LINE,
 )
@@ -344,8 +344,8 @@ E5_COMBINED_REVIEW_PROMPT = Site(
             text=_E5_TEXT,
         ),
     ),
-    insertion=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}\n",
-    expected_replacement=f"    + SKILL_CREATOR_CONSULT_RULE + {_NL2!r}",
+    insertion=f"    + (SKILL_CREATOR_CONSULT_RULE + {_NL2!r}) +\n",
+    expected_replacement=f"    + (SKILL_CREATOR_CONSULT_RULE + {_NL2!r}) +",
     kind=KIND_APPEND,
     line_for_state=E5_LINE,
 )

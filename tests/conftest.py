@@ -115,14 +115,14 @@ def _build_prompt_builder_padded() -> str:
     lines.append('"""\n')
     # E2 anchor must stay at L158 (existing test contract): insert the
     # MEMORY_GUIDANCE opener at L157, E2 anchor at L158, close at L159.
-    for i in range(1, 155):
+    for i in range(1, 152):
         lines.append(f"# padding {i}\n")
     lines.append("MEMORY_GUIDANCE = (\n")
     lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
     lines.append(")  # end MEMORY_GUIDANCE\n")
     # E1 anchor must stay at L179 (existing test contract): SKILLS_GUIDANCE
     # opener at L178, E1 anchor at L179, close at L180.
-    for i in range(159, 177):
+    for i in range(156, 174):
         lines.append(f"# padding {i}\n")
     lines.append("SKILLS_GUIDANCE = (\n")
     lines.append('    "Skills that aren\'t maintained become liabilities."\n')
@@ -193,27 +193,27 @@ def _build_background_review_padded() -> str:
     lines.append("See the ``hermes-agent-dev`` skill (``references/self-improvement-loop.md``)\n")
     lines.append("for invariants and PR review criteria.\n")
     lines.append('"""\n')
-    # E4 anchor (3-line block starting at L244, inside _SKILL_REVIEW_PROMPT
-    # tuple). Opener at L243, anchor at L244..L246, closer at L247.
-    for i in range(1, 241):
+    # E4 anchor (3-line block starting at L229, inside _SKILL_REVIEW_PROMPT
+    # tuple). Opener at L228, anchor at L229..L231, closer at L232.
+    for i in range(1, 211):
         lines.append(f"# padding {i}\n")
     lines.append("_SKILL_REVIEW_PROMPT = (\n")
-    lines.append('    + "session artifact. If the proposed name only makes sense for "\n')
+    lines.append('    "session artifact. If the proposed name only makes sense for "\n')
     lines.append(
-        '    + "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n",
+        '    "today' "'" "s task, it" "'" r's wrong — fall back to (1), (2), or (3).\n\n"' "\n",
     )
-    lines.append('    + "User-preference embedding (important): when the user expressed a "\n')
+    lines.append('    "User-preference embedding (important): when the user expressed a "\n')
     lines.append(")\n")
-    # E5 anchor (3-line block starting at L331, inside _COMBINED_REVIEW_PROMPT
-    # tuple). Opener at L330, anchor at L331..L333, closer at L334.
-    for i in range(248, 329):
+    # E5 anchor (3-line block starting at L316, inside _COMBINED_REVIEW_PROMPT
+    # tuple). Opener at L315, anchor at L316..L318, closer at L319.
+    for i in range(233, 315):
         lines.append(f"# padding {i}\n")
     lines.append("_COMBINED_REVIEW_PROMPT = (\n")
-    lines.append('    + "artifact. If the name only fits today\'s task, fall back to (1), "\n')
-    lines.append(r'    + "(2), or (3).\n\n"' "\n")
-    lines.append('    + "User-preference embedding: when the user complains about how "\n')
+    lines.append('    "artifact. If the name only fits today\'s task, fall back to (1), "\n')
+    lines.append(r'    "(2), or (3).\n\n"' "\n")
+    lines.append('    "User-preference embedding: when the user complains about how "\n')
     lines.append(")\n")
-    for i in range(335, 365):
+    for i in range(320, 350):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
 
