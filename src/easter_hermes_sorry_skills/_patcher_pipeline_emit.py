@@ -2,6 +2,10 @@
 
 Split from ``_patcher_pipeline`` to keep module surface small
 (WPS202) and to lower cognitive complexity (WPS231).
+
+The ``.patch.rejected`` sidecar was removed in the sidecar-cleanup
+phase; ``fail_with_drift`` now only emits diagnostics and returns
+``PatcherResult.rejected_path=None``.
 """
 
 from __future__ import annotations
@@ -11,11 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from easter_hermes_sorry_skills import _patcher_pipeline_emit_helpers as _helpers
-from easter_hermes_sorry_skills._patcher_apply import write_rejected
-from easter_hermes_sorry_skills._patcher_pipeline_consts import (
-    REMEDIATION_EN,
-    REMEDIATION_HU,
-)
 from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
 
@@ -31,6 +30,7 @@ class _FailDriftInputs:
     diagnostics: list[str]
     git_head: str
     exit_codes: tuple[int, int]
+    lang: str = "en"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -43,32 +43,30 @@ class _SiteDiff:
 
 
 def fail_with_drift(inputs: _FailDriftInputs) -> PatcherResult:
-    """Build the EXIT_DRIFT result, write rejected sidecar, append diagnostics.
+    """Build the EXIT_DRIFT result and append diagnostics.
 
     The two exit-code constants are passed in (not imported) so this
     helper has no compile-time cycle with ``_patcher``. The caller
     (``_patcher.run_patch``) supplies the canonical values from
-    ``EXIT_DRIFT`` and ``EXIT_PERMISSION``.
+    ``EXIT_DRIFT`` and ``EXIT_PERMISSION``. The ``.patch.rejected``
+    sidecar is no longer written; ``rejected_path`` on the result is
+    always ``None``.
+
+    ``lang`` selects the single-language i18n module for the drift
+    diagnostics via :func:`easter_hermes_sorry_skills._i18n_pick.pick`;
+    defaults to ``"en"``.
     """
     exit_drift_code, _ = inputs.exit_codes
-    rejected_path = write_rejected(
-        inputs.target_path,
-        failures=inputs.failures,
-        remediation_en=REMEDIATION_EN,
-        remediation_hu=REMEDIATION_HU,
-        git_head=inputs.git_head,
-    )
     for failure in inputs.failures:
-        _helpers.append_drift_diagnostic(failure, inputs.diagnostics)
-    from easter_hermes_sorry_skills._patcher_pipeline_apply import (
-        build_result_with_rejected as _build_result_with_rejected,
-    )
+        _helpers.append_drift_diagnostic(failure, inputs.diagnostics, lang=inputs.lang)
+    from easter_hermes_sorry_skills._patcher_pipeline_apply import build_result
 
-    return _build_result_with_rejected(
+    return build_result(
         exit_code=exit_drift_code,
         diagnostics=tuple(inputs.diagnostics),
         state=inputs.state,
-        rejected_path=rejected_path,
+        sites_patched=(),
+        sites_already=(),
     )
 
 

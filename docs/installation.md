@@ -33,7 +33,6 @@ vary by mode.
 The three entry points live at `pyproject.toml:33-36`:
 
 - `easter-hermes-sorry-skills-patch-hermes`
-- `easter-hermes-sorry-skills-install-profiles`
 - `easter-hermes-sorry-skills-report`
 
 The `.pyz` is a single-file standalone zipapp (PEP 441) produced by

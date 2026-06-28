@@ -14,8 +14,6 @@ dependencies = [
     "ruamel.yaml>=0.18",
     "pyyaml>=6",
     "python-frontmatter>=1.1",
-    # rich — Terminal-rendering library for the profiles CLI text tables
-    # (added in Phase B: see _cli_profiles_table.py).
     "rich>=13.0",
     "pytest>=8.0",
     "pytest-cov>=5.0",
@@ -32,7 +30,6 @@ dev = [
 
 [project.scripts]
 easter-hermes-sorry-skills-patch-hermes = "easter_hermes_sorry_skills.cli_patch:_main_entry"
-easter-hermes-sorry-skills-install-profiles = "easter_hermes_sorry_skills.cli_profiles:main"
 easter-hermes-sorry-skills-report = "easter_hermes_sorry_skills.cli_report:_main_entry"
 
 [build-system]

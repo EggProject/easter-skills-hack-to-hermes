@@ -25,6 +25,7 @@ from easter_hermes_sorry_skills._cli_report_helpers_consts import (
 
 _SORT_DEFAULT = "tokens"
 _FMT_DEFAULT = "text"
+_LANG_PARAM = "lang"
 
 
 class _LangAwareCommand(click.Command):
@@ -42,10 +43,10 @@ class _LangAwareCommand(click.Command):
     """
 
     def format_help_text(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        formatter.write(help_header(ctx.params.get("lang", LANG_EN)))
+        formatter.write(help_header(ctx.params.get(_LANG_PARAM, LANG_EN)))
 
     def format_options(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        lang = ctx.params.get("lang", LANG_EN)
+        lang = ctx.params.get(_LANG_PARAM, LANG_EN)
         lang_opt_desc = resolve_lang_opt_desc(lang)
         descriptions = resolve_descriptions(lang)
 
@@ -63,7 +64,7 @@ class _LangAwareCommand(click.Command):
         for entry in self.get_params(ctx):
             if entry.name is None:
                 continue
-            if entry.name == "lang":
+            if entry.name == _LANG_PARAM:
                 opt_label = "--lang"
                 description = lang_opt_desc
             else:
@@ -144,6 +145,7 @@ def _bare_main(**kwargs: bool | str | None) -> None:
             fmt=resolved.fmt,
             json_path=resolved.json_path,
             verbose=resolved.verbose,
+            lang=resolved.lang,
             argv=argv,
         ),
     )
@@ -158,6 +160,7 @@ class _ResolvedCliArgs:
     fmt: str
     json_path: Path | None
     verbose: bool
+    lang: str
 
 
 def _resolve_cli_kwargs(kwargs: dict[str, bool | str | None]) -> _ResolvedCliArgs:
@@ -166,12 +169,14 @@ def _resolve_cli_kwargs(kwargs: dict[str, bool | str | None]) -> _ResolvedCliArg
     sort = kwargs.get("sort")
     fmt = kwargs.get("fmt")
     json_path_str = kwargs.get("json_path")
+    lang = kwargs.get(_LANG_PARAM)
     return _ResolvedCliArgs(
         profile=profile if isinstance(profile, str) else None,
         sort=sort if isinstance(sort, str) else _SORT_DEFAULT,
         fmt=fmt if isinstance(fmt, str) else _FMT_DEFAULT,
         json_path=Path(json_path_str) if isinstance(json_path_str, str) else None,
         verbose=bool(kwargs.get("verbose", False)),
+        lang=lang if isinstance(lang, str) else LANG_EN,
     )
 
 

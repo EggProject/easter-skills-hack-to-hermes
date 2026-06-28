@@ -42,7 +42,6 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run
 uv run --locked easter-hermes-sorry-skills-patch-hermes
 
 # 4. Smoke test
-uv run --locked easter-hermes-sorry-skills-install-profiles
 uv run --locked easter-hermes-sorry-skills-report
 ```
 
@@ -52,7 +51,6 @@ Részletes használati útmutató: [docs/usage.md](docs/usage.md).
 Telepítés után a három CLI a `PATH`-odon lesz:
 
 - `easter-hermes-sorry-skills-patch-hermes`
-- `easter-hermes-sorry-skills-install-profiles`
 - `easter-hermes-sorry-skills-report`
 
 ## Dokumentáció
@@ -81,10 +79,6 @@ Mind a három entry point a `pyproject.toml:34-36` sorban van deklarálva. Mindi
   (S1.cap + 6 Task E site + S1.cap skills-prompt-snapshot purge) a Hermes
   checkout-odon. Alapértelmezetten `--target ~/.hermes/hermes-agent`. Alapból
   **ír**; a `--dry-run` kapcsolóval auditálhatsz írás nélkül.
-- `easter-hermes-sorry-skills-install-profiles` — **read-only**, profile-onkénti
-  audit a migrált `skill-creator` mellett (mely profilokban engedélyezett,
-  mely skill-ek láthatók). Alapértelmezetten táblázatot ad, a `--json`
-  kapcsolóval JSON-t.
 - `easter-hermes-sorry-skills-report` — **read-only** használati riport.
   Megmutatja, mely skill-ek vannak jelenleg engedélyezve, és hogyan néz ki a
   napi költségfelület. Nincs írás, nincs config-flippelés.
@@ -136,7 +130,6 @@ src/easter_hermes_sorry_skills/   # plugin + a három CLI
   _advisory.py                    # statikus-AST cap-detektálás (nincs módosítás)
   _patcher*.py                    # the 8-patch engine
   cli_patch.py                    # patch-hermes CLI
-  cli_profiles.py                 # install-profiles CLI
   cli_report.py                   # report CLI
   i18n/                           # kétnyelvű üzenetkatalógus (en, hu)
 skills/skill-creator/             # migrált skill (Hermes variáns)
@@ -186,7 +179,7 @@ Az elkészült `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` egy ön-telje
 ```bash
 tar -xzf easter-hermes-sorry-skills-v0.1.0.tar.gz
 cd easter-hermes-sorry-skills-v0.1.0/
-bash scripts/easter-hermes-sorry-skills-install-profiles.sh [args...]
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh [args...]
 ```
 
 Az egyetlen követelmény a felhasználó gépén: **Python 3.14+** (a `.pyz` shebang a rendszer `python3`-ra mutat).

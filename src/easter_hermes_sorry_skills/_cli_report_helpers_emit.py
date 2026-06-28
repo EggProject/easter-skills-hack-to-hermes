@@ -7,6 +7,7 @@ output sections and write them to disk / stdout.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import click
@@ -15,9 +16,11 @@ from easter_hermes_sorry_skills._cli_report_helpers_consts import (
     DEFAULT_JSON_NAME,
     FORMAT_JSON,
     FORMAT_TEXT,
+    LANG_EN,
     TOOL_NAME,
     TOOL_VERSION,
 )
+from easter_hermes_sorry_skills._i18n_pick import pick
 from easter_hermes_sorry_skills._reporter import (
     TEXT_COLUMNS,
     ProfileSection,
@@ -26,7 +29,17 @@ from easter_hermes_sorry_skills._reporter import (
     format_text,
 )
 from easter_hermes_sorry_skills._reporter_format import _format_value_for_text
-from easter_hermes_sorry_skills.i18n import messages_en as EN
+
+
+@dataclass(frozen=True)
+class _VerboseEmit:
+    """Verbose-emission controls bundled to keep make_section at ≤5 args (WPS211)."""
+
+    enabled: bool
+    lang: str = LANG_EN
+
+
+_VERBOSE_OFF: _VerboseEmit = _VerboseEmit(enabled=False)
 
 
 def resolve_json_path(fmt: str, json_path: Path | None) -> Path | None:
@@ -41,6 +54,7 @@ def _emit_verbose_cell(
     section: str,
     column: str,
     cell_value: object,
+    lang: str = LANG_EN,
 ) -> None:
     """Emit a per-cell ``[verbose]`` line on stderr."""
     click.echo(
@@ -54,11 +68,12 @@ def _emit_verbose_section(
     *,
     profile: str,
     section: str,
+    lang: str = LANG_EN,
 ) -> None:
     """Emit one ``[verbose] cell=...=value`` line per (row, column)."""
     for row in rows:
         for column in TEXT_COLUMNS:
-            _emit_verbose_cell(profile, section, column, _format_value_for_text(row, column))
+            _emit_verbose_cell(profile, section, column, _format_value_for_text(row, column), lang)
 
 
 def make_section(
@@ -67,11 +82,11 @@ def make_section(
     rows: list[SkillRow],
     total: int,
     *,
-    verbose: bool = False,
+    verbose: _VerboseEmit = _VERBOSE_OFF,
 ) -> str | ProfileSection:
     """Build a single text section string or json ProfileSection."""
-    if verbose:
-        _emit_verbose_section(rows, profile=name, section=name)
+    if verbose.enabled:
+        _emit_verbose_section(rows, profile=name, section=name, lang=verbose.lang)
     if fmt == FORMAT_TEXT:
         return format_text(name, rows, total_tokens=total)
     return ProfileSection(
@@ -98,11 +113,11 @@ def render_output(
     )
 
 
-def emit_output(fmt: str, output: str, json_path: Path | None) -> None:
+def emit_output(fmt: str, output: str, json_path: Path | None, lang: str = LANG_EN) -> None:
     """Write or print the final output."""
     if fmt == FORMAT_JSON:
         assert json_path is not None
         json_path.write_text(output, encoding="utf-8")
-        click.echo(EN.report_opt_json)
+        click.echo(pick(lang).REPORT_OPT_JSON)
     else:
         click.echo(output)

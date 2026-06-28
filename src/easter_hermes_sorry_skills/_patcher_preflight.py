@@ -27,18 +27,13 @@ from __future__ import annotations
 import dataclasses
 from pathlib import Path
 
+from easter_hermes_sorry_skills._i18n_pick import pick
 from easter_hermes_sorry_skills._patcher_consts import (
     EXIT_IO,
     EXIT_OK,
 )
 from easter_hermes_sorry_skills._patcher_helpers import is_hermes_agent
 from easter_hermes_sorry_skills._patcher_sites import TOOLS_SKILL_UTILS_REL
-from easter_hermes_sorry_skills.i18n.messages_en import (
-    DRY_RUN_PREFLIGHT_WARNING,
-    TARGET_IS_HERMES_AGENT,
-    TARGET_MISSING_SKILL_UTILS,
-    TARGET_REQUIRED,
-)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -60,6 +55,7 @@ def run_preflight(
     target: Path | None,
     *,
     dry_run: bool = False,
+    lang: str = "en",
 ) -> PreflightOutcome | None:
     """Return a :class:`PreflightOutcome` on refusal, ``None`` to continue.
 
@@ -69,11 +65,17 @@ def run_preflight(
     so the operator can audit the planned patches before applying.
     The other two rules are always HARD (severity ``"error"``,
     exit_code ``EXIT_IO``).
+
+    ``lang`` selects the single-language i18n module via
+    :func:`easter_hermes_sorry_skills._i18n_pick.pick`. Defaults to
+    ``"en"`` so callers that do not pass a language get English
+    diagnostics.
     """
+    msgs = pick(lang)
     if target is None:
         return PreflightOutcome(
             exit_code=EXIT_IO,
-            diagnostic=TARGET_REQUIRED,
+            diagnostic=msgs.TARGET_REQUIRED,
             severity="error",
         )
     target_path = Path(target).resolve()
@@ -81,10 +83,10 @@ def run_preflight(
         if dry_run:
             return PreflightOutcome(
                 exit_code=EXIT_OK,
-                diagnostic=DRY_RUN_PREFLIGHT_WARNING,
+                diagnostic=msgs.DRY_RUN_PREFLIGHT_WARNING,
                 severity="warning",
             )
-        msg = TARGET_IS_HERMES_AGENT.format(resolved=str(target_path))
+        msg = msgs.TARGET_IS_HERMES_AGENT.format(resolved=str(target_path))
         return PreflightOutcome(
             exit_code=EXIT_IO,
             diagnostic=msg,
@@ -92,7 +94,7 @@ def run_preflight(
         )
     skill_utils = target_path / TOOLS_SKILL_UTILS_REL
     if not skill_utils.exists():
-        msg = TARGET_MISSING_SKILL_UTILS.format(path=str(skill_utils))
+        msg = msgs.TARGET_MISSING_SKILL_UTILS.format(path=str(skill_utils))
         return PreflightOutcome(
             exit_code=EXIT_IO,
             diagnostic=msg,

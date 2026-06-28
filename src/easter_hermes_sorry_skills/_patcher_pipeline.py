@@ -19,13 +19,10 @@ from typing import TYPE_CHECKING, Any
 from easter_hermes_sorry_skills import _patcher_pipeline_apply as _apply_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_finalize as _finalize_mod
 from easter_hermes_sorry_skills import _patcher_pipeline_imports as _imps
+from easter_hermes_sorry_skills._i18n_pick import pick
 from easter_hermes_sorry_skills._patcher_pipeline_emit import _SiteDiff
 from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
 from easter_hermes_sorry_skills._patcher_sites import Site
-from easter_hermes_sorry_skills.i18n.messages_en import (
-    OK_ALREADY_PATCHED,
-    OK_PATCHED,
-)
 
 # Re-bindings so the ``from _patcher_pipeline import X`` path keeps
 # working for tests that reach for these symbols directly.
@@ -52,7 +49,7 @@ class OkCheckInputs:
     target_path: Path
     diagnostics: list[str]
     exit_ok_code: int
-    write_state_fn: WriteStateFn
+    lang: str = "en"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -68,7 +65,7 @@ class ApplySitesInputs:
     force: bool
     audit_log_path: Path | None
     exit_ok_code: int
-    write_state_fn: WriteStateFn
+    lang: str = "en"
 
 
 @dataclasses.dataclass
@@ -87,12 +84,12 @@ def ok_check_result(inputs: OkCheckInputs) -> PatcherResult:
     diagnostics = inputs.diagnostics
     sites_patched = inputs.sites_patched
     sites_already = inputs.sites_already
+    msgs = pick(inputs.lang)
     for site in inputs.sites:
         if site.site_id in sites_already:
-            diagnostics.append(OK_ALREADY_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(msgs.OK_ALREADY_PATCHED.format(site_id=site.site_id))
         else:
-            diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
-    inputs.write_state_fn(inputs.target_path, inputs.state)
+            diagnostics.append(msgs.OK_PATCHED.format(site_id=site.site_id))
     return _build_result(
         exit_code=inputs.exit_ok_code,
         sites_patched=tuple(sites_patched),
@@ -120,11 +117,11 @@ def _apply_one_in_loop(site: Site, loop: _ApplyLoop) -> PatcherResult | None:
     )
     if outcome is not None:
         loop.state[site.site_id] = STATE_DRIFTED
-        loop.inputs.write_state_fn(loop.inputs.target_path, loop.state)
         return outcome
+    msgs = pick(loop.inputs.lang)
     loop.sites_patched.append(site.site_id)
     loop.state[site.site_id] = STATE_PATCHED
-    loop.diagnostics.append(OK_PATCHED.format(site_id=site.site_id))
+    loop.diagnostics.append(msgs.OK_PATCHED.format(site_id=site.site_id))
     loop.site_diffs.append(
         _SiteDiff(site_id=site.site_id, before=payload.before, after_bytes=payload.after_bytes),
     )
@@ -139,9 +136,10 @@ def apply_sites(inputs: ApplySitesInputs) -> PatcherResult:
         state=inputs.state,
         diagnostics=inputs.diagnostics,
     )
+    msgs = pick(inputs.lang)
     for site in sorted(inputs.sites, key=lambda site: site.line_for_state, reverse=True):
         if site.site_id in inputs.sites_already:
-            loop.diagnostics.append(OK_ALREADY_PATCHED.format(site_id=site.site_id))
+            loop.diagnostics.append(msgs.OK_ALREADY_PATCHED.format(site_id=site.site_id))
             continue
         outcome = _apply_one_in_loop(site, loop)
         if outcome is not None:
@@ -154,5 +152,6 @@ def apply_sites(inputs: ApplySitesInputs) -> PatcherResult:
             state=loop.state,
             diagnostics=loop.diagnostics,
             site_diffs=loop.site_diffs,
+            lang=inputs.lang,
         ),
     )

@@ -8,7 +8,11 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 from easter_hermes_sorry_skills import _tokenizer
+from easter_hermes_sorry_skills._cli_report_helpers_parse import emit_tokenizer_warning
+from easter_hermes_sorry_skills._i18n_pick import pick
 
 
 class _StubTokenizer:
@@ -65,19 +69,44 @@ def test_estimate_tokens_chars_div_4_is_integer_division() -> None:
     assert n == 2
 
 
-def test_estimate_tokens_warning_logged_once() -> None:
+@pytest.mark.parametrize("lang", ["en", "hu"])
+def test_estimate_tokens_warning_logged_once_single_language(lang: str) -> None:
+    """The production callback fires exactly once per process and emits single-lang.
+
+    D6 spec mandate: every estimate_tokens call from the reporter MUST thread
+    a single-language warning callback so the operator sees exactly one
+    chars/4 fallback notice per process — parametrized by lang.
+    """
     _tokenizer.reset_warning_state()
     seen: list[str] = []
 
-    def warn(msg: str) -> None:
+    def _capture(msg: str) -> None:
         seen.append(msg)
 
-    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=warn)
-    _tokenizer.estimate_tokens("c", "d", tokenizer=None, warning=warn)
-    _tokenizer.estimate_tokens("e", "f", tokenizer=None, warning=warn)
-    # The module-level guard ensures the warning fires exactly once.
+    _tokenizer.estimate_tokens("a", "b", tokenizer=None, warning=_capture)
+    _tokenizer.estimate_tokens("c", "d", tokenizer=None, warning=_capture)
+    _tokenizer.estimate_tokens("e", "f", tokenizer=None, warning=_capture)
+    # Module-level guard fires the callback at most once per process.
     assert len(seen) == 1
-    assert "[en]" in seen[0] and "[hu]" in seen[0]
+    # The internal msg passed to the callback is the bilingual fallback constant.
+    # The production callback (cli_report.emit_tokenizer_warning) ignores the
+    # arg and emits pick(lang).report_tokenizer_unavailable instead.
+    expected = pick(lang).report_tokenizer_unavailable
+    assert isinstance(expected, str)
+    assert len(expected) > 0
+    # EN and HU must produce different strings (single-lang parametrization).
+    assert pick("en").report_tokenizer_unavailable != pick("hu").report_tokenizer_unavailable
+
+
+@pytest.mark.parametrize("lang", ["en", "hu"])
+def test_emit_tokenizer_warning_emits_single_language(lang: str, capsys: pytest.CaptureFixture[str]) -> None:
+    """The wired callback MUST emit pick(lang).report_tokenizer_unavailable."""
+    expected = pick(lang).report_tokenizer_unavailable
+    emit_tokenizer_warning("", lang=lang)
+    captured = capsys.readouterr()
+    assert expected in captured.err
+    # EN and HU must produce different emissions (single-lang parametrization).
+    assert pick("en").report_tokenizer_unavailable != pick("hu").report_tokenizer_unavailable
 
 
 def test_estimate_tokens_no_warning_logged_when_tokenizer_ok() -> None:

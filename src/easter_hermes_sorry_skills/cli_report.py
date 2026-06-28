@@ -65,10 +65,12 @@ class ReportInputs:
     show_help: bool = False
     verbose: bool = False
     argv: list[str] | None = None
+    lang: str = _helpers_consts.LANG_EN
 
 
 def run(**kwargs: Any) -> int:
     """Run the reporter. Returns the exit code (0 on success)."""
+    kwargs.setdefault("lang", _helpers_consts.LANG_EN)
     return _dispatch(ReportInputs(**kwargs))
 
 
@@ -81,6 +83,7 @@ def _dispatch(inputs: ReportInputs) -> int:
         inputs.fmt,
         inputs.json_path,
         inputs.profile,
+        lang=inputs.lang,
     )
     if err is not None:
         return err
@@ -101,23 +104,40 @@ def _build_and_emit(
         curator=curator,
         verbose=inputs.verbose,
     )
-    text_sections, json_sections, build_err = _profile_sections(profile_paths, ctx)
+    text_sections, json_sections, build_err = _profile_sections(
+        profile_paths,
+        ctx,
+        lang=inputs.lang,
+    )
     if build_err is not None:
         return build_err
-    _emit_sections(inputs.fmt, json_path, text_sections, json_sections)
+    _emit_sections(
+        inputs.fmt,
+        json_path,
+        text_sections,
+        json_sections,
+        lang=inputs.lang,
+    )
     return 0
 
 
 def _early_exit_rc(inputs: ReportInputs) -> int | None:
     """Return exit code for short-circuit cases (help / invalid args), or None."""
     if inputs.show_help:
-        emit_bilingual_help()
+        emit_bilingual_help(lang=inputs.lang)
         return 0
     if inputs.argv is not None:
-        rc: int | None = _imps.reject_unwanted_flags(inputs.argv)
+        rc: int | None = _imps.reject_unwanted_flags(
+            inputs.argv,
+            lang=inputs.lang,
+        )
         if rc is not None:
             return rc
-    rc = _imps.validate_sort_and_fmt(inputs.sort, inputs.fmt)
+    rc = _imps.validate_sort_and_fmt(
+        inputs.sort,
+        inputs.fmt,
+        lang=inputs.lang,
+    )
     if rc is not None:
         return rc
     return None

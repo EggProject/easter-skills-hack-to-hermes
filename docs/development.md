@@ -14,7 +14,7 @@ The test suite is split into four layers. Each layer has a single responsibility
 - `tests/unit/` — 11 Python unit tests (`pytest`). Covers `cli_patch`, the profiles CLI, the patcher, the safety decorator, scope, the conftest sentinel, and the subprocess placeholder.
 - `tests/report/` — 9 reporter tests + `_fixtures.py`. Covers `cli_report`, the reporter format, token counting, verbose mode, and the readonly + branch surfaces.
 - `tests/meta/` — 3 meta-tests for the `tools/` helpers. Covers `check_bilingual.py`, `check_line_count.py`, and the meta conftest.
-- `tests/bats/` — 3 bash smoke tests (`patch-hermes.bats`, `install-profiles.bats`, `report.bats`). Exercise the shell wrappers end-to-end.
+- `tests/bats/` — bash smoke tests (`patch-hermes.bats`, `report.bats`). Exercise the shell wrappers end-to-end.
 
 Top-level tests (`test_register.py`, `test_advisory.py`, `test_i18n_bilingual.py`) live alongside the `tests/conftest.py` merged fixture file. The conftest exposes `hermes_home`, `hermes_checkout`, `skill_creator_home`, and `real_hermes_agent_sentinel`, and pre-registers stub modules for `hermes_cli.profiles` and `hermes_cli.skills_config` at import time so `tests/unit/*.py` can import the production code under test without the real Hermes runtime on the path.
 

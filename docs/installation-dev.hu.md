@@ -53,9 +53,8 @@ uv sync --locked --all-extras --dev
 # 3. Az egyesített pre-commit kapu telepítése (ruff + black + mypy + wemake + flake8 + pytest + bats + shellcheck)
 uv run --locked pre-commit install
 
-# 4. A három CLI PATH-on van-e
+# 4. A CLI-k PATH-on vannak-e
 uv run --locked easter-hermes-sorry-skills-patch-hermes --version
-uv run --locked easter-hermes-sorry-skills-install-profiles --version
 uv run --locked easter-hermes-sorry-skills-report --version
 ```
 
@@ -83,7 +82,6 @@ Három ellenőrzés; minden parancsnak `0` exit kóddal kell kilépnie.
 ```bash
 # 1. Minden CLI kiírja a --version-t
 uv run --locked easter-hermes-sorry-skills-patch-hermes --version
-uv run --locked easter-hermes-sorry-skills-install-profiles --version
 uv run --locked easter-hermes-sorry-skills-report --version
 
 # 2. A pre-commit kapu be van kötve

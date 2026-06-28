@@ -19,7 +19,6 @@ verifies the decorator itself fires when the live file is mutated.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import stat
 from pathlib import Path
@@ -35,7 +34,6 @@ from easter_hermes_sorry_skills._patcher import (
     EXIT_PERMISSION,
     S1_CAP_SITE,
     S1_CAP_SITE_FALLBACK,
-    STATE_SIDECAR,
     Anchor,
     PatchRunInputs,
     Site,
@@ -44,13 +42,10 @@ from easter_hermes_sorry_skills._patcher import (
     file_has_circular_import,
     hermes_agent_path,
     is_hermes_agent,
-    load_state,
     locate_anchor,
     run_patch,
     site_already_patched,
     site_in_state,
-    write_rejected,
-    write_state,
 )
 from easter_hermes_sorry_skills._patcher_sites_table import _CONSULT_RULE_TEXT
 from tests.conftest import (
@@ -186,21 +181,6 @@ def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str 
     assert pre == post
 
 
-def test_apply_creates_state_sidecar(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """--apply writes .patch.state.json with S1.cap=patched."""
-    r = run_patch(
-        PatchRunInputs(
-            target=hermes_checkout,
-            dry_run=False,
-        ),
-    )
-    assert r.exit_code == EXIT_OK
-    sidecar = hermes_checkout / STATE_SIDECAR
-    assert sidecar.exists()
-    raw = json.loads(sidecar.read_text(encoding="utf-8"))
-    assert raw["S1.cap"] in {"patched", "matched"}
-
-
 # REMOVED (Phase 7 refactor): ``test_force_retries_only_drifted_sites``
 # — verified that a second ``--force`` run on a clean (already-patched)
 # state did not re-write the file. The ``--force`` flag was removed
@@ -231,9 +211,7 @@ def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sent
     assert r.exit_code != EXIT_OK
     post = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
     assert pre == post
-    assert r.rejected_path is not None
-    rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
-    assert any(f["site_id"] == "S1.cap" for f in rejected["failures"])
+    assert r.rejected_path is None
 
 
 def test_apply_cap_raise_max_description_length_defined(
@@ -249,13 +227,13 @@ def test_apply_cap_raise_max_description_length_defined(
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
     assert "MAX_DESCRIPTION_LENGTH" in text
-    # The literal "60" must be gone from the cap-raise site (line 688).
+    # The literal "60" must be gone from the cap-raise site (line 716).
     lines = text.splitlines()
-    assert "60" not in lines[687]
-    assert "MAX_DESCRIPTION_LENGTH" in lines[687]
-    # The slice on L689 (now L690 after the new comparator line) is
+    assert "60" not in lines[715]
+    assert "MAX_DESCRIPTION_LENGTH" in lines[715]
+    # The slice on L717 (now L718 after the new comparator line) is
     # `desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."`.
-    assert "MAX_DESCRIPTION_LENGTH - 3" in "\n".join(lines[687:691])
+    assert "MAX_DESCRIPTION_LENGTH - 3" in "\n".join(lines[715:719])
 
 
 def test_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
@@ -302,19 +280,46 @@ def test_task_e_always_touches_target_files(hermes_checkout: Path) -> None:
 # --- Task E composition --------------------------------------------------
 
 
-def test_target_required_exits_4(real_hermes_agent_sentinel: str | None) -> None:
-    """--target unset -> exit 4 with bilingual message."""
+@pytest.mark.parametrize(
+    ("lang", "expected_text"),
+    [
+        ("en", "--target is required"),
+        ("hu", "a --target megadása kötelező"),
+    ],
+)
+def test_target_required_exits_4(
+    lang: str,
+    expected_text: str,
+    real_hermes_agent_sentinel: str | None,
+) -> None:
+    """--target unset -> exit 4 with single-language TARGET_REQUIRED message.
+
+    The preflight routes ``TARGET_REQUIRED`` through
+    :func:`_i18n_pick.pick(lang)` so ``en`` emits
+    ``"--target is required"`` and ``hu`` emits
+    ``"a --target megadása kötelező"``.
+    """
     r = run_patch(
         PatchRunInputs(
             target=None,
             dry_run=True,
+            lang=lang,
         ),
     )
     assert r.exit_code == EXIT_IO
-    assert any("[en]" in d and "[hu]" in d for d in r.diagnostics)
+    assert any(expected_text in d for d in r.diagnostics)
 
 
+@pytest.mark.parametrize(
+    ("lang", "expected_warning"),
+    [
+        ("en", "WARNING: target is the live hermes-agent checkout, no patches will be applied"),
+        ("hu", "FIGYELEM: a target az élő hermes-agent checkout, nem történik patch"),
+    ],
+)
 def test_target_resolves_to_hermes_agent_refused(
+    lang: str,
+    expected_warning: str,
     real_hermes_agent_sentinel: str | None,
 ) -> None:
     """Soft safety: ``--dry-run`` + hermes-agent target -> WARNING + EXIT_OK (or drift).
@@ -322,26 +327,33 @@ def test_target_resolves_to_hermes_agent_refused(
     Before the soft-safety change this test asserted ``EXIT_IO`` for
     ANY ``--target ~/.hermes/hermes-agent`` invocation. After the
     change, ``--dry-run`` SOFTENS the refusal: the preflight emits
-    the bilingual WARNING diagnostic and the pipeline proceeds. The
-    exit code depends on what the post-preflight pipeline finds —
+    the single-language WARNING diagnostic and the pipeline proceeds.
+    The exit code depends on what the post-preflight pipeline finds —
     for the synthetic hermes-agent path on a developer machine the
     validation typically detects TEXT_DRIFT and returns ``EXIT_DRIFT``
     (2), but the soft-safety diagnostic is always present.
+
+    The WARNING diagnostic is selected via :func:`_i18n_pick.pick(lang)`
+    from the language-specific module: ``en`` -> English WARNING line,
+    ``hu`` -> Hungarian FIGYELEM line.
     """
     r = run_patch(
         PatchRunInputs(
             target=hermes_agent_path(),
             dry_run=True,
+            lang=lang,
         ),
     )
-    # Soft-safety diagnostic MUST appear (proves the preflight short-
-    # circuit fired and did NOT hard-refuse with EXIT_IO).
-    assert any("hermes-agent checkout" in d and "no patches will be applied" in d for d in r.diagnostics)
+    # Soft-safety diagnostic MUST appear in the selected language
+    # (proves the preflight short-circuit fired and did NOT hard-
+    # refuse with EXIT_IO).
+    assert any(expected_warning in d for d in r.diagnostics)
     # Apply mode (dry_run=False) still HARD-refuses with EXIT_IO.
     r_apply = run_patch(
         PatchRunInputs(
             target=hermes_agent_path(),
             dry_run=False,
+            lang=lang,
         ),
     )
     assert r_apply.exit_code == EXIT_IO
@@ -370,10 +382,10 @@ def test_circular_import_preflight_emits_diagnostic(tmp_path: Path, real_hermes_
     checkout = tmp_path / "cycle"
     _write_task_e_files(checkout)
     # Layout mirrors the real Hermes checkout: skill_utils.py has the
-    # cap-raise pair at L688/L689 so the S1.cap_fallback site anchors
+    # cap-raise pair at L716/L717 so the S1.cap_fallback site anchors
     # match. The cycle marker is on L1 so the preflight fires.
     lines: list[str] = ["from tools.skills_tool import MAX_DESCRIPTION_LENGTH\n"]
-    for i in range(1, 687):
+    for i in range(1, 715):
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append('        return desc[:57] + "..."\n')
@@ -399,7 +411,7 @@ def test_line_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
     """Cap-raise comparator matches anchor; the LINE is wrong -> LINE_DRIFT."""
     checkout = tmp_path / "line-drift"
     (checkout / "agent").mkdir(parents=True)
-    # Put the cap-raise site at L10 (not L688) — same anchor text, wrong line.
+    # Put the cap-raise site at L10 (not L716) — same anchor text, wrong line.
     (checkout / "agent" / "skill_utils.py").write_text(
         "# pad\n" * 9 + "    if len(desc) > 60:\n",
         encoding="utf-8",
@@ -418,7 +430,7 @@ def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
     checkout = tmp_path / "text-drift"
     (checkout / "agent").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 688) + "\n    if len(desc) > 61:\n",
+        "\n".join(["# pad"] * 716) + "\n    if len(desc) > 61:\n",
         encoding="utf-8",
     )
     r = run_patch(
@@ -428,9 +440,7 @@ def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
         ),
     )
     assert r.exit_code == EXIT_DRIFT
-    assert r.rejected_path is not None
-    rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
-    assert any(f["site_id"] == "S1.cap" for f in rejected["failures"])
+    assert r.rejected_path is None
 
 
 def test_e1_skills_guidance_appends_only(hermes_checkout: Path) -> None:
@@ -475,7 +485,9 @@ def test_e2_memory_guidance_appends_only(hermes_checkout: Path) -> None:
 
 def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E4 anchor preserved verbatim and
-    the consult-rule line follows it.
+    the consult-rule line precedes it (the patcher inserts BEFORE the
+    multi-line 3-line anchor block; the rule + the 3 anchor lines
+    remain in order).
     """
     r = run_patch(
         PatchRunInputs(
@@ -488,14 +500,16 @@ def test_e4_skill_review_prompt_appends_only(hermes_checkout: Path) -> None:
     lines = text.splitlines()
     anchor_idx = next(i for i, ln in enumerate(lines) if "today's task, it's wrong" in ln)
     assert lines[anchor_idx] == "    \"today's task, it's wrong — fall back to (1), (2), or (3)."
-    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
-    assert lines[anchor_idx + 2] == ""
-    assert lines[anchor_idx + 3] == '"'
+    # The consult-rule insertion sits immediately before the 3-line
+    # anchor block (one line above the first anchor line).
+    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
+    assert lines[anchor_idx + 1] == ""
+    assert lines[anchor_idx + 2] == '"'
 
 
 def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     """05 §Per-site additive-only — E5 anchor preserved verbatim and
-    the consult-rule line follows it.
+    the consult-rule line precedes it.
     """
     r = run_patch(
         PatchRunInputs(
@@ -510,9 +524,11 @@ def test_e5_combined_review_prompt_appends_only(hermes_checkout: Path) -> None:
     # the EXACT line (E5's anchor text).
     anchor_idx = next(i for i, ln in enumerate(lines) if ln == '    "(2), or (3).')
     assert lines[anchor_idx] == '    "(2), or (3).'
-    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
-    assert lines[anchor_idx + 2] == ""
-    assert lines[anchor_idx + 3] == '"'
+    # The consult-rule insertion sits immediately before the 3-line
+    # anchor block (one line above the first anchor line).
+    assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx - 1]
+    assert lines[anchor_idx + 1] == ""
+    assert lines[anchor_idx + 2] == '"'
 
 
 def test_task_e_current_text_is_unique_in_source() -> None:
@@ -665,9 +681,7 @@ def test_task_e_drift_exits_2(
         ),
     )
     assert r.exit_code == EXIT_DRIFT
-    assert r.rejected_path is not None
-    rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
-    assert any(f["site_id"] == "E2.memory_guidance" for f in rejected["failures"])
+    assert r.rejected_path is None
 
 
 # --- edge cases ----------------------------------------------------------
@@ -746,7 +760,7 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
     (checkout / "agent").mkdir(parents=True)
     (checkout / "tools").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 688) + "\n    if len(desc) > 999:\n",
+        "\n".join(["# pad"] * 716) + "\n    if len(desc) > 999:\n",
         encoding="utf-8",
     )
     (checkout / "agent" / "prompt_builder.py").write_text(
@@ -780,13 +794,14 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
 
 
 def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """Every USER-FACING diagnostic in the run is bilingual (en/hu on a single line).
+    """Every USER-FACING diagnostic in the run is single-language (no
+    bilingual ``[en] X / [hu] Y`` prefix).
 
-    Internal/operator notes (e.g. the skills-prompt-snapshot purge note
-    emitted by ``_drive_pipeline`` after a successful --apply) are
-    single-line informational messages that are not part of the
-    bilingual user-facing diagnostic stream and are excluded from the
-    regex check.
+    After the patcher i18n refactor, all diagnostics are emitted in a
+    single language selected by ``--lang`` (default ``en``). The
+    legacy bilingual ``[en] X / [hu] Y`` format is gone — this test
+    pins the new single-language contract: each diagnostic is one
+    line, no ``[en]`` / ``[hu]`` prefixes anywhere.
     """
     r = run_patch(
         PatchRunInputs(
@@ -795,17 +810,9 @@ def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_her
         ),
     )
     assert r.exit_code == EXIT_OK
-    pattern = __import__("re").compile(r"^\[en\] .+ / \[hu\] .+$")
-    # Operator notes that are NOT translated (single-line, no [en]/[hu]).
-    _non_bilingual_operator_notes = (
-        "snapshot",
-        "purge",
-    )
     for d in r.diagnostics:
-        is_note = any(token in d.lower() for token in _non_bilingual_operator_notes)
-        if is_note:
-            continue
-        assert pattern.match(d), f"non-bilingual diagnostic: {d!r}"
+        assert "[en]" not in d, f"legacy [en] prefix found: {d!r}"
+        assert "[hu]" not in d, f"legacy [hu] prefix found: {d!r}"
 
 
 def test_help_is_lang_aware() -> None:
@@ -851,7 +858,7 @@ def test_check_already_patched_exits_0(hermes_checkout: Path, real_hermes_agent_
         ),
     )
     assert r.exit_code == EXIT_OK
-    assert any("már javítva" in d for d in r.diagnostics)
+    assert any("already patched" in d for d in r.diagnostics)
 
 
 def test_state_sidecar_survives_re_run(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
@@ -947,66 +954,6 @@ def test_site_already_patched_false() -> None:
     assert site_already_patched(text, S1_CAP_SITE) is False
 
 
-def test_load_state_missing(tmp_path: Path) -> None:
-    assert load_state(tmp_path) == {}
-
-
-def test_load_state_corrupt(tmp_path: Path) -> None:
-    sidecar = tmp_path / STATE_SIDECAR
-    sidecar.write_text("NOT JSON", encoding="utf-8")
-    assert load_state(tmp_path) == {}
-
-
-def test_load_state_non_dict(tmp_path: Path) -> None:
-    sidecar = tmp_path / STATE_SIDECAR
-    sidecar.write_text("[1, 2, 3]", encoding="utf-8")
-    assert load_state(tmp_path) == {}
-
-
-def test_load_state_oserror_on_read(tmp_path: Path) -> None:
-    """When the sidecar is unreadable (OSError mid-read), return {}."""
-    sidecar = tmp_path / STATE_SIDECAR
-    sidecar.write_bytes(b'{"S1.cap": "patched"}')
-
-    real_read_text = Path.read_text
-
-    def fake_read_text(self: Path, *args: object, **kwargs: object) -> str:
-        if self == sidecar:
-            raise OSError("simulated read failure")
-        return real_read_text(self, *args, **kwargs)
-
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(Path, "read_text", fake_read_text)
-        assert load_state(tmp_path) == {}
-
-
-def test_load_state_unicode_decode_error(tmp_path: Path) -> None:
-    """When the sidecar contains non-UTF-8 bytes, return {}."""
-    sidecar = tmp_path / STATE_SIDECAR
-    sidecar.write_bytes(b"\xff\xfe\x00invalid-utf8")
-    assert load_state(tmp_path) == {}
-
-
-def test_write_state_roundtrip(tmp_path: Path) -> None:
-    write_state(tmp_path, {"S1.cap": "patched"})
-    assert load_state(tmp_path) == {"S1.cap": "patched"}
-
-
-def test_write_rejected_roundtrip(tmp_path: Path) -> None:
-    p = write_rejected(
-        tmp_path,
-        failures=[{"site_id": "S1.cap", "reason": "TEXT_DRIFT"}],
-        remediation_en="Re-run",
-        remediation_hu="Ujra",
-        git_head="abc123",
-    )
-    raw = json.loads(p.read_text(encoding="utf-8"))
-    assert raw["tool"] == "easter-hermes-sorry-skills-patch-hermes"
-    assert raw["git_head"] == "abc123"
-    assert raw["failures"][0]["site_id"] == "S1.cap"
-    assert raw["remediation_en"] == "Re-run"
-
-
 def test_atomic_write_bytes_creates_file(tmp_path: Path) -> None:
     p = tmp_path / "out.txt"
     _atomic_write_bytes(p, b"hello")
@@ -1086,13 +1033,13 @@ def test_apply_anchor_text_missing_exits_drift(tmp_path: Path, real_hermes_agent
 def test_apply_cap_secondary_anchor_mismatch_caught_by_validation(
     tmp_path: Path, real_hermes_agent_sentinel: str | None
 ) -> None:
-    """S1.cap.a is at L688 with the right text; S1.cap.b (L689) is wrong.
+    """S1.cap.a is at L716 with the right text; S1.cap.b (L717) is wrong.
     The pre-validation pass catches this as drift (TEXT_DRIFT on the b
     anchor) and the run aborts before the apply step."""
     checkout = tmp_path / "cap-mismatch"
     (checkout / "agent").mkdir(parents=True)
     lines: list[str] = []
-    for i in range(1, 688):
+    for i in range(1, 716):
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append("    return desc[:57] + 'XXX'\n")  # WRONG slice
@@ -1229,8 +1176,8 @@ def test_apply_emits_cross_fs_warning(
         ),
     )
     assert r.exit_code == EXIT_OK
-    # The CROSS_FS_WARN diagnostic is emitted (bilingual).
-    assert any("warning" in d.lower() and "fájlrendszer" in d for d in r.diagnostics)
+    # The CROSS_FS_WARN diagnostic is emitted (single-language, EN by default).
+    assert any("warning" in d.lower() and "filesystems" in d for d in r.diagnostics)
 
 
 # --- coverage: atomic_write_bytes unlink + chmod error paths -----------
@@ -1502,7 +1449,7 @@ def test_apply_cap_raise_with_long_description(
     returns ~MAX_DESCRIPTION_LENGTH-3 chars (NOT 60 chars)."""
     checkout = tmp_path / "long-desc"
     _write_task_e_files(checkout)
-    # Use the standard fixture: the cap-raise site is at L688/L689.
+    # Use the standard fixture: the cap-raise site is at L716/L717.
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
     r = run_patch(
         PatchRunInputs(
@@ -1514,8 +1461,8 @@ def test_apply_cap_raise_with_long_description(
     # Post-patch: BOTH S1.cap.a and S1.cap.b are applied.
     text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    assert "MAX_DESCRIPTION_LENGTH" in lines[687]
-    assert "MAX_DESCRIPTION_LENGTH - 3" in lines[688]
+    assert "MAX_DESCRIPTION_LENGTH" in lines[715]
+    assert "MAX_DESCRIPTION_LENGTH - 3" in lines[716]
 
 
 def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1554,7 +1501,7 @@ def test_partial_failure_zero_writes(
     checkout = tmp_path / "partial"
     (checkout / "agent").mkdir(parents=True)
     lines: list[str] = []
-    for i in range(1, 688):
+    for i in range(1, 716):
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append("    return desc[:57] + 'CORRUPTED'\n")
@@ -1570,9 +1517,7 @@ def test_partial_failure_zero_writes(
     assert r.exit_code == EXIT_DRIFT
     post = hashlib.sha256(target.read_bytes()).hexdigest()
     assert pre == post
-    assert r.rejected_path is not None
-    rejected = json.loads(r.rejected_path.read_text(encoding="utf-8"))
-    assert any(f["site_id"] == "S1.cap" for f in rejected["failures"])
+    assert r.rejected_path is None
 
 
 # REMOVED (Phase 7 refactor): ``test_force_still_drifts_exits_nonzero``
@@ -1657,8 +1602,8 @@ def test_run_patch_required_params() -> None:
 def test_apply_then_check_exits_0_with_already_patched(
     hermes_checkout: Path,
 ) -> None:
-    """After --apply, --check exits 0 with 'már javítva' diagnostic for
-    S1.cap (per the spec bilingual requirement)."""
+    """After --apply, --check exits 0 with 'already patched' diagnostic for
+    S1.cap (single-language emission after the i18n refactor)."""
     run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -1672,7 +1617,7 @@ def test_apply_then_check_exits_0_with_already_patched(
         ),
     )
     assert r.exit_code == EXIT_OK
-    assert any("már javítva" in d for d in r.diagnostics)
+    assert any("already patched" in d for d in r.diagnostics)
     assert any("S1.cap" in d for d in r.diagnostics)
 
 
@@ -1711,10 +1656,10 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
     _write_task_e_files(checkout)
     # The file does NOT contain the import marker; the subprocess
     # check should still detect the cycle if the import would fail.
-    # Layout mirrors real Hermes: cap-raise anchors at L688/L689 so
+    # Layout mirrors real Hermes: cap-raise anchors at L716/L717 so
     # S1.cap_fallback validation succeeds after the cycle signal.
     lines: list[str] = ["# no tools.skills_tool import here\n"]
-    for i in range(1, 687):
+    for i in range(1, 715):
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append('        return desc[:57] + "..."\n')
@@ -1809,16 +1754,16 @@ def test_line_drift_failure_uses_actual_line_number_key() -> None:
     """
     from easter_hermes_sorry_skills._patcher_validation import _line_drift_failure
 
-    anchor = Anchor(line=688, text="    if len(desc) > 60:")
+    anchor = Anchor(line=716, text="    if len(desc) > 60:")
     text = "# pad\n" * 9 + "    if len(desc) > 60:\n"
     failure = _line_drift_failure(
         site=S1_CAP_SITE,
         anchor=anchor,
-        line_no=10,  # found on L10 instead of expected L688
+        line_no=10,  # found on L10 instead of expected L716
         text=text,
     )
     assert failure["reason"] == "LINE_DRIFT"
-    assert failure["anchor_line"] == 688
+    assert failure["anchor_line"] == 716
     assert failure["found_at_line"] == 10
     # The dynamic key is the actual line number where the anchor was found.
     assert "actual_at_line_10" in failure
@@ -1832,10 +1777,10 @@ def test_text_drift_failure_uses_unknown_sentinel_key() -> None:
     """
     from easter_hermes_sorry_skills._patcher_validation import _text_drift_failure
 
-    anchor = Anchor(line=688, text="    if len(desc) > 60:")
+    anchor = Anchor(line=716, text="    if len(desc) > 60:")
     failure = _text_drift_failure(site=S1_CAP_SITE, anchor=anchor)
     assert failure["reason"] == "TEXT_DRIFT"
-    assert failure["anchor_line"] == 688
+    assert failure["anchor_line"] == 716
     assert "actual_at_line_unknown" in failure
     assert "actual_at_line_<missing>" not in failure  # no literal placeholder
     assert failure["actual_at_line_unknown"] == "<not found>"
@@ -1869,7 +1814,7 @@ def test_text_drift_diagnostic_consumer_reads_sentinel_key() -> None:
     append_drift_diagnostic(
         {
             "site_id": "S1.cap",
-            "anchor_line": 688,
+            "anchor_line": 716,
             "reason": "TEXT_DRIFT",
             "expected": "    if len(desc) > 60:",
             "actual_at_line_unknown": "<file missing>",
@@ -1899,7 +1844,7 @@ def test_line_drift_diagnostic_consumer_reads_dynamic_key() -> None:
     append_drift_diagnostic(
         {
             "site_id": "S1.cap",
-            "anchor_line": 688,
+            "anchor_line": 716,
             "found_at_line": 10,
             "reason": "LINE_DRIFT",
             "expected": "    if len(desc) > 60:",
@@ -1907,9 +1852,9 @@ def test_line_drift_diagnostic_consumer_reads_dynamic_key() -> None:
         },
         diagnostics,
     )
-    # The LINE_DRIFT message contains the EXPECTED anchor line (688),
+    # The LINE_DRIFT message contains the EXPECTED anchor line (716),
     # not the found_at_line.
-    assert any("688" in d for d in diagnostics)
+    assert any("716" in d for d in diagnostics)
     assert any("line drift" in d for d in diagnostics)
 
 
@@ -1942,7 +1887,7 @@ def test_s1_cap_fallback_used_when_circular_import_detected(
     checkout = tmp_path / "fallback-apply"
     _write_task_e_files(checkout)
     lines: list[str] = ["# clean file\n"]
-    for i in range(1, 687):
+    for i in range(1, 715):
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append('        return desc[:57] + "..."\n')
@@ -1986,7 +1931,7 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     checkout = tmp_path / "normal-apply"
     _write_task_e_files(checkout)
     lines: list[str] = []
-    for i in range(1, 688):
+    for i in range(1, 716):
         lines.append(f"# pad {i}\n")
     lines.append("    if len(desc) > 60:\n")
     lines.append('        return desc[:57] + "..."\n')

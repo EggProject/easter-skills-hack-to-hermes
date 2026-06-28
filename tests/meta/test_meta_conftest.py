@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import importlib
 import os
-import sys
 from pathlib import Path
 
 import pytest
@@ -169,44 +168,3 @@ def test_hermes_checkout_fixture_calls_seed_minimal(
     # All 6 files from MINIMAL_HERMES_FILES MUST be present.
     for rel in MINIMAL_HERMES_FILES:
         assert (fake / rel).exists()
-
-
-def test_ensure_agent_stub_handles_existing_agent_module() -> None:
-    """_ensure_agent_stub MUST be a no-op when ``agent`` is already in sys.modules.
-
-    Exercises the ``agent_mod is None`` FALSE branch (line 120) AND the
-    pre-existing ``agent.skill_utils`` early-return at line 117/118.
-    """
-    import types
-
-    import tests.conftest as conftest_mod
-
-    saved_agent = sys.modules.get("agent")
-    saved_skill_utils = sys.modules.get("agent.skill_utils")
-    try:
-        # Install a sentinel ``agent`` package without skill_utils so the
-        # stub function actually executes the body (not the early return).
-        sentinel_agent = types.ModuleType("agent")
-        sentinel_agent.__path__ = []  # mark as package
-        sys.modules["agent"] = sentinel_agent
-        sys.modules.pop("agent.skill_utils", None)
-
-        conftest_mod._ensure_agent_stub()
-
-        # After the stub ran, skill_utils MUST be registered and reachable.
-        assert "agent.skill_utils" in sys.modules
-        skill_utils_mod = sys.modules["agent.skill_utils"]
-        # Calling the registered stub MUST return [] (covers line 127).
-        assert skill_utils_mod.get_disabled_skill_names() == []
-        # And the stub MUST be wired under sentinel_agent.
-        assert sentinel_agent.skill_utils is skill_utils_mod
-    finally:
-        # Restore sys.modules to avoid polluting other tests.
-        if saved_agent is None:
-            sys.modules.pop("agent", None)
-        else:
-            sys.modules["agent"] = saved_agent
-        if saved_skill_utils is None:
-            sys.modules.pop("agent.skill_utils", None)
-        else:
-            sys.modules["agent.skill_utils"] = saved_skill_utils

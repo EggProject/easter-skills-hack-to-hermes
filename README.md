@@ -41,7 +41,6 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run
 uv run --locked easter-hermes-sorry-skills-patch-hermes
 
 # 4. Smoke test
-uv run --locked easter-hermes-sorry-skills-install-profiles
 uv run --locked easter-hermes-sorry-skills-report
 ```
 
@@ -51,7 +50,6 @@ Detailed usage guide: [docs/usage.md](docs/usage.md).
 After install the three CLIs are on your `PATH`:
 
 - `easter-hermes-sorry-skills-patch-hermes`
-- `easter-hermes-sorry-skills-install-profiles`
 - `easter-hermes-sorry-skills-report`
 
 ## Documentation
@@ -80,9 +78,6 @@ through `uv run --locked` so `uv.lock` stays authoritative.
   (S1.cap + 6 Task E sites + S1.cap skills-prompt-snapshot purge) to your
   Hermes checkout. Defaults to `--target ~/.hermes/hermes-agent`. WRITES by
   default; pass `--dry-run` to audit without writing.
-- `easter-hermes-sorry-skills-install-profiles` — **read-only** per-profile
-  audit of the migrated `skill-creator` (which profiles have it enabled, which
-  skills are visible). Emits tables by default, JSON with `--json`.
 - `easter-hermes-sorry-skills-report` — **read-only** usage reporter. Shows
   which skills are currently enabled and what the daily cost surface looks
   like. NO writes, NO config flips.
@@ -132,7 +127,6 @@ src/easter_hermes_sorry_skills/   # plugin + the three CLIs
   _advisory.py                    # static-AST cap detection (no mutation)
   _patcher*.py                    # the 8-patch engine
   cli_patch.py                    # patch-hermes CLI
-  cli_profiles.py                 # install-profiles CLI
   cli_report.py                   # report CLI
   i18n/                           # bilingual message catalog (en, hu)
 skills/skill-creator/             # migrated skill (Hermes variant)
@@ -180,7 +174,7 @@ The resulting `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` is a self-cont
 ```bash
 tar -xzf easter-hermes-sorry-skills-v0.1.0.tar.gz
 cd easter-hermes-sorry-skills-v0.1.0/
-bash scripts/easter-hermes-sorry-skills-install-profiles.sh [args...]
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh [args...]
 ```
 
 The only requirement on the user's machine is **Python 3.14+** (the `.pyz` shebang points to the system's `python3`).

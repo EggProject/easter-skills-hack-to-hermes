@@ -9,18 +9,28 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from easter_hermes_sorry_skills._i18n_pick import pick
 from easter_hermes_sorry_skills._patcher_consts import EXIT_IO, EXIT_PERMISSION
 from easter_hermes_sorry_skills._patcher_pipeline_types import PatcherResult
-from easter_hermes_sorry_skills.i18n.messages_en import IO_ERROR, PERMISSION_DENIED
 
 
-def io_error_result(path: Path, exc: OSError | PermissionError) -> PatcherResult:
-    """Build the IO-error PatcherResult for the given exception."""
+def io_error_result(
+    path: Path,
+    exc: OSError | PermissionError,
+    lang: str = "en",
+) -> PatcherResult:
+    """Build the IO-error PatcherResult for the given exception.
+
+    ``lang`` selects the single-language module via
+    :func:`easter_hermes_sorry_skills._i18n_pick.pick`; defaults to
+    ``"en"``.
+    """
+    msgs = pick(lang)
     if isinstance(exc, PermissionError):
-        diag = PERMISSION_DENIED.format(path=str(path))
+        diag = msgs.PERMISSION_DENIED.format(path=str(path))
         exit_code = EXIT_PERMISSION
     else:
-        diag = IO_ERROR.format(path=str(path), error=str(exc))
+        diag = msgs.IO_ERROR.format(path=str(path), error=str(exc))
         exit_code = EXIT_IO
     return build_result(
         exit_code=exit_code,

@@ -118,31 +118,3 @@ def test_real_hermes_agent_sentinel_install_present_branch(tmp_path, monkeypatch
     assert result == "sentinel-ok"
     # Finalizer MUST be registered on the live-install path.
     assert len(finalizers) == 1
-
-
-def test_ensure_hermes_cli_profiles_stub_idempotent_when_present(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """If ``hermes_cli.profiles`` is already in ``sys.modules``, the helper
-    is a no-op (early return)."""
-    import sys
-
-    pre = sys.modules.get("hermes_cli.profiles")
-    conftest._ensure_hermes_cli_profiles_stub()
-    assert sys.modules.get("hermes_cli.profiles") is pre
-
-
-def test_ensure_hermes_cli_profiles_stub_creates_when_hermes_cli_present(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """When ``hermes_cli`` is already in sys.modules but ``profiles`` isn't,
-    the helper adds ``profiles`` to the existing module rather than replacing it."""
-    import sys
-    import types
-
-    fake_parent = types.ModuleType("hermes_cli")
-    monkeypatch.setitem(sys.modules, "hermes_cli", fake_parent)
-    monkeypatch.delitem(sys.modules, "hermes_cli.profiles", raising=False)
-    conftest._ensure_hermes_cli_profiles_stub()
-    assert sys.modules["hermes_cli.profiles"].ProfileInfo is not None
-    assert sys.modules["hermes_cli"].profiles is sys.modules["hermes_cli.profiles"]

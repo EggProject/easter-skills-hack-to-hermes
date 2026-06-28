@@ -1,13 +1,22 @@
 """tests/meta/test_meta_check_bilingual.py — meta-tests for tools/check_bilingual.py.
 
-Implements the TDD test list declared at the top of tools/check_bilingual.py:
+The code now uses single-language console messages (the actual bilingual
+strings live in ``src/easter_hermes_sorry_skills/i18n/``). This meta-tool
+inverts the previous bilingual-enforcement rule: console messages and
+help text MUST NOT contain ``[en]`` or ``[hu]`` prefix tokens — except in
+``i18n/`` helper files where those tokens are the source of truth.
 
-  test_console_message_with_both_locales_passes
-  test_console_message_missing_hu_fails
-  test_console_message_missing_en_fails
-  test_console_message_with_hu_on_separate_line_fails
-  test_click_echo_calls_in_src_have_bilingual_argument
-  test_help_text_has_english_and_magyar_sections
+TDD test cases (mirror of tools/check_bilingual.py):
+
+  test_console_message_single_language_passes
+  test_console_message_with_en_prefix_fails
+  test_console_message_with_hu_prefix_fails
+  test_console_message_with_both_prefixes_fails
+  test_i18n_helper_with_prefix_passes
+  test_click_echo_with_en_prefix_fails
+  test_help_text_with_en_prefix_fails
+  test_help_text_with_hu_prefix_fails
+  test_help_text_in_i18n_helper_passes
   test_check_runs_clean_on_this_worktree_skeleton
 """
 
@@ -20,8 +29,6 @@ import pytest
 
 from tools import check_bilingual
 from tools.check_bilingual import (
-    HELP_EN_SECTION,
-    HELP_HU_SECTION,
     check_console_messages,
     check_help_text,
     run_all_checks,
@@ -37,21 +44,30 @@ def _write_src(tmp_path: Path, name: str, body: str) -> Path:
     return target
 
 
-def test_console_message_with_both_locales_passes(tmp_path: Path) -> None:
-    """`[en] hello / [hu] szia` is bilingual => no findings."""
+def _write_i18n(tmp_path: Path, name: str, body: str) -> Path:
+    """Drop a .py file under tmp_path/src/.../i18n/."""
+    i18n = tmp_path / "src" / "pkg" / "i18n"
+    i18n.mkdir(parents=True, exist_ok=True)
+    target = i18n / name
+    target.write_text(textwrap.dedent(body), encoding="utf-8")
+    return target
+
+
+def test_console_message_single_language_passes(tmp_path: Path) -> None:
+    """A plain single-language `print("hello")` MUST pass (no findings)."""
     _write_src(
         tmp_path,
         "ok.py",
         """\
         def run() -> None:
-            print("[en] hello / [hu] szia")
+            print("hello")
             """,
     )
     assert check_console_messages(tmp_path) == []
 
 
-def test_console_message_missing_hu_fails(tmp_path: Path) -> None:
-    """`print("[en] only english")` lacks `[hu]` => finding."""
+def test_console_message_with_en_prefix_fails(tmp_path: Path) -> None:
+    """`print("[en] only english")` MUST be flagged (single-language rule)."""
     _write_src(
         tmp_path,
         "bad.py",
@@ -61,11 +77,11 @@ def test_console_message_missing_hu_fails(tmp_path: Path) -> None:
             """,
     )
     findings = check_console_messages(tmp_path)
-    assert any("bilingual" in f.message for f in findings)
+    assert any("prefix" in f.message or "[en]" in f.message for f in findings)
 
 
-def test_console_message_missing_en_fails(tmp_path: Path) -> None:
-    """`print("[hu] csak magyar")` lacks `[en]` => finding."""
+def test_console_message_with_hu_prefix_fails(tmp_path: Path) -> None:
+    """`print("[hu] csak magyar")` MUST be flagged (single-language rule)."""
     _write_src(
         tmp_path,
         "bad.py",
@@ -75,33 +91,40 @@ def test_console_message_missing_en_fails(tmp_path: Path) -> None:
             """,
     )
     findings = check_console_messages(tmp_path)
-    assert any("bilingual" in f.message for f in findings)
+    assert any("prefix" in f.message or "[hu]" in f.message for f in findings)
 
 
-def test_console_message_with_hu_on_separate_line_fails(tmp_path: Path) -> None:
-    """Two separate print calls (one en, one hu) — neither alone is bilingual => finding."""
+def test_console_message_with_both_prefixes_fails(tmp_path: Path) -> None:
+    """A legacy bilingual `[en] ... / [hu] ...` literal MUST be flagged."""
     _write_src(
         tmp_path,
         "bad.py",
         """\
         def run() -> None:
-            print("[en] hello")
-            print("[hu] szia")
+            print("[en] hello / [hu] szia")
             """,
     )
     findings = check_console_messages(tmp_path)
-    # Both prints lack the other side, so we expect >= 2 findings.
-    bilingual_findings = [f for f in findings if "bilingual" in f.message]
-    assert len(bilingual_findings) >= 2
+    assert len(findings) >= 1
 
 
-def test_click_echo_calls_are_not_in_console_funcs(tmp_path: Path) -> None:
-    """click.echo resolves to attribute 'echo' — not in CONSOLE_FUNCS, so it is skipped.
+def test_i18n_helper_with_prefix_passes(tmp_path: Path) -> None:
+    """Files under i18n/ contain the bilingual strings by design => no findings."""
+    _write_i18n(
+        tmp_path,
+        "messages_en.py",
+        """\
+        REPORT_HELP_SHORT = "[en] Profile skill token + usage reporter / [hu] Profil skill token + használati riport"
+        """,
+    )
+    assert check_console_messages(tmp_path) == []
 
-    The console-message check covers `print` and `logger.{info,warning,error,debug,
-    critical}` only; `click.echo` is intentionally OUT of scope. A click.echo with
-    non-bilingual text MUST NOT be flagged (its bilingual surface is the click
-    command's --help docstring, asserted separately by `test_help_text_*`).
+
+def test_click_echo_with_en_prefix_fails(tmp_path: Path) -> None:
+    """A static `click.echo("[en] hello")` literal MUST be flagged.
+
+    click.echo is now in CONSOLE_FUNCS because single-language enforcement
+    applies to ALL console-output channels, not only print/logger.
     """
     _write_src(
         tmp_path,
@@ -109,75 +132,75 @@ def test_click_echo_calls_are_not_in_console_funcs(tmp_path: Path) -> None:
         """\
         import click
         def run() -> None:
-            click.echo("[en] hello / [hu] szia")
-            click.echo("plain non-bilingual")  # would be a violation if echo were checked
+            click.echo("[en] hello")
+        """,
+    )
+    findings = check_console_messages(tmp_path)
+    assert any("[en]" in f.message for f in findings)
+
+
+def test_click_echo_dynamic_call_passes(tmp_path: Path) -> None:
+    """`click.echo(pick(lang).X)` is dynamic => skipped (not flagged)."""
+    _write_src(
+        tmp_path,
+        "cli.py",
+        """\
+        import click
+        def run(msg: object) -> None:
+            click.echo(msg)
         """,
     )
     assert check_console_messages(tmp_path) == []
 
 
-def test_help_text_has_english_and_magyar_sections(tmp_path: Path) -> None:
-    """Help docstring with both `Usage (English)` and `Használat (magyar)` => no finding."""
+def test_help_text_with_en_prefix_fails(tmp_path: Path) -> None:
+    """A file containing the `[en]` prefix token MUST be flagged by check_help_text."""
     _write_src(
         tmp_path,
         "cli.py",
-        f'''\
-        """Module docstring.
+        '''\
+        """Module docstring with [en] inline marker."""
+        ''',
+    )
+    findings = check_help_text(tmp_path)
+    assert any("[en]" in f.message for f in findings)
 
-        {HELP_EN_SECTION}
-            --option TEXT  English option description.
 
-        {HELP_HU_SECTION}
-            --option TEXT  Magyar opció leírása.
-        """
+def test_help_text_with_hu_prefix_fails(tmp_path: Path) -> None:
+    """A file containing the `[hu]` prefix token MUST be flagged by check_help_text."""
+    _write_src(
+        tmp_path,
+        "cli.py",
+        '''\
+        """Module docstring with [hu] inline marker."""
+        ''',
+    )
+    findings = check_help_text(tmp_path)
+    assert any("[hu]" in f.message for f in findings)
+
+
+def test_help_text_in_i18n_helper_passes(tmp_path: Path) -> None:
+    """Files under i18n/ contain `[en]/[hu]` by design => no findings."""
+    _write_i18n(
+        tmp_path,
+        "messages_hu.py",
+        '''\
+        """Hungarian messages — [hu] prefix is the source of truth."""
+        REPORT_HELP = "[hu] Profil / [en] Profile"
         ''',
     )
     assert check_help_text(tmp_path) == []
 
 
-def test_help_text_missing_hu_section_fails(tmp_path: Path) -> None:
-    """Help docstring with English section but no Hungarian => finding."""
-    _write_src(
-        tmp_path,
-        "cli.py",
-        f'''\
-        """Module docstring.
-
-        {HELP_EN_SECTION}
-            --option TEXT  English option description.
-        """
-        ''',
-    )
-    findings = check_help_text(tmp_path)
-    assert any(HELP_HU_SECTION in f.message for f in findings)
-
-
-def test_help_text_missing_en_section_fails(tmp_path: Path) -> None:
-    """Help docstring with Hungarian section but no English => finding."""
-    _write_src(
-        tmp_path,
-        "cli.py",
-        f'''\
-        """Module docstring.
-
-        {HELP_HU_SECTION}
-            --option TEXT  Magyar opció leírása.
-        """
-        ''',
-    )
-    findings = check_help_text(tmp_path)
-    assert any(HELP_EN_SECTION in f.message for f in findings)
-
-
 def test_check_runs_clean_on_this_worktree_skeleton(tmp_path: Path, monkeypatch) -> None:
-    """The hook MUST exit 0 against a clean synthetic fixture (bilingual everywhere)."""
+    """The hook MUST exit 0 against a clean synthetic fixture (single-language everywhere)."""
     _write_src(
         tmp_path,
         "ok.py",
         """\
         def run() -> None:
-            print("[en] hello / [hu] szia")
-            print("[en] another / [hu] másik")
+            print("hello")
+            print("szia")
         """,
     )
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
@@ -185,8 +208,8 @@ def test_check_runs_clean_on_this_worktree_skeleton(tmp_path: Path, monkeypatch)
     assert findings == []
 
 
-def test_console_message_with_logger_warning_fails(tmp_path: Path) -> None:
-    """logger.warning(...) without bilingual format MUST be flagged."""
+def test_console_message_with_logger_warning_prefix_fails(tmp_path: Path) -> None:
+    """logger.warning("[en] ...") MUST be flagged (single-language rule)."""
     _write_src(
         tmp_path,
         "log.py",
@@ -195,15 +218,15 @@ def test_console_message_with_logger_warning_fails(tmp_path: Path) -> None:
         logger = logging.getLogger(__name__)
 
         def run() -> None:
-            logger.warning("just english")
+            logger.warning("[en] something")
         """,
     )
     findings = check_console_messages(tmp_path)
-    assert any("bilingual" in f.message for f in findings)
+    assert any("[en]" in f.message for f in findings)
 
 
-def test_console_message_with_logger_info_bilingual_passes(tmp_path: Path) -> None:
-    """logger.info("[en] ... / [hu] ...") MUST pass."""
+def test_console_message_with_logger_info_single_lang_passes(tmp_path: Path) -> None:
+    """logger.info("plain info") without any prefix MUST pass."""
     _write_src(
         tmp_path,
         "log.py",
@@ -212,10 +235,10 @@ def test_console_message_with_logger_info_bilingual_passes(tmp_path: Path) -> No
         logger = logging.getLogger(__name__)
 
         def run() -> None:
-            logger.info("[en] info / [hu] info")
-            logger.error("[en] error / [hu] hiba")
-            logger.debug("[en] debug / [hu] debug")
-            logger.critical("[en] critical / [hu] kritikus")
+            logger.info("info")
+            logger.error("error")
+            logger.debug("debug")
+            logger.critical("critical")
         """,
     )
     findings = check_console_messages(tmp_path)
@@ -233,20 +256,18 @@ def test_console_message_with_dynamic_string_skipped(tmp_path: Path) -> None:
         """,
     )
     findings = check_console_messages(tmp_path)
-    # Dynamic strings are skipped (the runtime contract enforces bilingual at runtime).
     assert findings == []
 
 
-def test_console_message_with_embedded_slash_passes(tmp_path: Path) -> None:
-    """Slashes inside the en/hu content (paths, URLs) MUST NOT break the match."""
+def test_console_message_with_brackets_not_en_or_hu_passes(tmp_path: Path) -> None:
+    """Brackets around tokens other than en/hu MUST NOT be flagged (e.g. `[verbose]`, `[X]`)."""
     _write_src(
         tmp_path,
-        "url.py",
+        "ok.py",
         """\
         def run() -> None:
-            print("[en] see /tmp/x / [hu] lásd /tmp/x")
-            print("[en] http://example.com / [hu] http://example.com")
-            print("[en] step 1/2 done / [hu] 1/2 lépés kész")
+            print("[verbose] diagnostic info")
+            print("[X] marker")
         """,
     )
     findings = check_console_messages(tmp_path)
@@ -273,7 +294,7 @@ def test_venv_dir_is_skipped(tmp_path: Path) -> None:
     venv_src = tmp_path / ".venv" / "src"
     venv_src.mkdir(parents=True)
     (venv_src / "ok.py").write_text(
-        'def run() -> None:\n    print("plain")\n',
+        'def run() -> None:\n    print("[en] hello")\n',
         encoding="utf-8",
     )
     findings = run_all_checks(tmp_path)
@@ -287,7 +308,7 @@ def test_main_returns_1_when_findings(tmp_path: Path, monkeypatch, capsys) -> No
         "bad.py",
         """\
         def run() -> None:
-            print("[en] english only")
+            print("[en] only english")
         """,
     )
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
@@ -304,7 +325,7 @@ def test_main_returns_0_when_clean(tmp_path: Path, monkeypatch, capsys) -> None:
         "ok.py",
         """\
         def run() -> None:
-            print("[en] hello / [hu] szia")
+            print("hello")
         """,
     )
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
@@ -312,38 +333,6 @@ def test_main_returns_0_when_clean(tmp_path: Path, monkeypatch, capsys) -> None:
     assert rc == 0
     out = capsys.readouterr().out
     assert "OK" in out
-
-
-def test_fstring_with_static_placeholder_is_bilingual(tmp_path: Path) -> None:
-    """f-strings whose placeholders are static string literals MUST be detected."""
-    _write_src(
-        tmp_path,
-        "fs.py",
-        """\
-        EN = "[en] hello"
-        HU = "[hu] szia"
-
-        def run() -> None:
-            print(f"{EN} world / {HU} világ")
-        """,
-    )
-    findings = check_console_messages(tmp_path)
-    assert findings == []
-
-
-def test_fstring_with_dynamic_placeholder_is_skipped(tmp_path: Path) -> None:
-    """f-strings with non-literal placeholders MUST be skipped (no false-positive)."""
-    _write_src(
-        tmp_path,
-        "fs.py",
-        """\
-        def run(name: str) -> None:
-            print(f"[en] hello {name} / [hu] szia {name}")
-        """,
-    )
-    findings = check_console_messages(tmp_path)
-    # Dynamic placeholders -> _string_value returns None -> skipped.
-    assert findings == []
 
 
 def test_print_with_no_args_is_skipped(tmp_path: Path) -> None:
@@ -366,7 +355,7 @@ def test_scripts_dir_is_walked(tmp_path: Path) -> None:
     scripts.mkdir()
     (scripts / "bad.py").write_text('def run() -> None:\n    print("[en] only")\n', encoding="utf-8")
     findings = run_all_checks(tmp_path)
-    assert any("bilingual" in f.message for f in findings)
+    assert any("[en]" in f.message for f in findings)
 
 
 def test_skills_dir_is_walked(tmp_path: Path) -> None:
@@ -375,7 +364,7 @@ def test_skills_dir_is_walked(tmp_path: Path) -> None:
     skills.mkdir()
     (skills / "bad.py").write_text('def run() -> None:\n    print("[hu] csak")\n', encoding="utf-8")
     findings = run_all_checks(tmp_path)
-    assert any("bilingual" in f.message for f in findings)
+    assert any("[hu]" in f.message for f in findings)
 
 
 def test_argparse_argument_parsing() -> None:
@@ -389,7 +378,7 @@ def test_help_text_skip_when_unreadable(tmp_path: Path, monkeypatch) -> None:
     src = tmp_path / "src"
     src.mkdir()
     (src / "ok.py").write_text(
-        "def run() -> None:\n    print('[en] hello / [hu] szia')\n",
+        "def run() -> None:\n    print('hello')\n",
         encoding="utf-8",
     )
     real_read_text = Path.read_text
@@ -405,7 +394,7 @@ def test_help_text_skip_when_unreadable(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_walker_skips_venv_git_pycache(tmp_path: Path) -> None:
-    """The walker MUST skip .venv/, .git/, __pycache__ dirs (covers line 56)."""
+    """The walker MUST skip .venv/, .git/, __pycache__ dirs."""
     for skip_dir in (".venv", ".git", "__pycache__"):
         d = tmp_path / "src" / skip_dir
         d.mkdir(parents=True)
@@ -418,7 +407,7 @@ def test_walker_skips_venv_git_pycache(tmp_path: Path) -> None:
 
 
 def test_string_value_fstring_with_dynamic_placeholder_returns_none() -> None:
-    """An f-string with a non-Constant FormattedValue MUST return None (line 81)."""
+    """An f-string with a non-Constant FormattedValue MUST return None."""
     import ast
 
     node = ast.parse("print(f'{1+1}')", mode="eval").body
@@ -426,23 +415,23 @@ def test_string_value_fstring_with_dynamic_placeholder_returns_none() -> None:
 
 
 def test_string_value_fstring_with_non_constant_placeholder_returns_none() -> None:
-    """A JoinedStr with a non-Constant/non-FormattedValue part MUST return None (line 83)."""
+    """A JoinedStr with a non-Constant/non-FormattedValue part MUST return None."""
     import ast
 
-    # `f"{[1, 2, 3]}"` has a List inside FormattedValue — falls through to line 83.
+    # `f"{[1, 2, 3]}"` has a List inside FormattedValue — falls through to None.
     node = ast.parse("print(f'{[1, 2, 3]}')", mode="eval").body
     assert check_bilingual._string_value(node) is None
 
 
 def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The `if __name__ == '__main__'` block MUST be runnable in-process (line 201)."""
+    """The `if __name__ == '__main__'` block MUST be runnable in-process."""
 
     _write_src(
         tmp_path,
         "ok.py",
         """\
         def run() -> None:
-            print("[en] hello / [hu] szia")
+            print("hello")
         """,
     )
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
@@ -460,10 +449,9 @@ def test_main_module_invocation_via_runpy(tmp_path: Path, monkeypatch: pytest.Mo
 
 
 def test_string_value_fstring_with_constant_formatted_value() -> None:
-    """A JoinedStr with FormattedValue(value=Constant(str)) MUST be joined (line 79)."""
+    """A JoinedStr with FormattedValue(value=Constant(str)) MUST be joined."""
     import ast
 
-    # Manually construct: f"{prefix}-X-suffix" where {prefix} is a Constant.
     fv = ast.FormattedValue(
         value=ast.Constant(value="M"),
         conversion=-1,
@@ -473,23 +461,21 @@ def test_string_value_fstring_with_constant_formatted_value() -> None:
     )
     js = ast.JoinedStr(
         values=[
-            ast.Constant(value="[en] hi-"),
+            ast.Constant(value="hi-"),
             fv,
-            ast.Constant(value=" / [hu] szia"),
+            ast.Constant(value="-suffix"),
         ],
         lineno=1,
         col_offset=0,
     )
     ast.fix_missing_locations(js)
-    assert check_bilingual._string_value(js) == "[en] hi-M / [hu] szia"
+    assert check_bilingual._string_value(js) == "hi-M-suffix"
 
 
 def test_string_value_joinedstr_with_unknown_value_returns_none() -> None:
-    """A JoinedStr with a non-Constant/non-FormattedValue value MUST return None (line 83-84)."""
+    """A JoinedStr with a non-Constant/non-FormattedValue value MUST return None."""
     import ast
 
-    # f"{*something}" — a Starred expression. Not legal in normal source, but
-    # we can construct it manually. Starred is not handled by the walker.
     starred = ast.Starred(
         value=ast.Constant(value="x", lineno=1, col_offset=0),
         ctx=ast.Load(),
@@ -510,7 +496,6 @@ def test_string_value_attribute_call_returns_none(tmp_path: Path) -> None:
     import ast
 
     node = ast.parse("print(f'{func()} world')", mode="eval").body
-    # JoinedStr with a Call inside FormattedValue -> dynamic
     assert check_bilingual._string_value(node) is None
 
 
@@ -550,7 +535,6 @@ def test_main_module_invocation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(sys, "argv", ["check_bilingual.py"])
     # Exercise the `if __name__ == "__main__":` block via runpy.
     runpy.run_module("tools.check_bilingual", run_name="__not_main__")
-    # The above doesn't trigger the __main__ branch; we just import to cover line 201 import.
 
 
 def test_main_with_argv_returns_clean(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -560,9 +544,36 @@ def test_main_with_argv_returns_clean(tmp_path: Path, monkeypatch, capsys) -> No
         "ok.py",
         """\
         def run() -> None:
-            print("[en] hello / [hu] szia")
+            print("hello")
         """,
     )
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
     rc = check_bilingual.main([])
     assert rc == 0
+
+
+def test_i18n_skipped_for_help_text(tmp_path: Path) -> None:
+    """i18n directory files MUST be skipped by check_help_text entirely."""
+    _write_i18n(
+        tmp_path,
+        "messages_en.py",
+        '''\
+        """[en] docstring contains the prefix on purpose."""
+        X = "[en] hello"
+        ''',
+    )
+    findings = check_help_text(tmp_path)
+    assert findings == []
+
+
+def test_i18n_subdir_anywhere_in_path_is_exempt(tmp_path: Path) -> None:
+    """A file whose path contains any 'i18n' part MUST be exempt from both checks."""
+    _write_i18n(
+        tmp_path,
+        "messages_hu.py",
+        """\
+        Y = "[hu] szia / [en] hello"
+        """,
+    )
+    assert check_console_messages(tmp_path) == []
+    assert check_help_text(tmp_path) == []

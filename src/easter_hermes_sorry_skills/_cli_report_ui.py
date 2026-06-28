@@ -9,7 +9,7 @@ from easter_hermes_sorry_skills._cli_report_helpers_consts import (
     HELP_EN_HEADER,
     HELP_HU_HEADER,
 )
-from easter_hermes_sorry_skills.i18n import messages_en as EN
+from easter_hermes_sorry_skills._i18n_pick import pick
 
 
 def emit_bilingual_help(lang: str = "en") -> None:
@@ -22,20 +22,21 @@ def emit_bilingual_help(lang: str = "en") -> None:
     """
     import click
 
-    if lang == "hu":
+    if pick(lang) is pick("hu"):
         click.echo(HELP_HU_HEADER)
     else:
         click.echo(HELP_EN_HEADER)
 
 
-def reject_flag(flag_name: str) -> int:
+def reject_flag(flag_name: str, lang: str = "en") -> int:
     """Print a bilingual rejection message and return exit code 2."""
     import click
 
+    msgs = pick(lang)
     msg = {
-        "apply": EN.report_rejected_apply,
-        "emit-migration-note": EN.report_rejected_emit_migration_note,
-        "write-report": EN.report_rejected_write_report,
-    }.get(flag_name, EN.report_rejected_apply)
+        "apply": msgs.report_rejected_apply,
+        "emit-migration-note": msgs.report_rejected_emit_migration_note,
+        "write-report": msgs.report_rejected_write_report,
+    }.get(flag_name, msgs.report_rejected_apply)
     click.echo(msg, err=True)
     return 2

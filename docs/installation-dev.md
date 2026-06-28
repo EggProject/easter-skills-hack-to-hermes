@@ -67,9 +67,8 @@ uv sync --locked --all-extras --dev
 # 3. Install the unified pre-commit gate (ruff + black + mypy + wemake + flake8 + pytest + bats + shellcheck)
 uv run --locked pre-commit install
 
-# 4. Verify the three CLIs are on PATH
+# 4. Verify the CLIs are on PATH
 uv run --locked easter-hermes-sorry-skills-patch-hermes --version
-uv run --locked easter-hermes-sorry-skills-install-profiles --version
 uv run --locked easter-hermes-sorry-skills-report --version
 ```
 
@@ -103,7 +102,6 @@ Three checks; every command must exit `0`.
 ```bash
 # 1. Each CLI prints --version
 uv run --locked easter-hermes-sorry-skills-patch-hermes --version
-uv run --locked easter-hermes-sorry-skills-install-profiles --version
 uv run --locked easter-hermes-sorry-skills-report --version
 
 # 2. The pre-commit gate is wired

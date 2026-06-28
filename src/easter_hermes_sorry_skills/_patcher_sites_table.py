@@ -70,12 +70,14 @@ KIND_CAP = "cap"
 # Extracted into named constants so wemake WPS342 (implicit raw string)
 # does not flag the multi-`\n` patterns inside the Site() calls below.
 _NL2 = "\n\n"
-_E4_TEXT = '''    "today's task, it's wrong — fall back to (1), (2), or (3).
-
-"'''
-_E5_TEXT = '''    "(2), or (3).
-
-"'''
+_E4_LINE_A = '    "session artifact. If the proposed name only makes sense for "\n'
+_E4_LINE_B = "    \"today's task, it's wrong — fall back to (1), (2), or (3).\n\n\"\n"
+_E4_LINE_C = '    "User-preference embedding (important): when the user expressed a "\n'
+_E4_TEXT = _E4_LINE_A + _E4_LINE_B + _E4_LINE_C
+_E5_LINE_A = '    "artifact. If the name only fits today\'s task, fall back to (1), "\n'
+_E5_LINE_B = '    "(2), or (3).\n\n"\n'
+_E5_LINE_C = '    "User-preference embedding: when the user complains about how "\n'
+_E5_TEXT = _E5_LINE_A + _E5_LINE_B + _E5_LINE_C
 
 
 # --- site data classes ----------------------------------------------------
@@ -123,8 +125,8 @@ class Site:
 
 
 # --- canonical line-number constants (plans/04 §Multi-signal) -------------
-S1_CAP_LINE_A = 688
-S1_CAP_LINE_B = 689
+S1_CAP_LINE_A = 716
+S1_CAP_LINE_B = 717
 E0_LINE = 1
 # AC-2.8: E1/E2/E3 anchor lines are unchanged
 # because E0's insertion (constant definition) is applied LAST (the
@@ -137,17 +139,17 @@ E1_LINE = 179
 E2_LINE = 158
 E4B_LINE = 1
 # Same descending-order logic for E4/E5 in ``agent/background_review.py``
-# (E4b applies last, so L105/L192 anchors remain valid).
-E4_LINE = 105
-E5_LINE = 194
+# (E4b applies last, so L230/L317 anchors remain valid).
+E4_LINE = 230
+E5_LINE = 317
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
 # (agent/background_review.py). The patcher matches these against the
 # target's L1 docstring; the canonical text below mirrors the test
 # fixtures in ``tests/conftest.py``. In production, the docstring text
 # may differ; the site TEXT_DRIFTs and aborts so the operator can review.
-_E0_ANCHOR_TEXT = '"""Prompt builder (test fixture stand-in for agent/prompt_builder.py)."""'
-_E4B_ANCHOR_TEXT = '"""Background review (test fixture stand-in for agent/background_review.py)."""'
+_E0_ANCHOR_TEXT = '"""System prompt assembly -- identity, platform hints, skills index, context files.'
+_E4B_ANCHOR_TEXT = '"""Background memory/skill review — fork the agent to evaluate the turn.'
 
 # --- the S1.cap site (two-anchor atomic pair) -----------------------------
 

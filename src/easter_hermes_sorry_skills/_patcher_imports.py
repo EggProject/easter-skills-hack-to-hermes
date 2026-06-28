@@ -18,27 +18,21 @@ Module members are kept under WPS202 by exposing only the names that
 
 from __future__ import annotations
 
-from easter_hermes_sorry_skills import _patcher_apply as _apply_mod
 from easter_hermes_sorry_skills import _patcher_apply_atomic as _atomic_mod
-from easter_hermes_sorry_skills import _patcher_apply_state as _state_mod
 from easter_hermes_sorry_skills import _patcher_consts as _consts_mod
 from easter_hermes_sorry_skills import _patcher_helpers as _helpers_mod
 from easter_hermes_sorry_skills import _patcher_sites as _sites
 
 # Constants — re-bound to keep the orchestrator readable.
-REJECTED_SIDECAR = _apply_mod.REJECTED_SIDECAR
-write_rejected = _apply_mod.write_rejected
 _atomic_write_bytes = _atomic_mod._atomic_write_bytes
-STATE_SIDECAR = _state_mod.STATE_SIDECAR
-STATE_DRIFTED = _consts_mod.STATE_DRIFTED
-load_state = _state_mod.load_state
-write_state = _state_mod.write_state
 EXIT_DRIFT = _consts_mod.EXIT_DRIFT
 EXIT_IO = _consts_mod.EXIT_IO
 EXIT_OK = _consts_mod.EXIT_OK
 EXIT_PERMISSION = _consts_mod.EXIT_PERMISSION
 EXIT_USER_ABORT = _consts_mod.EXIT_USER_ABORT
 EXIT_VALIDATION = _consts_mod.EXIT_VALIDATION
+STATE_DRIFTED = _consts_mod.STATE_DRIFTED
+STATE_PATCHED = _consts_mod.STATE_PATCHED
 
 # Helpers — re-bound to the canonical function names used by callers.
 _cross_filesystem = _helpers_mod.cross_filesystem

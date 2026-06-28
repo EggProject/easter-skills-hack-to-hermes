@@ -78,13 +78,8 @@ _validate_sites = validate_sites
 # Local bindings matching the previous top-level import names. The
 # actual imports live in :mod:`._patcher_imports` to keep this
 # orchestrator under wemake WPS201 (<=12 imports per module).
-REJECTED_SIDECAR = _imps.REJECTED_SIDECAR
-write_rejected = _imps.write_rejected
 _atomic_write_bytes = _imps._atomic_write_bytes
-STATE_SIDECAR = _imps.STATE_SIDECAR
 STATE_DRIFTED = _imps.STATE_DRIFTED
-load_state = _imps.load_state
-write_state = _imps.write_state
 EXIT_DRIFT = _imps.EXIT_DRIFT
 EXIT_IO = _imps.EXIT_IO
 EXIT_OK = _imps.EXIT_OK
@@ -155,6 +150,7 @@ class PatchRunInputs:
     # when this is ``None``. Retained for API/back-compat.
     audit_log_path: Path | None = None
     git_head: str = ""
+    lang: str = "en"
 
 
 # --- internal pipeline state (re-exported for tests) --------------------
@@ -178,7 +174,7 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     # abort. The pipeline swaps S1.cap for S1.cap_fallback when a
     # cycle is detected so the patch proceeds with a local
     # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant.
-    circular = _check_circular_import(target_path, state)
+    circular = _check_circular_import(target_path, state, lang=inputs.lang)
     use_fallback_cap = circular.detected
     return _drive_pipeline(inputs, target_path, state, use_fallback_cap)
 
@@ -197,7 +193,7 @@ def _drive_pipeline(
     # from ``tools.skills_tool`` (which would cycle).
     if use_fallback_cap:
         all_sites = [S1_CAP_SITE_FALLBACK if site.site_id == S1_CAP_SITE.site_id else site for site in all_sites]
-    persisted = load_state(target_path)
+    persisted: dict[str, str] = {}
     # Validation always runs on every site so a fresh LINE_DRIFT is
     # detected and either EXIT_DRIFT (default) or absorbed into the
     # apply-time filter (when ``--force``). AC-2.5: ``--force`` retries
@@ -219,6 +215,7 @@ def _drive_pipeline(
                 diagnostics=list(state.diagnostics),
                 git_head=inputs.git_head,
                 exit_codes=(EXIT_DRIFT, EXIT_PERMISSION),
+                lang=inputs.lang,
             ),
         )
     # AC-2.5: when ``--force`` is set, only LINE_DRIFT sites (per
@@ -226,11 +223,17 @@ def _drive_pipeline(
     # sites are NOT re-applied.
     sites = all_sites
     if inputs.dry_run:
-        # Emit the bilingual plan BEFORE the EXIT_OK result builder so
+        # Emit the plan BEFORE the EXIT_OK result builder so
         # the operator sees the planned changes plus the
         # ``--dry-run mode, N patches were NOT applied`` tail.
         state.diagnostics.extend(
-            _plan_output._emit_plan(target_path, sites, validation, mode="dry_run"),
+            _plan_output._emit_plan(
+                target_path,
+                sites,
+                validation,
+                mode="dry_run",
+                lang=inputs.lang,
+            ),
         )
         return _ok_check_result_pipeline(
             OkCheckInputs(
@@ -241,14 +244,20 @@ def _drive_pipeline(
                 target_path=target_path,
                 diagnostics=state.diagnostics,
                 exit_ok_code=EXIT_OK,
-                write_state_fn=write_state,
+                lang=inputs.lang,
             ),
         )
-    # Apply path: emit the same bilingual plan (now followed by the
+    # Apply path: emit the same plan (now followed by the
     # ``N patches applied`` tail) BEFORE the apply loop so the
     # operator sees the planned changes alongside the apply summary.
     state.diagnostics.extend(
-        _plan_output._emit_plan(target_path, sites, validation, mode="apply"),
+        _plan_output._emit_plan(
+            target_path,
+            sites,
+            validation,
+            mode="apply",
+            lang=inputs.lang,
+        ),
     )
     return apply_skills_cache_purge_to_result(
         _apply_sites_pipeline(
@@ -262,7 +271,7 @@ def _drive_pipeline(
                 force=False,
                 audit_log_path=inputs.audit_log_path,
                 exit_ok_code=EXIT_OK,
-                write_state_fn=write_state,
+                lang=inputs.lang,
             )
         )
     )

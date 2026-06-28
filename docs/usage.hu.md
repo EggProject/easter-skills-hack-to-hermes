@@ -37,7 +37,6 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target /path/to/user-hermes
 
 # 4. Smoke test — a skill látható a Hermes számára?
-uv run --locked easter-hermes-sorry-skills-install-profiles
 uv run --locked easter-hermes-sorry-skills-report
 ```
 
@@ -67,10 +66,6 @@ találhatók.
   lévő Hermes checkout-ra. Alapértelmezetten ír; `--dry-run` flaggel
   csak auditol. Nem nyúl a `~/.hermes/hermes-agent` útvonalhoz (az
   upstream repó).
-- `easter-hermes-sorry-skills-install-profiles` — Read-only, profilonkénti
-  audit a migrált `skill-creator` skillről minden Hermes profilban.
-  Alapértelmezetten rich text táblázat; `--json` flaggel géppel
-  olvasható kimenet.
 - `easter-hermes-sorry-skills-report` — Read-only kezelői nézet: az
   engedélyezett skill-ek profilonként, token becslésekkel, használati
   számmal és utolsó használat időbélyeggel. NEM ír, kivéve egy

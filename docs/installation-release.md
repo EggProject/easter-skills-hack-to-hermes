@@ -90,7 +90,6 @@ set, and the `.pyz` runs via its Python shebang.
 ```bash
 # 1. The wrapper resolves the .pyz and exits 0
 easter-hermes-sorry-skills-patch-hermes --version
-easter-hermes-sorry-skills-install-profiles --version
 easter-hermes-sorry-skills-report --version
 
 # 2. Bilingual help prints both EN and HU sections
