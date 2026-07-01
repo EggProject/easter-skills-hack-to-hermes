@@ -68,7 +68,7 @@ The pre-commit config deliberately excludes `check_bilingual.py` because the mig
 
 `.github/workflows/ci.yml` runs on `push` to `main` and on every pull request. It uses separate jobs so independent checks can run in parallel:
 
-1. `lint` — `uv sync --locked --all-extras --dev`, system `bats` + `shellcheck`, then `uv run --locked pre-commit run --all-files --show-diff-on-failure`.
+1. `lint` — `uv sync --locked --all-extras --dev`, system `bats` + `shellcheck`, a Linux-compatible `.pyz` for wrapper smoke tests, then `uv run --locked pre-commit run --all-files --show-diff-on-failure`.
 2. `test-python` — `uv run --locked pytest -q`, using the 100% branch coverage gate from `pyproject.toml`.
 3. `test-bats` — builds a Linux-compatible `.pyz`, then runs `bats tests/bats/`.
 4. `static-safety` — asserts that no `# noqa`, `# type: ignore`, or `# pragma: no cover` lines exist in `src/`.

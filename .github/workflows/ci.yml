@@ -39,6 +39,18 @@ jobs:
       - name: Install system packages
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck
 
+      - name: Build .pyz for pre-commit wrapper smoke tests
+        run: |
+          uv pip install --quiet 'shiv>=1.0,<2.0'
+          PYTHON="$(command -v python3)"
+          "$PYTHON" -m shiv \
+              --site-packages .venv/lib/python3.14/site-packages \
+              --python "$PYTHON" \
+              --output-file dist/easter-hermes-sorry-skills.pyz \
+              --entry-point easter_hermes_sorry_skills.cli_patch:main \
+              --compressed \
+              .
+
       - name: Run pre-commit
         run: uv run --locked pre-commit run --all-files --show-diff-on-failure
 

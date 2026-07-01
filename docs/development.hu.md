@@ -68,7 +68,7 @@ A pre-commit konfig szándékosan mellőzi a `check_bilingual.py`-t, mert a migr
 
 A `.github/workflows/ci.yml` `main`-re push és minden pull request esetén fut. Több külön jobot használ, így a független checkek párhuzamosan futhatnak:
 
-1. `lint` — `uv sync --locked --all-extras --dev`, system `bats` + `shellcheck`, majd `uv run --locked pre-commit run --all-files --show-diff-on-failure`.
+1. `lint` — `uv sync --locked --all-extras --dev`, system `bats` + `shellcheck`, Linux-kompatibilis `.pyz` a wrapper smoke tesztekhez, majd `uv run --locked pre-commit run --all-files --show-diff-on-failure`.
 2. `test-python` — `uv run --locked pytest -q`, a `pyproject.toml` 100%-os branch coverage kapujával.
 3. `test-bats` — Linux-kompatibilis `.pyz` build, majd `bats tests/bats/`.
 4. `static-safety` — ellenőrzi, hogy `# noqa`, `# type: ignore` vagy `# pragma: no cover` sor NEM létezik az `src/`-ben.
