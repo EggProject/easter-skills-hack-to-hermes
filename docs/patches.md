@@ -22,7 +22,7 @@ The patcher always applies the full site table: `S1.cap` (or its fallback) plus 
 
 ## Cap raise
 
-The S1 pair replaces two physical lines in `agent/skill_utils.py` that hard-code a 60-character description cap. Skill descriptions longer than 60 characters are silently truncated at runtime, which makes the consulted rule and richer skill descriptions unusable. The replacement routes the cap through a constant the rest of the module can read.
+The S1 pair replaces two physical lines in `agent/skill_utils.py` that hard-code a 60-character description cap. Skill descriptions longer than 60 characters are silently truncated at runtime, which makes the consulted rule and richer skill descriptions unusable. The replacement uses a local `_MAX_DESCRIPTION_LENGTH = 1024` constant inside the function so `agent/skill_utils.py` stays import-light.
 
 ### S1.cap — raise the 60-char cap
 
@@ -34,19 +34,20 @@ The S1 pair replaces two physical lines in `agent/skill_utils.py` that hard-code
 - **Replacement:**
 
   ```python
-      if len(desc) > MAX_DESCRIPTION_LENGTH:
-          return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."
+      _MAX_DESCRIPTION_LENGTH = 1024
+      if len(desc) > _MAX_DESCRIPTION_LENGTH:
+          return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."
   ```
 
-- **Why:** the `60` literal lives deep in the truncation branch; raising it via a named constant lets `tools.skills_tool` import the same cap and stay consistent across modules.
+- **Why:** the `60` literal lives deep in the truncation branch; raising it to the same `1024` value used by the tools-layer validators keeps the system prompt index aligned without importing `tools.skills_tool` into Hermes's lightweight `agent/skill_utils.py`.
 
 ### S1.cap_fallback — circular-import fallback
 
 - **Site ID:** `S1.cap_fallback`
 - **Target:** same file, same anchors (lines 688–689)
-- **Action:** two-line atomic replace, but the replacement also prepends a local constant `_MAX_DESCRIPTION_LENGTH = 1024`
+- **Action:** compatibility site with the same local-constant replacement as `S1.cap`
 - **Trigger:** the pre-flight circular-import detector (`_check_circular_import` in `_patcher_internals.py:74-89`) walks `agent/skill_utils.py`'s existing `from tools.skills_tool import …` chain. If a cycle is detected, the orchestrator swaps `S1.cap` for `S1.cap_fallback` so the patch still proceeds without importing the cross-module `MAX_DESCRIPTION_LENGTH`
-- **Why:** keeps the cap raise working even when the import graph would otherwise cycle back through the file we are about to edit.
+- **Why:** keeps the circular-import branch explicit while preserving the same import-free runtime shape as `S1.cap`.
 
 ## Prompt-injection sites
 

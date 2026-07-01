@@ -207,6 +207,7 @@ _E4B_ANCHOR_TEXT = "from __future__ import annotations\n"
 
 # --- the S1.cap site (two-anchor atomic pair) -----------------------------
 
+_FALLBACK_MAX_DESCRIPTION_LENGTH = 1024
 S1_CAP_SITE = Site(
     site_id="S1.cap",
     file_path=TOOLS_SKILL_UTILS_REL,
@@ -215,24 +216,24 @@ S1_CAP_SITE = Site(
         Anchor(line=S1_CAP_LINE_B, text='        return desc[:57] + "..."'),
     ),
     insertion=(
-        '    if len(desc) > MAX_DESCRIPTION_LENGTH:\n        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
+        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
+        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
     # The idempotency check looks for the replacement text:
     expected_replacement=(
-        '    if len(desc) > MAX_DESCRIPTION_LENGTH:\n        return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
+        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
+        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
+        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
     ),
     kind=KIND_CAP,
     line_for_state=S1_CAP_LINE_A,
 )
 
-# AC-2.11 fallback: when ``tools.skills_tool`` cannot be imported in
-# the target checkout (potential circular import), the patcher swaps
-# S1.cap for S1.cap_fallback, which uses a LOCAL constant
-# ``_MAX_DESCRIPTION_LENGTH = 1024`` instead of the cross-module
-# ``MAX_DESCRIPTION_LENGTH``. The anchors are identical to S1.cap so
-# the multi-signal targeting lines up; only the replacement text
-# differs (it prepends a local-definition line).
-_FALLBACK_MAX_DESCRIPTION_LENGTH = 1024
+# AC-2.11 fallback: retained as a compatibility site for callers that
+# inspect the circular-import branch explicitly. It now matches S1.cap's
+# import-free local constant shape, because the pinned Hermes
+# ``agent/skill_utils.py`` module intentionally avoids tools-layer imports.
 S1_CAP_SITE_FALLBACK = Site(
     site_id="S1.cap_fallback",
     file_path=TOOLS_SKILL_UTILS_REL,

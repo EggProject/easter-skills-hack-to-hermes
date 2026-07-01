@@ -38,7 +38,7 @@ from easter_hermes_sorry_skills._advisory import (
 
 
 def test_detect_cap_state_patched(tmp_path: Path) -> None:
-    """fixture checkout with MAX_DESCRIPTION_LENGTH in the comparator; returns 'patched'."""
+    """fixture checkout with _MAX_DESCRIPTION_LENGTH in the comparator; returns 'patched'."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
@@ -47,9 +47,9 @@ def test_detect_cap_state_patched(tmp_path: Path) -> None:
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
-                MAX_DESCRIPTION_LENGTH = 1024
-                if len(desc) > MAX_DESCRIPTION_LENGTH:
-                    return desc[:MAX_DESCRIPTION_LENGTH]
+                _MAX_DESCRIPTION_LENGTH = 1024
+                if len(desc) > _MAX_DESCRIPTION_LENGTH:
+                    return desc[:_MAX_DESCRIPTION_LENGTH]
                 return desc
             """
         ),
@@ -152,7 +152,7 @@ def test_detect_cap_state_extract_fn_no_compare_with_cap(tmp_path: Path) -> None
 
 def test_detect_cap_state_extract_fn_with_unrelated_name(tmp_path: Path) -> None:
     """extract_skill_description has a Compare with a Name comparator that is
-    NOT MAX_DESCRIPTION_LENGTH. Exercises the 'comparator is Name but id !=
+    NOT _MAX_DESCRIPTION_LENGTH. Exercises the 'comparator is Name but id !=
     PATCHED_CAP_REFERENCE' branch (line 78->75)."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
@@ -319,4 +319,4 @@ def test_advisory_no_setattr_on_skill_utils() -> None:
 def test_advisory_pin_values() -> None:
     """Pin the cap values per plan D5."""
     assert UNPATCHED_CAP == 60
-    assert PATCHED_CAP_REFERENCE == "MAX_DESCRIPTION_LENGTH"
+    assert PATCHED_CAP_REFERENCE == "_MAX_DESCRIPTION_LENGTH"

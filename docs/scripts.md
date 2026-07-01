@@ -18,7 +18,7 @@ decorator only parses argv.
 ## #1 `easter-hermes-sorry-skills-patch-hermes`
 
 Idempotent Hermes patcher. Applies S1.cap (replaces the hard-coded `60`
-cap with `MAX_DESCRIPTION_LENGTH`) plus 6 Task E prompt-injection sites
+cap with a local 1024-character cap) plus 6 Task E prompt-injection sites
 for the consult rule. Task E runs by default — there is no opt-out flag
 for it. The patcher WRITES by default; pass `--dry-run` to audit only.
 

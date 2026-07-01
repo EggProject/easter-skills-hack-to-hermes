@@ -12,7 +12,7 @@ from pathlib import Path
 # Pin: the cap value in the unpatched agent/skill_utils.py.
 UNPATCHED_CAP = 60
 # Pin: the constant the patched function uses.
-PATCHED_CAP_REFERENCE = "MAX_DESCRIPTION_LENGTH"
+PATCHED_CAP_REFERENCE = "_MAX_DESCRIPTION_LENGTH"
 # Sentinel return values (public so register() can compare without importing
 # leading-underscore names from another module).
 PATCHED_STATE = "patched"

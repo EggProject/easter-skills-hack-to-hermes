@@ -222,6 +222,7 @@ def test_cli_dry_run_emits_plan_with_files_and_lines(
     assert "line " in combined
     assert "- " in combined
     assert "+ " in combined
+    assert 'return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."' in combined
     # Trailing NOT-APPLIED summary (dry_run mode) in the selected language.
     assert trailing_summary in combined
 

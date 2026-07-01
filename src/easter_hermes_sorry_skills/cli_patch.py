@@ -5,8 +5,8 @@ Bilingual --help (two-section EN/HU) and a small wrapper around
 
 The patcher applies two classes of changes to a Hermes checkout:
 - S1.cap (PRIMARY): replaces the hard-coded ``60`` cap in
-  ``agent/skill_utils.py``'s ``extract_skill_description`` with
-  ``MAX_DESCRIPTION_LENGTH``.
+  ``agent/skill_utils.py``'s ``extract_skill_description`` with a
+  local 1024-character cap.
 - 5 Task E sites (ALWAYS-ON, no flag): injects the consult rule
   (``SKILL_CREATOR_CONSULT_RULE``) into the Hermes prompt surfaces
   flagged by Task E.
@@ -52,7 +52,7 @@ from easter_hermes_sorry_skills.cli_patch_options import _add_click_option
 
 HELP_EN = (
     "Patcher applies:\n"
-    "  S1.cap   replace hard-coded ``60`` cap with MAX_DESCRIPTION_LENGTH\n"
+    "  S1.cap   replace hard-coded ``60`` cap with a local 1024-character cap\n"
     "  Task E   5 prompt-injection sites (consult rule for skill-creator)\n"
     "           applied by default, no flag.\n"
     "\n"
@@ -62,7 +62,7 @@ HELP_EN = (
 
 HELP_HU = (
     "A patcher a kovetkezoket vegzi:\n"
-    "  S1.cap   a hard-coded ``60`` cap-et MAX_DESCRIPTION_LENGTH-re csereli\n"
+    "  S1.cap   a hard-coded ``60`` cap-et lokalis 1024 karakteres cap-re csereli\n"
     "  Task E   5 prompt-injection hely (skill-creator tanacsado szabaly)\n"
     "           alapertelmezetten fut, nincs flag.\n"
     "\n"
@@ -135,7 +135,7 @@ def resolve_target(target_str: str | None) -> Path | None:
 
 
 def _patch_impl(args: PatchArgs) -> int:
-    """Idempotent Hermes patcher (S1.cap: MAX_DESCRIPTION_LENGTH cap-raise).
+    """Idempotent Hermes patcher (S1.cap: local 1024 cap-raise).
 
     Returns the exit code; the click wrapper raises ``SystemExit`` so
     that test code can call this directly without click's process-exit

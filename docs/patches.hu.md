@@ -22,7 +22,7 @@ A patcher mindig a teljes site-táblát alkalmazza: `S1.cap` (vagy a fallbackje)
 
 ## Cap felemelés
 
-Az `S1` pár két fizikai sort cserél ki az `agent/skill_utils.py` fájlban, amelyek egy 60-karakteres description cap-et hard-code-olnak. A 60 karakternél hosszabb skill leírások csendben truncálódnak futásidőben, ami a konzultációs szabályt és a gazdagabb skill leírásokat használhatatlanná teszi. A csere a cap-et egy olyan konstanson keresztül vezeti, amelyet a modul többi része is olvashat.
+Az `S1` pár két fizikai sort cserél ki az `agent/skill_utils.py` fájlban, amelyek egy 60-karakteres description cap-et hard-code-olnak. A 60 karakternél hosszabb skill leírások csendben truncálódnak futásidőben, ami a konzultációs szabályt és a gazdagabb skill leírásokat használhatatlanná teszi. A csere lokális `_MAX_DESCRIPTION_LENGTH = 1024` konstanst használ a függvényen belül, így az `agent/skill_utils.py` import-light marad.
 
 ### S1.cap — a 60-karakteres cap felemelése
 
@@ -34,19 +34,20 @@ Az `S1` pár két fizikai sort cserél ki az `agent/skill_utils.py` fájlban, am
 - **Csere:**
 
   ```python
-      if len(desc) > MAX_DESCRIPTION_LENGTH:
-          return desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."
+      _MAX_DESCRIPTION_LENGTH = 1024
+      if len(desc) > _MAX_DESCRIPTION_LENGTH:
+          return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."
   ```
 
-- **Miért:** a `60` literál mélyen a truncációs ágban lakik; a felemelése egy elnevezett konstanson keresztül lehetővé teszi, hogy a `tools.skills_tool` is importálja ugyanazt a cap-et, és a modulok között konzisztens maradjon.
+- **Miért:** a `60` literál mélyen a truncációs ágban lakik; a tools-layer validátorok által is használt `1024` értékre emelve a system prompt index igazodik a többi felülethez anélkül, hogy `tools.skills_tool` import kerülne a lightweight `agent/skill_utils.py` modulba.
 
 ### S1.cap_fallback — circular-import fallback
 
 - **Site ID:** `S1.cap_fallback`
 - **Cél:** ugyanaz a fájl, ugyanazok az anchorok (L688–L689)
-- **Művelet:** két soros atomi csere, de a csere egy lokális `_MAX_DESCRIPTION_LENGTH = 1024` konstanst is beilleszt a sorok elé
+- **Művelet:** kompatibilitási site ugyanazzal a lokális-konstans cserével, mint az `S1.cap`
 - **Trigger:** a pre-flight circular-import detektor (`_check_circular_import` a `_patcher_internals.py:74-89`-ben) bejárja az `agent/skill_utils.py` meglévő `from tools.skills_tool import …` láncát. Ha ciklust talál, az orchestrator `S1.cap` helyett `S1.cap_fallback`-et választ, így a patch a cross-module `MAX_DESCRIPTION_LENGTH` importálása nélkül is lefuthat
-- **Miért:** a cap-emelés akkor is működik, amikor az import-gráf egyébként visszafordulna az általunk szerkesztendő fájlba
+- **Miért:** a circular-import ág explicit marad, miközben ugyanazt az importmentes runtime alakot használja, mint az `S1.cap`
 
 ## Prompt-injection site-ok
 
