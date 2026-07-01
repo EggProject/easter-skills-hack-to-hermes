@@ -43,11 +43,13 @@ jobs:
         run: |
           uv pip install --quiet 'shiv>=1.0,<2.0'
           PYTHON="$(command -v python3)"
-          "$PYTHON" -m shiv \
-              --site-packages .venv/lib/python3.14/site-packages \
-              --python "$PYTHON" \
-              --output-file dist/easter-hermes-sorry-skills.pyz \
-              --entry-point easter_hermes_sorry_skills.cli_patch:main \
+          PY_VERSION="$("${PYTHON}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+          SITE_PACKAGES=".venv/lib/python${PY_VERSION}/site-packages"
+          "${PWD}/.venv/bin/shiv" \
+              --site-packages "${SITE_PACKAGES}" \
+              --python "${PYTHON}" \
+              --output-file "dist/easter-hermes-sorry-skills.pyz" \
+              --reproducible \
               --compressed \
               .
 
