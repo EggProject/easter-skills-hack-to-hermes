@@ -168,3 +168,14 @@ def test_hermes_checkout_fixture_calls_seed_minimal(
     # All 6 files from MINIMAL_HERMES_FILES MUST be present.
     for rel in MINIMAL_HERMES_FILES:
         assert (fake / rel).exists()
+
+
+def test_frozen_time_fixture_sets_env(frozen_time: str) -> None:
+    """frozen_time fixture MUST mirror the value into the process env."""
+    assert frozen_time == "2026-06-17T00:00:00Z"
+    assert os.environ["HERMES_SKILL_CREATOR_FROZEN_TIME"] == frozen_time
+
+
+def test_worktree_fixture_creates_directory(worktree: Path) -> None:
+    """worktree fixture MUST provide an existing scratch directory."""
+    assert worktree.is_dir()

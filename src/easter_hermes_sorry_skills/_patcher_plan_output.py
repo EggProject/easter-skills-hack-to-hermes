@@ -19,7 +19,7 @@ no I/O.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from easter_hermes_sorry_skills._i18n_pick import Messages, pick
 from easter_hermes_sorry_skills._patcher_pipeline_emit import mutate_lines_for_site
@@ -45,24 +45,24 @@ class _SiteDiffFormatter:
     threshold and the local-variable count under WPS210.
     """
 
-    def __init__(self, old_lines: list[str], new_lines: list[str], anchor: int, msgs: Messages) -> None:
+    def __init__(
+        self,
+        old_lines: list[str],
+        new_lines: list[str],
+        anchor: int,
+        new_count: int,
+        msgs: Messages,
+    ) -> None:
         self.old_lines = old_lines
         self.new_lines = new_lines
         self.anchor = anchor
+        self.new_count = new_count
         self.msgs = msgs
 
     def cap(self) -> list[str]:
-        r"""Return the 2-line diff block for a ``cap`` site."""
+        r"""Return the old two-line block plus the replacement lines for a ``cap`` site."""
         start = self.anchor - 1
-        old_t = self.msgs.DRY_RUN_DIFF_LINE_OLD
-        new_t = self.msgs.DRY_RUN_DIFF_LINE_NEW
-        anchor = self.anchor
-        return [
-            old_t.format(line=anchor, old=self.old_lines[start]),
-            new_t.format(line=anchor, new=self.new_lines[start]),
-            old_t.format(line=anchor + 1, old=self.old_lines[start + 1]),
-            new_t.format(line=anchor + 1, new=self.new_lines[start + 1]),
-        ]
+        return self._old_cap_lines(start) + self._new_cap_lines(start)
 
     def additive(self) -> list[str]:
         r"""Return the ``anchor + inserted`` diff for an additive site."""
@@ -74,6 +74,38 @@ class _SiteDiffFormatter:
             self.msgs.DRY_RUN_DIFF_LINE_OLD.format(line=self.anchor, old=old_after),
             self.msgs.DRY_RUN_DIFF_LINE_NEW.format(line=self.anchor, new=new_after),
         ]
+
+    def _old_cap_lines(self, start: int) -> list[str]:
+        r"""Return the two old cap lines consumed by the replacement."""
+        return [self._old_cap_line(start, offset) for offset in range(2)]
+
+    def _new_cap_lines(self, start: int) -> list[str]:
+        r"""Return every inserted replacement line for a cap site."""
+        return [self._new_cap_line(start, offset) for offset in range(self.new_count)]
+
+    def _old_cap_line(self, start: int, offset: int) -> str:
+        r"""Return one consumed line for a cap site."""
+        line_no = self.anchor + offset
+        old_idx = start + offset
+        return cast(
+            str,
+            self.msgs.DRY_RUN_DIFF_LINE_OLD.format(
+                line=line_no,
+                old=self.old_lines[old_idx],
+            ),
+        )
+
+    def _new_cap_line(self, start: int, offset: int) -> str:
+        r"""Return one inserted replacement line for a cap site."""
+        line_no = self.anchor + offset
+        new_idx = start + offset
+        return cast(
+            str,
+            self.msgs.DRY_RUN_DIFF_LINE_NEW.format(
+                line=line_no,
+                new=self.new_lines[new_idx],
+            ),
+        )
 
 
 def _site_diff(site: Site, text: str, msgs: Messages) -> list[str]:
@@ -90,7 +122,9 @@ def _site_diff(site: Site, text: str, msgs: Messages) -> list[str]:
         new_lines = "".join(mutate_lines_for_site(site, text)).splitlines()
     except (IndexError, ValueError):
         return []
-    formatter = _SiteDiffFormatter(old_lines, new_lines, site.primary_anchor().line, msgs)
+    anchor = site.primary_anchor().line
+    new_count = len(site.insertion.splitlines())
+    formatter = _SiteDiffFormatter(old_lines, new_lines, anchor, new_count, msgs)
     if site.kind == "cap":
         return formatter.cap()
     return formatter.additive()

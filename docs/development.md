@@ -43,7 +43,7 @@ uv sync --all-extras --dev              # one-time: install every dependency
 
 All Python commands MUST be prefixed with `uv run --locked` (per `.claude/rules/worktree-pr-workflow.md`); this keeps `uv.lock` authoritative. Never call `pytest`, `ruff`, `mypy`, `black`, `wemake-python-styleguide`, or `pre-commit` directly.
 
-Coverage is reported but not gated: `pyproject.toml:78` sets `--cov-fail-under=0`. The 100% kcov gate was dropped because Ubuntu 24.04 noble has no `kcov` package; bats smoke tests cover the shell wrappers instead.
+Coverage is gated at 100% branch coverage via `pyproject.toml` (`--cov-fail-under=100`). The Python gate covers the package, `tools/`, and shared test fixtures; bats smoke tests cover the shell wrappers separately.
 
 ---
 
@@ -66,18 +66,13 @@ The pre-commit config deliberately excludes `check_bilingual.py` because the mig
 
 ## CI workflow
 
-`.github/workflows/ci.yml` runs on `push` to `main` and on every pull request. The single job `pre-commit-and-pytest` executes on `ubuntu-latest` with a 30-minute timeout:
+`.github/workflows/ci.yml` runs on `push` to `main` and on every pull request. It uses separate jobs so independent checks can run in parallel:
 
-1. Checkout (full history, `fetch-depth: 0`).
-2. Setup Python 3.14.
-3. Install `uv` and cache `~/.cache/uv` keyed on `uv.lock` + `pyproject.toml`.
-4. `uv sync --all-extras --dev`.
-5. `sudo apt-get install -y bats shellcheck` — note: `kcov` is intentionally NOT installed (no package on Ubuntu 24.04 noble).
-6. `uv run pre-commit run --all-files --show-diff-on-failure`.
-7. `bats tests/bats/`.
-8. `uv run pytest --cov=easter_hermes_sorry_skills --cov-branch --cov-fail-under=0 -q` (matches `pyproject.toml:78`).
-9. Real silencers check: assert that no `# noqa`, `# type: ignore`, or `# pragma: no cover` lines exist in `src/`. Exit code 1 if any are found.
-10. `.gitignore` revert guard: fails the build if a PR diff modifies `.gitignore` beyond a trailing-newline change. This protects the operator's user-modification rule.
+1. `lint` — `uv sync --locked --all-extras --dev`, system `bats` + `shellcheck`, then `uv run --locked pre-commit run --all-files --show-diff-on-failure`.
+2. `test-python` — `uv run --locked pytest -q`, using the 100% branch coverage gate from `pyproject.toml`.
+3. `test-bats` — builds a Linux-compatible `.pyz`, then runs `bats tests/bats/`.
+4. `static-safety` — asserts that no `# noqa`, `# type: ignore`, or `# pragma: no cover` lines exist in `src/`.
+5. `build-package` — runs `scripts/build-release.sh --only-shiv` as a release-artifact smoke build.
 
 Pull requests that show CI red MUST NOT be merged with `--admin`. Wait for CI to pass or request an explicit operator override.
 

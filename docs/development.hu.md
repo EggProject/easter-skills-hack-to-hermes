@@ -43,7 +43,7 @@ uv sync --all-extras --dev              # one-time: install every dependency
 
 Minden Python parancsot `uv run --locked` prefix-szel kell futtatni (a `.claude/rules/worktree-pr-workflow.md` szerint); ez tartja autoritatívnek az `uv.lock`-ot. Soha ne hívd közvetlenül a `pytest`, `ruff`, `mypy`, `black`, `wemake-python-styleguide` vagy `pre-commit` parancsokat.
 
-A lefedettség riportolva van, de NEM kapuzott: a `pyproject.toml:78` a `--cov-fail-under=0` értéket állítja be. A 100%-os kcov kaput elvetettük, mert az Ubuntu 24.04 noble nem tartalmazza a `kcov` csomagot; helyette a bats smoke tesztek fedik a shell wrapper-eket.
+A lefedettség 100%-os branch coverage kapuval fut a `pyproject.toml` alapján (`--cov-fail-under=100`). A Python gate a csomagot, a `tools/` fájlokat és a közös teszt fixture-öket fedi; a bats smoke tesztek külön fedik a shell wrapper-eket.
 
 ---
 
@@ -66,18 +66,13 @@ A pre-commit konfig szándékosan mellőzi a `check_bilingual.py`-t, mert a migr
 
 ## CI workflow
 
-A `.github/workflows/ci.yml` `main`-re push és minden pull request esetén fut. Az egyetlen `pre-commit-and-pytest` job `ubuntu-latest`-en fut, 30 perces időkorláttal:
+A `.github/workflows/ci.yml` `main`-re push és minden pull request esetén fut. Több külön jobot használ, így a független checkek párhuzamosan futhatnak:
 
-1. Checkout (teljes történet, `fetch-depth: 0`).
-2. Python 3.14 telepítése.
-3. `uv` telepítése és a `~/.cache/uv` cache-elése az `uv.lock` + `pyproject.toml` alapján.
-4. `uv sync --all-extras --dev`.
-5. `sudo apt-get install -y bats shellcheck` — megjegyzés: a `kcov` szándékosan NEM települ (nincs csomag az Ubuntu 24.04 noble-on).
-6. `uv run pre-commit run --all-files --show-diff-on-failure`.
-7. `bats tests/bats/`.
-8. `uv run pytest --cov=easter_hermes_sorry_skills --cov-branch --cov-fail-under=0 -q` (megegyezik a `pyproject.toml:78`-cal).
-9. Real silencers check: ellenőrzi, hogy `# noqa`, `# type: ignore` vagy `# pragma: no cover` sor NEM létezik az `src/`-ben. Exit 1 ha bármelyiket talál.
-10. `.gitignore` revert guard: elbukik, ha egy PR diff a `.gitignore`-t módosítja a sorvégi újsor karakteren túl. Ez védi az operátor user-modification szabályát.
+1. `lint` — `uv sync --locked --all-extras --dev`, system `bats` + `shellcheck`, majd `uv run --locked pre-commit run --all-files --show-diff-on-failure`.
+2. `test-python` — `uv run --locked pytest -q`, a `pyproject.toml` 100%-os branch coverage kapujával.
+3. `test-bats` — Linux-kompatibilis `.pyz` build, majd `bats tests/bats/`.
+4. `static-safety` — ellenőrzi, hogy `# noqa`, `# type: ignore` vagy `# pragma: no cover` sor NEM létezik az `src/`-ben.
+5. `build-package` — `scripts/build-release.sh --only-shiv` release-artifact smoke build.
 
 Piros CI-t mutató pull requesteket TILOS `--admin` flag-gel mergelni. Várjuk meg a CI-t, vagy kérjünk explicit operator override-ot.
 

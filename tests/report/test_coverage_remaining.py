@@ -368,3 +368,72 @@ def test_run_git_rev_parse_success_returns_stripped_stdout(tmp_path: Path) -> No
     fake_subprocess = types.SimpleNamespace(run=fake_run)
     out = cli_patch_git.run_git_rev_parse(fake_subprocess, tmp_path)
     assert out == "abc123def"
+
+
+def test_report_help_option_writer_skips_nameless_and_undocumented_entries() -> None:
+    """_LangAwareCommand._write_option_lines covers nameless and no-description branches."""
+    import types
+
+    import click
+
+    from easter_hermes_sorry_skills._cli_report_cmd import _LangAwareCommand
+
+    cmd = _LangAwareCommand("x")
+    ctx = click.Context(cmd)
+    formatter = click.HelpFormatter()
+
+    def fake_params(_ctx: click.Context):
+        return [
+            types.SimpleNamespace(name=None, opts=["--ignored"]),
+            types.SimpleNamespace(name="missing", opts=["--missing"]),
+        ]
+
+    cmd.get_params = fake_params
+    cmd._write_option_lines(formatter, ctx, {}, "language")
+    assert formatter.getvalue() == ""
+
+
+def test_emit_bilingual_help_hu_branch(capsys) -> None:
+    """emit_bilingual_help MUST render the Hungarian header when lang='hu'."""
+    from easter_hermes_sorry_skills._cli_report_helpers_consts import HELP_HU_HEADER
+    from easter_hermes_sorry_skills._cli_report_ui import emit_bilingual_help
+
+    emit_bilingual_help("hu")
+    assert HELP_HU_HEADER in capsys.readouterr().out
+
+
+def test_cli_patch_help_empty_text_branch(monkeypatch) -> None:
+    """cli_patch._LangAwareCommand.format_help_text handles an empty help body."""
+    import click
+
+    from easter_hermes_sorry_skills import cli_patch
+
+    monkeypatch.setattr(cli_patch, "HELP_EN", "")
+    cmd = cli_patch._LangAwareCommand("x")
+    ctx = click.Context(cmd)
+    formatter = click.HelpFormatter()
+    cmd.format_help_text(ctx, formatter)
+    assert formatter.getvalue() == ""
+
+
+def test_patch_impl_exits_when_resolve_target_returns_none(monkeypatch) -> None:
+    """_patch_impl defensive target_path None branch is covered explicitly."""
+    from easter_hermes_sorry_skills import cli_patch
+
+    monkeypatch.setattr(cli_patch, "resolve_target", lambda _target: None)
+    with pytest.raises(SystemExit, match="target_path must not be None"):
+        cli_patch._patch_impl(cli_patch.PatchArgs(target="/tmp/x", dry_run=True, verbose=False))
+
+
+def test_add_click_option_with_dest_branch() -> None:
+    """_add_click_option MUST support explicit Click destination names."""
+    import click
+
+    from easter_hermes_sorry_skills.cli_patch_options import _add_click_option
+
+    @click.command()
+    def cmd(custom_name: str | None = None) -> None:
+        assert custom_name is None
+
+    wrapped = _add_click_option(cmd, "--example", "custom_name")
+    assert any(param.name == "custom_name" for param in wrapped.params)

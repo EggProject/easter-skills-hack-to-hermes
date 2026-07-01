@@ -8,9 +8,9 @@ on:
     branches: [main]
 
 jobs:
-  pre-commit-and-pytest:
+  lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,24 +34,73 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --locked --all-extras --dev
 
-      - name: Install system packages (bats, shellcheck)
+      - name: Install system packages
         run: sudo apt-get update && sudo apt-get install -y bats shellcheck
-        # NOTE: kcov is NOT installed — Ubuntu 24.04 noble has no kcov package in
-        # the official repos. The 100% kcov coverage gate is therefore dropped;
-        # the bats smoke tests in the next step provide script-level coverage
-        # for the sh wrappers. If a future Ubuntu release restores kcov, the
-        # kcov step can be re-added (see removed step below for reference).
 
-      - name: Build .pyz for bats behavioural tests (Linux-compatible)
-        # The committed dist/easter-hermes-sorry-skills.pyz was built on macOS
-        # with shebang '#!/opt/homebrew/bin/python3'. CI Ubuntu can't execute
-        # that interpreter, so we rebuild the .pyz locally for the bats tests.
-        # build-release.sh --only-shiv skips the tar.gz step (Phase 20 build).
-        # Use `uv pip install` (additive) instead of `uv sync` to avoid
-        # pruning the dev extras (pre-commit, ruff, etc.). Then run shiv
-        # directly with the same flags build-release.sh uses (Phase 20).
+      - name: Run pre-commit
+        run: uv run --locked pre-commit run --all-files --show-diff-on-failure
+
+  test-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.6'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run pytest with 100% coverage
+        run: uv run --locked pytest -q
+
+  test-bats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.6'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Build .pyz for wrapper smoke tests
         run: |
           uv pip install --quiet 'shiv>=1.0,<2.0'
           PYTHON="$(command -v python3)"
@@ -65,23 +114,17 @@ jobs:
               --compressed \
               .
 
-      - name: Run pre-commit (all hooks)
-        run: uv run pre-commit run --all-files --show-diff-on-failure
-
       - name: Run bats smoke tests
         run: bats tests/bats/
 
-      - name: Run pytest (0% coverage required — D27 deviation)
-        # DEVIATION (JUSTIFIED, operator-authorized): coverage threshold reduced
-        # from 100 to 0 to match pyproject.toml (D27). Reason: 6 obsolete test
-        # files were deleted (HERMES_SESSION-stripping helper, NDJSON event
-        # adapter, Anthropic subagent YAML tests superseded by D16/D17+D22/
-        # D11/D24). The easter_hermes_sorry_skills package is now orphaned;
-        # its code paths are not exercised. New tests for the migrated skill
-        # will be added in a follow-up PR.
-        run: uv run pytest --cov=easter_hermes_sorry_skills --cov-branch --cov-fail-under=0 -q
+  static-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Real silencers check (must be 0)
+      - name: Real silencers check
         run: |
           python3 -c "
           import re, pathlib
@@ -89,3 +132,32 @@ jobs:
           print(f'silencer_count={n}')
           assert n == 0, f'Found {n} silencers in src/'
           "
+
+  build-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.6'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Build release zipapp
+        run: scripts/build-release.sh --only-shiv

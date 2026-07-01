@@ -220,7 +220,7 @@ def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sent
 def test_apply_cap_raise_max_description_length_defined(
     hermes_checkout: Path, real_hermes_agent_sentinel: str | None
 ) -> None:
-    """After --apply, the cap-raise site uses MAX_DESCRIPTION_LENGTH."""
+    """After --apply, the cap-raise site defines the runtime cap locally."""
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -229,14 +229,22 @@ def test_apply_cap_raise_max_description_length_defined(
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
-    assert "MAX_DESCRIPTION_LENGTH" in text
+    assert "_MAX_DESCRIPTION_LENGTH" in text
     # The literal "60" must be gone from the cap-raise site (line 716).
     lines = text.splitlines()
     assert "60" not in lines[715]
-    assert "MAX_DESCRIPTION_LENGTH" in lines[715]
+    assert "_MAX_DESCRIPTION_LENGTH = 1024" in lines[715]
     # The slice on L717 (now L718 after the new comparator line) is
-    # `desc[:MAX_DESCRIPTION_LENGTH - 3] + "..."`.
-    assert "MAX_DESCRIPTION_LENGTH - 3" in "\n".join(lines[715:719])
+    # `desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."`.
+    assert "_MAX_DESCRIPTION_LENGTH - 3" in "\n".join(lines[715:719])
+
+    namespace: dict[str, object] = {}
+    code = compile(text, str(hermes_checkout / "agent" / "skill_utils.py"), "exec")
+    exec(code, namespace)
+    extract = namespace["extract_skill_description"]
+    assert callable(extract)
+    result = extract({"description": "a" * 1100})
+    assert result == ("a" * 1021) + "..."
 
 
 def test_task_e_runs_by_default(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
@@ -1659,8 +1667,9 @@ def test_apply_cap_raise_with_long_description(
     # Post-patch: BOTH S1.cap.a and S1.cap.b are applied.
     text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    assert "MAX_DESCRIPTION_LENGTH" in lines[715]
-    assert "MAX_DESCRIPTION_LENGTH - 3" in lines[716]
+    assert "_MAX_DESCRIPTION_LENGTH = 1024" in lines[715]
+    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in lines[716]
+    assert "_MAX_DESCRIPTION_LENGTH - 3" in lines[717]
 
 
 def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2123,8 +2132,7 @@ def test_s1_cap_fallback_used_when_circular_import_detected(
 
 def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """AC-2.11 negative path: when there is no circular import, the
-    patcher uses the regular S1.cap site (cross-module
-    ``MAX_DESCRIPTION_LENGTH``) and does NOT emit the cycle diagnostic.
+    patcher uses the regular S1.cap site and does NOT emit the cycle diagnostic.
     """
     checkout = tmp_path / "normal-apply"
     _write_task_e_files(checkout)
@@ -2143,9 +2151,10 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     )
     assert r.exit_code == EXIT_OK
     text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
-    # Normal S1.cap — uses the cross-module constant, NOT the fallback.
-    assert "if len(desc) > MAX_DESCRIPTION_LENGTH:" in text
-    assert "_MAX_DESCRIPTION_LENGTH" not in text
+    # Normal S1.cap now uses the same local constant shape as the fallback,
+    # avoiding a cross-module import into Hermes's lightweight skill_utils.py.
+    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in text
+    assert "_MAX_DESCRIPTION_LENGTH = 1024" in text
     # No cycle diagnostic.
     assert not any("circular import" in d for d in r.diagnostics)
 
@@ -2310,6 +2319,55 @@ def test_squash_payload_preserves_unicode_chars() -> None:
 def test_squash_payload_empty_string_returns_empty() -> None:
     """An empty string stays empty — no control chars, no truncation."""
     assert _squash_payload("") == ""
+
+
+def test_audit_log_path_creates_logs_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """audit_log_path creates ./logs and returns the patch-audit path."""
+    from easter_hermes_sorry_skills._patcher_apply import AUDIT_LOG_NAME, audit_log_path
+
+    monkeypatch.chdir(tmp_path)
+    path = audit_log_path()
+    assert path == Path("logs") / AUDIT_LOG_NAME
+    assert path.parent.is_dir()
+
+
+def test_combined_sha_empty_and_nonempty() -> None:
+    """combined_sha returns empty for no parts and a stable digest otherwise."""
+    from easter_hermes_sorry_skills._patcher_pipeline_emit_helpers import combined_sha
+
+    assert combined_sha([]) == ""
+    assert len(combined_sha(["a", "b"])) == 64
+
+
+def test_build_result_with_rejected_sets_rejected_path(tmp_path: Path) -> None:
+    """build_result_with_rejected returns a result carrying rejected_path."""
+    from easter_hermes_sorry_skills._patcher_pipeline_results import build_result_with_rejected
+
+    rejected = tmp_path / ".patch.rejected"
+    result = build_result_with_rejected(
+        exit_code=2,
+        diagnostics=("drift",),
+        state={"S1.cap": "drifted"},
+        rejected_path=rejected,
+    )
+    assert result.rejected_path == rejected
+    assert result.diagnostics == ("drift",)
+    assert result.state == {"S1.cap": "drifted"}
+
+
+def test_plan_output_read_text_and_site_diff_error_branches(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Plan helpers return empty diff data on missing files and stale anchors."""
+    from easter_hermes_sorry_skills import _patcher_plan_output as plan_output
+    from easter_hermes_sorry_skills._i18n_pick import pick
+
+    assert plan_output._read_text(tmp_path / "missing.py") == ""
+    assert plan_output._site_diff(S1_CAP_SITE, "", pick("en")) == []
+
+    def _boom(_site: Site, _text: str) -> list[str]:
+        raise ValueError("stale")
+
+    monkeypatch.setattr(plan_output, "mutate_lines_for_site", _boom)
+    assert plan_output._site_diff(S1_CAP_SITE, "line\n", pick("en")) == []
 
 
 def test_apply_against_real_upstream_hermes_files(tmp_path: Path) -> None:

@@ -95,9 +95,9 @@ def test_register_silent_when_cap_patched(tmp_path: Path, monkeypatch: pytest.Mo
         textwrap.dedent(
             """\
             def extract_skill_description(desc):
-                MAX_DESCRIPTION_LENGTH = 1024
-                if len(desc) > MAX_DESCRIPTION_LENGTH:
-                    return desc[:MAX_DESCRIPTION_LENGTH]
+                _MAX_DESCRIPTION_LENGTH = 1024
+                if len(desc) > _MAX_DESCRIPTION_LENGTH:
+                    return desc[:_MAX_DESCRIPTION_LENGTH]
                 return desc
             """
         ),
