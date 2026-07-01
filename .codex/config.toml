@@ -1,0 +1,40 @@
+[mcp_servers.easter-mind-map]
+command = "bun"
+args = ["dist/index.js"]
+cwd = "."
+env_vars = [
+  "EASTER_MIND_MAP_MCP_LOGLEVEL",
+  "EASTER_MIND_MAP_MCP_LOGPATH",
+  "EASTER_MIND_MAP_MCP_MINDMAP_DATA_DIR",
+  "EASTER_MIND_MAP_MCP_MINDMAP_DOCUMENT_ROOTS",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_BASE_URL",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_START_COMMAND",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_INSTALL_COMMAND",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_HEALTH_TIMEOUT_MS",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_ENV_LLM_PROVIDER",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_ENV_MINIMAX_API_KEY",
+  "EASTER_MIND_MAP_MCP_MINDGENIUS_ENV_MINIMAX_MODEL",
+]
+
+[mcp_servers.easter-mind-map.env]
+EASTER_MIND_MAP_MCP_MINDGENIUS_ENV_LLM_PROVIDER = "minimax"
+EASTER_MIND_MAP_MCP_MINDGENIUS_ENV_MINIMAX_MODEL = "MiniMax-M3"
+EASTER_MIND_MAP_MCP_LOGLEVEL = "DEBUG"
+
+[mcp_servers.easter-mind-map.tools.mindmap_guide]
+approval_mode = "approve"
+
+[mcp_servers.easter-mind-map.tools.mindmap_create]
+approval_mode = "approve"
+
+[mcp_servers.easter-mind-map.tools.mindmap_get_status]
+approval_mode = "approve"
+
+[mcp_servers.easter-mind-map.tools.mindmap_export]
+approval_mode = "approve"
+
+[mcp_servers.easter-mind-map.tools.mindmap_get_result]
+approval_mode = "approve"
+
+[mcp_servers.easter-mind-map.tools.mindmap_continue]
+approval_mode = "approve"
