@@ -96,6 +96,48 @@ agent-ek (`analyzer`, `comparator`, `grader`):
 
 ---
 
+## Adaptív skill emlékeztetők
+
+A plugin egy `pre_llm_call` hookot is regisztrál. Minden jogosult turnnél
+a Hermes skills API-n keresztül lekéri az engedélyezett skill-eket, a
+felhasználói üzenetet összeveti a skill nevekkel, kategóriákkal és
+leírásokkal, és csak akkor szúr be rövid emlékeztetőt, ha egy skill
+relevánsnak tűnik. Nem scannel profilokat és nem olvas közvetlenül skill
+fájlokat.
+
+A Hermes `config.yaml` fájlban, a plugin entry alatt állítható:
+
+```yaml
+plugins:
+  entries:
+    easter-hermes-sorry-skills-plugin:
+      skill_hook:
+        enabled: true
+        mode: adaptive
+        output: shortlist
+        top_k: 3
+        min_score: 2
+        log_level: INFO
+```
+
+Támogatott `mode` értékek:
+
+- `adaptive` — minden turnt értékel, de csak akkor szúr be emlékeztetőt,
+  ha a felhasználói üzenet illeszkedik az engedélyezett skill metaadatokra.
+- `first` — csak a session első turnjén értékel.
+- `off` — kikapcsolja a hookot a plugin kikapcsolása nélkül.
+
+Támogatott `output` értékek:
+
+- `shortlist` — skill nevek rövid leírásokkal.
+- `names` — csak skill nevek.
+- `index` — skill nevek hosszabb Hermes leírásokkal.
+
+Matching debughoz állítsd be az `EASTER_HERMES_SORRY_SKILLS_LOG_LEVEL=DEBUG`
+értéket. A log nem írja ki a felhasználói promptot.
+
+---
+
 ## Csak hivatkozások
 
 - [docs/installation.hu.md](installation.hu.md) — három telepítési mód + smoke test

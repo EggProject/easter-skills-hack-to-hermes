@@ -59,16 +59,18 @@ def test_register_callable_in_package_init() -> None:
     assert param_names == expected, f"register must take exactly {expected}; got params={param_names}"
 
 
-def test_register_calls_ctx_register_hook_once() -> None:
-    """register(ctx) must call ctx.register_hook('on_session_start', cb) exactly once
+def test_register_calls_ctx_register_hooks() -> None:
+    """register(ctx) must register advisory and pre_llm_call hooks.
+
     and must not invoke any other ctx.* methods beyond ctx.log / ctx.register_skill /
-    ctx.register_hook (which is itself called exactly once)."""
+    ctx.register_hook.
+    """
     ctx = _make_ctx()
     register(ctx)
-    assert ctx.register_hook.call_count == 1
-    args, _kwargs = ctx.register_hook.call_args
-    assert args[0] == "on_session_start"
-    assert callable(args[1])
+    assert ctx.register_hook.call_count == 2
+    calls = ctx.register_hook.call_args_list
+    assert [call.args[0] for call in calls] == ["on_session_start", "pre_llm_call"]
+    assert all(callable(call.args[1]) for call in calls)
 
 
 def test_register_does_not_call_ctx_register_skill() -> None:

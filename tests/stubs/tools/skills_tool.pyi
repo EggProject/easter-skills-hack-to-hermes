@@ -1,0 +1,3 @@
+"""tools.skills_tool stub — type declarations for host runtime module."""
+
+def skills_list(category: str | None = None, task_id: str | None = None) -> str: ...

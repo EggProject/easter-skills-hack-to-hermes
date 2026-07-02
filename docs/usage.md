@@ -88,6 +88,47 @@ details, and the leaf agents (`analyzer`, `comparator`, `grader`):
 
 ---
 
+## Adaptive skill reminders
+
+The plugin also registers a `pre_llm_call` hook. On each eligible turn it
+asks the Hermes skills API for the enabled skills, matches the current
+user message against skill names, categories, and descriptions, and injects
+a short reminder only when a skill looks relevant. It does not scan profiles
+or read skill files directly.
+
+Configure it in the Hermes `config.yaml` under the plugin entry:
+
+```yaml
+plugins:
+  entries:
+    easter-hermes-sorry-skills-plugin:
+      skill_hook:
+        enabled: true
+        mode: adaptive
+        output: shortlist
+        top_k: 3
+        min_score: 2
+        log_level: INFO
+```
+
+Supported `mode` values are:
+
+- `adaptive` — evaluate every turn, inject only when the user message
+  matches enabled skill metadata.
+- `first` — evaluate only on the first turn of a session.
+- `off` — disable the hook without disabling the plugin.
+
+Supported `output` values are:
+
+- `shortlist` — skill names plus short descriptions.
+- `names` — skill names only.
+- `index` — skill names plus longer Hermes descriptions.
+
+Set `EASTER_HERMES_SORRY_SKILLS_LOG_LEVEL=DEBUG` to debug matching
+decisions without logging user prompts.
+
+---
+
 ## See only
 
 - [docs/installation.md](installation.md) — three install modes + smoke test
