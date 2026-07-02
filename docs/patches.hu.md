@@ -66,7 +66,7 @@ A site-okat **csökkenő sorszám-sorrendben** alkalmazzuk, hogy a fájl-teteji 
   ```python
 
   SKILL_CREATOR_CONSULT_RULE = (
-      "When creating or editing a skill — use skill-creator. Persist with skill_manage. Small targeted fixes (one-file, < ~20 lines, no schema change) stay patch-first."
+      "Use skill-creator for creating or editing skills; use skill_manage only when persisting skill state; for small targeted fixes, prefer patch-first when limited to one file, roughly under 20 lines, and no schema change."
   )
 
   ```
