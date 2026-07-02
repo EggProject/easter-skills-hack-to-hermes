@@ -93,18 +93,19 @@ A `chmod +x` nem szükséges: az `.sh` fájlok az executable bit-tel együtt
 easter-hermes-sorry-skills-patch-hermes --version
 easter-hermes-sorry-skills-report --version
 
-# 2. A kétnyelvű help kiírja az EN és HU szekciót
+# 2. A help működik mindkét támogatott nyelven
 easter-hermes-sorry-skills-patch-hermes --help --lang en
 easter-hermes-sorry-skills-patch-hermes --help --lang hu
 
 # 3. A .pyz érvényes zipapp és önállóan fut
-python3 -m zipfile -l dist/easter-hermes-sorry-skills.pyz | head
+python3 -m zipfile -t dist/easter-hermes-sorry-skills.pyz
 ./dist/easter-hermes-sorry-skills.pyz -c "import easter_hermes_sorry_skills; print(easter_hermes_sorry_skills.__name__)"
 ```
 
 A tiszta telepítés minden `--version`-ből kiírja az
 `easter-hermes-sorry-skills 0.1.0` szöveget, a `--help --lang en`-ből
-mind a `[en]`, mind a `[hu]` blokkot, a `-c` hívásból pedig a csomagnevet.
+angol helpet, a `--help --lang hu`-ból magyar helpet, a `-c` hívásból
+pedig a csomagnevet.
 Teljes smoke teszt: [installation-verify.md](installation-verify.md).
 
 ---

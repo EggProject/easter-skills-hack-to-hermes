@@ -118,6 +118,6 @@ def emit_output(fmt: str, output: str, json_path: Path | None, lang: str = LANG_
     if fmt == FORMAT_JSON:
         assert json_path is not None
         json_path.write_text(output, encoding="utf-8")
-        click.echo(pick(lang).REPORT_OPT_JSON)
+        click.echo(pick(lang).REPORT_JSON_WRITTEN.format(path=str(json_path)))
     else:
         click.echo(output)

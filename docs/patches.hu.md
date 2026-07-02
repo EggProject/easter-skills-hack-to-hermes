@@ -151,14 +151,13 @@ Az `E4b` / `E4` / `E5` hármas az `agent/background_review.py` fájlt szerkeszti
 
 Az orchestrator (`_patcher.py:124-255`) egy fix pipeline-t követ:
 
-1. **Preflight** — megtagadja a futást, ha a `--target` a `~/.hermes/hermes-agent` útvonalra oldódik fel (az upstream repo), 4-es exit kóddal és kétnyelvű diagnosztikával. Lásd `_patcher.py:1-45` a refusal-rule contractért.
+1. **Preflight** — `--dry-run` módban figyelmeztet, ha a `--target` a `~/.hermes/hermes-agent` útvonalra oldódik fel, hogy az operátor lássa: az élő checkout auditja történik. Apply módban az operátor dönt, a patcher a feloldott célpontra ír.
 2. **Circular-import ellenőrzés** — a `file_has_circular_import` (a `_patcher_imports.py`-ban újraexportálva, eredetileg `_patcher_helpers`-ben) bejárja az `agent/skill_utils.py` meglévő import-gráfját. Egy észlelt ciklus `S1.cap`-et `S1.cap_fallback`-re cseréli (a patch tovább fut, a cross-module import elkerülve). Lásd `_patcher_internals.py:74-89`.
 3. **Site-szintű validáció** — minden site egyezését a fájl nyers bájtjain futtatjuk, a többszignálos anchor (8+ kar + 1-alapú sor) alapján. Az eltérés `LINE_DRIFT` vagy `TEXT_DRIFT` (a `_patcher_consts.py:26-27`-ben definiált konstansok).
 4. **Atomi írás** — a sikeres site-kat a `<file>.patch.tmp` + `os.replace` mintán keresztül írjuk (`_patcher_apply_atomic.py:47-71`). POSIX-atomi ugyanazon a fájlrendszeren; a mode bitek `os.chmod` segítségével megmaradnak. A temp fájl bármilyen kivétel esetén törlődik, így az eredeti érintetlen marad.
 5. **State sidecar** — a `.patch.state.json` (a `_patcher_apply_state.py:35-52`-ben) rögzíti, hogy mely site-ok `matched`, `patched` vagy `drifted` állapotúak. A következő futás ebből olvassa ki a már alkalmazott site-okat.
-6. **Rejected sidecar** — a `.patch.rejected` (a `_patcher_apply.py:64-102`-ban) a kétnyelvű, géppel olvasható hibarekord, amelyet drift esetén írunk ki. Sikeres futáskor soha nem jön létre.
-7. **Audit log** — a `~/.hermes/patch-audit.log` (a `_patcher_apply.py:42`-ben definiált `AUDIT_LOG_NAME`) csak sikeres `--force` futáskor kap egy új sort (időbélyeg + combined diff sha256). A normál `--apply` futások nem írnak audit sort.
-8. **Cache purge** — sikeres apply után a `_patcher_pipeline_purge.py:48-59` törli a `~/.hermes/.skills_prompt_snapshot.json` fájlt. A snapshot csak a `SKILL.md` / `DESCRIPTION.md` mtime-okat követi; nem veszi észre, ha a `prompt_builder.py`-t a patcher módosította. A purge hideg rebuildet kényszerít a következő Hermes futáskor.
+6. **Rejected sidecar** — a `.patch.rejected` a géppel olvasható hibarekord, amelyet drift esetén írunk ki. Sikeres futáskor soha nem jön létre.
+7. **Cache purge** — sikeres apply után a `_patcher_pipeline_purge.py:48-59` törli a `~/.hermes/.skills_prompt_snapshot.json` fájlt. A snapshot csak a `SKILL.md` / `DESCRIPTION.md` mtime-okat követi; nem veszi észre, ha a `prompt_builder.py`-t a patcher módosította. A purge hideg rebuildet kényszerít a következő Hermes futáskor.
 
 ### Exit kódok
 

@@ -60,7 +60,7 @@ A `.pre-commit-config.yaml` a kapu egyetlen forrása. A hook-ok a legszigorúbbt
 7. `mypy` v1.11.2 `--strict` — statikus típusellenőrzés. Hatókör: `src/`.
 8. `shellcheck` (lokális bináris) — `scripts/*.sh` lint. Súlyosság = warning.
 
-A pre-commit konfig szándékosan mellőzi a `check_bilingual.py`-t, mert a migrált skill angol marad (operator-authorized deviation).
+A pre-commit konfig szándékosan mellőzi a `check_bilingual.py`-t; lokális auditként továbbra is használható az egy nyelvű konzolkimeneti szerződésre.
 
 ---
 
@@ -82,9 +82,9 @@ Piros CI-t mutató pull requesteket TILOS `--admin` flag-gel mergelni. Várjuk m
 
 ### `tools/check_bilingual.py`
 
-AST-walk az `src/`, `scripts/` és `skills/` mappákon. Minden `print(...)` és `logger.{info,warning,error,...}(...)` hívásra, amelynek első argumentuma statikus string, ellenőrzi, hogy a formátum-string illeszkedik a `^\[en\] .+?/ \[hu\] .+?$` mintára — vagyis az `[en] ... / [hu] ...` egysoros kétnyelvű felületre (`tools/check_bilingual.py:44`). A nem-statikus stringek (változók, nem-literális placeholder-eket tartalmazó f-stringek) kimaradnak; a hívónak futásidőben kell kétnyelvű kimenetet előállítania.
+AST-walk az `src/`, `scripts/` és `skills/` mappákon. Minden `print(...)`, `click.echo(...)` és `logger.{info,warning,error,debug,critical}(...)` hívásra, amelynek első argumentuma statikus string, ellenőrzi, hogy a string **nem** tartalmaz régi `[en]` vagy `[hu]` prefixet. A nem-statikus stringek (változók, nem-literális placeholder-eket tartalmazó f-stringek) kimaradnak; a hívónak futásidőben is nyelvválasztás szerinti kimenetet kell adnia.
 
-A tool a Click parancsok docstringjeit is végigjárja, és ellenőrzi, hogy mind a `Usage (English)`, mind a `Használat (magyar)` szekció jelen van (`tools/check_bilingual.py:45-46`). Az egyik szekciót nélkülöző help docstringek finding-ként jelennek meg.
+A tool a help szövegeket és modulszövegeket is átnézi régi `[en]` / `[hu]` prefixek után. A `src/.../i18n/` alatti fájlok kivételek, mert a nyelvi katalógusok a validációs tesztek miatt birtokolhatják ezeket a tokeneket.
 
 A pre-commit-ból jelenleg ki van véve (operator döntés szerint, lásd `.pre-commit-config.yaml:25-30`).
 

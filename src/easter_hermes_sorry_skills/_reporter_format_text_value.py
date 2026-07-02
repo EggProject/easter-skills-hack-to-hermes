@@ -65,6 +65,11 @@ def _format_value_for_text(row: SkillRow, column: str) -> str:
     return getter(row)
 
 
+def _profile_heading(profile: str, rendered_lines: list[str]) -> str:
+    """Return a profile heading padded to the rendered table width."""
+    return f"◇ profile: {profile}".ljust(max(len(line) for line in rendered_lines))
+
+
 def format_text(
     profile: str,
     rows: list[SkillRow],
@@ -86,4 +91,5 @@ def format_text(
     for body_row in body:
         lines.append(_render_row(body_row, widths))
     lines.append(_render_row(_build_total_cells(columns, total_tokens), widths))
+    lines.insert(0, _profile_heading(profile, lines))
     return "\n".join(lines)

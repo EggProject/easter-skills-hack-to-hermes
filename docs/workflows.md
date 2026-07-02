@@ -15,7 +15,7 @@ Last verified: 2026-06-27 against `pyproject.toml` (HEAD `76b7cc3`).
 
 ## Workflow 1: First-time setup
 
-Bootstrap a fresh machine. 1.1-1.2 read-only; 1.3 writes the 8 patches;
+Bootstrap a fresh machine. 1.1-1.2 read-only; 1.3 writes the 7 patch sites;
 1.4-1.5 verify the migrated skill triggers from Hermes.
 
 ```bash
@@ -25,7 +25,7 @@ Bootstrap a fresh machine. 1.1-1.2 read-only; 1.3 writes the 8 patches;
 uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run \
     --target ~/work/hermes-fork
 
-# 1.3  Patch apply — write the 8 patches (S1.cap + 5 Task E + cache purge)
+# 1.3  Patch apply — write the 7 patch sites (S1.cap + 6 Task E + cache purge)
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target ~/work/hermes-fork
 
@@ -36,7 +36,7 @@ uv run --locked easter-hermes-sorry-skills-report --format text
 hermes chat -p "Use skill-creator to scaffold a skill called hello-world."
 ```
 
-`--dry-run` in step 1.2 prints one bilingual line per site. If any site
+`--dry-run` in step 1.2 prints one selected-language line per site. If any site
 reports `drifted`, abort and consult [Troubleshooting](#troubleshooting)
 — do not run 1.3 against a drifted target. Step 1.3 is atomic per file;
 1.4 is read-only; 1.5 confirms the round-trip end-to-end.
@@ -124,7 +124,7 @@ engineer sees on day-2+.
 | `--lang hu` does not switch the default help section | Release artifact built before `--lang` landed (commit `76b7cc3`, PR #47). Rebuild: `scripts/build-release.sh` |
 | `Skill 'X' already exists` when registering via `ln -sfn` | `rm -f "${HOME}/.hermes/skills/X"`, then re-create the symlink |
 | `report --json` exits non-zero with `Invalid --sort value` | Valid `--sort`: `tokens`, `use_count`, `last_used_at`. See [scripts.md](scripts.md) |
-| Bilingual `[hu]` lines missing from output | `uv sync --locked --all-extras --dev`; do NOT hand-edit `messages_en.py` / `messages_hu.py` |
+| `--lang hu` still emits English output | `uv sync --locked --all-extras --dev`; do NOT hand-edit `messages_en.py` / `messages_hu.py` |
 
 If none match, capture the full `uv run --locked` command, exit code, and
 first 10 lines of stderr, then open an issue. The on-call engineer can

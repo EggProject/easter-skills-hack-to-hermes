@@ -39,7 +39,7 @@ easter-hermes-sorry-skills-report --help --lang en
 
 easter-hermes-sorry-skills-report --format text
 
-python3 -m zipfile -l dist/easter-hermes-sorry-skills.pyz | head
+python3 -m zipfile -t dist/easter-hermes-sorry-skills.pyz
 ./dist/easter-hermes-sorry-skills.pyz -c "import easter_hermes_sorry_skills; print(easter_hermes_sorry_skills.__name__)"
 
 .venv/bin/python3 -c "from easter_hermes_sorry_skills import cli_patch; cli_patch._main_entry()" -- --help
@@ -60,13 +60,11 @@ readlink -f ~/.hermes/skills/skill-creator
 ```
 
 A tiszta telepítés kiírja minden CLI verzióját, az EN és HU help szekciót
-is, és minden parancs `0` exit kóddal lép ki. Ha bármelyik parancs
-nem-nullával lép ki, vagy a `.pyz` zip listájából hiányzik a
-`site-packages/`, a telepítés hibás; NE lépj tovább a
-[docs/usage.hu.md](usage.hu.md)-ra; helyette menj az alábbi
-hibakezelési táblázathoz. A megfelelő `bats` ellenőrzések a
-`tests/bats/{patch-hermes,report}.bats` fájlokban
-találhatók.
+is, validálja a `.pyz` fájlt, és minden parancs `0` exit kóddal lép ki. Ha
+bármelyik parancs nem-nullával lép ki, a telepítés hibás; NE lépj tovább a
+[docs/usage.hu.md](usage.hu.md)-ra; helyette menj az alábbi hibakezelési
+táblázathoz. A megfelelő `bats` ellenőrzések a
+`tests/bats/{patch-hermes,report}.bats` fájlokban találhatók.
 
 ---
 
@@ -82,7 +80,7 @@ találhatók.
 | 6 | `Permission denied` patchek alkalmazásakor egy Hermes checkouton | A checkout csak olvasható vagy más felhasználó tulajdona | `chown -R "${USER}": /path/to/user-hermes`; a patcher 3-as exit kóddal lép ki jogosultsági hibáknál |
 | 7 | `Skill not found` a `~/.hermes/hermes-agent`-ből | Sérült symlink vagy `skills_dirs` hiányzik a `~/.hermes/hermes-agent.yaml`-ból | A `readlink -f ~/.hermes/skills/skill-creator` oldjon fel; adj hozzá `skills_dirs: [~/.hermes/skills]` bejegyzést |
 | 8 | `JSON parse error` az `easter-hermes-sorry-skills-report`-ból | A `~/.hermes/hermes-agent.yaml` hibás (kézi szerkesztéskor lemaradt egy idézőjel) | `python3 -c "import yaml; yaml.safe_load(open('${HOME}/.hermes/hermes-agent.yaml'))"`; állítsd vissza biztonsági mentésből |
-| 9 | A `--lang hu` szekció hiányzik vagy a `--help` csak `[en]`-t ír ki | Egyedi `--help` felüldefiniálás törölt egy szekciót, vagy Python 3.13-on fut (3.14 kell a kétnyelvű táblázatokhoz) | Generáld újra az `uv sync --locked --all-extras --dev` paranccsal; NE szerkeszd kézzel a `messages_en.py` / `messages_hu.py` fájlokat; ellenőrizd, hogy a `python3 --version` 3.14.x-et írjon |
+| 9 | A `--lang hu --help` továbbra is angol szöveget ír | Egyedi `--help` felüldefiniálás figyelmen kívül hagyta a `--lang` értéket, vagy régi artifact fut | Generáld újra az `uv sync --locked --all-extras --dev` paranccsal; rebuildeld a `dist/` tartalmát; NE szerkeszd kézzel a `messages_en.py` / `messages_hu.py` fájlokat |
 
 Ha a fentiek egyike sem illik, rögzítsd a teljes parancsot, annak exit
 kódját és a stderr első 10 sorát, majd nyiss egy issue-t.
@@ -145,7 +143,7 @@ rm -rf ~/.hermes/python-extras/easter_hermes_sorry_skills            # a plugin 
 # 4. A ~/.hermes/hermes-agent.yaml visszaállítása (ha módosítottad)
 cp ~/.hermes/hermes-agent.yaml.bak ~/.hermes/hermes-agent.yaml      # ha készítettél biztonsági mentést
 
-# 5. A 8 patch visszavonása (Hermes oldalán; checkout-onként)
+# 5. A 7 patch site visszavonása (Hermes oldalán; checkout-onként)
 cd /path/to/user-hermes
 git checkout HEAD -- agent/skill_utils.py agent/prompt_builder.py agent/background_review.py
 ```

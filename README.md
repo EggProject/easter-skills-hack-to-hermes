@@ -14,8 +14,8 @@
 
 Two coordinated artifacts from the Hermes Skills Hack:
 
-1. **Hermes plugin** (`src/easter_hermes_sorry_skills/`) — emits a one-time bilingual
-   advisory when the 60-character skill-description cap is un-raised in your
+1. **Hermes plugin** (`src/easter_hermes_sorry_skills/`) — emits a one-time
+   language-specific advisory when the 60-character skill-description cap is un-raised in your
    Hermes checkout. The plugin is **advisory only**: it never mutates Hermes
    (`_register.py:1-13`).
 2. **Migrated `skill-creator`** (`skills/skill-creator/`) — ported from
@@ -24,7 +24,7 @@ Two coordinated artifacts from the Hermes Skills Hack:
    See `skills/skill-creator/SKILL.md:4` for the frontmatter contract.
 
 The package ships three operator-facing CLI entry points (`pyproject.toml:34-36`)
-plus the bilingual message catalog at `src/easter_hermes_sorry_skills/i18n/`.
+plus the EN/HU message catalog at `src/easter_hermes_sorry_skills/i18n/`.
 
 ## Quick start
 
@@ -74,7 +74,7 @@ After install the three CLIs are on your `PATH`:
 All three entry points are declared in `pyproject.toml:34-36`. Run any of them
 through `uv run --locked` so `uv.lock` stays authoritative.
 
-- `easter-hermes-sorry-skills-patch-hermes` — applies the **8 patches**
+- `easter-hermes-sorry-skills-patch-hermes` — applies the **7 patch sites**
   (S1.cap + 6 Task E sites + S1.cap skills-prompt-snapshot purge) to your
   Hermes checkout. Defaults to `--target ~/.hermes/hermes-agent`. WRITES by
   default; pass `--dry-run` to audit without writing.
@@ -86,38 +86,34 @@ through `uv run --locked` so `uv.lock` stays authoritative.
 
 `easter-hermes-sorry-skills-patch-hermes --dry-run` audits every planned
 patch without writing a single byte to the target. The output is a
-bilingual EN/HU **plan** the operator reads before deciding to apply:
+single-language **plan** selected by `--lang` that the operator reads before
+deciding to apply:
 
 ```text
-[en] plan for /path/to/target:
-[hu] terv a /path/to/target útvonalra:
-[en] would patch: agent/skill_utils.py (site S1.cap)
-[hu] patchelné: agent/skill_utils.py (S1.cap site)
+◇ plan for /path/to/target:
+• would patch: agent/skill_utils.py (site S1.cap)
   line 688: - old line content
   line 688: + new line content
-[en] 8 patch(es) would be applied / [hu] 8 patch kerülne alkalmazásra
-[en] WARNING: --dry-run mode, 8 patches were NOT applied /
-[hu] FIGYELEM: --dry-run módban vagyunk, 8 patch NEM történt meg
+◇ 7 patch(es) would be applied
+⚠ --dry-run mode, 7 patches were NOT applied
 ```
 
 Apply mode emits the same plan body, but the trailing tail switches to
-the bilingual "applied" message instead of the dry-run warning:
+the "applied" message instead of the dry-run warning:
 
 ```text
-[en] 8 patches applied / [hu] 8 patch alkalmazva
+✓ 7 patches applied
 ```
 
 **Soft safety.** The hermes-agent checkout (`~/.hermes/hermes-agent`) is
-the no-touch sentinel for the patcher. Apply mode (`--dry-run` not set)
-HARD-refuses it with `EXIT_IO` and a bilingual diagnostic. Dry-run
-mode SOFTENS the refusal: the patcher emits a bilingual WARNING,
-prints the plan, and proceeds so the operator can audit the planned
-changes before deciding to apply. The target file hash stays
-byte-identical (verified by the `test_cli_dry_run_no_writes_to_target`
-unit test).
+the default target. Dry-run emits a warning and prints the plan so the
+operator can audit the planned changes before deciding to apply. The target
+file hash stays byte-identical (verified by the
+`test_cli_dry_run_no_writes_to_target` unit test). Apply mode is operator
+controlled and writes to the resolved target.
 
-All three CLIs emit bilingual EN/HU console output (`i18n/messages_en.py`,
-`i18n/messages_hu.py`); `--help` carries mirrored English / magyar sections.
+All CLI text output is single-language (`--lang en|hu`) and uses the message
+modules in `i18n/messages_en.py` and `i18n/messages_hu.py`.
 
 ## Project layout
 
@@ -128,7 +124,7 @@ src/easter_hermes_sorry_skills/   # plugin + the three CLIs
   _patcher*.py                    # the 8-patch engine
   cli_patch.py                    # patch-hermes CLI
   cli_report.py                   # report CLI
-  i18n/                           # bilingual message catalog (en, hu)
+  i18n/                           # EN/HU message catalog
 skills/skill-creator/             # migrated skill (Hermes variant)
 docs/                             # per-topic docs (see table above)
 scripts/                          # bash wrappers around each CLI

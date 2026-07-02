@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -17,10 +16,10 @@ from easter_hermes_sorry_skills import cli_report
 from easter_hermes_sorry_skills.cli_report import HELP_EN_HEADER, HELP_HU_HEADER, main
 from tests.report._fixtures import _write_profile
 
-# --- help + bilingual ---
+# --- help + language selection ---
 
 
-def test_help_is_bilingual() -> None:
+def test_help_respects_selected_language() -> None:
     runner = CliRunner()
     en_result = runner.invoke(main, ["--help"])
     assert en_result.exit_code == 0
@@ -37,17 +36,16 @@ def test_help_is_bilingual() -> None:
         assert opt in hu_result.output
 
 
-def test_console_log_lines_match_bilingual_regex() -> None:
-    """Assert every print/echo line in cli_report.py matches the bilingual regex.
+def test_console_log_lines_are_single_language() -> None:
+    """Assert static print/echo lines in cli_report.py do not use legacy prefixes.
 
-    The script emits messages via click.echo; this test asserts the source
-    contains no non-bilingual string literals passed to echo/print.
+    The script emits messages via click.echo; this test asserts static source
+    literals do not reintroduce the old ``[en]`` / ``[hu]`` console format.
     """
     import ast
 
     src = Path(cli_report.__file__).read_text(encoding="utf-8")
     tree = ast.parse(src)
-    pat = re.compile(r"\[en\][^/]+/\[hu\]")
     bad: list[tuple[int, str]] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
@@ -67,9 +65,9 @@ def test_console_log_lines_match_bilingual_regex() -> None:
                     if not arg.value:
                         # Empty separator line — allowed.
                         continue
-                    if not pat.search(arg.value):
+                    if "[en]" in arg.value or "[hu]" in arg.value:
                         bad.append((node.lineno, arg.value))
-    assert not bad, f"non-bilingual call(s): {bad}"
+    assert not bad, f"legacy language-prefixed call(s): {bad}"
 
 
 # --- exit codes ---
@@ -173,6 +171,22 @@ def test_json_path_outside_hermes_home(hermes_home: Path, tmp_path: Path) -> Non
     )
     assert rc == 0
     assert out.exists()
+
+
+def test_json_write_message_reports_actual_path(hermes_home: Path, tmp_path: Path, capsys) -> None:
+    """JSON mode reports the path it wrote, not the --json option help text."""
+    _write_profile(hermes_home, name="hermes", config=None, skills={"a": "x"})
+    out = tmp_path / "report.json"
+    rc = cli_report.run(
+        profile="hermes",
+        sort="tokens",
+        fmt="json",
+        json_path=out,
+    )
+    assert rc == 0
+    stdout = capsys.readouterr().out
+    assert f"✓ report written to {out}" in stdout
+    assert "Write the report to PATH" not in stdout
 
 
 def test_json_path_inside_hermes_home_aborts(hermes_home: Path) -> None:

@@ -4,11 +4,9 @@ Exercises the full flag matrix and the ``--lang`` single-language
 help output.
 
 The CLI help output is single-language per ``--lang``. The patcher
-diagnostic stream is bilingual in format (``[en] X / [hu] Y``); the
-``--lang`` flag is plumbed through to ``run_patch`` for future single-
-language emission (when the patcher i18n refactor lands). The tests
-pin the current bilingual diagnostic format AND assert the ``--lang``
-flag is required on every ``runner.invoke`` call.
+diagnostic stream is also single-language and selected by ``--lang``.
+The tests pin the visible text output contract and assert the
+``--lang`` flag is present on every ``runner.invoke`` call.
 """
 
 from __future__ import annotations
@@ -359,7 +357,7 @@ def test_cli_verbose_emits_diagnostics(
         ["--lang", "en", "--verbose", "--target", str(hermes_checkout)],
     )
     assert r.exit_code == EXIT_OK
-    assert "OK" in r.output
+    assert "✓" in r.output
 
 
 def test_cli_default_writes(

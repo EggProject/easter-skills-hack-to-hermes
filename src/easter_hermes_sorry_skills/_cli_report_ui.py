@@ -1,7 +1,4 @@
-"""src/easter_hermes_sorry_skills/_cli_report_ui.py
-
-Bilingual help/rejection messages for the reporter CLI.
-"""
+"""Single-language help/rejection messages for the reporter CLI."""
 
 from __future__ import annotations
 
@@ -29,7 +26,7 @@ def emit_bilingual_help(lang: str = "en") -> None:
 
 
 def reject_flag(flag_name: str, lang: str = "en") -> int:
-    """Print a bilingual rejection message and return exit code 2."""
+    """Print a language-specific rejection message and return exit code 2."""
     import click
 
     msgs = pick(lang)

@@ -8,8 +8,8 @@ with `easter-hermes-sorry-skills`. The CLIs are declared as console-script
 entry points in `pyproject.toml:33-36`; the shell wrappers are convenience
 launchers that resolve the venv before execing the entry point.
 
-Both CLIs print bilingual `--help` text (English + Hungarian). Both
-are intentionally thin: every flag flows through to a typed
+Both CLIs print `--help` text in the selected language (`--lang en|hu`).
+Both are intentionally thin: every flag flows through to a typed
 dataclass (`PatchArgs` for #1, `ReportInputs` for #2) and the click
 decorator only parses argv.
 
@@ -32,19 +32,19 @@ easter-hermes-sorry-skills-patch-hermes [--target DIR] [--dry-run] [--verbose] [
 
 | Flag | Type | Default | Effect |
 |---|---|---|---|
-| `--target DIR` | path | `~/.hermes/hermes-agent` (REFUSED) | User-owned Hermes checkout. The default is the no-touch sentinel; the patcher refuses it (resolve() comparison, exit code 4). Pass an explicit path to patch a different checkout. |
+| `--target DIR` | path | `~/.hermes/hermes-agent` | Hermes checkout to inspect or patch. The default points at the live Hermes checkout; use `--dry-run` first when auditing. |
 | `--dry-run` | flag | `false` (writes) | Audit only; no writes. Default behavior is to WRITE. |
-| `--verbose` | flag | `false` | Print bilingual per-site diagnostics on stderr/stdout. |
-| `--help` / `-h` | flag | `false` | Show bilingual EN + HU help. |
+| `--verbose` | flag | `false` | Print per-site diagnostics. |
+| `--help` / `-h` | flag | `false` | Show help in the selected `--lang`. |
 
 ### Example
 
 ```bash
 $ easter-hermes-sorry-skills-patch-hermes --dry-run --target /path/to/user-hermes
-[en] S1.cap: matched, would patch
-[hu] S1.cap: illesztve, patch-elendo
-[en] Task E site 1/5: matched, would patch
-[hu] Task E 1/5 hely: illesztve, patch-elendo
+◇ plan for /path/to/user-hermes:
+• would patch: agent/skill_utils.py (site S1.cap)
+◇ 7 patch(es) would be applied
+⚠ --dry-run mode, 7 patches were NOT applied
 $ echo $?
 0
 ```
@@ -86,7 +86,7 @@ easter-hermes-sorry-skills-report [--profile NAME] [--sort {tokens,use_count,las
 | `--format` / `--fmt` | choice | `text` | Output format: `text` (rich tables) or `json` (machine-readable). |
 | `--json PATH` | path | `./skill-report.json` | Write the JSON report to `PATH`. Only meaningful when `--format json` is also passed. The default JSON name is `DEFAULT_JSON_NAME` in `_cli_report_helpers_consts.py:42`. |
 | `--verbose` | flag | `false` | Verbose diagnostics. |
-| `--help` | flag | `false` | Show bilingual EN + HU help. |
+| `--help` | flag | `false` | Show help in the selected `--lang`. |
 
 The CLI also rejects the legacy flags `--apply`, `--emit-migration-note`,
 and `--write-report` (defined in `REJECTED_FLAGS` at
@@ -97,8 +97,7 @@ non-zero before the report is built.
 
 ```bash
 $ easter-hermes-sorry-skills-report --format json --json ./skill-report.json --sort use_count
-[en] writing report to ./skill-report.json
-[hu] jelentés írása ide: ./skill-report.json
+✓ report written to skill-report.json
 $ echo $?
 0
 ```
@@ -118,7 +117,7 @@ Two 15-line bash wrappers under `scripts/` provide a stable
 "`./scripts/<name>.sh`" entry point regardless of whether the project
 is installed via the `.venv` or via `PATH`. Every wrapper uses
 `set -euo pipefail`, runs `cd "$(git rev-parse --show-toplevel)"`,
-and exits `127` with a bilingual error if the entry point is not
+and exits `127` with an error if the entry point is not
 found (the message tells the operator to run
 `uv sync --locked --all-extras --dev`).
 
@@ -134,15 +133,16 @@ found (the message tells the operator to run
 2. cd to the git repo root (so .venv/bin/... resolves)
 3. if .venv/bin/<name> exists and is executable → exec it
 4. elif <name> is on PATH → exec it
-5. else → print bilingual ERROR to stderr, exit 127
+5. else → print ERROR to stderr, exit 127
 ```
 
 ### Example
 
 ```bash
 $ ./scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
-[en] S1.cap: matched, no change in dry-run
-[hu] S1.cap: illesztve, dry-run módban nincs valtozas
+◇ plan for /tmp/hermes-135f23516:
+• would patch: S1.cap in agent/skill_utils.py
+⚠ --dry-run mode, 7 patches were NOT applied
 ```
 
 ---

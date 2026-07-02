@@ -20,7 +20,7 @@ the user's skills directory (`~/.hermes/skills/` by convention).
 
 - The skill is loaded at Hermes startup; the agent can call `/skill skill-creator`
 - Upgrades are a single `git pull` in this repo (the symlink preserves the path)
-- Mode 3 alone does not patch the Hermes source. To apply the 8 patches, run `easter-hermes-sorry-skills-patch-hermes --target /path/to/user-hermes` from mode 1 or 2.
+- Mode 3 alone does not patch the Hermes source. To apply the 7 patch sites, run `easter-hermes-sorry-skills-patch-hermes --target /path/to/user-hermes` from mode 1 or 2.
 
 Skip mode 3 if you do not need the skill at runtime (operator-only).
 
@@ -58,7 +58,7 @@ skill in place.
 
 Step 3 puts `easter_hermes_sorry_skills` on the Python path Hermes
 uses (`src/easter_hermes_sorry_skills/_register.py:33-37`). After the
-next Hermes restart, the one-time bilingual advisory fires unless the
+next Hermes restart, the one-time language-specific advisory fires unless the
 `S1.cap` patch was applied; the marker
 `~/.hermes/.easter_hermes_sorry_skills_advisory_seen` suppresses it.
 

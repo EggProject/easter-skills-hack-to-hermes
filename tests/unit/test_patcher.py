@@ -148,7 +148,7 @@ def assert_hermes_agent_untouched_decorator(func):
 
 def test_apply_cap_only_default_idempotent(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """First --apply patches S1.cap; second --apply exits 0 with
-    'OK: already patched' diagnostics."""
+    'already patched' diagnostics."""
     r1 = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -324,8 +324,8 @@ def test_target_required_exits_4(
 @pytest.mark.parametrize(
     ("lang", "expected_warning"),
     [
-        ("en", "WARNING: target is the live hermes-agent checkout (the default), no patches will be applied"),
-        ("hu", "FIGYELEM: a target az élő hermes-agent checkout (alapértelmezett), nem történik patch"),
+        ("en", "⚠ WARNING: target is the live hermes-agent checkout (the default), no patches will be applied"),
+        ("hu", "⚠ FIGYELEM: a target az élő hermes-agent checkout (alapértelmezett), nem történik patch"),
     ],
 )
 def test_target_resolves_to_hermes_agent_refused(
@@ -996,10 +996,13 @@ def test_zero_writes_on_validation_failure(tmp_path: Path, real_hermes_agent_sen
 # Phase 7A.5.
 
 
-# --- bilingual format / site table hygiene -------------------------------
+# --- single-language format / site table hygiene -------------------------
 
 
-def test_console_log_lines_match_bilingual_regex(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
+def test_console_log_lines_are_single_language(
+    hermes_checkout: Path,
+    real_hermes_agent_sentinel: str | None,
+) -> None:
     """Every USER-FACING diagnostic in the run is single-language (no
     bilingual ``[en] X / [hu] Y`` prefix).
 
@@ -1050,7 +1053,7 @@ def test_help_is_lang_aware() -> None:
 
 def test_check_already_patched_exits_0(hermes_checkout: Path, real_hermes_agent_sentinel: str | None) -> None:
     """After a successful --apply, --check exits 0 with per-site
-    'OK: already patched' messages."""
+    'already patched' messages."""
     run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -1383,7 +1386,7 @@ def test_apply_emits_cross_fs_warning(
     )
     assert r.exit_code == EXIT_OK
     # The CROSS_FS_WARN diagnostic is emitted (single-language, EN by default).
-    assert any("warning" in d.lower() and "filesystems" in d for d in r.diagnostics)
+    assert any(d.startswith("⚠") and "filesystems" in d for d in r.diagnostics)
 
 
 # --- coverage: atomic_write_bytes unlink + chmod error paths -----------
@@ -2268,7 +2271,7 @@ def test_idempotency_per_site(
     assert r1.exit_code == EXIT_OK, f"first apply failed: {r1.diagnostics}"
     assert site.site_id in r1.sites_patched, f"{site.site_id} should be patched on first apply; got {r1.sites_patched}"
     # Second --apply: site must be reported as 'already patched' (either
-    # by appearing in ``sites_already`` OR by a bilingual diagnostic
+    # by appearing in ``sites_already`` OR by a single-language diagnostic
     # naming the site). The two together cover both code paths.
     r2 = run_patch(
         PatchRunInputs(

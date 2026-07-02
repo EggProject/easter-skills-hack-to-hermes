@@ -35,7 +35,7 @@ def test_check_hermes_home_default_lang_emits_en_half() -> None:
         _dispatch._imps._check_json_path.return_value = True  # type: ignore[attr-defined]
         rc = _dispatch.check_hermes_home(inside, hermes_home)
     assert rc == _dispatch._JSON_INSIDE_HERMES_HOME_RC
-    assert captured["msg"] == "--json path resolves under HERMES_HOME, refusing", captured["msg"]
+    assert captured["msg"] == "✗ --json path resolves under HERMES_HOME; refusing to write there", captured["msg"]
 
 
 def test_check_hermes_home_hu_lang_emits_hu_half() -> None:
@@ -51,7 +51,7 @@ def test_check_hermes_home_hu_lang_emits_hu_half() -> None:
         _dispatch._imps._check_json_path.return_value = True  # type: ignore[attr-defined]
         rc = _dispatch.check_hermes_home(inside, hermes_home, lang="hu")
     assert rc == _dispatch._JSON_INSIDE_HERMES_HOME_RC
-    assert captured["msg"] == "a --json útvonala a HERMES_HOME alá esik, megtagadva", captured["msg"]
+    assert captured["msg"] == "✗ a --json útvonala a HERMES_HOME alá esik; ide nem írunk", captured["msg"]
 
 
 def test_load_context_forwards_lang_to_check_hermes_home() -> None:

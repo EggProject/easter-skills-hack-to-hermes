@@ -92,18 +92,18 @@ set, and the `.pyz` runs via its Python shebang.
 easter-hermes-sorry-skills-patch-hermes --version
 easter-hermes-sorry-skills-report --version
 
-# 2. Bilingual help prints both EN and HU sections
+# 2. Help follows the selected language
 easter-hermes-sorry-skills-patch-hermes --help --lang en
 easter-hermes-sorry-skills-patch-hermes --help --lang hu
 
 # 3. The .pyz is a valid zipapp and runs standalone
-python3 -m zipfile -l dist/easter-hermes-sorry-skills.pyz | head
+python3 -m zipfile -t dist/easter-hermes-sorry-skills.pyz
 ./dist/easter-hermes-sorry-skills.pyz -c "import easter_hermes_sorry_skills; print(easter_hermes_sorry_skills.__name__)"
 ```
 
 A clean install prints `easter-hermes-sorry-skills 0.1.0` from each
-`--version`, both `[en]` and `[hu]` blocks from `--help --lang en`, and
-the package name from the `-c` invocation. Full smoke battery:
+`--version`, English help from `--help --lang en`, Hungarian help from
+`--help --lang hu`, and the package name from the `-c` invocation. Full smoke battery:
 [installation-verify.md](installation-verify.md).
 
 ---
