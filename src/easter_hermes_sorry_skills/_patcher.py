@@ -229,11 +229,14 @@ def _drive_pipeline(
         # ``--dry-run mode, N patches were NOT applied`` tail.
         state.diagnostics.extend(
             _plan_output._emit_plan(
-                target_path,
-                sites,
-                validation,
-                mode="dry_run",
-                lang=inputs.lang,
+                _plan_output._EmitPlanInputs(
+                    target_path=target_path,
+                    sites=sites,
+                    validation=validation,
+                    mode="dry_run",
+                    sites_already=state.sites_already,
+                    lang=inputs.lang,
+                ),
             ),
         )
         return _ok_check_result_pipeline(
@@ -253,11 +256,14 @@ def _drive_pipeline(
     # operator sees the planned changes alongside the apply summary.
     state.diagnostics.extend(
         _plan_output._emit_plan(
-            target_path,
-            sites,
-            validation,
-            mode="apply",
-            lang=inputs.lang,
+            _plan_output._EmitPlanInputs(
+                target_path=target_path,
+                sites=sites,
+                validation=validation,
+                mode="apply",
+                sites_already=state.sites_already,
+                lang=inputs.lang,
+            ),
         ),
     )
     return apply_skills_cache_purge_to_result(

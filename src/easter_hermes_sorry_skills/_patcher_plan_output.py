@@ -18,6 +18,7 @@ no I/O.
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Literal, cast
 
@@ -149,31 +150,48 @@ def _build_plan_body(
     return lines
 
 
-def _emit_plan(
-    target_path: Path,
-    sites: list[Site],
-    validation: ValidationResult,
-    mode: Literal["dry_run", "apply"],
-    lang: str = "en",
-) -> list[str]:
+@dataclasses.dataclass(frozen=True)
+class _EmitPlanInputs:
+    """Bundled inputs for :func:`_emit_plan` (WPS211 <= 5 args)."""
+
+    target_path: Path
+    sites: list[Site]
+    validation: ValidationResult
+    mode: Literal["dry_run", "apply"]
+    sites_already: list[str]
+    lang: str = "en"
+
+
+def _planned_sites(inputs: _EmitPlanInputs) -> list[Site]:
+    """Return sites that would actually be applied."""
+    drifted_ids = {failure.get("site_id") for failure in inputs.validation.failures}
+    already_ids = set(inputs.sites_already)
+    planned: list[Site] = []
+    for site in inputs.sites:
+        if site.site_id in drifted_ids or site.site_id in already_ids:
+            continue
+        planned.append(site)
+    return planned
+
+
+def _emit_plan(inputs: _EmitPlanInputs) -> list[str]:
     r"""Return the plan lines for ``target_path`` + ``sites``.
 
     Renders the header, one ``would patch: <file> (site <id>)`` line
     per site, the per-site old/new diff preview, the summary, and the
     mode-specific tail (``not applied`` / ``applied``).
 
-    Sites that already match (idempotency) are skipped from the
-    per-site body but still counted in the summary. Drift sites are
-    skipped — the plan only renders sites that WOULD be applied.
+    Sites that already match (idempotency) and drift sites are skipped
+    from the per-site body and the summary count — the plan only
+    renders sites that WOULD be applied.
 
     ``lang`` selects the single-language i18n module via
     :func:`easter_hermes_sorry_skills._i18n_pick.pick`; defaults to
     ``"en"``.
     """
-    msgs = pick(lang)
-    drifted_ids = {failure.get("site_id") for failure in validation.failures}
-    applied = [site for site in sites if site.site_id not in drifted_ids]
-    lines = _build_plan_body(target_path, applied, msgs)
-    template = msgs.DRY_RUN_NOT_APPLIED if mode == "dry_run" else msgs.DRY_RUN_APPLIED
-    lines.append(template.format(count=len(applied)))
+    msgs = pick(inputs.lang)
+    planned = _planned_sites(inputs)
+    lines = _build_plan_body(inputs.target_path, planned, msgs)
+    template = msgs.DRY_RUN_NOT_APPLIED if inputs.mode == "dry_run" else msgs.DRY_RUN_APPLIED
+    lines.append(template.format(count=len(planned)))
     return lines

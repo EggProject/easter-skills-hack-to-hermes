@@ -58,9 +58,9 @@ The sites are applied in **descending line order** so that the top-of-file inser
 ### E0.consult_rule_def
 
 - **Site ID:** `E0.consult_rule_def`
-- **Target:** `agent/prompt_builder.py` line 1
-- **Action:** append a module-level constant immediately after the L1 docstring anchor (`kind="append"`)
-- **Anchor text:** the L1 docstring of `agent/prompt_builder.py`
+- **Target:** `agent/prompt_builder.py` line 5
+- **Action:** append a module-level constant immediately after the L5 closing docstring anchor (`kind="append"`)
+- **Anchor text:** the closing `"""` line of the real `agent/prompt_builder.py` multi-line docstring
 - **Insertion (verbatim, after the docstring):**
 
   ```python
@@ -108,9 +108,9 @@ The `E4b` / `E4` / `E5` triple edits `agent/background_review.py`. `E4b` adds th
 ### E4b.consult_rule_import
 
 - **Site ID:** `E4b.consult_rule_import`
-- **Target:** `agent/background_review.py` line 1
-- **Action:** append a single top-of-file import immediately after the L1 docstring
-- **Anchor text:** the L1 docstring of `agent/background_review.py`
+- **Target:** `agent/background_review.py` line 19
+- **Action:** append the `SKILL_CREATOR_CONSULT_RULE` import immediately after `from __future__ import annotations`
+- **Anchor text:** the byte-exact `from __future__ import annotations` line of `agent/background_review.py`
 - **Insertion (one line):**
 
   ```python
