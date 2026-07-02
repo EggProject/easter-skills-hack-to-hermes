@@ -59,14 +59,14 @@ Olyan üzemeltető gépekhez, amelyeknek csak a három CLI-t kell futtatniuk. Ni
 
 Olyan Hermes futtatókörnyezetekhez, amelyeknek a migrált `skill-creator` skillt kell kitenniük, és induláskor be kell tölteniük a patcher plugint. Az 1-es és 2-es módtól független.
 
-- Extra előfeltétel: user-owned Hermes checkout (a patcher elutasítja az upstream repot, exit code 4).
+- Extra előfeltétel: patchelendő Hermes checkout.
 - Idő a kész állapotig: ~5 perc a patch audit-tal együtt.
 
 → [docs/installation-hermes.hu.md](installation-hermes.hu.md)
 
 ### A telepítés ellenőrzése
 
-Bármelyik mód után futtasd a kétnyelvű smoke tesztet. Minden parancsnak `0` exit kóddal kell kilépnie; az EN + HU help szekcióknak egyszerre kell megjelenniük.
+Bármelyik mód után futtasd a smoke tesztet. Minden parancsnak `0` exit kóddal kell kilépnie; ellenőrizd a `--lang en` és `--lang hu` help kimenetet is.
 
 → [docs/installation-verify.hu.md](installation-verify.hu.md)
 
@@ -77,7 +77,7 @@ Bármelyik mód után futtasd a kétnyelvű smoke tesztet. Minden parancsnak `0`
 - [Telepítés — development mód](installation-dev.hu.md) — clone, `uv sync`, pre-commit
 - [Telepítés — release mód](installation-release.hu.md) — `.pyz` + wrapper-ek a `PATH`-on
 - [Telepítés — Hermes mód](installation-hermes.hu.md) — patch + plugin + skill
-- [Telepítés — verify](installation-verify.hu.md) — kétnyelvű smoke teszt
+- [Telepítés — verify](installation-verify.hu.md) — smoke teszt
 - [Használat](usage.hu.md) — a három CLI end-to-end vezérlése
 - [Workflow-k](workflows.hu.md) — gyakori telepítési / szerzői / riport receptek
 - [Fejlesztés](development.hu.md) — teszt, lint, CI, worktree + PR konvenciók

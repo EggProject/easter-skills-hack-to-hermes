@@ -5,7 +5,7 @@
 
 Ez az oldal az `easter-hermes-sorry-skills` csomaghoz szállított két Python CLI-t és két shell wrapper-t dokumentálja. A CLI-k console-script entry pointként vannak deklarálva a `pyproject.toml:33-36` sorban; a shell wrapper-ek kényelmi indítók, amelyek a venv-et feloldják `exec` előtt.
 
-Mindkét CLI kétnyelvű `--help` szöveget ír ki (angol + magyar), és szándékosan vékony: minden flag egy típusos dataclassba folyik (`PatchArgs` az #1-hez, `ReportInputs` a #2-höz); a click dekorátor csak az argv-ot parseolja.
+Mindkét CLI a kiválasztott nyelven ír `--help` szöveget (`--lang en|hu`), és szándékosan vékony: minden flag egy típusos dataclassba folyik (`PatchArgs` az #1-hez, `ReportInputs` a #2-höz); a click dekorátor csak az argv-ot parseolja.
 
 ---
 
@@ -27,19 +27,19 @@ easter-hermes-sorry-skills-patch-hermes [--target DIR] [--dry-run] [--verbose] [
 
 | Flag | Típus | Alapértelmezett | Hatás |
 |---|---|---|---|
-| `--target DIR` | útvonal | `~/.hermes/hermes-agent` (MEGTAGADVA) | Felhasználói tulajdonú Hermes checkout. Az alapértelmezett a no-touch sentinel; a patcher megtagadja (`resolve()` összehasonlítás, 4-es kilépési kód). Adj meg explicit útvonalat. |
+| `--target DIR` | útvonal | `~/.hermes/hermes-agent` | Vizsgálandó vagy patchelendő Hermes checkout. Az alapértelmezett az élő Hermes checkout; audit előtt használd a `--dry-run` módot. |
 | `--dry-run` | flag | `false` (ír) | Csak audit; nem ír. |
-| `--verbose` | flag | `false` | Kétnyelvű per-hely diagnosztikát ír ki. |
-| `--help` / `-h` | flag | `false` | Kétnyelvű (EN + HU) súgót mutat. |
+| `--verbose` | flag | `false` | Per-site diagnosztikát ír ki. |
+| `--help` / `-h` | flag | `false` | A kiválasztott `--lang` szerinti súgót mutatja. |
 
 ### Példa
 
 ```bash
 $ easter-hermes-sorry-skills-patch-hermes --dry-run --target /path/to/user-hermes
-[en] S1.cap: matched, would patch
-[hu] S1.cap: illesztve, patch-elendo
-[en] Task E site 1/5: matched, would patch
-[hu] Task E 1/5 hely: illesztve, patch-elendo
+◇ terv a /path/to/user-hermes útvonalra:
+• patchelné: agent/skill_utils.py (S1.cap site)
+◇ 7 patch kerülne alkalmazásra
+⚠ --dry-run módban vagyunk, 7 patch NEM történt meg
 $ echo $?
 0
 ```
@@ -92,8 +92,7 @@ nem nulla kilépési kóddal kilép.
 
 ```bash
 $ easter-hermes-sorry-skills-report --format json --json ./skill-report.json --sort use_count
-[en] writing report to ./skill-report.json
-[hu] jelentés írása ide: ./skill-report.json
+✓ jelentés kiírva ide: skill-report.json
 $ echo $?
 0
 ```
@@ -113,7 +112,7 @@ Két 15 soros bash wrapper a `scripts/` alatt biztosít stabil
 `./scripts/<név>.sh` belépési pontot, függetlenül attól, hogy a projekt
 `.venv`-en vagy `PATH`-on keresztül van-e telepítve. Minden wrapper
 `set -euo pipefail`-t használ, `cd "$(git rev-parse --show-toplevel)"`-t
-futtat, és `127`-es kóddal kétnyelvű hibát ír stderr-re, ha az entry point
+futtat, és `127`-es kóddal hibát ír stderr-re, ha az entry point
 nem található (az üzenet az operátornak szól: `uv sync --locked --all-extras --dev`).
 
 | Wrapper | Megfelelő CLI |
@@ -128,15 +127,16 @@ nem található (az üzenet az operátornak szól: `uv sync --locked --all-extra
 2. cd to the git repo root (so .venv/bin/... resolves)
 3. if .venv/bin/<name> exists and is executable → exec it
 4. elif <name> is on PATH → exec it
-5. else → print bilingual ERROR to stderr, exit 127
+5. else → print ERROR to stderr, exit 127
 ```
 
 ### Példa
 
 ```bash
 $ ./scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
-[en] S1.cap: matched, no change in dry-run
-[hu] S1.cap: illesztve, dry-run módban nincs valtozas
+◇ terv a /tmp/hermes-135f23516 útvonalra:
+• patchelné: S1.cap itt: agent/skill_utils.py
+⚠ --dry-run mód, 7 patch NEM lett alkalmazva
 ```
 
 ---

@@ -19,12 +19,12 @@ REJECTED_FLAGS: MappingProxyType[str, str] = MappingProxyType(
 
 HELP_EN_HEADER = (
     "Per-profile READ-ONLY report for the migrated skill-creator skill.\n"
-    "Walks every Hermes profile and prints a bilingual EN/HU report."
+    "Walks every Hermes profile and prints a report in the selected language."
 )
 
 HELP_HU_HEADER = (
     "Profilonkénti CSAK OLVASÁS riport a migrált skill-creator skillhez.\n"
-    "Végigmegy minden Hermes profil és kétnyelvű EN/HU riportot ír."
+    "Végigmegy minden Hermes profilon, és a kiválasztott nyelven ír riportot."
 )
 
 _EN_DESCRIPTIONS: MappingProxyType[str, str] = MappingProxyType(

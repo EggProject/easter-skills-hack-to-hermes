@@ -112,7 +112,7 @@ uv run --locked pre-commit run --all-files
 uv run --locked pytest
 ```
 
-For the full bilingual smoke test (EN + HU help, `.pyz` zip listing,
+For the full smoke test (`--lang en`, `--lang hu`, `.pyz` integrity test,
 plugin tree), see [docs/installation-verify.md](installation-verify.md).
 
 ---

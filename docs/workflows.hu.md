@@ -29,7 +29,7 @@ Hermesben.
 uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run \
     --target ~/work/hermes-fork
 
-# 1.3  Patch apply — a 8 patch kiírása (S1.cap + 5 Task E + cache purge)
+# 1.3  Patch apply — a 7 patch site kiírása (S1.cap + 6 Task E + cache purge)
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target ~/work/hermes-fork
 
@@ -40,7 +40,7 @@ uv run --locked easter-hermes-sorry-skills-report --format text
 hermes chat -p "Use skill-creator to scaffold a skill called hello-world."
 ```
 
-Az 1.2-ben a `--dry-run` site-onként egy kétnyelvű sort ír ki. Ha bármely
+Az 1.2-ben a `--dry-run` site-onként egy, a kiválasztott nyelvű sort ír ki. Ha bármely
 site `drifted`-et jelez, abort és olvasd el a
 [Hibakezelés](#hibakezelés) szekciót — ne futtasd az 1.3-at drifted
 targeten. Az 1.3 fájlonként atomi; az 1.4 read-only; az 1.5 a teljes
@@ -133,7 +133,7 @@ azután lát.
 | A `--lang hu` nem váltja át az alapértelmezett help szekciót | A release artifact a `--lang` bevezetése előtt épült (`76b7cc3` commit, PR #47). Újraépítés: `scripts/build-release.sh` |
 | `Skill 'X' already exists` hiba `ln -sfn` regisztrációnál | `rm -f "${HOME}/.hermes/skills/X"`, majd hozd létre újra a szimbolikus linket |
 | A `report --json` nem nullával lép ki, `Invalid --sort value` üzenettel | Érvényes `--sort` értékek: `tokens`, `use_count`, `last_used_at`. Lásd [scripts.hu.md](scripts.hu.md) |
-| A kétnyelvű `[hu]` sorok hiányoznak a kimenetből | `uv sync --locked --all-extras --dev`; NE szerkeszd kézzel a `messages_en.py` / `messages_hu.py` fájlokat |
+| A `--lang hu` kimenet nem magyar | `uv sync --locked --all-extras --dev`; NE szerkeszd kézzel a `messages_en.py` / `messages_hu.py` fájlokat |
 
 Ha egyik sem illik, rögzítsd a teljes `uv run --locked` parancsot, a
 kilépési kódot és a stderr első 10 sorát, majd nyiss egy issue-t. Az

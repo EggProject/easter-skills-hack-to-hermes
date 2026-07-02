@@ -3,7 +3,7 @@
 The :mod:`._patcher_pipeline` orchestrator pulls in 12+ symbols from
 across :mod:`._patcher`, :mod:`._patcher_apply`, :mod:`._patcher_helpers`,
 :mod:`._patcher_pipeline_consts`, :mod:`._patcher_pipeline_emit`,
-:mod:`._patcher_sites`, and the top-level :mod:`.i18n` bilingual
+:mod:`._patcher_sites`, and the top-level :mod:`.i18n` EN/HU message
 catalog. Binding them all in ``_patcher_pipeline.py``'s own import
 block blows past the wemake WPS201 (<=12 imports per module) cap.
 

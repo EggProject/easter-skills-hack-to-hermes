@@ -151,14 +151,13 @@ The `E4b` / `E4` / `E5` triple edits `agent/background_review.py`. `E4b` adds th
 
 The orchestrator (`_patcher.py:124-255`) follows a fixed pipeline:
 
-1. **Preflight** — refuses to run if `--target` resolves to `~/.hermes/hermes-agent` (the upstream repo), with exit code 4 and a bilingual diagnostic. See `_patcher.py:1-45` for the refusal-rule contract.
+1. **Preflight** — under `--dry-run`, warns if `--target` resolves to `~/.hermes/hermes-agent` so the operator sees that the live checkout is being audited. Apply mode is operator-controlled and writes to the resolved target.
 2. **Circular-import check** — `file_has_circular_import` (in `_patcher_helpers`) walks the existing import graph of `agent/skill_utils.py`. A detected cycle swaps `S1.cap` for `S1.cap_fallback` (the patch proceeds, the cross-module import is avoided). See `_patcher_internals.py:74-89`.
 3. **Per-site validation** — every site is matched against the file's raw bytes using the multi-signal anchor (8+ chars + 1-based line). A mismatch is `LINE_DRIFT` or `TEXT_DRIFT` (constants in `_patcher_consts.py:26-27`).
 4. **Atomic write** — successful sites are written through `<file>.patch.tmp` + `os.replace` (`_patcher_apply_atomic.py:47-71`). POSIX-atomic on the same filesystem; mode bits are preserved via `os.chmod`. The temp file is unlinked on any exception so the original is left untouched.
 5. **State sidecar** — `.patch.state.json` (in `_patcher_apply_state.py`) records which sites are `matched`, `patched`, or `drifted`. The next run reads it to detect already-applied sites.
-6. **Rejected sidecar** — `.patch.rejected` (built in `_patcher_apply.py:64-102`) is the bilingual-machine-readable failure record emitted on any drift. It is never written on success.
-7. **Audit log** — `~/.hermes/patch-audit.log` (the path comes from `AUDIT_LOG_NAME` in `_patcher_apply.py:42`) is appended only on successful `--force` runs (one line per invocation, with timestamp + combined diff sha256). Normal `--apply` runs do not append.
-8. **Cache purge** — after a successful apply, `_patcher_pipeline_purge.py:48-59` deletes `~/.hermes/.skills_prompt_snapshot.json`. The snapshot tracks only `SKILL.md` / `DESCRIPTION.md` mtimes; it does not notice that `prompt_builder.py` was modified by the patcher. A purge forces a cold rebuild on the next Hermes run.
+6. **Rejected sidecar** — `.patch.rejected` is the machine-readable failure record emitted on any drift. It is never written on success.
+7. **Cache purge** — after a successful apply, `_patcher_pipeline_purge.py:48-59` deletes `~/.hermes/.skills_prompt_snapshot.json`. The snapshot tracks only `SKILL.md` / `DESCRIPTION.md` mtimes; it does not notice that `prompt_builder.py` was modified by the patcher. A purge forces a cold rebuild on the next Hermes run.
 
 ### Exit codes
 

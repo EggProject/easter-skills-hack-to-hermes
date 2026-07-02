@@ -1,20 +1,19 @@
-"""Script #1 patcher orchestrator: cap-raise + opt-in Task E sites.
+"""Script #1 patcher orchestrator: cap-raise + always-on Task E sites.
 
 Idempotent, all-or-nothing patcher for a user-owned Hermes checkout.
 This module is the ORCHESTRATOR; the site table, the apply-side
-primitives, the migration note renderer, and the pure-function
-helpers live in sibling modules to keep each file under the 500-line
-hard cap (plans/10 D1):
+primitives, and the pure-function helpers live in sibling modules to
+keep each file under the 500-line hard cap (plans/10 D1):
 
 - :mod:`._patcher_sites` — Site dataclass, the S1.cap two-anchor
-  atomic pair, the 5 Task E sites, and the shared
+  atomic pair, the 6 Task E sites, and the shared
   ``SKILL_CREATOR_CONSULT_RULE`` constant.
 - :mod:`._patcher_apply` — atomic write (``<file>.patch.tmp`` +
   ``os.replace``), the state / rejected / audit sidecars.
 - :mod:`._patcher_helpers` — pure-function helpers (anchor locator,
   circular-import pre-flight, cross-FS detector, ISO timestamp).
 - :mod:`._patcher_consts` — exit codes, state strings, drift reasons.
-- :mod:`._patcher_preflight` — refusal-rule preflight.
+- :mod:`._patcher_preflight` — dry-run soft-safety preflight.
 - :mod:`._patcher_validation` — per-site drift detection.
 
 The orchestrator's public API (``run_patch``, ``PatcherResult``, the
@@ -25,19 +24,21 @@ existing imports (``from easter_hermes_sorry_skills._patcher import
 
 The patcher:
 
-1. Refuses to run when ``--target`` resolves to ``~/.hermes/hermes-agent``
-   (exit code 4, bilingual diagnostic).
+1. Emits a warning under ``--dry-run`` when ``--target`` resolves to
+   ``~/.hermes/hermes-agent`` so the operator sees that the live
+   checkout is being audited.
 2. Pre-validates every site in a single pass against the file's raw bytes
    (multi-signal targeting: 8+ char anchor + 1-based line number).
 3. On a cycle-detection pre-flight against ``agent/skill_utils.py``'s
-   existing imports from ``tools.skills_tool``, refuses to write and exits
-   with code 4.
+   existing imports from ``tools.skills_tool``, swaps S1.cap for the
+   import-free fallback site.
 4. On validation failure for ANY site, writes a ``.patch.rejected`` JSON
    sidecar and exits non-zero with ZERO bytes touched on the target.
 5. On success, performs the atomic-write protocol
    (``<file>.patch.tmp`` + ``os.replace``), preserves file mode bits,
    and updates ``.patch.state.json``.
-6. Emits a ``.patch.audit.log`` line on every successful ``--force`` run.
+6. Purges the skills prompt snapshot after successful apply so Hermes
+   rebuilds the prompt from the patched sources.
 
 See also: plans/04-script-1-patch.md,
 plans/08-migration-note-format.md, plans/10-toolchain-and-conventions.md,
@@ -185,7 +186,7 @@ def _drive_pipeline(
     state: _PatchBodyState,
     use_fallback_cap: bool = False,
 ) -> PatcherResult:
-    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 5 Task E sites.
+    # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 6 Task E sites.
     all_sites = list(sites_for_mode())
     # AC-2.11: when the circular-import pre-flight fired, swap S1.cap
     # for S1.cap_fallback so the patch proceeds with a local

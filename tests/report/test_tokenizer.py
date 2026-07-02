@@ -88,7 +88,7 @@ def test_estimate_tokens_warning_logged_once_single_language(lang: str) -> None:
     _tokenizer.estimate_tokens("e", "f", tokenizer=None, warning=_capture)
     # Module-level guard fires the callback at most once per process.
     assert len(seen) == 1
-    # The internal msg passed to the callback is the bilingual fallback constant.
+    # The internal msg passed to the callback is the language-specific fallback constant.
     # The production callback (cli_report.emit_tokenizer_warning) ignores the
     # arg and emits pick(lang).report_tokenizer_unavailable instead.
     expected = pick(lang).report_tokenizer_unavailable

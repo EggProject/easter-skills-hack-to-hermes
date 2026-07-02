@@ -26,11 +26,12 @@ from tests.report._fixtures import make_row_factory
 def test_format_text_columns_present() -> None:
     rows = [make_row_factory(name="a", tokens=10)]
     out = format_text("hermes", rows, total_tokens=10)
+    assert out.splitlines()[0].startswith("◇ profile: hermes")
     # Every TEXT_COLUMNS header must appear in the rendered table. This
     # covers the six documented usage fields (view_count, patch_count,
     # last_used_at, last_viewed_at, last_patched_at) plus the structural
     # columns (profile, name, description, tokens, use_count, pct_of_cap).
-    header_line = out.splitlines()[0]
+    header_line = out.splitlines()[1]
     rendered_headers = set(header_line.split())
     for col in TEXT_COLUMNS:
         assert col in rendered_headers, f"missing column header {col!r} in {header_line!r}"
@@ -41,7 +42,7 @@ def test_format_text_truncates_description_to_60() -> None:
     rows = [make_row_factory(name="a", description=desc, tokens=5)]
     out = format_text("hermes", rows, total_tokens=5)
     # Find the row that contains 'a' and the description cells.
-    body_lines = out.splitlines()[1:]  # skip header
+    body_lines = out.splitlines()[2:]  # skip profile title + header
     assert any("xxx..." in line for line in body_lines)
     # The description cell in the text table is 60 chars max.
     # After truncation: 57 x's + "..." = 60 chars.
@@ -253,7 +254,7 @@ def test_zero_renders_when_persisted_true() -> None:
     row = make_row_factory(name="a", use_count=0)
     out = format_text("hermes", [row], total_tokens=10)
     # The use_count column should show "0" not "n/a" for a persisted row.
-    body = out.splitlines()[1]
+    body = out.splitlines()[2]
     cells = body.split("  ")
     # The "0" should appear (in either tokens or use_count cells).
     assert "0" in cells

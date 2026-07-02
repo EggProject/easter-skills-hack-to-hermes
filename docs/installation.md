@@ -73,16 +73,15 @@ For Hermes runtimes that should expose the migrated `skill-creator`
 skill and load the patcher plugin at startup. Independent of modes 1
 and 2.
 
-- Prereq extras: a user-owned Hermes checkout (the patcher refuses the
-  upstream repo, exit code 4).
+- Prereq extras: a Hermes checkout to patch.
 - Time-to-ready: ~5 minutes including the patch audit.
 
 → [docs/installation-hermes.md](installation-hermes.md)
 
 ### Verify the install
 
-After any mode, run the bilingual smoke test. Every command must exit
-`0`; the EN + HU help sections must both print.
+After any mode, run the smoke test. Every command must exit `0`; verify
+both `--lang en` and `--lang hu` help output.
 
 → [docs/installation-verify.md](installation-verify.md)
 
@@ -93,7 +92,7 @@ After any mode, run the bilingual smoke test. Every command must exit
 - [Installation — dev mode](installation-dev.md) — clone, `uv sync`, pre-commit
 - [Installation — release mode](installation-release.md) — `.pyz` + wrappers on `PATH`
 - [Installation — Hermes mode](installation-hermes.md) — patch + plugin + skill
-- [Installation — verify](installation-verify.md) — bilingual smoke test
+- [Installation — verify](installation-verify.md) — smoke test
 - [Usage](usage.md) — driving the three CLIs end-to-end
 - [Workflows](workflows.md) — common install / authoring / report recipes
 - [Development](development.md) — test, lint, CI, worktree + PR conventions

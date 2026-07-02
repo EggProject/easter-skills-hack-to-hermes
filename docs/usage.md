@@ -29,7 +29,7 @@ verifies.
 uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run \
     --target /path/to/user-hermes
 
-# 3. Patch apply — write the 8 patches
+# 3. Patch apply — write the 7 patch sites
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target /path/to/user-hermes
 
@@ -51,14 +51,13 @@ After step 4, restart Hermes and invoke `/skill skill-creator` — see
 ## The three CLIs at a glance
 
 All three are declared as console-script entry points in
-`pyproject.toml:33-36` and print bilingual `--help` (English + Hungarian;
-switch with `--lang en|hu`). Flag-by-flag tables, exit codes, and the
+`pyproject.toml:33-36` and print help in the selected language
+(`--lang en|hu`). Flag-by-flag tables, exit codes, and the
 shell-wrapper contract live in [docs/scripts.md](scripts.md).
 
-- `easter-hermes-sorry-skills-patch-hermes` — Applies the 8 patches
-  (S1.cap + 5 Task E sites + skills-cache purge) to a user-owned Hermes
-  checkout. Writes by default; pass `--dry-run` to audit only. Refuses
-  to touch `~/.hermes/hermes-agent` (the upstream repo).
+- `easter-hermes-sorry-skills-patch-hermes` — Applies the 7 patch sites
+  (S1.cap + 6 Task E sites + skills-cache purge) to a Hermes checkout.
+  Writes by default; pass `--dry-run` to audit only.
 - `easter-hermes-sorry-skills-report` — Read-only operator view: enabled
   skills per profile with token estimates, use counts, and last-used
   timestamps. NO writes except an operator-chosen `--json PATH`;
@@ -94,7 +93,7 @@ details, and the leaf agents (`analyzer`, `comparator`, `grader`):
 - [docs/installation.md](installation.md) — three install modes + smoke test
 - [docs/scripts.md](scripts.md) — flag-by-flag reference for the three CLIs
 - [docs/skill-creator.md](skill-creator.md) — the migrated `skill-creator` skill
-- [docs/patches.md](patches.md) — the eight patch sites (S1.cap + 5 Task E sites) and rollback mechanics
+- [docs/patches.md](patches.md) — the 7 patch sites (S1.cap + 6 Task E sites) and rollback mechanics
 - [docs/workflows.md](workflows.md) — common workflows + troubleshooting
 - [docs/development.md](development.md) — test, lint, CI, and the worktree + PR workflow
 

@@ -60,7 +60,7 @@ Coverage is gated at 100% branch coverage via `pyproject.toml` (`--cov-fail-unde
 7. `mypy` v1.11.2 `--strict` — static type check. Scope: `src/`.
 8. `shellcheck` (local binary) — `scripts/*.sh` lint. Severity = warning.
 
-The pre-commit config deliberately excludes `check_bilingual.py` because the migrated skill stays English-only (operator-authorized deviation).
+The pre-commit config deliberately excludes `check_bilingual.py`; it remains available as a local audit for the single-language console contract.
 
 ---
 
@@ -82,9 +82,9 @@ Pull requests that show CI red MUST NOT be merged with `--admin`. Wait for CI to
 
 ### `tools/check_bilingual.py`
 
-AST-walks `src/`, `scripts/`, and `skills/`. For every `print(...)` and `logger.{info,warning,error,...}(...)` call whose first argument is a static string, asserts the format string matches `^\[en\] .+?/ \[hu\] .+?$` — i.e. the `[en] ... / [hu] ...` single-line bilingual surface (`tools/check_bilingual.py:44`). Non-static strings (variables, f-strings with non-literal placeholders) are skipped; the caller must produce bilingual output at runtime.
+AST-walks `src/`, `scripts/`, and `skills/`. For every `print(...)`, `click.echo(...)`, and `logger.{info,warning,error,debug,critical}(...)` call whose first argument is a static string, asserts the string does **not** contain legacy `[en]` or `[hu]` prefixes. Non-static strings (variables, f-strings with non-literal placeholders) are skipped; the caller must keep runtime output language-specific.
 
-The tool also walks Click command docstrings and asserts both `Usage (English)` and `Használat (magyar)` sections are present (`tools/check_bilingual.py:45-46`). Help docstrings missing either section are reported as findings.
+The tool also scans help text and module text for legacy `[en]` / `[hu]` prefixes. Files under `src/.../i18n/` are exempt because the language catalogs are allowed to own those tokens for validation tests.
 
 Currently disabled in pre-commit per operator decision (see `.pre-commit-config.yaml:25-30`).
 

@@ -38,7 +38,7 @@ class PatcherResult:
     BEFORE this run (idempotency).
     ``state`` is the updated ``.patch.state.json`` mapping
     ``{site_id: "matched" | "drifted" | "patched" | "already"}``.
-    ``diagnostics`` is the list of bilingual messages emitted.
+    ``diagnostics`` is the list of language-specific messages emitted.
     """
 
     exit_code: int

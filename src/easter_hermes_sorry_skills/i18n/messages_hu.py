@@ -19,7 +19,7 @@ TDD test cases:
 # skill-description cap is detected as still un-raised in the operator's
 # Hermes checkout (no marker-file gating, single-language via pick(lang)).
 ADVISORY_CAP = (
-    "A 60 karakteres skill-leírás-korlát még nincs felemelve a Hermes "
+    "⚠ A 60 karakteres skill-leírás-korlát még nincs felemelve a Hermes "
     "checkoutban. Futtasd a `easter-hermes-sorry-skills-patch-hermes` parancsot "
     "a felemeléshez."
 )
@@ -38,6 +38,7 @@ REPORT_OPT_JSON = (
     "A riport kiírása PATH-ba (alapértelmezett: ./skill-report.json, "
     "ha --format=json; egyébként figyelmen kívül hagyva)."
 )
+REPORT_JSON_WRITTEN = "✓ jelentés kiírva ide: {path}"
 REPORT_OPT_HELP = "Súgó megjelenítése és kilépés."
 REPORT_OPT_VERBOSE = (
     "Részletes, cellánkénti diagnosztika a stderr-re "
@@ -46,44 +47,44 @@ REPORT_OPT_VERBOSE = (
 )
 
 REPORT_USAGE_HEADER = "Használat: easter-hermes-sorry-skills-report [OPTIONS]"
-REPORT_TOKENIZER_UNAVAILABLE = "a tokenizer nem elérhető, chars/4 becslés"
-FALLBACK_WARNING = "a tokenizer nem elérhető, chars/4 becslés"
-REPORT_ENABLED_DETECTION_UNAVAILABLE = "az enabled-detection modul nem elérhető, a skillek nem listázhatók"
-REPORT_REJECTED_APPLY = "az apply nem támogatott a riporton"
-REPORT_REJECTED_EMIT_MIGRATION_NOTE = "az emit-migration-note nem riport-flag"
-REPORT_REJECTED_WRITE_REPORT = "a write-report nem riport-flag"
-REPORT_JSON_PATH_INSIDE_HERMES_HOME = "a --json útvonala a HERMES_HOME alá esik, megtagadva"
-REPORT_NO_PROFILES = "nem találhatók profilok"
+REPORT_TOKENIZER_UNAVAILABLE = "⚠ a tokenizer nem elérhető; a tokenbecslés chars/4 alapján készül"
+FALLBACK_WARNING = "⚠ a tokenizer nem elérhető; a tokenbecslés chars/4 alapján készül"
+REPORT_ENABLED_DETECTION_UNAVAILABLE = "✗ az enabled-detection modul nem elérhető; a skillek nem listázhatók"
+REPORT_REJECTED_APPLY = "✗ a --apply nem támogatott a csak olvasó riporton"
+REPORT_REJECTED_EMIT_MIGRATION_NOTE = "✗ a --emit-migration-note nem riport-flag"
+REPORT_REJECTED_WRITE_REPORT = "✗ a --write-report nem riport-flag"
+REPORT_JSON_PATH_INSIDE_HERMES_HOME = "✗ a --json útvonala a HERMES_HOME alá esik; ide nem írunk"
+REPORT_NO_PROFILES = "✗ nem találhatók profilok"
 
 # Patcher preflight diagnostics.
 CIRCULAR_IMPORT_PREFLIGHT = (
-    "potenciális körkörös import észlelve az agent/skill_utils.py-ban (importál a tools.skills_tool-ból)"
+    "⚠ potenciális körkörös import észlelve az agent/skill_utils.py-ban (importál a tools.skills_tool-ból)"
 )
 
 # Patcher diagnostics.
-TARGET_REQUIRED = "a --target megadása kötelező"
-TARGET_MISSING_SKILL_UTILS = "a célpontból hiányzik az agent/skill_utils.py: {path}"
-LINE_DRIFT = "sor-eltérés a {site_id} helyen (sor {line})"
-VALIDATION_FAILED = "az érvényesítés sikertelen a {site_id} helyen"
-OK_ALREADY_PATCHED = "OK: a {site_id} hely már javítva"
-OK_PATCHED = "OK: a {site_id} hely sikeresen javítva"
-PERMISSION_DENIED = "írási engedély megtagadva: {path}"
-IO_ERROR = "I/O hiba a {path} írásakor: {error}"
-CROSS_FS_WARN = "figyelmeztetés: a cél és az ideiglenes könyvtár különböző fájlrendszeren van"
-TEXT_DRIFT = "szöveg-eltérés a {site_id} helyen: elvárt {expected}, tényleges {actual}"
+TARGET_REQUIRED = "✗ a --target megadása kötelező"
+TARGET_MISSING_SKILL_UTILS = "✗ a célpontból hiányzik az agent/skill_utils.py: {path}"
+LINE_DRIFT = "✗ sor-eltérés a {site_id} helyen (sor {line})"
+VALIDATION_FAILED = "✗ az érvényesítés sikertelen a {site_id} helyen"
+OK_ALREADY_PATCHED = "✓ a {site_id} hely már javítva"
+OK_PATCHED = "✓ a {site_id} hely sikeresen javítva"
+PERMISSION_DENIED = "✗ írási engedély megtagadva: {path}"
+IO_ERROR = "✗ I/O hiba a {path} írásakor: {error}"
+CROSS_FS_WARN = "⚠ a cél és az ideiglenes könyvtár különböző fájlrendszeren van"
+TEXT_DRIFT = "✗ szöveg-eltérés a {site_id} helyen: elvárt {expected}, tényleges {actual}"
 
 # Dry-run plan output (plain Hungarian).
-DRY_RUN_PLAN_HEADER = "terv a {target} útvonalra:"
+DRY_RUN_PLAN_HEADER = "◇ terv a {target} útvonalra:"
 DRY_RUN_PREFLIGHT_WARNING = (
-    "FIGYELEM: a target az élő hermes-agent checkout (alapértelmezett), nem történik patch.\n"
+    "⚠ FIGYELEM: a target az élő hermes-agent checkout (alapértelmezett), nem történik patch.\n"
     "  Ha más checkoutra akarsz validálni, add meg a --target <path> flaget."
 )
-DRY_RUN_PATCH_LINE = "patchelné: {file_path} ({site_id} site)"
+DRY_RUN_PATCH_LINE = "• patchelné: {file_path} ({site_id} site)"
 DRY_RUN_DIFF_LINE_OLD = "  line {line}: - {old}"
 DRY_RUN_DIFF_LINE_NEW = "  line {line}: + {new}"
-DRY_RUN_PLAN_SUMMARY = "{count} patch kerülne alkalmazásra"
-DRY_RUN_NOT_APPLIED = "FIGYELEM: --dry-run módban vagyunk, {count} patch NEM történt meg"
-DRY_RUN_APPLIED = "{count} patch alkalmazva"
+DRY_RUN_PLAN_SUMMARY = "◇ {count} patch kerülne alkalmazásra"
+DRY_RUN_NOT_APPLIED = "⚠ --dry-run módban vagyunk, {count} patch NEM történt meg"
+DRY_RUN_APPLIED = "✓ {count} patch alkalmazva"
 
 # Column headers (Hungarian).
 COL_PROFILE = "profil"
@@ -109,6 +110,7 @@ report_opt_profile = REPORT_OPT_PROFILE
 report_opt_sort = REPORT_OPT_SORT
 report_opt_format = REPORT_OPT_FORMAT
 report_opt_json = REPORT_OPT_JSON
+report_json_written = REPORT_JSON_WRITTEN
 report_opt_help = REPORT_OPT_HELP
 report_opt_verbose = REPORT_OPT_VERBOSE
 report_usage_header = REPORT_USAGE_HEADER

@@ -308,7 +308,7 @@ def test_emit_tokenizer_warning_emits_single_language_internal(
 def test_emit_tokenizer_warning_emits_single_language(lang: str, capsys: pytest.CaptureFixture[str]) -> None:
     """Single-language parametrization: emit_tokenizer_warning must produce lang-aware output.
 
-    The internal _tokenizer callback receives the bilingual fallback constant.
+    The internal _tokenizer callback receives the language-specific fallback constant.
     The production callback (cli_report.emit_tokenizer_warning) ignores that
     arg and emits pick(lang).report_tokenizer_unavailable on stderr instead.
     """
@@ -329,7 +329,7 @@ def test_cli_report_wires_warning_callback(monkeypatch, hermes_home: Path) -> No
     """cli_report._build_rows_for_profile MUST pass a warning= callback to estimate_tokens.
 
     D6 spec mandate: every estimate_tokens call from the reporter MUST thread
-    the bilingual warning callback so the operator sees exactly one
+    the language-specific warning callback so the operator sees exactly one
     `chars/4 fallback` notice per process. This test asserts the kwarg is
     wired (rather than relying on incidental coverage).
     """

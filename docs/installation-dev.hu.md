@@ -92,7 +92,7 @@ uv run --locked pre-commit run --all-files
 uv run --locked pytest
 ```
 
-A teljes kétnyelvű smoke teszthez (EN + HU help, `.pyz` zip listing, plugin tree) lásd [docs/installation-verify.hu.md](installation-verify.hu.md).
+A teljes smoke teszthez (`--lang en`, `--lang hu`, `.pyz` integritásteszt, plugin tree) lásd [docs/installation-verify.hu.md](installation-verify.hu.md).
 
 ---
 

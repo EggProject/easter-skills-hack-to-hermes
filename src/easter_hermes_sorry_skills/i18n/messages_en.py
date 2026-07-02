@@ -20,7 +20,7 @@ TDD test cases:
 # skill-description cap is detected as still un-raised in the operator's
 # Hermes checkout (no marker-file gating, single-language via pick(lang)).
 ADVISORY_CAP = (
-    "The 60-character skill-description cap is un-raised in your Hermes "
+    "⚠ The 60-character skill-description cap is un-raised in your Hermes "
     "checkout. Run `easter-hermes-sorry-skills-patch-hermes` to raise it."
 )
 
@@ -35,48 +35,49 @@ REPORT_OPT_PROFILE = "Report a single profile; default iterates the `hermes` (de
 REPORT_OPT_SORT = "Reorder rows: tokens | use_count | last_used_at. Default: tokens."
 REPORT_OPT_FORMAT = "Output format: text (default) | json."
 REPORT_OPT_JSON = "Write the report to PATH (default: ./skill-report.json when --format=json; otherwise ignored)."
+REPORT_JSON_WRITTEN = "✓ report written to {path}"
 REPORT_OPT_HELP = "Show help and exit."
 REPORT_OPT_VERBOSE = "Print detailed per-cell diagnostics to stderr (every cell value + section summary)."
 
 REPORT_USAGE_HEADER = "Usage: easter-hermes-sorry-skills-report [OPTIONS]"
-REPORT_TOKENIZER_UNAVAILABLE = "tokenizer unavailable, falling back to chars/4"
-FALLBACK_WARNING = "tokenizer unavailable, falling back to chars/4"
-REPORT_ENABLED_DETECTION_UNAVAILABLE = "enabled-detection module unavailable, cannot enumerate skills"
-REPORT_REJECTED_APPLY = "apply not supported on the reporter"
-REPORT_REJECTED_EMIT_MIGRATION_NOTE = "emit-migration-note is not a reporter flag"
-REPORT_REJECTED_WRITE_REPORT = "write-report is not a reporter flag"
-REPORT_JSON_PATH_INSIDE_HERMES_HOME = "--json path resolves under HERMES_HOME, refusing"
-REPORT_NO_PROFILES = "no profiles found"
+REPORT_TOKENIZER_UNAVAILABLE = "⚠ tokenizer unavailable; estimating tokens as chars/4"
+FALLBACK_WARNING = "⚠ tokenizer unavailable; estimating tokens as chars/4"
+REPORT_ENABLED_DETECTION_UNAVAILABLE = "✗ enabled-detection module unavailable; cannot enumerate skills"
+REPORT_REJECTED_APPLY = "✗ --apply is not supported on the read-only reporter"
+REPORT_REJECTED_EMIT_MIGRATION_NOTE = "✗ --emit-migration-note is not a reporter flag"
+REPORT_REJECTED_WRITE_REPORT = "✗ --write-report is not a reporter flag"
+REPORT_JSON_PATH_INSIDE_HERMES_HOME = "✗ --json path resolves under HERMES_HOME; refusing to write there"
+REPORT_NO_PROFILES = "✗ no profiles found"
 
 # Patcher preflight diagnostics.
 CIRCULAR_IMPORT_PREFLIGHT = (
-    "potential circular import detected in agent/skill_utils.py (imports from tools.skills_tool)"
+    "⚠ potential circular import detected in agent/skill_utils.py (imports from tools.skills_tool)"
 )
 
 # Patcher diagnostics.
-TARGET_REQUIRED = "--target is required"
-TARGET_MISSING_SKILL_UTILS = "target missing agent/skill_utils.py: {path}"
-LINE_DRIFT = "line drift detected at site {site_id} (line {line})"
-VALIDATION_FAILED = "validation failed at site {site_id}"
-OK_ALREADY_PATCHED = "OK: site {site_id} already patched"
-OK_PATCHED = "OK: site {site_id} patched successfully"
-PERMISSION_DENIED = "permission denied writing {path}"
-IO_ERROR = "I/O error writing {path}: {error}"
-CROSS_FS_WARN = "warning: target and tmp live on different filesystems"
-TEXT_DRIFT = "text drift detected at site {site_id}: expected {expected}, actual {actual}"
+TARGET_REQUIRED = "✗ --target is required"
+TARGET_MISSING_SKILL_UTILS = "✗ target missing agent/skill_utils.py: {path}"
+LINE_DRIFT = "✗ line drift detected at site {site_id} (line {line})"
+VALIDATION_FAILED = "✗ validation failed at site {site_id}"
+OK_ALREADY_PATCHED = "✓ site {site_id} already patched"
+OK_PATCHED = "✓ site {site_id} patched successfully"
+PERMISSION_DENIED = "✗ permission denied writing {path}"
+IO_ERROR = "✗ I/O error writing {path}: {error}"
+CROSS_FS_WARN = "⚠ target and tmp live on different filesystems"
+TEXT_DRIFT = "✗ text drift detected at site {site_id}: expected {expected}, actual {actual}"
 
 # Dry-run plan output (plain English).
-DRY_RUN_PLAN_HEADER = "plan for {target}:"
+DRY_RUN_PLAN_HEADER = "◇ plan for {target}:"
 DRY_RUN_PREFLIGHT_WARNING = (
-    "WARNING: target is the live hermes-agent checkout (the default), no patches will be applied.\n"
+    "⚠ WARNING: target is the live hermes-agent checkout (the default), no patches will be applied.\n"
     "  Pass --target <path> to validate a different checkout."
 )
-DRY_RUN_PATCH_LINE = "would patch: {file_path} (site {site_id})"
+DRY_RUN_PATCH_LINE = "• would patch: {file_path} (site {site_id})"
 DRY_RUN_DIFF_LINE_OLD = "  line {line}: - {old}"
 DRY_RUN_DIFF_LINE_NEW = "  line {line}: + {new}"
-DRY_RUN_PLAN_SUMMARY = "{count} patch(es) would be applied"
-DRY_RUN_NOT_APPLIED = "WARNING: --dry-run mode, {count} patches were NOT applied"
-DRY_RUN_APPLIED = "{count} patches applied"
+DRY_RUN_PLAN_SUMMARY = "◇ {count} patch(es) would be applied"
+DRY_RUN_NOT_APPLIED = "⚠ --dry-run mode, {count} patches were NOT applied"
+DRY_RUN_APPLIED = "✓ {count} patches applied"
 
 # Column headers (English).
 COL_PROFILE = "profile"
@@ -102,6 +103,7 @@ report_opt_profile = REPORT_OPT_PROFILE
 report_opt_sort = REPORT_OPT_SORT
 report_opt_format = REPORT_OPT_FORMAT
 report_opt_json = REPORT_OPT_JSON
+report_json_written = REPORT_JSON_WRITTEN
 report_opt_help = REPORT_OPT_HELP
 report_opt_verbose = REPORT_OPT_VERBOSE
 report_usage_header = REPORT_USAGE_HEADER

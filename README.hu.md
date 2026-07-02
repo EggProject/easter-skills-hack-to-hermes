@@ -14,8 +14,8 @@
 
 A Hermes Skills Hack 5. fázisából származó két összehangolt artifact:
 
-1. **Hermes plugin** (`src/easter_hermes_sorry_skills/`) — egyszeri, kétnyelvű
-   figyelmeztetést ad ki, ha a 60 karakteres skill-leírás cap nincs felemelve a
+1. **Hermes plugin** (`src/easter_hermes_sorry_skills/`) — egyszeri,
+   nyelvválasztás szerinti figyelmeztetést ad ki, ha a 60 karakteres skill-leírás cap nincs felemelve a
    Hermes checkout-odban. A plugin **kizárólag tanácsadó**: soha nem módosítja
    a Hermest (`_register.py:1-13`).
 2. **Migrált `skill-creator`** (`skills/skill-creator/`) — Anthropic
@@ -24,7 +24,7 @@ A Hermes Skills Hack 5. fázisából származó két összehangolt artifact:
    A frontmatter-szerződést lásd: `skills/skill-creator/SKILL.md:4`.
 
 A csomag három, operátor felé néző CLI entry pointot szállít
-(`pyproject.toml:34-36`), valamint a kétnyelvű üzenetkatalógust itt:
+(`pyproject.toml:34-36`), valamint az EN/HU üzenetkatalógust itt:
 `src/easter_hermes_sorry_skills/i18n/`.
 
 ## Gyors indulás
@@ -75,7 +75,7 @@ Telepítés után a három CLI a `PATH`-odon lesz:
 Mind a három entry point a `pyproject.toml:34-36` sorban van deklarálva. Mindig
 `uv run --locked` mögé zárd, hogy az `uv.lock` maradjon a mérvadó.
 
-- `easter-hermes-sorry-skills-patch-hermes` — alkalmazza a **8 patch-et**
+- `easter-hermes-sorry-skills-patch-hermes` — alkalmazza a **7 patch site-ot**
   (S1.cap + 6 Task E site + S1.cap skills-prompt-snapshot purge) a Hermes
   checkout-odon. Alapértelmezetten `--target ~/.hermes/hermes-agent`. Alapból
   **ír**; a `--dry-run` kapcsolóval auditálhatsz írás nélkül.
@@ -87,40 +87,34 @@ Mind a három entry point a `pyproject.toml:34-36` sorban van deklarálva. Mindi
 
 Az `easter-hermes-sorry-skills-patch-hermes --dry-run` az összes tervezett
 patch-et auditálja anélkül, hogy egyetlen byte-ot is írna a célpontra. A
-kimenet egy kétnyelvű (EN/HU) **terv**, amelyet az operátor az apply
-előtt olvas el:
+kimenet egy `--lang` alapján választott, egynyelvű **terv**, amelyet az
+operátor az apply előtt olvas el:
 
 ```text
-[en] plan for /path/to/target:
-[hu] terv a /path/to/target útvonalra:
-[en] would patch: agent/skill_utils.py (site S1.cap)
-[hu] patchelné: agent/skill_utils.py (S1.cap site)
+◇ terv a /path/to/target útvonalra:
+• patchelné: agent/skill_utils.py (S1.cap site)
   line 688: - régi sor tartalma
   line 688: + új sor tartalma
-[en] 8 patch(es) would be applied / [hu] 8 patch kerülne alkalmazásra
-[en] WARNING: --dry-run mode, 8 patches were NOT applied /
-[hu] FIGYELEM: --dry-run módban vagyunk, 8 patch NEM történt meg
+◇ 7 patch kerülne alkalmazásra
+⚠ --dry-run módban vagyunk, 7 patch NEM történt meg
 ```
 
 Az apply mód ugyanazt a tervet adja ki, de a záró sor átvált a
-kétnyelvű „alkalmazva" üzenetre a dry-run figyelmeztetés helyett:
+„alkalmazva" üzenetre a dry-run figyelmeztetés helyett:
 
 ```text
-[en] 8 patches applied / [hu] 8 patch alkalmazva
+✓ 7 patch alkalmazva
 ```
 
 **Lágy safety.** A `~/.hermes/hermes-agent` checkout a patcher
-no-touch sentinelje. Az apply mód (`--dry-run` nélkül) KEMÉNYEN
-megtagadja `EXIT_IO` kóddal és kétnyelvű diagnosztikával. A dry-run
-mód LÁGYÍTJA a megtagadást: a patcher kétnyelvű WARNING-ot ad ki,
-kiírja a tervet, és továbbhalad, hogy az operátor az apply előtt
-megnézhesse a tervezett változtatásokat. A célfájl hash-e
-byte-azonos marad (a `test_cli_dry_run_no_writes_to_target`
-egységteszt ellenőrzi).
+alapértelmezett célpontja. Dry-run módban figyelmeztetést ad és kiírja a
+tervet, hogy az operátor apply előtt ellenőrizhesse a tervezett
+változtatásokat. A célfájl hash-e byte-azonos marad (a
+`test_cli_dry_run_no_writes_to_target` egységteszt ellenőrzi). Apply módban
+az operátor dönt, és a patcher a feloldott célpontra ír.
 
-Mind a három CLI kétnyelvű (EN/HU) konzol-kimenetet ad
-(`i18n/messages_en.py`, `i18n/messages_hu.py`); a `--help` tükrözött angol /
-magyar szekciókat tartalmaz.
+A CLI-k szöveges kimenete egynyelvű (`--lang en|hu`), a szövegek forrása az
+`i18n/messages_en.py` és az `i18n/messages_hu.py`.
 
 ## Projekt felépítése
 
@@ -131,7 +125,7 @@ src/easter_hermes_sorry_skills/   # plugin + a három CLI
   _patcher*.py                    # the 8-patch engine
   cli_patch.py                    # patch-hermes CLI
   cli_report.py                   # report CLI
-  i18n/                           # kétnyelvű üzenetkatalógus (en, hu)
+  i18n/                           # EN/HU üzenetkatalógus
 skills/skill-creator/             # migrált skill (Hermes variáns)
 docs/                             # témánkénti dokk (lásd a fenti táblázatot)
 scripts/                          # bash wrapper-ek minden CLI köré

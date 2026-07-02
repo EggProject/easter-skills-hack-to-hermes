@@ -32,7 +32,7 @@ ellenőriz.
 uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run \
     --target /path/to/user-hermes
 
-# 3. Patch apply — a 8 patch kiírása
+# 3. Patch apply — a 7 patch site kiírása
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
     --target /path/to/user-hermes
 
@@ -56,16 +56,14 @@ A 4. lépés után indítsd újra a Hermest, és hívd meg a
 ## A három CLI áttekintése
 
 Mindhárom console-script entry point a `pyproject.toml:33-36` sorokban van
-deklarálva, és kétnyelvű `--help` szöveget ír ki (angol + magyar;
-váltás: `--lang en|hu`). A flag-enkénti táblázatok, kilépési kódok és a
+deklarálva, és a kiválasztott nyelven ír `--help` szöveget
+(`--lang en|hu`). A flag-enkénti táblázatok, kilépési kódok és a
 shell-wrapper szerződés a [docs/scripts.hu.md](scripts.hu.md) oldalon
 találhatók.
 
-- `easter-hermes-sorry-skills-patch-hermes` — A 8 patch (S1.cap + 5 Task E
-  site + skills-cache purge) alkalmazása egy felhasználó tulajdonában
-  lévő Hermes checkout-ra. Alapértelmezetten ír; `--dry-run` flaggel
-  csak auditol. Nem nyúl a `~/.hermes/hermes-agent` útvonalhoz (az
-  upstream repó).
+- `easter-hermes-sorry-skills-patch-hermes` — A 7 patch site (S1.cap + 6
+  Task E site + skills-cache purge) alkalmazása egy Hermes checkout-ra.
+  Alapértelmezetten ír; `--dry-run` flaggel csak auditol.
 - `easter-hermes-sorry-skills-report` — Read-only kezelői nézet: az
   engedélyezett skill-ek profilonként, token becslésekkel, használati
   számmal és utolsó használat időbélyeggel. NEM ír, kivéve egy
@@ -103,7 +101,7 @@ agent-ek (`analyzer`, `comparator`, `grader`):
 - [docs/installation.hu.md](installation.hu.md) — három telepítési mód + smoke test
 - [docs/scripts.hu.md](scripts.hu.md) — flag-enkénti referencia a három CLI-hoz
 - [docs/skill-creator.hu.md](skill-creator.hu.md) — a migrált `skill-creator` skill
-- [docs/patches.hu.md](patches.hu.md) — a nyolc patch site (S1.cap + 5 Task E site) és a rollback mechanika
+- [docs/patches.hu.md](patches.hu.md) — a 7 patch site (S1.cap + 6 Task E site) és a rollback mechanika
 - [docs/workflows.hu.md](workflows.hu.md) — gyakori munkafolyamatok + hibakezelés
 - [docs/development.hu.md](development.hu.md) — teszt, lint, CI, és a worktree + PR munkafolyamat
 

@@ -39,7 +39,7 @@ easter-hermes-sorry-skills-report --help --lang en
 
 easter-hermes-sorry-skills-report --format text
 
-python3 -m zipfile -l dist/easter-hermes-sorry-skills.pyz | head
+python3 -m zipfile -t dist/easter-hermes-sorry-skills.pyz
 ./dist/easter-hermes-sorry-skills.pyz -c "import easter_hermes_sorry_skills; print(easter_hermes_sorry_skills.__name__)"
 
 .venv/bin/python3 -c "from easter_hermes_sorry_skills import cli_patch; cli_patch._main_entry()" -- --help
@@ -59,11 +59,10 @@ readlink -f ~/.hermes/skills/skill-creator
 ```
 
 A clean install prints the version of each CLI, both EN and HU help
-sections, and exits each command with `0`. If any command exits
-non-zero or the `.pyz` is missing `site-packages/` in the zip listing,
-the install is broken; do NOT proceed to [docs/usage.md](usage.md);
-instead go to the troubleshooting table below. The matching `bats`
-checks live at `tests/bats/{patch-hermes,report}.bats`.
+sections, validates the `.pyz`, and exits each command with `0`. If any
+command exits non-zero, the install is broken; do NOT proceed to
+[docs/usage.md](usage.md); instead go to the troubleshooting table below.
+The matching `bats` checks live at `tests/bats/{patch-hermes,report}.bats`.
 
 ---
 
@@ -79,7 +78,7 @@ checks live at `tests/bats/{patch-hermes,report}.bats`.
 | 6 | `Permission denied` when applying patches to a Hermes checkout | The checkout is read-only or owned by another user | `chown -R "${USER}": /path/to/user-hermes`; the patcher exits with code 3 on permission failures |
 | 7 | `Skill not found` from `~/.hermes/hermes-agent` | Symlink broken or `skills_dirs` missing in `~/.hermes/hermes-agent.yaml` | `readlink -f ~/.hermes/skills/skill-creator` should resolve; add `skills_dirs: [~/.hermes/skills]` |
 | 8 | `JSON parse error` from `easter-hermes-sorry-skills-report` | `~/.hermes/hermes-agent.yaml` is malformed (manual edit dropped a quote) | `python3 -c "import yaml; yaml.safe_load(open('${HOME}/.hermes/hermes-agent.yaml'))"`; restore from backup |
-| 9 | `--lang hu` section is missing or `--help` prints only `[en]` | Custom `--help` override dropped a section, or running on Python 3.13 (3.14 required for bilingual tables) | Regenerate via `uv sync --locked --all-extras --dev`; do NOT hand-edit `messages_en.py` / `messages_hu.py`; verify `python3 --version` reports 3.14.x |
+| 9 | `--lang hu --help` still prints English text | Custom `--help` override ignored `--lang`, or running an old artifact | Regenerate via `uv sync --locked --all-extras --dev`; rebuild `dist/`; do NOT hand-edit `messages_en.py` / `messages_hu.py` |
 
 If none of the above matches, capture the full command, its exit code,
 and the first 10 lines of stderr, and open an issue.
@@ -142,7 +141,7 @@ rm -rf ~/.hermes/python-extras/easter_hermes_sorry_skills            # the plugi
 # 4. Restore ~/.hermes/hermes-agent.yaml (if you modified it)
 cp ~/.hermes/hermes-agent.yaml.bak ~/.hermes/hermes-agent.yaml      # if you made a backup
 
-# 5. Revert the 8 patches (Hermes-side; per Hermes checkout)
+# 5. Revert the 7 patch sites (Hermes-side; per Hermes checkout)
 cd /path/to/user-hermes
 git checkout HEAD -- agent/skill_utils.py agent/prompt_builder.py agent/background_review.py
 ```

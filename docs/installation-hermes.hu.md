@@ -21,7 +21,7 @@ skills könyvtárába symlinkeljük (`~/.hermes/skills/` a szokásos).
 
 - A skill a Hermes indításakor töltődik be; az agent hívhatja a `/skill skill-creator` parancsot
 - A frissítés egyetlen `git pull` ebben a repóban (a symlink megőrzi az útvonalat)
-- A 3. mód önmagában nem patcheli a Hermes forrást. A 8 patch alkalmazásához futtasd az `easter-hermes-sorry-skills-patch-hermes --target /path/to/user-hermes` parancsot az 1. vagy 2. módból.
+- A 3. mód önmagában nem patcheli a Hermes forrást. A 7 patch site alkalmazásához futtasd az `easter-hermes-sorry-skills-patch-hermes --target /path/to/user-hermes` parancsot az 1. vagy 2. módból.
 
 Hagyd ki a 3. módot, ha a skillre nincs szükséged futásidőben (csak operátori használat).
 
@@ -59,7 +59,7 @@ számára. A symlink megőrzi az abszolút repó útvonalat, így az itteni
 
 A 3. lépés az `easter_hermes_sorry_skills` csomagot a Hermes által használt
 Python útvonalra teszi (`src/easter_hermes_sorry_skills/_register.py:33-37`).
-A következő Hermes újraindítás után az egyszeri kétnyelvű figyelmeztetés
+A következő Hermes újraindítás után az egyszeri, kiválasztott nyelvű figyelmeztetés
 felugrik, hacsak az `S1.cap` patchet nem alkalmazták; a marker fájl
 (`~/.hermes/.easter_hermes_sorry_skills_advisory_seen`) elnyomja azt.
 
@@ -99,7 +99,7 @@ megmutatja a SKILL.md frontmatterét (`compatibility: hermes` sor), és a
 | `Skill not found` a `~/.hermes/hermes-agent`-ből | Sérült symlink vagy hiányzó `skills_dirs` konfig | A `readlink -f ~/.hermes/skills/skill-creator` oldjon fel; adj hozzá `skills_dirs: [~/.hermes/skills]` bejegyzést a `~/.hermes/hermes-agent.yaml` fájlhoz |
 | `Permission denied` a `~/.hermes/skills/`-en | A könyvtár más felhasználó tulajdona vagy csak olvasható | `chown -R "${USER}": "${HOME}/.hermes/skills"`; a patcher 3-as exit kóddal elutasítja az olvashatatlan felhasználói fájlokba írást |
 | `~/.hermes/hermes-agent.yaml: parse error` | Kézi szerkesztéskor lemaradt egy idézőjel vagy kulcs | `python3 -c "import yaml; yaml.safe_load(open('${HOME}/.hermes/hermes-agent.yaml'))"`; állítsd vissza biztonsági mentésből |
-| A kétnyelvű figyelmeztetés ismétlődően felugrik | A marker fájl törölve vagy az `S1.cap` nincs alkalmazva | Hagyd, hogy a figyelmeztetés egyszer fusson, majd hozd létre újra a markert; vagy alkalmazd az S1.cap patchet a patcherrel |
+| A nyelvválasztás szerinti figyelmeztetés ismétlődően felugrik | A marker fájl törölve vagy az `S1.cap` nincs alkalmazva | Hagyd, hogy a figyelmeztetés egyszer fusson, majd hozd létre újra a markert; vagy alkalmazd az S1.cap patchet a patcherrel |
 
 ---
 
