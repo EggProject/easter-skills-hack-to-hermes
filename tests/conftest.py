@@ -85,7 +85,7 @@ All functions are stateless. AIAgent._build_system_prompt() calls these to
 assemble pieces, then combines them with memory and ephemeral prompts.
 """
 
-# --- MEMORY_GUIDANCE (E2 anchor is L158) ---
+# --- MEMORY_GUIDANCE (E2 anchor is L161) ---
 MEMORY_GUIDANCE = (
     "If you've discovered a new way to do something, "
     "solved a problem that could be "
@@ -104,7 +104,7 @@ def _build_prompt_builder_padded() -> str:
     # multi-line docstring (opening + blank + 2 body lines +
     # closing); this fixture mirrors that shape so ``ast.parse()``
     # accepts the post-patch file. The E1/E2 anchor lines at
-    # L179/L158 are wrapped in real ``MEMORY_GUIDANCE = (...)``
+    # L182/L161 are wrapped in real ``MEMORY_GUIDANCE = (...)``
     # / ``SKILLS_GUIDANCE = (...)`` tuple literals so the indented
     # anchor strings are syntactically valid at module scope once
     # the docstring is closed (matching real Hermes's structure).
@@ -113,21 +113,21 @@ def _build_prompt_builder_padded() -> str:
     lines.append("All functions are stateless. AIAgent._build_system_prompt() calls these to\n")
     lines.append("assemble pieces, then combines them with memory and ephemeral prompts.\n")
     lines.append('"""\n')
-    # E2 anchor must stay at L158 (existing test contract): insert the
-    # MEMORY_GUIDANCE opener at L157, E2 anchor at L158, close at L159.
-    for i in range(1, 152):
+    # E2 anchor must stay at L161 (existing test contract): insert the
+    # MEMORY_GUIDANCE opener at L160, E2 anchor at L161, close at L162.
+    for i in range(1, 155):
         lines.append(f"# padding {i}\n")
     lines.append("MEMORY_GUIDANCE = (\n")
     lines.append('    "necessary later, save it as a skill with the skill tool.\\n"\n')
     lines.append(")  # end MEMORY_GUIDANCE\n")
-    # E1 anchor must stay at L179 (existing test contract): SKILLS_GUIDANCE
-    # opener at L178, E1 anchor at L179, close at L180.
-    for i in range(156, 174):
+    # E1 anchor must stay at L182 (existing test contract): SKILLS_GUIDANCE
+    # opener at L181, E1 anchor at L182, close at L183.
+    for i in range(159, 177):
         lines.append(f"# padding {i}\n")
     lines.append("SKILLS_GUIDANCE = (\n")
     lines.append('    "Skills that aren\'t maintained become liabilities."\n')
     lines.append(")\n")
-    for i in range(181, 1421):
+    for i in range(184, 1421):
         lines.append(f"# padding {i}\n")
     # E3 anchor (L1421) was removed 2026-06-23 — the loop below still
     # pads every line individually to preserve the fixture's total
@@ -198,15 +198,14 @@ def _build_background_review_padded() -> str:
     # ``background_review.py`` has this line at L19 (L18 blank, L19 the
     # import). The E4b patcher anchor is this byte-exact L19 line; the
     # insertion lands at L20 so PEP 563 ordering is preserved. The E4
-    # padding loop below starts at range(1, 208) (3 fewer padding
-    # lines than the previous L17-anchor layout) so the E4 anchor block
-    # (L229..L231) stays at the same line numbers downstream — the
+    # padding loop below starts at range(1, 210) so the E4 anchor block
+    # (L230..L232) stays aligned with Hermes commit 30e947e0a — the
     # fixture's E4/E5 anchors and the real upstream lines are aligned.
     lines.append("\n")  # L18 blank
     lines.append("from __future__ import annotations\n")  # L19
-    # E4 anchor (3-line block starting at L229, inside _SKILL_REVIEW_PROMPT
-    # tuple). Opener at L228, anchor at L229..L231, closer at L232.
-    for i in range(1, 209):
+    # E4 anchor (3-line block starting at L230, inside _SKILL_REVIEW_PROMPT
+    # tuple). Opener at L229, anchor at L230..L232, closer at L233.
+    for i in range(1, 210):
         lines.append(f"# padding {i}\n")
     lines.append("_SKILL_REVIEW_PROMPT = (\n")
     lines.append('    "session artifact. If the proposed name only makes sense for "\n')
@@ -215,16 +214,16 @@ def _build_background_review_padded() -> str:
     )
     lines.append('    "User-preference embedding (important): when the user expressed a "\n')
     lines.append(")\n")
-    # E5 anchor (3-line block starting at L316, inside _COMBINED_REVIEW_PROMPT
-    # tuple). Opener at L315, anchor at L316..L318, closer at L319.
-    for i in range(233, 315):
+    # E5 anchor (3-line block starting at L317, inside _COMBINED_REVIEW_PROMPT
+    # tuple). Opener at L316, anchor at L317..L319, closer at L320.
+    for i in range(234, 316):
         lines.append(f"# padding {i}\n")
     lines.append("_COMBINED_REVIEW_PROMPT = (\n")
     lines.append('    "artifact. If the name only fits today\'s task, fall back to (1), "\n')
     lines.append(r'    "(2), or (3).\n\n"' "\n")
     lines.append('    "User-preference embedding: when the user complains about how "\n')
     lines.append(")\n")
-    for i in range(320, 350):
+    for i in range(321, 350):
         lines.append(f"# padding {i}\n")
     return "".join(lines)
 
