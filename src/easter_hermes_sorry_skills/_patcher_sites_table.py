@@ -51,10 +51,10 @@ BACKGROUND_REVIEW_REL = Path("agent") / "background_review.py"
 # of ``agent/prompt_builder.py``. AC-2.8 unit tests assert substring
 # invariants against this string.
 _CONSULT_RULE_TEXT = (
-    "When creating or editing a skill — "
-    "use skill-creator. "
-    "Persist with skill_manage. "
-    "Small targeted fixes (one-file, < ~20 lines, no schema change) stay patch-first."
+    "Use skill-creator for creating or editing skills; "
+    "use skill_manage only when persisting skill state; "
+    "for small targeted fixes, prefer patch-first when limited to one file, "
+    "roughly under 20 lines, and no schema change."
 )
 
 # Top-of-file insertion (constant definition) for the E0 site. E0 anchors

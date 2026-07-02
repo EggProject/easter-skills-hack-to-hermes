@@ -636,9 +636,9 @@ def test_e0_consult_rule_def_writes_constant_into_prompt_builder(
     # The constant definition is present (assigned to the canonical name).
     assert "SKILL_CREATOR_CONSULT_RULE = (" in text
     # And the canonical wording appears verbatim in the file.
-    assert "use skill-creator" in text
-    assert "Persist with skill_manage" in text
-    assert "one-file, < ~20 lines, no schema change" in text
+    assert "Use skill-creator for creating or editing skills" in text
+    assert "use skill_manage only when persisting skill state" in text
+    assert "roughly under 20 lines, and no schema change" in text
 
 
 def test_e0_anchors_on_closing_triple_double_quote() -> None:
@@ -821,14 +821,12 @@ def test_skill_creator_consult_rule_constant() -> None:
     """AC-2.8: the shared constant lives in ``agent/prompt_builder.py``
     (the target) and is written there by the E0 patch site. The plugin
     no longer exports ``SKILL_CREATOR_CONSULT_RULE``; tests assert the
-    canonical "Közepes" wording via ``_CONSULT_RULE_TEXT``.
+    canonical routing wording via ``_CONSULT_RULE_TEXT``.
     """
-    # Phase C2 canonical wording ("Közepes" tier): short rule that
-    # names ``skill-creator`` and ``skill_manage`` and reinforces the
-    # patch-first preference for small fixes.
-    assert "use skill-creator" in _CONSULT_RULE_TEXT
-    assert "Persist with skill_manage" in _CONSULT_RULE_TEXT
-    assert "one-file, < ~20 lines, no schema change" in _CONSULT_RULE_TEXT
+    assert "Use skill-creator for creating or editing skills" in _CONSULT_RULE_TEXT
+    assert "use skill_manage only when persisting skill state" in _CONSULT_RULE_TEXT
+    assert "limited to one file" in _CONSULT_RULE_TEXT
+    assert "roughly under 20 lines, and no schema change" in _CONSULT_RULE_TEXT
     assert "skill-creator" in _CONSULT_RULE_TEXT  # ensure skill-creator mentioned
     # E0 is a top-of-file patch site anchored on the L1 docstring of
     # ``agent/prompt_builder.py``; its insertion payload contains the
