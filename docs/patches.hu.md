@@ -58,9 +58,9 @@ A site-okat **csökkenő sorszám-sorrendben** alkalmazzuk, hogy a fájl-teteji 
 ### E0.consult_rule_def
 
 - **Site ID:** `E0.consult_rule_def`
-- **Cél:** `agent/prompt_builder.py` L1
-- **Művelet:** modul-szintű konstans hozzáfűzése közvetlenül az L1 docstring anchor után (`kind="append"`)
-- **Anchor szövege:** az `agent/prompt_builder.py` L1 docstringje
+- **Cél:** `agent/prompt_builder.py` L5
+- **Művelet:** modul-szintű konstans hozzáfűzése közvetlenül az L5 záró docstring anchor után (`kind="append"`)
+- **Anchor szövege:** a valódi `agent/prompt_builder.py` több soros docstringjének záró `"""` sora
 - **Beszúrás (verbatim, a docstring után):**
 
   ```python
@@ -108,9 +108,9 @@ Az `E4b` / `E4` / `E5` hármas az `agent/background_review.py` fájlt szerkeszti
 ### E4b.consult_rule_import
 
 - **Site ID:** `E4b.consult_rule_import`
-- **Cél:** `agent/background_review.py` L1
-- **Művelet:** egyetlen fájl-teteji import hozzáfűzése közvetlenül az L1 docstring után
-- **Anchor szövege:** az `agent/background_review.py` L1 docstringje
+- **Cél:** `agent/background_review.py` L19
+- **Művelet:** a `SKILL_CREATOR_CONSULT_RULE` import hozzáfűzése közvetlenül a `from __future__ import annotations` után
+- **Anchor szövege:** az `agent/background_review.py` byte-pontos `from __future__ import annotations` sora
 - **Beszúrás (egy sor):**
 
   ```python

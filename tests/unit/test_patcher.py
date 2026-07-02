@@ -863,6 +863,48 @@ def test_task_e_reapply_is_idempotent(hermes_checkout: Path) -> None:
     assert len(already_msgs) == 7
 
 
+def test_reapply_plan_reports_zero_planned_sites(hermes_checkout: Path) -> None:
+    """A second apply must not claim already-patched sites will be patched."""
+    r1 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            dry_run=False,
+        ),
+    )
+    assert r1.exit_code == EXIT_OK
+    r2 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            dry_run=False,
+        ),
+    )
+    assert r2.exit_code == EXIT_OK
+    assert "◇ 0 patch(es) would be applied" in r2.diagnostics
+    assert "✓ 0 patches applied" in r2.diagnostics
+    assert not any("would patch:" in diagnostic for diagnostic in r2.diagnostics)
+
+
+def test_dry_run_after_apply_reports_zero_planned_sites(hermes_checkout: Path) -> None:
+    """Dry-run on an already-patched checkout must not advertise writes."""
+    r1 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            dry_run=False,
+        ),
+    )
+    assert r1.exit_code == EXIT_OK
+    r2 = run_patch(
+        PatchRunInputs(
+            target=hermes_checkout,
+            dry_run=True,
+        ),
+    )
+    assert r2.exit_code == EXIT_OK
+    assert "◇ 0 patch(es) would be applied" in r2.diagnostics
+    assert "⚠ --dry-run mode, 0 patches were NOT applied" in r2.diagnostics
+    assert not any("would patch:" in diagnostic for diagnostic in r2.diagnostics)
+
+
 def test_task_e_drift_exits_2(
     tmp_path: Path,
 ) -> None:

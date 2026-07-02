@@ -258,13 +258,13 @@ S1_CAP_SITE_FALLBACK = Site(
 
 # --- the 6 Task E sites ---------------------------------------------------
 
-# E0 inserts the SKILL_CREATOR_CONSULT_RULE constant definition at the
-# top of agent/prompt_builder.py (immediately after the closing ``"""``
-# line of the L1/L2 multi-line docstring). This is the single source
+# E0 inserts the SKILL_CREATOR_CONSULT_RULE constant definition near the
+# top of agent/prompt_builder.py (immediately after the L5 closing
+# ``"""`` line of the real multi-line docstring). This is the single source
 # of truth for the constant's wording; E1-E3 reference the literal name
 # SKILL_CREATOR_CONSULT_RULE which resolves at module level once E0
 # has been applied. The patcher applies sites in DESCENDING line order
-# so E0 (L2) runs last and its insertion doesn't shift higher-line
+# so E0 (L5) runs last and its insertion doesn't shift higher-line
 # anchors.
 E0_CONSULT_RULE_DEF = Site(
     site_id="E0.consult_rule_def",
@@ -272,19 +272,18 @@ E0_CONSULT_RULE_DEF = Site(
     anchors=(Anchor(line=E0_LINE, text=_E0_ANCHOR_TEXT),),
     insertion=_CONSULT_RULE_DEFINITION,
     # Idempotency: the constant definition is present iff the marker
-    # assignment line appears verbatim after the L2 anchor.
+    # assignment line appears verbatim after the L5 anchor.
     expected_replacement="SKILL_CREATOR_CONSULT_RULE = (",
     kind=KIND_APPEND,
     line_for_state=E0_LINE,
 )
 
-# E4b inserts the top-of-file import of SKILL_CREATOR_CONSULT_RULE
-# from agent.prompt_builder into agent/background_review.py so the
-# E4 and E5 sites can use the constant name (the name resolves via
-# the import at runtime). Append-before shape: the anchor is the
-# closing ``"""`` line (L2) of the multi-line docstring at the top
-# of ``agent/background_review.py``; the import is appended AFTER
-# the closing ``"""`` so the import lives at module scope.
+# E4b inserts the import of SKILL_CREATOR_CONSULT_RULE from
+# agent.prompt_builder into agent/background_review.py so the E4 and
+# E5 sites can use the constant name (the name resolves via the import
+# at runtime). The anchor is the byte-exact L19
+# ``from __future__ import annotations`` line; the import is appended
+# AFTER it so PEP 563 ordering remains valid.
 E4B_CONSULT_RULE_IMPORT = Site(
     site_id="E4b.consult_rule_import",
     file_path=BACKGROUND_REVIEW_REL,

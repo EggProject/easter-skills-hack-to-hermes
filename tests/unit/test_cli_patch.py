@@ -298,6 +298,28 @@ def test_cli_apply_emits_applied_summary(
     assert applied_tail in combined
 
 
+def test_cli_dry_run_after_apply_reports_zero_planned_sites(
+    hermes_checkout: Path,
+    real_hermes_agent_sentinel: str | None,
+) -> None:
+    """User-facing dry-run output should not claim already-patched sites will change."""
+    runner = CliRunner()
+    r_apply = runner.invoke(
+        main,
+        ["--lang", "en", "--target", str(hermes_checkout)],
+    )
+    assert r_apply.exit_code == EXIT_OK
+    r_dry = runner.invoke(
+        main,
+        ["--lang", "en", "--dry-run", "--target", str(hermes_checkout)],
+    )
+    assert r_dry.exit_code == EXIT_OK
+    combined = r_dry.output + (r_dry.stderr or "")
+    assert "◇ 0 patch(es) would be applied" in combined
+    assert "⚠ --dry-run mode, 0 patches were NOT applied" in combined
+    assert "would patch:" not in combined
+
+
 def test_cli_dry_run_no_writes_to_target(
     hermes_checkout: Path,
     real_hermes_agent_sentinel: str | None,
