@@ -76,7 +76,7 @@ The sites are applied in **descending line order** so that the top-of-file inser
 ### E1.skills_guidance
 
 - **Site ID:** `E1.skills_guidance`
-- **Target:** `agent/prompt_builder.py` line 179
+- **Target:** `agent/prompt_builder.py` line 182
 - **Action:** append a single source line directly after the anchor (additive — surrounding literals stay verbatim)
 - **Anchor text:** the closing line of an implicit-concat block about skills not being maintained
 - **Insertion (one line):**
@@ -90,7 +90,7 @@ The sites are applied in **descending line order** so that the top-of-file inser
 ### E2.memory_guidance
 
 - **Site ID:** `E2.memory_guidance`
-- **Target:** `agent/prompt_builder.py` line 158
+- **Target:** `agent/prompt_builder.py` line 161
 - **Action:** append a single source line directly after the anchor
 - **Anchor text:** the memory-guidance literal ending with `"necessary later, save it as a skill with the skill tool.\n"`
 - **Insertion (one line):**
@@ -122,7 +122,7 @@ The `E4b` / `E4` / `E5` triple edits `agent/background_review.py`. `E4b` adds th
 ### E4.skill_review_prompt_opt4
 
 - **Site ID:** `E4.skill_review_prompt_opt4`
-- **Target:** `agent/background_review.py` line 105
+- **Target:** `agent/background_review.py` line 230
 - **Action:** append a single source line inside the skill-review prompt template
 - **Anchor text:** the closing line of an implicit-concat block about today's task being wrong
 - **Insertion (one line):**
@@ -136,7 +136,7 @@ The `E4b` / `E4` / `E5` triple edits `agent/background_review.py`. `E4b` adds th
 ### E5.combined_review_prompt_opt4
 
 - **Site ID:** `E5.combined_review_prompt_opt4`
-- **Target:** `agent/background_review.py` line 194
+- **Target:** `agent/background_review.py` line 317
 - **Action:** append a single source line inside the combined-review prompt template
 - **Anchor text:** the closing line of an implicit-concat block referring back to options (1)/(2)/(3)
 - **Insertion (one line):**

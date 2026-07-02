@@ -2,6 +2,9 @@
 
 > 🇬🇧 **[English version →](README.md)**
 
+> Támogatott Hermes commit: `30e947e0a`
+> (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Language: EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
 [![Language: HU](https://img.shields.io/badge/lang-HU-blue.svg)](README.hu.md)

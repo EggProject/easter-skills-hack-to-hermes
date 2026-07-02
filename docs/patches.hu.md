@@ -76,7 +76,7 @@ A site-okat **csökkenő sorszám-sorrendben** alkalmazzuk, hogy a fájl-teteji 
 ### E1.skills_guidance
 
 - **Site ID:** `E1.skills_guidance`
-- **Cél:** `agent/prompt_builder.py` L179
+- **Cél:** `agent/prompt_builder.py` L182
 - **Művelet:** egyetlen forrássor hozzáfűzése közvetlenül az anchor után (additív — a környező literálok verbatim maradnak)
 - **Anchor szövege:** egy implicit-concat blokk záró sora a skills being maintained-ről
 - **Beszúrás (egy sor):**
@@ -90,7 +90,7 @@ A site-okat **csökkenő sorszám-sorrendben** alkalmazzuk, hogy a fájl-teteji 
 ### E2.memory_guidance
 
 - **Site ID:** `E2.memory_guidance`
-- **Cél:** `agent/prompt_builder.py` L158
+- **Cél:** `agent/prompt_builder.py` L161
 - **Művelet:** egyetlen forrássor hozzáfűzése közvetlenül az anchor után
 - **Anchor szövege:** a memory-guidance literál, amely `"necessary later, save it as a skill with the skill tool.\n"`-re végződik
 - **Beszúrás (egy sor):**
@@ -122,7 +122,7 @@ Az `E4b` / `E4` / `E5` hármas az `agent/background_review.py` fájlt szerkeszti
 ### E4.skill_review_prompt_opt4
 
 - **Site ID:** `E4.skill_review_prompt_opt4`
-- **Cél:** `agent/background_review.py` L105
+- **Cél:** `agent/background_review.py` L230
 - **Művelet:** egyetlen forrássor hozzáfűzése a skill-review prompt template belsejében
 - **Anchor szövege:** egy implicit-concat blokk záró sora, amely a mai task helytelenségéről szól
 - **Beszúrás (egy sor):**
@@ -136,7 +136,7 @@ Az `E4b` / `E4` / `E5` hármas az `agent/background_review.py` fájlt szerkeszti
 ### E5.combined_review_prompt_opt4
 
 - **Site ID:** `E5.combined_review_prompt_opt4`
-- **Cél:** `agent/background_review.py` L194
+- **Cél:** `agent/background_review.py` L317
 - **Művelet:** egyetlen forrássor hozzáfűzése a combined-review prompt template belsejében
 - **Anchor szövege:** egy implicit-concat blokk záró sora, amely az (1)/(2)/(3) opciókra hivatkozik vissza
 - **Beszúrás (egy sor):**
