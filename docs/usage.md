@@ -96,10 +96,20 @@ user message against skill names, categories, and descriptions, and injects
 a short reminder only when a skill looks relevant. It does not scan profiles
 or read skill files directly.
 
-Configure it in the Hermes `config.yaml` under the plugin entry:
+First make sure the plugin itself is enabled through Hermes' plugin list:
 
 ```yaml
 plugins:
+  enabled:
+    - easter-hermes-sorry-skills-plugin
+```
+
+Configure the hook under the plugin-owned entry in Hermes `config.yaml`:
+
+```yaml
+plugins:
+  enabled:
+    - easter-hermes-sorry-skills-plugin
   entries:
     easter-hermes-sorry-skills-plugin:
       skill_hook:
@@ -110,6 +120,10 @@ plugins:
         min_score: 2
         log_level: INFO
 ```
+
+Do not put `easter-hermes-sorry-skills-plugin:` at the root of
+`config.yaml`; Hermes' plugin-specific config convention for this kind of
+plugin-owned setting is `plugins.entries.<plugin_id>`.
 
 Supported `mode` values are:
 
@@ -126,6 +140,9 @@ Supported `output` values are:
 
 Set `EASTER_HERMES_SORRY_SKILLS_LOG_LEVEL=DEBUG` to debug matching
 decisions without logging user prompts.
+
+Flowcharts for the runtime paths and decisions:
+[docs/wow-skills-flowcharts.md](wow-skills-flowcharts.md).
 
 ---
 

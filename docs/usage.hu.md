@@ -105,10 +105,22 @@ leírásokkal, és csak akkor szúr be rövid emlékeztetőt, ha egy skill
 relevánsnak tűnik. Nem scannel profilokat és nem olvas közvetlenül skill
 fájlokat.
 
-A Hermes `config.yaml` fájlban, a plugin entry alatt állítható:
+Először győződj meg róla, hogy maga a plugin engedélyezve van a Hermes
+plugin listájában:
 
 ```yaml
 plugins:
+  enabled:
+    - easter-hermes-sorry-skills-plugin
+```
+
+A hook a Hermes `config.yaml` fájlban, a plugin saját entry-je alatt
+állítható:
+
+```yaml
+plugins:
+  enabled:
+    - easter-hermes-sorry-skills-plugin
   entries:
     easter-hermes-sorry-skills-plugin:
       skill_hook:
@@ -119,6 +131,10 @@ plugins:
         min_score: 2
         log_level: INFO
 ```
+
+Ne tedd az `easter-hermes-sorry-skills-plugin:` kulcsot a `config.yaml`
+root szintjére; az ilyen plugin-saját beállításhoz a Hermesben használt
+konvenció a `plugins.entries.<plugin_id>`.
 
 Támogatott `mode` értékek:
 
@@ -135,6 +151,9 @@ Támogatott `output` értékek:
 
 Matching debughoz állítsd be az `EASTER_HERMES_SORRY_SKILLS_LOG_LEVEL=DEBUG`
 értéket. A log nem írja ki a felhasználói promptot.
+
+A futási utak és döntési ágak folyamatábrái:
+[docs/wow-skills-flowcharts.md](wow-skills-flowcharts.md).
 
 ---
 
