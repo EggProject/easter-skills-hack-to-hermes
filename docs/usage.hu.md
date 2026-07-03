@@ -153,7 +153,7 @@ Matching debughoz állítsd be az `EASTER_HERMES_SORRY_SKILLS_LOG_LEVEL=DEBUG`
 értéket. A log nem írja ki a felhasználói promptot.
 
 A futási utak és döntési ágak folyamatábrái:
-[docs/wow-skills-flowcharts.md](wow-skills-flowcharts.md).
+[docs/wow-skills-flowcharts.hu.md](wow-skills-flowcharts.hu.md).
 
 ---
 

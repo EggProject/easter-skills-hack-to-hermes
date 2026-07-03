@@ -1,5 +1,7 @@
 # WOW Skills Plugin Hook Flowcharts
 
+🇭🇺 **[Magyar verzió →](wow-skills-flowcharts.hu.md)**
+
 This document describes only the plugin hook behavior added by the adaptive
 WOW skills feature. It does not cover release, CI, packaging, or the Hermes
 core patcher.
