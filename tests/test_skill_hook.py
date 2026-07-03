@@ -36,6 +36,76 @@ def test_pre_llm_call_returns_context_for_adaptive_match(monkeypatch: pytest.Mon
     assert "reviewer" in result["context"]
 
 
+def test_pre_llm_call_marks_already_loaded_match(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Already loaded matches are weak reminders, not normal recommendations."""
+    _patch_hook_deps(
+        monkeypatch,
+        SkillHookConfig(),
+        (SkillMetadata(name="reviewer", description="Review code changes", category="coding"),),
+    )
+    history = [
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "function": {"name": "skill_view", "arguments": '{"name": "reviewer"}'},
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call-1",
+            "content": '{"success": true, "name": "reviewer", "content": "body"}',
+        },
+    ]
+
+    result = _skill_hook.pre_llm_call(
+        user_message="Please review code changes",
+        conversation_history=history,
+        is_first_turn=False,
+    )
+
+    assert result is not None
+    assert "Already loaded relevant Hermes skills" in result["context"]
+    assert "Relevant Hermes skills to consider" not in result["context"]
+    assert "Follow already loaded skill instructions" in result["context"]
+
+
+def test_pre_llm_call_splits_loaded_and_new_matches(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A loaded match does not suppress unrelated new relevant matches."""
+    _patch_hook_deps(
+        monkeypatch,
+        SkillHookConfig(top_k=3),
+        (
+            SkillMetadata(name="docs", description="Write release documentation", category="docs"),
+            SkillMetadata(name="reviewer", description="Review code changes", category="coding"),
+        ),
+    )
+    history = [
+        {
+            "role": "user",
+            "content": (
+                '[IMPORTANT: The user has invoked the "reviewer" skill, '
+                "indicating they want you to follow its instructions. "
+                "The full skill content is loaded below.]"
+            ),
+        },
+    ]
+
+    result = _skill_hook.pre_llm_call(
+        user_message="Please review code changes and write release documentation",
+        conversation_history=history,
+        is_first_turn=False,
+    )
+
+    assert result is not None
+    assert "Relevant Hermes skills to consider" in result["context"]
+    assert "- docs:" in result["context"]
+    assert "Already loaded relevant Hermes skills" in result["context"]
+    assert "- reviewer" in result["context"]
+
+
 def test_pre_llm_call_off_mode_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """Off mode never injects context."""
     _patch_hook_deps(monkeypatch, SkillHookConfig(mode="off"), ())
@@ -103,6 +173,6 @@ def test_build_pre_llm_context_debug_logs_without_prompt(
         )
 
     assert context is not None
-    assert "skill_hook: mode=adaptive" in caplog.text
+    assert "skill_hook: mode=adaptive output=shortlist skills=1 matched=1 loaded=0 injected=1" in caplog.text
     assert "matched reviewer" in caplog.text
     assert "SECRET" not in caplog.text

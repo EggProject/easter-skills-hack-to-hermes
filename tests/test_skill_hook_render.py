@@ -72,6 +72,32 @@ def test_render_skill_context_handles_empty_description() -> None:
     assert "- plain\n" in context
 
 
+def test_render_skill_context_loaded_only() -> None:
+    """Loaded-only matches render as weak reminders."""
+    context = render_skill_context((), OUTPUT_NAMES, loaded_matches=(_match("review", "Review code changes"),))
+
+    assert context is not None
+    assert "Relevant Hermes skills to consider" not in context
+    assert "Already loaded relevant Hermes skills" in context
+    assert "- review" in context
+    assert "Follow already loaded skill instructions" in context
+
+
+def test_render_skill_context_new_and_loaded_sections() -> None:
+    """New and loaded matches are rendered in separate sections."""
+    context = render_skill_context(
+        (_match("docs", "Write docs"),),
+        OUTPUT_SHORTLIST,
+        loaded_matches=(_match("review", "Review code changes"),),
+    )
+
+    assert context is not None
+    assert "Relevant Hermes skills to consider" in context
+    assert "- docs: Write docs" in context
+    assert "Already loaded relevant Hermes skills" in context
+    assert "- review" in context
+
+
 def test_truncate_handles_tiny_limit() -> None:
     """Tiny truncate limits clip without ellipsis."""
     assert _truncate("abcdef", 2) == "ab"

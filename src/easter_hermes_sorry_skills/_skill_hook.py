@@ -6,10 +6,11 @@ import logging
 from typing import Any
 
 from easter_hermes_sorry_skills._skill_hook_api import load_enabled_skills
-from easter_hermes_sorry_skills._skill_hook_config import load_skill_hook_config
+from easter_hermes_sorry_skills._skill_hook_config import SkillHookConfig, load_skill_hook_config
 from easter_hermes_sorry_skills._skill_hook_config_consts import MODE_ADAPTIVE, MODE_FIRST, MODE_OFF
+from easter_hermes_sorry_skills._skill_hook_loaded import render_matches_with_loaded_state
 from easter_hermes_sorry_skills._skill_hook_matcher import SkillMatch, match_skills
-from easter_hermes_sorry_skills._skill_hook_render import render_skill_context
+from easter_hermes_sorry_skills._skill_hook_models import SkillMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,24 @@ def build_pre_llm_context(payload: dict[str, Any]) -> str | None:
         logger.debug("skill_hook: skipped reason=empty_user_message")
         return None
     skills = load_enabled_skills()
+    context_info = _build_matched_context(payload, user_message, skills, config)
+    _log_decision(
+        config,
+        len(skills),
+        context_info[1],
+        context_info[2],
+        bool(context_info[0]),
+    )
+    return context_info[0]
+
+
+def _build_matched_context(
+    payload: dict[str, Any],
+    user_message: str,
+    skills: tuple[SkillMetadata, ...],
+    config: SkillHookConfig,
+) -> tuple[str | None, int, int]:
+    """Build context and return context, match count, loaded-match count."""
     matches = match_skills(
         user_message,
         skills,
@@ -48,9 +67,13 @@ def build_pre_llm_context(payload: dict[str, Any]) -> str | None:
         top_k=config.top_k,
         min_score=config.min_score,
     )
-    context = render_skill_context(matches, config.output)
-    _log_decision(config.mode, config.output, len(skills), matches, bool(context))
-    return context
+    context, loaded_count = render_matches_with_loaded_state(
+        matches,
+        config.output,
+        payload.get("conversation_history"),
+    )
+    _log_matches(matches)
+    return context, len(matches), loaded_count
 
 
 def _should_run(enabled: bool, mode: str, is_first_turn: object) -> bool:
@@ -68,21 +91,26 @@ def _apply_log_level(log_level: str) -> None:
 
 
 def _log_decision(
-    mode: str,
-    output: str,
+    config: SkillHookConfig,
     skill_count: int,
-    matches: tuple[SkillMatch, ...],
+    match_count: int,
+    loaded_count: int,
     injected: bool,
 ) -> None:
     """Emit bounded debug details without logging the user prompt."""
     logger.debug(
-        "skill_hook: mode=%s output=%s skills=%d matched=%d injected=%d",
-        mode,
-        output,
+        "skill_hook: mode=%s output=%s skills=%d matched=%d loaded=%d injected=%d",
+        config.mode,
+        config.output,
         skill_count,
-        len(matches),
+        match_count,
+        loaded_count,
         int(injected),
     )
+
+
+def _log_matches(matches: tuple[SkillMatch, ...]) -> None:
+    """Log matched skill details without user prompt content."""
     for match in matches:
         logger.debug(
             "skill_hook: matched %s score=%d reason=%s",

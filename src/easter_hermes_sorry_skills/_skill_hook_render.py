@@ -8,19 +8,42 @@ from easter_hermes_sorry_skills._skill_hook_matcher import SkillMatch
 _SHORT_DESCRIPTION_LIMIT = 140
 _INDEX_DESCRIPTION_LIMIT = 1024
 _FOOTER = "Use skill_view(name) only if the current task actually matches."
+_LOADED_FOOTER = "Follow already loaded skill instructions; call skill_view(name) again only for linked files."
 
 
-def render_skill_context(matches: tuple[SkillMatch, ...], output: str) -> str | None:
+def render_skill_context(
+    matches: tuple[SkillMatch, ...],
+    output: str,
+    *,
+    loaded_matches: tuple[SkillMatch, ...] = (),
+) -> str | None:
     """Render matched skills for pre_llm_call context injection."""
-    if not matches:
+    if not matches and not loaded_matches:
         return None
-    if output == OUTPUT_NAMES:
-        body = _render_names(matches)
-    elif output == OUTPUT_INDEX:
-        body = _render_with_descriptions(matches, _INDEX_DESCRIPTION_LIMIT)
-    else:
-        body = _render_with_descriptions(matches, _SHORT_DESCRIPTION_LIMIT)
-    return "\n".join(("Relevant Hermes skills to consider:", body, "", _FOOTER))
+    sections: list[str] = []
+    body = ""
+    if matches:
+        if output == OUTPUT_NAMES:
+            body = _render_names(matches)
+        elif output == OUTPUT_INDEX:
+            body = _render_with_descriptions(matches, _INDEX_DESCRIPTION_LIMIT)
+        else:
+            body = _render_with_descriptions(matches, _SHORT_DESCRIPTION_LIMIT)
+    if body:
+        sections.append("\n".join(("Relevant Hermes skills to consider:", body, "", _FOOTER)))
+    if loaded_matches:
+        loaded_body = _render_names(loaded_matches)
+        sections.append(
+            "\n".join(
+                (
+                    "Already loaded relevant Hermes skills:",
+                    loaded_body,
+                    "",
+                    _LOADED_FOOTER,
+                ),
+            ),
+        )
+    return "\n\n".join(sections)
 
 
 def _render_names(matches: tuple[SkillMatch, ...]) -> str:

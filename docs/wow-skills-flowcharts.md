@@ -59,7 +59,9 @@ flowchart TD
     J --> K
     K --> L{"Any match reaches min_score?"}
     L -->|"no"| E
-    L -->|"yes"| M["Render bounded skill reminder"]
+    L -->|"yes"| Q["Scan conversation_history for already loaded skills"]
+    Q --> R["Split matches into new and already loaded"]
+    R --> M["Render bounded skill reminder"]
     M --> N{"Rendered context exists?"}
     N -->|"no"| E
     N -->|"yes"| O["Return {context: rendered_text}"]
@@ -67,7 +69,10 @@ flowchart TD
 ```
 
 The returned context is ephemeral. It is not a system prompt patch and it does
-not load full `SKILL.md` bodies.
+not load full `SKILL.md` bodies. If a matching skill was already loaded through
+`skill_view` or a Hermes skill slash command, the plugin renders only a weak
+"already loaded" reminder instead of recommending another main `skill_view`
+call.
 
 ## Mode Decision
 
@@ -84,7 +89,10 @@ flowchart TD
     E -->|"adaptive"| G
     G --> H{"Relevant skill match exists?"}
     H -->|"no"| C
-    H -->|"yes"| I["Inject rendered context"]
+    H -->|"yes"| I["Check current conversation_history"]
+    I --> J{"Was a matched skill already loaded?"}
+    J -->|"no"| K["Inject normal skill_view reminder"]
+    J -->|"yes"| L["Inject weak already-loaded reminder"]
 ```
 
 `first` and `adaptive` both use the same matcher. `first` only permits the
@@ -191,7 +199,73 @@ skill_view(name="skill-creator") is appropriate because the user is asking to
 create a skill.
 ```
 
-## Chat Example 2: No Match Means No Context
+## Chat Example 2: Already Loaded Skill Gets Weak Reminder
+
+Config is the same as Example 1.
+
+Conversation before the current LLM call:
+
+```text
+User:
+Review this Python CLI patch.
+
+Assistant tool call:
+skill_view(name="code-review")
+
+Tool result:
+{
+  "success": true,
+  "name": "code-review",
+  "content": "...full SKILL.md instructions..."
+}
+
+Assistant:
+I loaded the code-review skill and will use it for the review.
+
+User:
+Now review the updated tests too.
+```
+
+Plugin decision on the second user turn:
+
+- `mode=adaptive` allows this turn.
+- `skills_list()` succeeds.
+- `code-review` still matches the current user message.
+- `conversation_history` shows a successful main `skill_view(name="code-review")`
+  result.
+- The match is treated as already loaded.
+
+Context returned by the plugin:
+
+```text
+Already loaded relevant Hermes skills:
+- code-review
+
+Follow already loaded skill instructions; call skill_view(name) again only for linked files.
+```
+
+What Hermes sends into the current LLM call conceptually:
+
+```text
+User:
+Now review the updated tests too.
+
+[Plugin context]
+Already loaded relevant Hermes skills:
+- code-review
+
+Follow already loaded skill instructions; call skill_view(name) again only for linked files.
+```
+
+Expected model behavior:
+
+```text
+Assistant:
+Continue using the already loaded code-review instructions. Do not reload the
+main skill content unless a linked reference file is needed.
+```
+
+## Chat Example 3: No Match Means No Context
 
 Config is the same as Example 1.
 
@@ -230,7 +304,7 @@ Answer normally. No skill reminder was injected, so there is no extra recency
 pressure to call skill_view.
 ```
 
-## Chat Example 3: `first` Mode Skips Later Turns
+## Chat Example 4: `first` Mode Skips Later Turns
 
 Config:
 
@@ -284,7 +358,7 @@ Plugin return value on turn 2:
 None
 ```
 
-## Chat Example 4: Hook Error Fails Open
+## Chat Example 5: Hook Error Fails Open
 
 Conversation before the LLM call:
 
