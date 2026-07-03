@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 
 from easter_hermes_sorry_skills._skill_hook_history import (
-    _json_object,
+    loaded_skill_names_from_history,
+)
+from easter_hermes_sorry_skills._skill_hook_history_tool import (
     _tool_call_arguments,
     _tool_call_name,
-    loaded_skill_names_from_history,
+    json_object,
 )
 
 
@@ -147,5 +149,5 @@ def test_private_json_and_tool_call_shape_guards() -> None:
     assert _tool_call_name("not a dict") == ""
     assert _tool_call_arguments("not a dict") == {}
     assert _tool_call_arguments({"function": "not a dict"}) == {}
-    assert _json_object({"success": True}) == {"success": True}
-    assert _json_object(123) == {}
+    assert json_object({"success": True}) == {"success": True}
+    assert json_object(123) == {}
