@@ -1,6 +1,5 @@
 """tests/test_register.py — TDD tests for src/easter_hermes_sorry_skills/__init__.py.
 
-Plan file: docs/plans/03-plugin-spec.md
 ACs covered: AC-1.2
 
 TDD list (from plan §TDD test list / register(ctx) wiring):

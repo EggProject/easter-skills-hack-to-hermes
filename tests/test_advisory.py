@@ -1,6 +1,5 @@
 """tests/test_advisory.py — TDD tests for src/easter_hermes_sorry_skills/_advisory.py.
 
-Plan file: docs/plans/03-plugin-spec.md
 ACs covered: AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-4.10
 
 TDD list (from plan):

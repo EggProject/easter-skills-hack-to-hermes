@@ -1,212 +1,105 @@
 # easter-hermes-sorry-skills
 
-> [Magyar verzió](README.hu.md)
+[Magyar verzio](README.hu.md) | [Docs](docs/README.md) | [License](LICENSE)
+
+![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)
+![uv managed](https://img.shields.io/badge/uv-managed-green.svg)
+![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![Hermes](https://img.shields.io/badge/Hermes-30e947e0a-purple.svg)
 
 > Supported Hermes commit: `30e947e0a`
 > (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Language: EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
-[![Language: HU](https://img.shields.io/badge/lang-HU-blue.svg)](README.hu.md)
-[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](pyproject.toml)
-[![CI](https://img.shields.io/badge/CI-pre--commit%20%2B%20pytest-green.svg)](.github/workflows/ci.yml)
-[![Hermes Plugin](https://img.shields.io/badge/Hermes-plugin-blueviolet.svg)](src/easter_hermes_sorry_skills/_register.py)
-[![Hermes Hack: deliverable](https://img.shields.io/badge/Hermes%20Hack-deliverable-orange.svg)](#what-is-this)
+## What It Does
 
-## What is this
+`easter-hermes-sorry-skills` is a small Hermes companion package for skill
+loading and skill-authoring workflows.
 
-Two coordinated artifacts from the Hermes Skills Hack:
+| Area | Purpose |
+| --- | --- |
+| 🧩 Hermes plugin | Registers `on_session_start` and `pre_llm_call` hooks. |
+| 🪝 WOW skill hook | Reminds the model about relevant enabled skills before an LLM call. |
+| 🩹 Hermes patcher | Updates the pinned Hermes checkout so skill descriptions and prompts behave better. |
+| 🧰 Migrated skill | Ships a Hermes-compatible `skills/skill-creator/` directory. |
+| 📊 Reporter | Shows enabled skill metadata and token/cost surface without changing config. |
 
-1. **Hermes plugin** (`src/easter_hermes_sorry_skills/`) — emits a one-time
-   language-specific advisory when the 60-character skill-description cap is un-raised in your
-   Hermes checkout. The plugin is **advisory only**: it never mutates Hermes
-   (`_register.py:1-13`).
-2. **Migrated `skill-creator`** (`skills/skill-creator/`) — ported from
-   Anthropic's `claude-plugins-official` to Hermes (`claude` → `hermes`,
-   `.skill` → `.zip`, NDJSON → ShareGPT, plus `compatibility` frontmatter).
-   See `skills/skill-creator/SKILL.md:4` for the frontmatter contract.
+The plugin does not own or bundle the migrated `skill-creator` skill. The skill
+is a separate top-level artifact under `skills/skill-creator/`.
 
-The package ships three operator-facing CLI entry points (`pyproject.toml:34-36`)
-plus the EN/HU message catalog at `src/easter_hermes_sorry_skills/i18n/`.
+## Quick Start
 
-## Quick start
-
-```sh
-# 1. Install the package (3 modes: development / release artifact / Hermes plugin)
-#    See: docs/installation.md
+```bash
 uv sync --locked --all-extras --dev
-uv run --locked pre-commit install
 
-# 2. Patch audit (dry-run)
-uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run
+# Validate a pinned Hermes checkout without writing.
+uv run --locked easter-hermes-sorry-skills-patch-hermes \
+  --dry-run \
+  --target /tmp/hermes-30e947e0a
 
-# 3. Patch apply
-uv run --locked easter-hermes-sorry-skills-patch-hermes
-
-# 4. Smoke test
+# Inspect enabled skill usage.
 uv run --locked easter-hermes-sorry-skills-report
 ```
 
-Detailed installation guide: [docs/installation.md](docs/installation.md).
-Detailed usage guide: [docs/usage.md](docs/usage.md).
+The patcher writes by default. Use `--dry-run` for validation and review before
+an operator applies the same command without `--dry-run`.
 
-After install the three CLIs are on your `PATH`:
+## Commands
 
-- `easter-hermes-sorry-skills-patch-hermes`
-- `easter-hermes-sorry-skills-report`
+| Command | Writes? | Notes |
+| --- | --- | --- |
+| `easter-hermes-sorry-skills-patch-hermes` | Yes, unless `--dry-run` is set | Patches a Hermes checkout. |
+| `easter-hermes-sorry-skills-report` | No, except operator-chosen JSON output | Reads profiles and skill metadata. |
+
+## Configure the Skill Hook
+
+```yaml
+plugins:
+  enabled:
+    - easter-hermes-sorry-skills-plugin
+  entries:
+    easter-hermes-sorry-skills-plugin:
+      skill_hook:
+        enabled: true
+        mode: adaptive
+        output: shortlist
+        top_k: 3
+        min_score: 2
+        log_level: INFO
+```
+
+`adaptive` mode runs on each turn and injects a short reminder only when the
+current user message matches enabled skill names or descriptions. Already loaded
+skills are treated as loaded context and are not re-recommended strongly.
 
 ## Documentation
 
 | Topic | Link |
-|---|---|
-| Installation (3 modes) | [docs/installation.md](docs/installation.md) |
-| Installation: development | [docs/installation-dev.md](docs/installation-dev.md) |
-| Installation: release artifact | [docs/installation-release.md](docs/installation-release.md) |
-| Installation: Hermes plugin | [docs/installation-hermes.md](docs/installation-hermes.md) |
-| Verification + lifecycle | [docs/installation-verify.md](docs/installation-verify.md) |
-| Usage (quick start + workflows) | [docs/usage.md](docs/usage.md) |
-| Common workflows + troubleshooting | [docs/workflows.md](docs/workflows.md) |
-| Patches (S1.cap + Task E sites) | [docs/patches.md](docs/patches.md) |
-| Skill-creator (migrated) | [docs/skill-creator.md](docs/skill-creator.md) |
-| Scripts (the three CLIs) | [docs/scripts.md](docs/scripts.md) |
-| Migration log (claude → hermes) | [docs/migration.md](docs/migration.md) |
-| Development (uv + pre-commit) | [docs/development.md](docs/development.md) |
+| --- | --- |
+| 🧭 Documentation index | [docs/README.md](docs/README.md) |
+| ⚡ Getting started | [docs/getting-started.md](docs/getting-started.md) |
+| 🧰 Commands | [docs/commands.md](docs/commands.md) |
+| 🧩 Plugin and hooks | [docs/plugin.md](docs/plugin.md) |
+| 🩹 Patching Hermes | [docs/patching.md](docs/patching.md) |
+| 🛠️ Skill creator | [docs/skill-creator.md](docs/skill-creator.md) |
+| 📦 Operations and release | [docs/operations.md](docs/operations.md) |
+| 🧪 Development | [docs/development.md](docs/development.md) |
+| 🧾 Migration notes | [docs/migration-notes.md](docs/migration-notes.md) |
+| 🪝 Hook flowcharts | [docs/wow-skills-flowcharts.md](docs/wow-skills-flowcharts.md) |
 
-## Scripts at a glance
-
-All three entry points are declared in `pyproject.toml:34-36`. Run any of them
-through `uv run --locked` so `uv.lock` stays authoritative.
-
-- `easter-hermes-sorry-skills-patch-hermes` — applies the **7 patch sites**
-  (S1.cap + 6 Task E sites + S1.cap skills-prompt-snapshot purge) to your
-  Hermes checkout. Defaults to `--target ~/.hermes/hermes-agent`. WRITES by
-  default; pass `--dry-run` to audit without writing.
-- `easter-hermes-sorry-skills-report` — **read-only** usage reporter. Shows
-  which skills are currently enabled and what the daily cost surface looks
-  like. NO writes, NO config flips.
-
-### `--dry-run` and the dry-run plan
-
-`easter-hermes-sorry-skills-patch-hermes --dry-run` audits every planned
-patch without writing a single byte to the target. The output is a
-single-language **plan** selected by `--lang` that the operator reads before
-deciding to apply:
-
-```text
-◇ plan for /path/to/target:
-• would patch: agent/skill_utils.py (site S1.cap)
-  line 688: - old line content
-  line 688: + new line content
-◇ 7 patch(es) would be applied
-⚠ --dry-run mode, 7 patches were NOT applied
-```
-
-Apply mode emits the same plan body, but the trailing tail switches to
-the "applied" message instead of the dry-run warning:
-
-```text
-✓ 7 patches applied
-```
-
-**Soft safety.** The hermes-agent checkout (`~/.hermes/hermes-agent`) is
-the default target. Dry-run emits a warning and prints the plan so the
-operator can audit the planned changes before deciding to apply. The target
-file hash stays byte-identical (verified by the
-`test_cli_dry_run_no_writes_to_target` unit test). Apply mode is operator
-controlled and writes to the resolved target.
-
-All CLI text output is single-language (`--lang en|hu`) and uses the message
-modules in `i18n/messages_en.py` and `i18n/messages_hu.py`.
-
-## Project layout
-
-```
-src/easter_hermes_sorry_skills/   # plugin + the three CLIs
-  _register.py                    # hermes_cli.plugins entry point
-  _advisory.py                    # static-AST cap detection (no mutation)
-  _patcher*.py                    # the 8-patch engine
-  cli_patch.py                    # patch-hermes CLI
-  cli_report.py                   # report CLI
-  i18n/                           # EN/HU message catalog
-skills/skill-creator/             # migrated skill (Hermes variant)
-docs/                             # per-topic docs (see table above)
-scripts/                          # bash wrappers around each CLI
-```
-
-## Development
-
-This project is **Python 3.14+**, **uv-managed**, and gated by
-[pre-commit](https://pre-commit.com/). The strictest hooks (wemake-python-styleguide,
-mypy strict, ruff, black) are configured in `.pre-commit-config.yaml` per the
-toolchain conventions plan.
-
-```sh
-uv sync --locked --all-extras --dev           # one-shot venv bootstrap
-uv run --locked pre-commit install            # gate on every commit
-uv run --locked pre-commit run --all-files    # full sweep before pushing
-uv run --locked pytest                        # run the test suite
-uv run --locked ruff check src tests          # lint only
-uv run --locked mypy src                      # type-check only
-```
-
-CI runs the same `uv sync --all-extras --dev` step (`.github/workflows/ci.yml`),
-so a passing local pre-commit run guarantees a passing CI run for the same code.
-
-## Release build
-
-When the code that goes into the release artifact changes (Python source under `src/` or dependencies in `pyproject.toml` / `uv.lock`), you need to rebuild the release artifact:
+## Quality Gate
 
 ```bash
+uv run --locked pytest -q
+uv run --locked pre-commit run --all-files --show-diff-on-failure
 scripts/build-release.sh
 ```
 
-This script performs 3 steps:
-
-1. **`uv sync --locked`** — installs dependencies from `uv.lock` into `.venv/`
-2. **`shiv`** — bundles `.venv/lib/python3.14/site-packages/` into `dist/easter-hermes-sorry-skills.pyz` (a single-file standalone zipapp, PEP 441)
-3. **`tar -czf`** — packs `dist/*.pyz` + `scripts/` + `README*` into `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz`
-
-### Distribution
-
-The resulting `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` is a self-contained release artifact. Users download it, extract it, and run the wrapper scripts **without installing anything** (no `uv sync`, no `pip install`):
-
-```bash
-tar -xzf easter-hermes-sorry-skills-v0.1.0.tar.gz
-cd easter-hermes-sorry-skills-v0.1.0/
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh [args...]
-```
-
-The only requirement on the user's machine is **Python 3.14+** (the `.pyz` shebang points to the system's `python3`).
-
-### Build flags
-
-`scripts/build-release.sh` supports optional flags:
-
-- `--only-shiv` — only build the `.pyz` (skip `tar.gz`)
-- `--only-tar` — only build the `tar.gz` (assumes `.pyz` exists)
-
-To clean the `dist/` folder before a rebuild, run `rm -rf dist/` manually (the `--clean` flag was intentionally not added to keep the script non-destructive).
+The Python test gate enforces 100% branch coverage through `pyproject.toml`.
+Release artifacts are written to `dist/`, and `dist/` should contain the latest
+build after release-facing files change.
 
 ## License
 
-Dual-licensed:
-
-- The [LICENSE](LICENSE) file is the canonical **MIT License** (Copyright © 2026
-  eggproject Kft.) — this is the authoritative license for open-source
-  redistribution.
-- The `pyproject.toml:7` `license = { text = "Proprietary" }` field is the
-  operator-managed marker for internal Hermes Hack packaging and distribution
-  control. It is NOT a separate license; the MIT text governs all use of the
-  source code in this repository.
-
-## Contributing
-
-All path references below point to project-internal files (`.claude/rules/*.md`)
-that govern the worktree+PR workflow; they are not external dependencies.
-
-Internal contributions only. Open a feature branch in
-`.claude/worktrees/<branch>/`, run the unified pre-commit gate, and submit a PR
-to `main`. Direct commits to `main` are forbidden per the worktree + PR workflow
-rule (`.claude/rules/worktree-pr-workflow.md`). Follow up every PR until it
-merges with green CI (`.claude/rules/follow-up-pr-until-merged.md`,
-`.claude/rules/no-pr-merge-without-green-ci.md`).
+The repository contains an MIT license in [LICENSE](LICENSE). The
+`pyproject.toml` metadata keeps an internal packaging marker; the repository
+license file is the source license for redistribution.

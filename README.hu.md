@@ -1,212 +1,107 @@
 # easter-hermes-sorry-skills
 
-> 🇬🇧 **[English version →](README.md)**
+[English version](README.md) | [Dokumentáció](docs/README.hu.md) | [Licenc](LICENSE)
+
+![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)
+![uv managed](https://img.shields.io/badge/uv-managed-green.svg)
+![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![Hermes](https://img.shields.io/badge/Hermes-30e947e0a-purple.svg)
 
 > Támogatott Hermes commit: `30e947e0a`
 > (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Language: EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
-[![Language: HU](https://img.shields.io/badge/lang-HU-blue.svg)](README.hu.md)
-[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](pyproject.toml)
-[![CI](https://img.shields.io/badge/CI-pre--commit%20%2B%20pytest-green.svg)](.github/workflows/ci.yml)
-[![Hermes Plugin](https://img.shields.io/badge/Hermes-plugin-blueviolet.svg)](src/easter_hermes_sorry_skills/_register.py)
-[![Hermes Hack: deliverable](https://img.shields.io/badge/Hermes%20Hack-deliverable-orange.svg)](#mir%C5%91l-sz%C3%B3l-ez-a-projekt)
+## Mit Csinál?
 
-## Miről szól ez a projekt?
+Az `easter-hermes-sorry-skills` egy kis Hermes kiegészítő csomag skill
+betöltéshez és skill-authoring workflow-khoz.
 
-A Hermes Skills Hack 5. fázisából származó két összehangolt artifact:
+| Terület | Cél |
+| --- | --- |
+| 🧩 Hermes plugin | `on_session_start` és `pre_llm_call` hookokat regisztrál. |
+| 🪝 WOW skill hook | LLM hívás előtt emlékezteti a modellt a releváns enabled skill-ekre. |
+| 🩹 Hermes patcher | A támogatott Hermes checkoutot igazítja a jobb skill prompt működéshez. |
+| 🧰 Migrált skill | Hermes-kompatibilis `skills/skill-creator/` könyvtárat szállít. |
+| 📊 Reporter | Config módosítás nélkül mutatja az enabled skill metaadatokat és token felületet. |
 
-1. **Hermes plugin** (`src/easter_hermes_sorry_skills/`) — egyszeri,
-   nyelvválasztás szerinti figyelmeztetést ad ki, ha a 60 karakteres skill-leírás cap nincs felemelve a
-   Hermes checkout-odban. A plugin **kizárólag tanácsadó**: soha nem módosítja
-   a Hermest (`_register.py:1-13`).
-2. **Migrált `skill-creator`** (`skills/skill-creator/`) — Anthropic
-   `claude-plugins-official` repójából portolva Hermes-re (`claude` → `hermes`,
-   `.skill` → `.zip`, NDJSON → ShareGPT, valamint `compatibility` frontmatter).
-   A frontmatter-szerződést lásd: `skills/skill-creator/SKILL.md:4`.
+A plugin nem birtokolja és nem csomagolja be a migrált `skill-creator` skillt.
+Az külön, top-level artifactként él a `skills/skill-creator/` alatt.
 
-A csomag három, operátor felé néző CLI entry pointot szállít
-(`pyproject.toml:34-36`), valamint az EN/HU üzenetkatalógust itt:
-`src/easter_hermes_sorry_skills/i18n/`.
+## Gyors Indulás
 
-## Gyors indulás
-
-```sh
-# 1. Telepítsd a csomagot (3 mód: development / release artifact / Hermes plugin)
-#    Lásd: docs/installation.md
+```bash
 uv sync --locked --all-extras --dev
-uv run --locked pre-commit install
 
-# 2. Patch audit (dry-run)
-uv run --locked easter-hermes-sorry-skills-patch-hermes --dry-run
+# Pinned Hermes checkout validálása írás nélkül.
+uv run --locked easter-hermes-sorry-skills-patch-hermes \
+  --dry-run \
+  --target /tmp/hermes-30e947e0a
 
-# 3. Patch apply
-uv run --locked easter-hermes-sorry-skills-patch-hermes
-
-# 4. Smoke test
+# Enabled skill használat ellenőrzése.
 uv run --locked easter-hermes-sorry-skills-report
 ```
 
-Részletes telepítési útmutató: [docs/installation.md](docs/installation.md).
-Részletes használati útmutató: [docs/usage.md](docs/usage.md).
+A patcher alapból ír. Validáláshoz és operátori ellenőrzéshez használd a
+`--dry-run` kapcsolót, és csak utána fusson ugyanaz a parancs `--dry-run`
+nélkül.
 
-Telepítés után a három CLI a `PATH`-odon lesz:
+## Parancsok
 
-- `easter-hermes-sorry-skills-patch-hermes`
-- `easter-hermes-sorry-skills-report`
+| Parancs | Ír? | Megjegyzés |
+| --- | --- | --- |
+| `easter-hermes-sorry-skills-patch-hermes` | Igen, ha nincs `--dry-run` | Hermes checkoutot patchel. |
+| `easter-hermes-sorry-skills-report` | Nem, kivéve operátor által megadott JSON output | Profilokat és skill metaadatokat olvas. |
+
+## Skill Hook Config
+
+```yaml
+plugins:
+  enabled:
+    - easter-hermes-sorry-skills-plugin
+  entries:
+    easter-hermes-sorry-skills-plugin:
+      skill_hook:
+        enabled: true
+        mode: adaptive
+        output: shortlist
+        top_k: 3
+        min_score: 2
+        log_level: INFO
+```
+
+Az `adaptive` mód minden turnnél lefut, de csak akkor szúr be rövid
+emlékeztetőt, ha az aktuális user üzenet illeszkedik enabled skill névre vagy
+descriptionre. A már betöltött skill-eket betöltött contextként kezeli, ezért
+nem ajánlja újra erős jelzéssel.
 
 ## Dokumentáció
 
 | Téma | Link |
-|---|---|
-| Telepítés (3 mód) | [docs/installation.md](docs/installation.md) |
-| Telepítés: development | [docs/installation-dev.md](docs/installation-dev.md) |
-| Telepítés: release artifact | [docs/installation-release.md](docs/installation-release.md) |
-| Telepítés: Hermes plugin | [docs/installation-hermes.md](docs/installation-hermes.md) |
-| Verifikáció + életciklus | [docs/installation-verify.md](docs/installation-verify.md) |
-| Használat (gyors indulás + workflow-k) | [docs/usage.md](docs/usage.md) |
-| Gyakori workflow-k + hibaelhárítás | [docs/workflows.md](docs/workflows.md) |
-| Patch-ek (S1.cap + Task E site-ok) | [docs/patches.md](docs/patches.md) |
-| Skill-creator (migrált) | [docs/skill-creator.md](docs/skill-creator.md) |
-| Szkriptek (a három CLI) | [docs/scripts.md](docs/scripts.md) |
-| Migrációs napló (claude → hermes) | [docs/migration.md](docs/migration.md) |
-| Fejlesztés (uv + pre-commit) | [docs/development.md](docs/development.md) |
+| --- | --- |
+| 🧭 Dokumentáció index | [docs/README.hu.md](docs/README.hu.md) |
+| ⚡ Első lépések | [docs/getting-started.hu.md](docs/getting-started.hu.md) |
+| 🧰 Parancsok | [docs/commands.hu.md](docs/commands.hu.md) |
+| 🧩 Plugin és hookok | [docs/plugin.hu.md](docs/plugin.hu.md) |
+| 🩹 Hermes patching | [docs/patching.hu.md](docs/patching.hu.md) |
+| 🛠️ Skill creator | [docs/skill-creator.hu.md](docs/skill-creator.hu.md) |
+| 📦 Üzemeltetés és release | [docs/operations.hu.md](docs/operations.hu.md) |
+| 🧪 Fejlesztés | [docs/development.hu.md](docs/development.hu.md) |
+| 🧾 Migrációs jegyzetek | [docs/migration-notes.hu.md](docs/migration-notes.hu.md) |
+| 🪝 Hook folyamatábrák | [docs/wow-skills-flowcharts.hu.md](docs/wow-skills-flowcharts.hu.md) |
 
-## Szkriptek áttekintése
-
-Mind a három entry point a `pyproject.toml:34-36` sorban van deklarálva. Mindig
-`uv run --locked` mögé zárd, hogy az `uv.lock` maradjon a mérvadó.
-
-- `easter-hermes-sorry-skills-patch-hermes` — alkalmazza a **7 patch site-ot**
-  (S1.cap + 6 Task E site + S1.cap skills-prompt-snapshot purge) a Hermes
-  checkout-odon. Alapértelmezetten `--target ~/.hermes/hermes-agent`. Alapból
-  **ír**; a `--dry-run` kapcsolóval auditálhatsz írás nélkül.
-- `easter-hermes-sorry-skills-report` — **read-only** használati riport.
-  Megmutatja, mely skill-ek vannak jelenleg engedélyezve, és hogyan néz ki a
-  napi költségfelület. Nincs írás, nincs config-flippelés.
-
-### `--dry-run` és a dry-run terv
-
-Az `easter-hermes-sorry-skills-patch-hermes --dry-run` az összes tervezett
-patch-et auditálja anélkül, hogy egyetlen byte-ot is írna a célpontra. A
-kimenet egy `--lang` alapján választott, egynyelvű **terv**, amelyet az
-operátor az apply előtt olvas el:
-
-```text
-◇ terv a /path/to/target útvonalra:
-• patchelné: agent/skill_utils.py (S1.cap site)
-  line 688: - régi sor tartalma
-  line 688: + új sor tartalma
-◇ 7 patch kerülne alkalmazásra
-⚠ --dry-run módban vagyunk, 7 patch NEM történt meg
-```
-
-Az apply mód ugyanazt a tervet adja ki, de a záró sor átvált a
-„alkalmazva" üzenetre a dry-run figyelmeztetés helyett:
-
-```text
-✓ 7 patch alkalmazva
-```
-
-**Lágy safety.** A `~/.hermes/hermes-agent` checkout a patcher
-alapértelmezett célpontja. Dry-run módban figyelmeztetést ad és kiírja a
-tervet, hogy az operátor apply előtt ellenőrizhesse a tervezett
-változtatásokat. A célfájl hash-e byte-azonos marad (a
-`test_cli_dry_run_no_writes_to_target` egységteszt ellenőrzi). Apply módban
-az operátor dönt, és a patcher a feloldott célpontra ír.
-
-A CLI-k szöveges kimenete egynyelvű (`--lang en|hu`), a szövegek forrása az
-`i18n/messages_en.py` és az `i18n/messages_hu.py`.
-
-## Projekt felépítése
-
-```
-src/easter_hermes_sorry_skills/   # plugin + a három CLI
-  _register.py                    # hermes_cli.plugins entry point
-  _advisory.py                    # statikus-AST cap-detektálás (nincs módosítás)
-  _patcher*.py                    # the 8-patch engine
-  cli_patch.py                    # patch-hermes CLI
-  cli_report.py                   # report CLI
-  i18n/                           # EN/HU üzenetkatalógus
-skills/skill-creator/             # migrált skill (Hermes variáns)
-docs/                             # témánkénti dokk (lásd a fenti táblázatot)
-scripts/                          # bash wrapper-ek minden CLI köré
-```
-
-## Fejlesztés
-
-Ez a projekt **Python 3.14+**, **uv-kezelésű**, és a
-[pre-commit](https://pre-commit.com/) felügyeli. A legszigorúbb hook-ok
-(wemake-python-styleguide, mypy strict, ruff, black) a
-`.pre-commit-config.yaml` fájlban vannak konfigurálva a toolchain-konvenciók
-terve szerint.
-
-```sh
-uv sync --locked --all-extras --dev           # egyszeri venv-bootstrap
-uv run --locked pre-commit install            # gate minden commitra
-uv run --locked pre-commit run --all-files    # teljes sweep push előtt
-uv run --locked pytest                        # run the test suite
-uv run --locked ruff check src tests          # csak lint
-uv run --locked mypy src                      # csak típusellenőrzés
-```
-
-A CI ugyanazt az `uv sync --all-extras --dev` lépést futtatja
-(`.github/workflows/ci.yml`), így a helyi pre-commit átfutás garantálja, hogy
-ugyanaz a kód átmegy a CI-on is.
-
-## Release build
-
-Amikor a release artifact-ba kerülő kód változik (Python forrás az `src/` mappában vagy függőségek a `pyproject.toml` / `uv.lock` fájlokban), újra kell építeni a release artifact-ot:
+## Minőségi Kapu
 
 ```bash
+uv run --locked pytest -q
+uv run --locked pre-commit run --all-files --show-diff-on-failure
 scripts/build-release.sh
 ```
 
-A script 3 lépést végez:
-
-1. **`uv sync --locked`** — a függőségek telepítése az `uv.lock` alapján a `.venv/` mappába
-2. **`shiv`** — a `.venv/lib/python3.14/site-packages/` becsomagolása a `dist/easter-hermes-sorry-skills.pyz` fájlba (single-file standalone zipapp, PEP 441)
-3. **`tar -czf`** — a `dist/*.pyz` + `scripts/` + `README*` becsomagolása a `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` fájlba
-
-### Terjesztés
-
-Az elkészült `dist/easter-hermes-sorry-skills-v{VERSION}.tar.gz` egy ön-teljes release artifact. A felhasználók letöltik, kibontják, és **install nélkül** futtatják a wrapper scripteket (nincs `uv sync`, nincs `pip install`):
-
-```bash
-tar -xzf easter-hermes-sorry-skills-v0.1.0.tar.gz
-cd easter-hermes-sorry-skills-v0.1.0/
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh [args...]
-```
-
-Az egyetlen követelmény a felhasználó gépén: **Python 3.14+** (a `.pyz` shebang a rendszer `python3`-ra mutat).
-
-### Build flag-ek
-
-A `scripts/build-release.sh` a következő opcionális flag-eket támogatja:
-
-- `--only-shiv` — csak a `.pyz` build (kihagyja a `tar.gz`-t)
-- `--only-tar` — csak a `tar.gz` (feltételezi, hogy a `.pyz` már létezik)
-
-A `dist/` mappa törléséhez rebuild előtt futtasd manuálisan: `rm -rf dist/` (a `--clean` flag szándékosan nem került a scriptbe, hogy ne legyen destruktív).
+A Python tesztkapu a `pyproject.toml` alapján 100% branch coverage-et vár el.
+A release artifactok a `dist/` mappába kerülnek, és release-t érintő változás
+után a `dist/` legyen a legfrissebb build.
 
 ## Licenc
 
-Kettős licencelés:
-
-- A [LICENSE](LICENSE) fájl a kanonikus **MIT Licenc** (Copyright © 2026
-  eggproject Kft.) — ez a hiteles licenc a nyílt forráskódú terjesztéshez.
-- A `pyproject.toml:7` `license = { text = "Proprietary" }` mező az operátor
-  által kezelt marker a belső Hermes Hack csomagoláshoz és terjesztés-
-  felügyelethez. NEM külön licenc; az MIT szöveg szabályozza a forráskód
-  minden felhasználását ebben a repository-ban.
-
-## Közreműködés
-
-Kizárólag belső hozzájárulás. Az alábbi útvonal-hivatkozások a projekt belső fájljaira mutatnak (`.claude/rules/*.md`), amelyek a worktree+PR workflow-t szabályozzák; ezek nem külső függőségek. Nyiss feature branch-et
-`.claude/worktrees/<branch>/` alatt, futtasd az egységes pre-commit kaput, és
-nyújts be PR-t `main` ellenében. A `main` ágra közvetlen commit tilos a worktree
-+ PR workflow szabály szerint (`.claude/rules/worktree-pr-workflow.md`). Minden
-PR-t kövess végig, amíg zöld CI-jú merge-ölésre nem kerül
-(`.claude/rules/follow-up-pr-until-merged.md`,
-`.claude/rules/no-pr-merge-without-green-ci.md`).
+A repository [LICENSE](LICENSE) fájlja MIT licencet tartalmaz. A
+`pyproject.toml` metadata belső csomagolási marker; a repository licencfájlja a
+redisztribúció forráslicence.

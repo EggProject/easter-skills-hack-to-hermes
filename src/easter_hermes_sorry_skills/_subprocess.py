@@ -3,8 +3,7 @@
 This file is a non-empty marker so the ``easter_hermes_sorry_skills``
 package is importable for plugin discovery. The canonical helper that
 strips the nesting-guard env var lives in
-``skills/skill-creator/_subprocess.py`` (see
-``docs/plans/07-skill-creator-migration.md`` D3 + AC-4.15). The plugin
+``skills/skill-creator/_subprocess.py``. The plugin
 package must NOT re-implement or re-declare the helper or the guard
 constant; doing so would break the single-source-of-truth contract
 enforced by ``test_helper_is_single_source_of_truth``.
