@@ -1,6 +1,5 @@
 """tests/test_i18n.py — TDD tests for the single-language i18n constants.
 
-Plan file: docs/plans/03-plugin-spec.md
 ACs covered: AC-1.2
 
 Single-language contract (no bilingual in-line format):

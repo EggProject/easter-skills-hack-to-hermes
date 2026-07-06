@@ -21,8 +21,7 @@ TDD test cases for this module:
     test_advisory_no_setattr_on_skill_utils
     test_advisory_pin_values
 
-See also: docs/plans/03-plugin-spec.md
-(Cap-raise mechanism, static-AST, NOT runtime)
+Cap-raise mechanism: static-AST detection only, no runtime mutation.
 """
 
 from __future__ import annotations

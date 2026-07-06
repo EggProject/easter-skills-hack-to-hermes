@@ -9,8 +9,7 @@ authors = [{ name = "Hermes Skills Hack Team" }]
 dependencies = [
     "click>=8.3.3",
     # ruamel.yaml (not pyyaml) — preserves comment order + round-trips
-    # frontmatter. Required by plans/08-migration-note-format.md (D6
-    # determinism: byte-identical output across runs).
+    # frontmatter for deterministic migration-note style files.
     "ruamel.yaml>=0.18",
     "pyyaml>=6",
     "python-frontmatter>=1.1",

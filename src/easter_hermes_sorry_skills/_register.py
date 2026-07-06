@@ -6,7 +6,8 @@ static-AST cap-state check synchronously and, when the cap is still
 un-raised, emits the single-language advisory via ``pick(lang).ADVISORY_CAP``
 EVERY call (no marker-file gating, no one-time semantics). It also
 registers the ``on_session_start`` hook (whose body is a no-op at
-runtime — the work is done at load time).
+runtime — the work is done at load time) and the adaptive ``pre_llm_call``
+skill reminder hook.
 
 The plugin does NOT call ``ctx.register_skill`` (the skill is shipped
 standalone via Script #2's flat-path install) and NEVER performs
@@ -24,6 +25,7 @@ from easter_hermes_sorry_skills._advisory import (
     resolve_target_dir,
 )
 from easter_hermes_sorry_skills._i18n_pick import pick
+from easter_hermes_sorry_skills._skill_hook import pre_llm_call
 
 
 def _advisory_callback(_ctx: object) -> None:
@@ -42,13 +44,14 @@ def register(ctx: Any, lang: str = "en") -> None:
     cap is still un-raised, emits ``pick(lang).ADVISORY_CAP`` (PLAIN
     english or PLAIN hungarian, no bilingual ``[en] ... / [hu] ...`` format)
     EVERY call. Registers the ``on_session_start`` hook (a no-op, the
-    work is already done at load time). The plugin does NOT call
-    ``ctx.register_skill`` (the skill is shipped standalone via Script
-    #2's flat-path install).
+    work is already done at load time) and the adaptive ``pre_llm_call``
+    skill reminder hook. The plugin does NOT call ``ctx.register_skill``
+    (the skill is shipped standalone via Script #2's flat-path install).
     """
     target = resolve_target_dir()
     if detect_cap_state(target) == UNPATCHED_STATE:
         log: Callable[[str], object] = ctx.log
         log(pick(lang).ADVISORY_CAP)
-    register_hook: Callable[[str, Callable[[object], None]], object] = ctx.register_hook
+    register_hook: Callable[[str, Callable[..., object]], object] = ctx.register_hook
     register_hook("on_session_start", _advisory_callback)
+    register_hook("pre_llm_call", pre_llm_call)
