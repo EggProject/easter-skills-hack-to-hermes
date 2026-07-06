@@ -10,15 +10,23 @@ each page as `.hu.md` files.
 
 | Goal | Read |
 | --- | --- |
-| ⚡ Install and run the first dry-run | [Getting started](getting-started.md) |
+| ⚡ Use a release bundle without `uv` | [User install](getting-started.md) |
 | 🧰 Check command flags and examples | [Commands](commands.md) |
 | 🧩 Configure the Hermes plugin hook | [Plugin and hooks](plugin.md) |
 | 🩹 Validate or apply Hermes patches | [Patching Hermes](patching.md) |
 | 🛠️ Use the migrated skill creator | [Skill creator](skill-creator.md) |
 | 📦 Build, verify, and release | [Operations](operations.md) |
-| 🧪 Work on the repository | [Development](development.md) |
+| 🧪 Develop from source with `uv` | [Development](development.md) |
 | 🧾 Understand migration decisions | [Migration notes](migration-notes.md) |
 | 🪝 Inspect hook decision flows | [WOW skill flowcharts](wow-skills-flowcharts.md) |
+
+## Install Paths
+
+| Path | Uses `uv`? | Runs inside Hermes? | Purpose |
+| --- | --- | --- | --- |
+| User install | No | No | Run the packaged `.pyz` through release wrapper scripts. |
+| Hermes plugin enablement | No | Yes | Let Hermes load the plugin and register hooks. |
+| Development setup | Yes | No | Edit, test, lint, and rebuild release artifacts from source. |
 
 ## Safety Model
 
@@ -32,6 +40,6 @@ each page as `.hu.md` files.
 
 - Commands, flags, paths, environment variables, and package names stay in
   English in both language versions.
-- Examples prefer `uv run --locked` so `uv.lock` remains authoritative.
+- User examples prefer release wrapper scripts; development examples use
+  `uv run --locked` so `uv.lock` remains authoritative.
 - Mermaid diagrams are kept in the flowchart pages and validated separately.
-

@@ -3,55 +3,56 @@
 [English version](README.md) | [Dokumentáció](docs/README.hu.md) | [Licenc](LICENSE)
 
 ![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)
-![uv managed](https://img.shields.io/badge/uv-managed-green.svg)
+![Hermes plugin](https://img.shields.io/badge/Hermes-plugin-purple.svg)
+![Release artifact](https://img.shields.io/badge/release-.pyz%20%2B%20wrappers-green.svg)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
-![Hermes](https://img.shields.io/badge/Hermes-30e947e0a-purple.svg)
 
 > Támogatott Hermes commit: `30e947e0a`
 > (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
 
 ## Mit Csinál?
 
-Az `easter-hermes-sorry-skills` egy kis Hermes kiegészítő csomag skill
-betöltéshez és skill-authoring workflow-khoz.
+Az `easter-hermes-sorry-skills` két külön felületet ad:
 
-| Terület | Cél |
-| --- | --- |
-| 🧩 Hermes plugin | `on_session_start` és `pre_llm_call` hookokat regisztrál. |
-| 🪝 WOW skill hook | LLM hívás előtt emlékezteti a modellt a releváns enabled skill-ekre. |
-| 🩹 Hermes patcher | A támogatott Hermes checkoutot igazítja a jobb skill prompt működéshez. |
-| 🧰 Migrált skill | Hermes-kompatibilis `skills/skill-creator/` könyvtárat szállít. |
-| 📊 Reporter | Config módosítás nélkül mutatja az enabled skill metaadatokat és token felületet. |
+| Felület | Runtime | Cél |
+| --- | --- | --- |
+| 🧩 Hermes plugin | Hermes saját Python/plugin loader | `on_session_start` és `pre_llm_call` hookokat regisztrál. |
+| 🧰 Operátori CLI bundle | `dist/easter-hermes-sorry-skills.pyz` + shell wrapper-ek | Patch dry-run/apply és read-only riport Hermes-en kívül. |
 
-A plugin nem birtokolja és nem csomagolja be a migrált `skill-creator` skillt.
-Az külön, top-level artifactként él a `skills/skill-creator/` alatt.
+A migrált `skill-creator` külön él a `skills/skill-creator/` alatt. A plugin
+emlékeztetheti Hermest a releváns skill betöltésére, de nem csomagolja és nem
+birtokolja ezt a skillt.
 
-## Gyors Indulás
+## Felhasználói Telepítés
+
+Ha csak használni akarod az eszközt, a release artifact kell. Ehhez nem kell
+`uv` setup.
 
 ```bash
-uv sync --locked --all-extras --dev
+tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
+cd easter-hermes-sorry-skills-v0.1.0
 
-# Pinned Hermes checkout validálása írás nélkül.
-uv run --locked easter-hermes-sorry-skills-patch-hermes \
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
   --dry-run \
   --target /tmp/hermes-30e947e0a
 
-# Enabled skill használat ellenőrzése.
-uv run --locked easter-hermes-sorry-skills-report
+bash scripts/easter-hermes-sorry-skills-report.sh
 ```
 
-A patcher alapból ír. Validáláshoz és operátori ellenőrzéshez használd a
-`--dry-run` kapcsolót, és csak utána fusson ugyanaz a parancs `--dry-run`
-nélkül.
+A wrapper scriptek megkeresik a `dist/easter-hermes-sorry-skills.pyz` fájlt, és
+a becsomagolt Python entry pointot futtatják. Nem hoznak létre virtual envet, és
+nem futtatnak `uv`-t.
 
-## Parancsok
+## Hermes Plugin Bekapcsolás
 
-| Parancs | Ír? | Megjegyzés |
-| --- | --- | --- |
-| `easter-hermes-sorry-skills-patch-hermes` | Igen, ha nincs `--dry-run` | Hermes checkoutot patchel. |
-| `easter-hermes-sorry-skills-report` | Nem, kivéve operátor által megadott JSON output | Profilokat és skill metaadatokat olvas. |
+A Hermes plugint Hermes tölti be, nem a wrapper script. A hivatalos Hermes
+plugin dokumentáció szerint a general plugin opt-in: egy megtalált plugin csak
+akkor töltődik be, ha a neve szerepel a `plugins.enabled` listában.
 
-## Skill Hook Config
+A jelenlegi release bundle nem Hermes plugin installer. Az operátori CLI
+bundle-t adja. A plugint külön kell Hermes plugin discovery útvonalon
+telepíthetővé vagy láthatóvá tenni, majd ezzel a configgal bekapcsolni és
+hangolni.
 
 ```yaml
 plugins:
@@ -68,17 +69,30 @@ plugins:
         log_level: INFO
 ```
 
-Az `adaptive` mód minden turnnél lefut, de csak akkor szúr be rövid
-emlékeztetőt, ha az aktuális user üzenet illeszkedik enabled skill névre vagy
-descriptionre. A már betöltött skill-eket betöltött contextként kezeli, ezért
-nem ajánlja újra erős jelzéssel.
+Az `adaptive` mód LLM hívás előtt fut, és csak akkor szúr be rövid
+emlékeztetőt, ha a legutóbbi user üzenet illeszkedik enabled skill névre vagy
+descriptionre.
+
+## Fejlesztői Setup
+
+`uv` csak akkor kell, ha a repositoryt szerkeszted, teszteket futtatsz, vagy
+újraépíted a `dist/` artifactokat.
+
+```bash
+uv sync --locked --all-extras --dev
+uv run --locked pytest -q
+uv run --locked pre-commit run --all-files --show-diff-on-failure
+scripts/build-release.sh
+```
+
+A Python tesztkapu a `pyproject.toml` alapján 100% branch coverage-et vár el.
 
 ## Dokumentáció
 
 | Téma | Link |
 | --- | --- |
 | 🧭 Dokumentáció index | [docs/README.hu.md](docs/README.hu.md) |
-| ⚡ Első lépések | [docs/getting-started.hu.md](docs/getting-started.hu.md) |
+| ⚡ Felhasználói telepítés | [docs/getting-started.hu.md](docs/getting-started.hu.md) |
 | 🧰 Parancsok | [docs/commands.hu.md](docs/commands.hu.md) |
 | 🧩 Plugin és hookok | [docs/plugin.hu.md](docs/plugin.hu.md) |
 | 🩹 Hermes patching | [docs/patching.hu.md](docs/patching.hu.md) |
@@ -87,18 +101,6 @@ nem ajánlja újra erős jelzéssel.
 | 🧪 Fejlesztés | [docs/development.hu.md](docs/development.hu.md) |
 | 🧾 Migrációs jegyzetek | [docs/migration-notes.hu.md](docs/migration-notes.hu.md) |
 | 🪝 Hook folyamatábrák | [docs/wow-skills-flowcharts.hu.md](docs/wow-skills-flowcharts.hu.md) |
-
-## Minőségi Kapu
-
-```bash
-uv run --locked pytest -q
-uv run --locked pre-commit run --all-files --show-diff-on-failure
-scripts/build-release.sh
-```
-
-A Python tesztkapu a `pyproject.toml` alapján 100% branch coverage-et vár el.
-A release artifactok a `dist/` mappába kerülnek, és release-t érintő változás
-után a `dist/` legyen a legfrissebb build.
 
 ## Licenc
 

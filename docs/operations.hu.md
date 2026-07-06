@@ -2,6 +2,11 @@
 
 [English version](operations.md) | [Dokumentáció](README.hu.md)
 
+Ez az oldal maintainereknek szól handoff vagy release előkészítéshez. A
+[Fejlesztés](development.hu.md) oldalon leírt fejlesztői környezetet használja.
+Végfelhasználóként a [Felhasználói telepítés](getting-started.hu.md) az induló
+pont; az release wrapper scripteket használ, és nem igényel `uv`-t.
+
 ## Ellenőrzés Handoff Előtt
 
 Dokumentáció vagy kód push előtt futtasd a helyi kaput:
@@ -44,7 +49,8 @@ scripts/easter-hermes-sorry-skills-report.sh
 ```
 
 A wrapperek közeli `dist/` helyeken keresik a `.pyz` fájlt, majd a megfelelő
-entry pointot futtatják.
+entry pointot futtatják. A bundle elkészülte után ez a felhasználói futtatási
+út.
 
 ## CI Forma
 
@@ -64,4 +70,3 @@ A GitHub workflow párhuzamos jobokra bontja a munkát:
 2. Futtasd a Hermes patcher dry-runt `/tmp/hermes-30e947e0a` ellen.
 3. Építsd újra a `dist/` mappát, ha release-t érintő fájl változott.
 4. Pushold a feature branchet és várd meg a zöld CI checkeket.
-

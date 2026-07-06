@@ -2,6 +2,11 @@
 
 [Magyar verzio](operations.hu.md) | [Docs](README.md)
 
+This page is for maintainers preparing a handoff or release. It uses the
+development environment from [Development](development.md). End users should
+start with [User install](getting-started.md), which uses release wrappers and
+does not require `uv`.
+
 ## Verify Before Handoff
 
 Run the local gate before pushing documentation or code changes:
@@ -45,7 +50,7 @@ scripts/easter-hermes-sorry-skills-report.sh
 ```
 
 The wrappers find the `.pyz` in nearby `dist/` locations and execute the matching
-entry point.
+entry point. This is the user-facing execution path after the bundle is built.
 
 ## CI Shape
 
@@ -65,4 +70,3 @@ The GitHub workflow separates the work into parallel jobs:
 2. Run Hermes patcher dry-run against `/tmp/hermes-30e947e0a`.
 3. Rebuild `dist/` when release-facing files changed.
 4. Push the feature branch and wait for green PR checks.
-

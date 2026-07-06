@@ -3,54 +3,55 @@
 [Magyar verzio](README.hu.md) | [Docs](docs/README.md) | [License](LICENSE)
 
 ![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)
-![uv managed](https://img.shields.io/badge/uv-managed-green.svg)
+![Hermes plugin](https://img.shields.io/badge/Hermes-plugin-purple.svg)
+![Release artifact](https://img.shields.io/badge/release-.pyz%20%2B%20wrappers-green.svg)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
-![Hermes](https://img.shields.io/badge/Hermes-30e947e0a-purple.svg)
 
 > Supported Hermes commit: `30e947e0a`
 > (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
 
 ## What It Does
 
-`easter-hermes-sorry-skills` is a small Hermes companion package for skill
-loading and skill-authoring workflows.
+`easter-hermes-sorry-skills` has two separate surfaces:
 
-| Area | Purpose |
-| --- | --- |
-| 🧩 Hermes plugin | Registers `on_session_start` and `pre_llm_call` hooks. |
-| 🪝 WOW skill hook | Reminds the model about relevant enabled skills before an LLM call. |
-| 🩹 Hermes patcher | Updates the pinned Hermes checkout so skill descriptions and prompts behave better. |
-| 🧰 Migrated skill | Ships a Hermes-compatible `skills/skill-creator/` directory. |
-| 📊 Reporter | Shows enabled skill metadata and token/cost surface without changing config. |
+| Surface | Runtime | Purpose |
+| --- | --- | --- |
+| 🧩 Hermes plugin | Hermes' own Python/plugin loader | Registers `on_session_start` and `pre_llm_call` hooks. |
+| 🧰 Operator CLI bundle | `dist/easter-hermes-sorry-skills.pyz` + shell wrappers | Runs patch dry-runs/applies and read-only reports outside Hermes. |
 
-The plugin does not own or bundle the migrated `skill-creator` skill. The skill
-is a separate top-level artifact under `skills/skill-creator/`.
+The migrated `skill-creator` lives separately under `skills/skill-creator/`.
+The plugin can remind Hermes to load relevant skills, but it does not bundle or
+own that skill.
 
-## Quick Start
+## User Install
+
+Use the release artifact when you only want to operate the tool. No `uv` setup is
+needed for this path.
 
 ```bash
-uv sync --locked --all-extras --dev
+tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
+cd easter-hermes-sorry-skills-v0.1.0
 
-# Validate a pinned Hermes checkout without writing.
-uv run --locked easter-hermes-sorry-skills-patch-hermes \
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
   --dry-run \
   --target /tmp/hermes-30e947e0a
 
-# Inspect enabled skill usage.
-uv run --locked easter-hermes-sorry-skills-report
+bash scripts/easter-hermes-sorry-skills-report.sh
 ```
 
-The patcher writes by default. Use `--dry-run` for validation and review before
-an operator applies the same command without `--dry-run`.
+The wrapper scripts resolve `dist/easter-hermes-sorry-skills.pyz` and execute the
+packaged Python entry point. They do not create a virtual environment and do not
+run `uv`.
 
-## Commands
+## Hermes Plugin Enablement
 
-| Command | Writes? | Notes |
-| --- | --- | --- |
-| `easter-hermes-sorry-skills-patch-hermes` | Yes, unless `--dry-run` is set | Patches a Hermes checkout. |
-| `easter-hermes-sorry-skills-report` | No, except operator-chosen JSON output | Reads profiles and skill metadata. |
+Hermes plugins are loaded by Hermes, not by the wrapper scripts. Official Hermes
+plugin docs describe general plugins as opt-in: a discovered plugin only loads
+after its name appears in `plugins.enabled`.
 
-## Configure the Skill Hook
+The current release bundle is not a Hermes plugin installer. It provides the
+operator CLI bundle. Install or expose the plugin through Hermes' plugin
+discovery path separately, then use this config to enable and tune it.
 
 ```yaml
 plugins:
@@ -67,16 +68,29 @@ plugins:
         log_level: INFO
 ```
 
-`adaptive` mode runs on each turn and injects a short reminder only when the
-current user message matches enabled skill names or descriptions. Already loaded
-skills are treated as loaded context and are not re-recommended strongly.
+`adaptive` mode runs before LLM calls and injects a short reminder only when the
+latest user message matches enabled skill names or descriptions.
+
+## Developer Setup
+
+Use `uv` only when you are editing the repository, running tests, or rebuilding
+`dist/`.
+
+```bash
+uv sync --locked --all-extras --dev
+uv run --locked pytest -q
+uv run --locked pre-commit run --all-files --show-diff-on-failure
+scripts/build-release.sh
+```
+
+The Python test gate enforces 100% branch coverage through `pyproject.toml`.
 
 ## Documentation
 
 | Topic | Link |
 | --- | --- |
 | 🧭 Documentation index | [docs/README.md](docs/README.md) |
-| ⚡ Getting started | [docs/getting-started.md](docs/getting-started.md) |
+| ⚡ User install | [docs/getting-started.md](docs/getting-started.md) |
 | 🧰 Commands | [docs/commands.md](docs/commands.md) |
 | 🧩 Plugin and hooks | [docs/plugin.md](docs/plugin.md) |
 | 🩹 Patching Hermes | [docs/patching.md](docs/patching.md) |
@@ -85,18 +99,6 @@ skills are treated as loaded context and are not re-recommended strongly.
 | 🧪 Development | [docs/development.md](docs/development.md) |
 | 🧾 Migration notes | [docs/migration-notes.md](docs/migration-notes.md) |
 | 🪝 Hook flowcharts | [docs/wow-skills-flowcharts.md](docs/wow-skills-flowcharts.md) |
-
-## Quality Gate
-
-```bash
-uv run --locked pytest -q
-uv run --locked pre-commit run --all-files --show-diff-on-failure
-scripts/build-release.sh
-```
-
-The Python test gate enforces 100% branch coverage through `pyproject.toml`.
-Release artifacts are written to `dist/`, and `dist/` should contain the latest
-build after release-facing files change.
 
 ## License
 

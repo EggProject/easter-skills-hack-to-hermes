@@ -5,7 +5,17 @@
 ## `easter-hermes-sorry-skills-patch-hermes`
 
 Hermes checkoutot patchel. Alapból ír; a `--dry-run` csak validálásra váltja a
-futast.
+futást.
+
+Felhasználói telepítési út:
+
+```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
+  --dry-run \
+  --target /tmp/hermes-30e947e0a
+```
+
+Fejlesztés forrásból:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
@@ -26,6 +36,16 @@ alkalmazza a csomaghoz tartozó prompt guidance site-okat.
 ## `easter-hermes-sorry-skills-report`
 
 Hermes profile és skill metadata alapján használati riportot ír ki.
+
+Felhasználói telepítési út:
+
+```bash
+bash scripts/easter-hermes-sorry-skills-report.sh \
+  --sort tokens \
+  --format text
+```
+
+Fejlesztés forrásból:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-report \
@@ -48,4 +68,5 @@ A reporter nem flippel configot, nem installál skillt, és nem patchel Hermest.
 
 A release tarball tartalmazza a `scripts/` shell wrappereket. Ezek megkeresik a
 `dist/easter-hermes-sorry-skills.pyz` fájlt a wrapper mellett vagy az aktuális
-checkoutban, majd a megfelelő Python entry pointot futtatják.
+checkoutban, majd a megfelelő Python entry pointot futtatják. Nem hívnak
+`uv`-t.

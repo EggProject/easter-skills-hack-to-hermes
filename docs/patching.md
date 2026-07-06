@@ -10,6 +10,14 @@ The current patch set is maintained for Hermes commit `30e947e0a`
 Use a pinned checkout for validation:
 
 ```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
+  --dry-run \
+  --target /tmp/hermes-30e947e0a
+```
+
+When developing from source, use the locked environment instead:
+
+```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
   --dry-run \
   --target /tmp/hermes-30e947e0a
@@ -44,7 +52,7 @@ after the plan is accepted.
 Apply mode is the same command without `--dry-run`:
 
 ```bash
-uv run --locked easter-hermes-sorry-skills-patch-hermes \
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
   --target /path/to/hermes-agent
 ```
 
@@ -58,4 +66,3 @@ first.
 | `line drift detected` | Anchor text moved or changed. | Update the patch site for the supported Hermes commit. |
 | `validation failed` | One or more patch sites cannot be proven safe. | Do not apply; fix anchors and re-run dry-run. |
 | No matching target | The checkout path is wrong or incomplete. | Re-check `--target`. |
-

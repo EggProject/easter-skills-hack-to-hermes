@@ -1,39 +1,61 @@
-# ⚡ Getting Started
+# ⚡ User Install
 
 [Magyar verzio](getting-started.hu.md) | [Docs](README.md)
 
-## Prerequisites
+This page is for operators who want to use the release artifact. It is separate
+from [developer setup](development.md).
 
-| Tool | Why |
+## Requirements
+
+| Requirement | Why |
 | --- | --- |
-| Python `>=3.14` | Project runtime and release zipapp target. |
-| `uv` | Virtual environment, dependency sync, and locked command runner. |
-| Git | Branching, PR workflow, and release metadata. |
-| Hermes checkout | Validate against commit `30e947e0a`. |
+| Python `>=3.14` | The `.pyz` zipapp runs with system `python3`. |
+| Release artifact | Contains `dist/easter-hermes-sorry-skills.pyz` and shell wrappers. |
+| Hermes checkout | Patch dry-run target, usually `/tmp/hermes-30e947e0a` for validation. |
 
-## 1. Prepare the Project
+No `uv` command is required for user install.
+
+## 1. Extract the Release Bundle
 
 ```bash
-uv sync --locked --all-extras --dev
+tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
+cd easter-hermes-sorry-skills-v0.1.0
 ```
 
-`uv run --locked` refuses to update the lockfile implicitly. That keeps local
-commands aligned with CI and the committed `uv.lock`.
+The bundle contains:
 
-## 2. Validate Hermes Without Writing
+```text
+dist/easter-hermes-sorry-skills.pyz
+scripts/easter-hermes-sorry-skills-patch-hermes.sh
+scripts/easter-hermes-sorry-skills-report.sh
+README.md
+README.hu.md
+```
+
+## 2. Run the Patcher in Dry-Run Mode
 
 ```bash
-uv run --locked easter-hermes-sorry-skills-patch-hermes \
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
   --dry-run \
   --target /tmp/hermes-30e947e0a
 ```
 
-Review the printed plan. Drift findings mean the patch anchors no longer match
-the supported Hermes source and must be fixed before apply mode is used.
+The wrapper runs the packaged `.pyz`. It does not create `.venv/`, does not
+install dependencies, and does not call `uv`.
 
-## 3. Enable the Plugin
+## 3. Run the Read-Only Report
 
-Add the package as a Hermes plugin and configure the hook in `config.yaml`:
+```bash
+bash scripts/easter-hermes-sorry-skills-report.sh
+```
+
+Use `--format json --json PATH` when another tool needs structured output.
+
+## 4. Enable the Hermes Plugin Separately
+
+The CLI bundle and the Hermes plugin are different install surfaces. The wrapper
+scripts run outside Hermes. The plugin runs inside Hermes through Hermes' plugin
+loader and must be discovered and enabled there.
 
 ```yaml
 plugins:
@@ -47,20 +69,10 @@ plugins:
         output: shortlist
 ```
 
-The hook reads enabled skills through the Hermes runtime API. It does not scan
-profile directories itself.
+See [Plugin and hooks](plugin.md) for the runtime behavior.
 
-## 4. Inspect Skill State
+## Not Developer Setup
 
-```bash
-uv run --locked easter-hermes-sorry-skills-report
-```
-
-Use `--format json --json PATH` when another tool needs structured output.
-
-## Next
-
-- [Commands](commands.md) lists all flags.
-- [Plugin and hooks](plugin.md) explains `adaptive`, `first`, and `off`.
-- [Patching Hermes](patching.md) explains patch sites and dry-run output.
-
+If you need to edit the repository, run tests, or rebuild the release artifact,
+switch to [Development](development.md). That is where `uv sync --locked
+--all-extras --dev` belongs.

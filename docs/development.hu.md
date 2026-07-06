@@ -4,6 +4,9 @@
 
 ## Helyi Környezet
 
+Ez nem a felhasználói telepítési út. Csak akkor használd, ha ezt a repositoryt
+szerkeszted, quality gate-eket futtatsz, vagy újraépíted a `dist/` mappát.
+
 ```bash
 uv sync --locked --all-extras --dev
 uv run --locked pre-commit install
@@ -59,4 +62,3 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes \
 
 Feature branchben dolgozz, pushold, nyisd vagy frissítsd a PR-t, és várd meg a
 zöld CI-t. Minden új változás külön új commit legyen.
-

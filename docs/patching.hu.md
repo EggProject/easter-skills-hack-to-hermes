@@ -10,6 +10,14 @@ A jelenlegi patch set a Hermes `30e947e0a`
 Pinned checkout validálása:
 
 ```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
+  --dry-run \
+  --target /tmp/hermes-30e947e0a
+```
+
+Forrásból fejlesztésnél a lockolt környezetet használd:
+
+```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
   --dry-run \
   --target /tmp/hermes-30e947e0a
@@ -44,7 +52,7 @@ használd, miután a terv elfogadott.
 Apply mód ugyanaz a parancs `--dry-run` nélkül:
 
 ```bash
-uv run --locked easter-hermes-sorry-skills-patch-hermes \
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
   --target /path/to/hermes-agent
 ```
 
@@ -57,4 +65,3 @@ Ne apply-olj ellenőrizetlen checkoutra. Először validáld a pontos forrásver
 | `line drift detected` | Az anchor text elmozdult vagy megváltozott. | Frissítsd a patch site-ot a támogatott Hermes commithoz. |
 | `validation failed` | Egy vagy több patch site nem bizonyítható biztonságosnak. | Ne apply-olj; javítsd az anchorokat és futtasd újra dry-runban. |
 | Nincs target match | Rossz vagy hiányos checkout path. | Ellenőrizd a `--target` értéket. |
-
