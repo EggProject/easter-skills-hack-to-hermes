@@ -12,16 +12,20 @@
 
 ## Mit Csinál?
 
-Az `easter-hermes-sorry-skills` két külön felületet ad:
+Az `easter-hermes-sorry-skills` egy kis kompatibilitási bundle, hogy a Hermes
+Agent skill használata közelebb legyen az elvárt Claude-style skill
+workflow-hoz. Négy részből áll:
 
-| Felület | Runtime | Cél |
+| Rész | Runtime | Cél |
 | --- | --- | --- |
-| 🧩 Hermes plugin | Hermes saját Python/plugin loader | `on_session_start` és `pre_llm_call` hookokat regisztrál. |
-| 🧰 Operátori CLI bundle | `dist/easter-hermes-sorry-skills.pyz` + shell wrapper-ek | Patch dry-run/apply és read-only riport Hermes-en kívül. |
+| 🩹 Hermes patcher | Release `.pyz` + shell wrapper | A támogatott Hermes checkoutot igazítja, hogy a skill descriptionök és skill-authoring promptok jól működjenek. |
+| 🧩 Hermes plugin | Hermes plugin loader | `on_session_start` és `pre_llm_call` hookokat regisztrál, hogy Hermes rövid skill emlékeztetőt kapjon LLM hívás előtt. |
+| 🛠️ Migrált skill | Hermes skill rendszer | Az installed OpenAI `skill-creator` skillt cseréli erre a Hermes-kompatibilis verzióra. |
+| 📊 Reporter | Release `.pyz` + shell wrapper | Read-only skill metadata és token surface diagnosztikát ír ki. |
 
-A migrált `skill-creator` külön él a `skills/skill-creator/` alatt. A plugin
-emlékeztetheti Hermest a releváns skill betöltésére, de nem csomagolja és nem
-birtokolja ezt a skillt.
+A plugin és a migrált `skill-creator` szándékosan külön van. A plugin csak
+emlékezteti Hermest, ha a `skill-creator` vagy más enabled skill relevánsnak
+tűnik; a tényleges skill betöltés továbbra is Hermes feladata.
 
 ## Felhasználói Telepítés
 
@@ -32,10 +36,7 @@ Ha csak használni akarod az eszközt, a release artifact kell. Ehhez nem kell
 tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
 cd easter-hermes-sorry-skills-v0.1.0
 
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
-
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 bash scripts/easter-hermes-sorry-skills-report.sh
 ```
 
@@ -43,16 +44,31 @@ A wrapper scriptek megkeresik a `dist/easter-hermes-sorry-skills.pyz` fájlt, é
 a becsomagolt Python entry pointot futtatják. Nem hoznak létre virtual envet, és
 nem futtatnak `uv`-t.
 
+Másold be a plugin payloadot Hermes user plugin könyvtárába:
+
+```bash
+plugin_backup="$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" ] || \
+  mv "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" "$plugin_backup"
+mkdir -p "$HOME/.hermes/plugins"
+cp -R plugin/easter-hermes-sorry-skills-plugin "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin"
+```
+
+Cseréld le Hermes installed OpenAI `skill-creator` skilljét erre a Hermes portra:
+
+```bash
+skill_backup="$HOME/.hermes/skills/skill-creator.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/skills/skill-creator" ] || \
+  mv "$HOME/.hermes/skills/skill-creator" "$skill_backup"
+mkdir -p "$HOME/.hermes/skills"
+cp -R skills/skill-creator "$HOME/.hermes/skills/skill-creator"
+```
+
 ## Hermes Plugin Bekapcsolás
 
 A Hermes plugint Hermes tölti be, nem a wrapper script. A hivatalos Hermes
 plugin dokumentáció szerint a general plugin opt-in: egy megtalált plugin csak
 akkor töltődik be, ha a neve szerepel a `plugins.enabled` listában.
-
-A jelenlegi release bundle nem Hermes plugin installer. Az operátori CLI
-bundle-t adja. A plugint külön kell Hermes plugin discovery útvonalon
-telepíthetővé vagy láthatóvá tenni, majd ezzel a configgal bekapcsolni és
-hangolni.
 
 ```yaml
 plugins:

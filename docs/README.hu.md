@@ -31,7 +31,8 @@ magyar fordítások ugyanazon név `.hu.md` párjaiban vannak.
 ## Safety Modell
 
 - A támogatott Hermes forrásverzió commitja: `30e947e0a`.
-- Pinned checkout validálásához: `--dry-run --target /tmp/hermes-30e947e0a`.
+- Patch apply előtt használj `--dry-run` módot; `--target
+  /tmp/hermes-30e947e0a` csak pinned fejlesztői validáláshoz kell.
 - A patcher ír, ha a `--dry-run` hiányzik.
 - A reporter read-only, kivéve ha az operátor JSON output fájlt kér.
 - A plugin rövid runtime contextet szúr be; Hermes forrást nem módosít.

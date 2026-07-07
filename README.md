@@ -12,16 +12,20 @@
 
 ## What It Does
 
-`easter-hermes-sorry-skills` has two separate surfaces:
+`easter-hermes-sorry-skills` is a small compatibility bundle for making Hermes
+Agent skill usage behave more like the expected Claude-style skill workflow. It
+has four parts:
 
-| Surface | Runtime | Purpose |
+| Part | Runtime | Purpose |
 | --- | --- | --- |
-| 🧩 Hermes plugin | Hermes' own Python/plugin loader | Registers `on_session_start` and `pre_llm_call` hooks. |
-| 🧰 Operator CLI bundle | `dist/easter-hermes-sorry-skills.pyz` + shell wrappers | Runs patch dry-runs/applies and read-only reports outside Hermes. |
+| 🩹 Hermes patcher | Release `.pyz` + shell wrapper | Updates the supported Hermes checkout so skill descriptions and skill-authoring prompts behave correctly. |
+| 🧩 Hermes plugin | Hermes' plugin loader | Registers `on_session_start` and `pre_llm_call` hooks so Hermes gets short skill reminders before LLM calls. |
+| 🛠️ Migrated skill | Hermes skill system | Replaces the installed OpenAI `skill-creator` skill with this Hermes-compatible version. |
+| 📊 Reporter | Release `.pyz` + shell wrapper | Prints read-only skill metadata and token surface diagnostics. |
 
-The migrated `skill-creator` lives separately under `skills/skill-creator/`.
-The plugin can remind Hermes to load relevant skills, but it does not bundle or
-own that skill.
+The plugin and the migrated `skill-creator` are intentionally separate. The
+plugin only reminds Hermes when `skill-creator` or another enabled skill looks
+relevant; Hermes still owns actual skill loading.
 
 ## User Install
 
@@ -32,10 +36,7 @@ needed for this path.
 tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
 cd easter-hermes-sorry-skills-v0.1.0
 
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
-
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 bash scripts/easter-hermes-sorry-skills-report.sh
 ```
 
@@ -43,15 +44,31 @@ The wrapper scripts resolve `dist/easter-hermes-sorry-skills.pyz` and execute th
 packaged Python entry point. They do not create a virtual environment and do not
 run `uv`.
 
+Install the plugin payload into Hermes' user plugin directory:
+
+```bash
+plugin_backup="$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" ] || \
+  mv "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" "$plugin_backup"
+mkdir -p "$HOME/.hermes/plugins"
+cp -R plugin/easter-hermes-sorry-skills-plugin "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin"
+```
+
+Replace Hermes' installed OpenAI `skill-creator` with this Hermes port:
+
+```bash
+skill_backup="$HOME/.hermes/skills/skill-creator.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/skills/skill-creator" ] || \
+  mv "$HOME/.hermes/skills/skill-creator" "$skill_backup"
+mkdir -p "$HOME/.hermes/skills"
+cp -R skills/skill-creator "$HOME/.hermes/skills/skill-creator"
+```
+
 ## Hermes Plugin Enablement
 
 Hermes plugins are loaded by Hermes, not by the wrapper scripts. Official Hermes
 plugin docs describe general plugins as opt-in: a discovered plugin only loads
 after its name appears in `plugins.enabled`.
-
-The current release bundle is not a Hermes plugin installer. It provides the
-operator CLI bundle. Install or expose the plugin through Hermes' plugin
-discovery path separately, then use this config to enable and tune it.
 
 ```yaml
 plugins:

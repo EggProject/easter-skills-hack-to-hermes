@@ -10,17 +10,14 @@ futást.
 Felhasználói telepítési út:
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 ```
 
 Fejlesztés forrásból:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 | Opció | Jelentés |

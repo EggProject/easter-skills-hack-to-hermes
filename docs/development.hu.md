@@ -46,8 +46,7 @@ Fejlesztési handoff közben a patchert csak `--dry-run` módban futtasd:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 ## Dokumentációs Szabályok

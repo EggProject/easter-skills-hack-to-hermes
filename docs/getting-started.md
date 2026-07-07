@@ -10,8 +10,8 @@ from [developer setup](development.md).
 | Requirement | Why |
 | --- | --- |
 | Python `>=3.14` | The `.pyz` zipapp runs with system `python3`. |
-| Release artifact | Contains `dist/easter-hermes-sorry-skills.pyz` and shell wrappers. |
-| Hermes checkout | Patch dry-run target, usually `/tmp/hermes-30e947e0a` for validation. |
+| Release artifact | Contains wrappers, the Hermes plugin payload, and the migrated `skill-creator`. |
+| Hermes checkout | The patch wrapper defaults to Hermes' live checkout path. |
 
 No `uv` command is required for user install.
 
@@ -28,34 +28,44 @@ The bundle contains:
 dist/easter-hermes-sorry-skills.pyz
 scripts/easter-hermes-sorry-skills-patch-hermes.sh
 scripts/easter-hermes-sorry-skills-report.sh
+plugin/easter-hermes-sorry-skills-plugin/
+skills/skill-creator/
 README.md
 README.hu.md
 ```
 
-## 2. Run the Patcher in Dry-Run Mode
+## 2. Install the Hermes Plugin Payload
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+plugin_backup="$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" ] || \
+  mv "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" "$plugin_backup"
+mkdir -p "$HOME/.hermes/plugins"
+cp -R plugin/easter-hermes-sorry-skills-plugin "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin"
 ```
 
-The wrapper runs the packaged `.pyz`. It does not create `.venv/`, does not
-install dependencies, and does not call `uv`.
+Hermes directory plugins live under `~/.hermes/plugins/<plugin-name>/` and need
+`plugin.yaml` plus `__init__.py`. The release bundle provides that exact
+directory under `plugin/easter-hermes-sorry-skills-plugin/`.
 
-## 3. Run the Read-Only Report
+## 3. Replace the Installed `skill-creator`
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-report.sh
+skill_backup="$HOME/.hermes/skills/skill-creator.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/skills/skill-creator" ] || \
+  mv "$HOME/.hermes/skills/skill-creator" "$skill_backup"
+mkdir -p "$HOME/.hermes/skills"
+cp -R skills/skill-creator "$HOME/.hermes/skills/skill-creator"
 ```
 
-Use `--format json --json PATH` when another tool needs structured output.
+This replaces the installed OpenAI `skill-creator` skill with the Hermes port in
+this repository. The backup step preserves the previous directory when one
+exists.
 
-## 4. Enable the Hermes Plugin Separately
+## 4. Enable the Hermes Plugin
 
-The CLI bundle and the Hermes plugin are different install surfaces. The wrapper
-scripts run outside Hermes. The plugin runs inside Hermes through Hermes' plugin
-loader and must be discovered and enabled there.
+The wrapper scripts run outside Hermes. The plugin runs inside Hermes through
+Hermes' plugin loader and must be enabled in Hermes config.
 
 ```yaml
 plugins:
@@ -70,6 +80,23 @@ plugins:
 ```
 
 See [Plugin and hooks](plugin.md) for the runtime behavior.
+
+## 5. Run the Patcher in Dry-Run Mode
+
+```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
+```
+
+The wrapper runs the packaged `.pyz`. It does not create `.venv/`, does not
+install dependencies, and does not call `uv`.
+
+## 6. Run the Read-Only Report
+
+```bash
+bash scripts/easter-hermes-sorry-skills-report.sh
+```
+
+Use `--format json --json PATH` when another tool needs structured output.
 
 ## Not Developer Setup
 

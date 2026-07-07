@@ -10,8 +10,8 @@ Külön van választva a [fejlesztői setuptól](development.hu.md).
 | Követelmény | Miért kell |
 | --- | --- |
 | Python `>=3.14` | A `.pyz` zipapp a rendszer `python3` parancsával fut. |
-| Release artifact | Tartalmazza a `dist/easter-hermes-sorry-skills.pyz` fájlt és a shell wrapper-eket. |
-| Hermes checkout | Patch dry-run target, validáláshoz általában `/tmp/hermes-30e947e0a`. |
+| Release artifact | Tartalmazza a wrapper-eket, a Hermes plugin payloadot és a migrált `skill-creator` skillt. |
+| Hermes checkout | A patch wrapper alapból Hermes live checkout pathra céloz. |
 
 Felhasználói telepítéshez nem kell `uv` parancs.
 
@@ -28,35 +28,43 @@ A bundle tartalma:
 dist/easter-hermes-sorry-skills.pyz
 scripts/easter-hermes-sorry-skills-patch-hermes.sh
 scripts/easter-hermes-sorry-skills-report.sh
+plugin/easter-hermes-sorry-skills-plugin/
+skills/skill-creator/
 README.md
 README.hu.md
 ```
 
-## 2. Patcher Futtatása Dry-Run Módban
+## 2. Hermes Plugin Payload Telepítése
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+plugin_backup="$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" ] || \
+  mv "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" "$plugin_backup"
+mkdir -p "$HOME/.hermes/plugins"
+cp -R plugin/easter-hermes-sorry-skills-plugin "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin"
 ```
 
-A wrapper a becsomagolt `.pyz` fájlt futtatja. Nem hoz létre `.venv/`
-könyvtárat, nem telepít dependencyket, és nem hív `uv`-t.
+A Hermes directory plugin helye `~/.hermes/plugins/<plugin-name>/`, és kell
+bele `plugin.yaml` plusz `__init__.py`. A release bundle pontosan ezt adja a
+`plugin/easter-hermes-sorry-skills-plugin/` könyvtárban.
 
-## 3. Read-Only Report Futtatása
+## 3. Installed `skill-creator` Cseréje
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-report.sh
+skill_backup="$HOME/.hermes/skills/skill-creator.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/skills/skill-creator" ] || \
+  mv "$HOME/.hermes/skills/skill-creator" "$skill_backup"
+mkdir -p "$HOME/.hermes/skills"
+cp -R skills/skill-creator "$HOME/.hermes/skills/skill-creator"
 ```
 
-Használd a `--format json --json PATH` opciókat, ha másik toolnak strukturált
-kimenet kell.
+Ez az installed OpenAI `skill-creator` skillt cseréli le a repository
+Hermes-portjára. A backup lépés megőrzi az előző könyvtárat, ha létezik.
 
-## 4. Hermes Plugin Külön Bekapcsolása
+## 4. Hermes Plugin Bekapcsolása
 
-A CLI bundle és a Hermes plugin két külön install felület. A wrapper scriptek
-Hermes-en kívül futnak. A plugin Hermes-en belül, a Hermes plugin loaderén
-keresztül fut, és ott kell megtalálhatóvá tenni és engedélyezni.
+A wrapper scriptek Hermes-en kívül futnak. A plugin Hermes-en belül, a Hermes
+plugin loaderén keresztül fut, és Hermes configban kell engedélyezni.
 
 ```yaml
 plugins:
@@ -71,6 +79,24 @@ plugins:
 ```
 
 A runtime működést a [Plugin és hookok](plugin.hu.md) oldal írja le.
+
+## 5. Patcher Futtatása Dry-Run Módban
+
+```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
+```
+
+A wrapper a becsomagolt `.pyz` fájlt futtatja. Nem hoz létre `.venv/`
+könyvtárat, nem telepít dependencyket, és nem hív `uv`-t.
+
+## 6. Read-Only Report Futtatása
+
+```bash
+bash scripts/easter-hermes-sorry-skills-report.sh
+```
+
+Használd a `--format json --json PATH` opciókat, ha másik toolnak strukturált
+kimenet kell.
 
 ## Nem Fejlesztői Setup
 

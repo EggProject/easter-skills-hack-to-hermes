@@ -7,20 +7,17 @@
 The current patch set is maintained for Hermes commit `30e947e0a`
 (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
 
-Use a pinned checkout for validation:
+Use dry-run for operator validation:
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 ```
 
 When developing from source, use the locked environment instead:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 ## What Gets Patched
@@ -44,7 +41,7 @@ Dry-run prints the plan and exits without writing target files.
 ⚠ --dry-run mode, patches were NOT applied
 ```
 
-Treat dry-run as the review artifact. Apply mode should use the same `--target`
+Treat dry-run as the review artifact. Apply mode should use the same checkout
 after the plan is accepted.
 
 ## Operator Apply
@@ -52,8 +49,7 @@ after the plan is accepted.
 Apply mode is the same command without `--dry-run`:
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --target /path/to/hermes-agent
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh
 ```
 
 Do not apply against an unreviewed checkout. Validate the exact source version

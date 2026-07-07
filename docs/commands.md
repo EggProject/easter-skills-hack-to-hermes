@@ -10,17 +10,14 @@ into validation only.
 User install path:
 
 ```bash
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 ```
 
 Development-from-source path:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 | Option | Meaning |

@@ -31,7 +31,8 @@ each page as `.hu.md` files.
 ## Safety Model
 
 - The supported Hermes source version is commit `30e947e0a`.
-- Use `--dry-run --target /tmp/hermes-30e947e0a` to validate a pinned checkout.
+- Use `--dry-run` before any patch apply; add `--target /tmp/hermes-30e947e0a`
+  only for pinned developer validation.
 - The patcher writes when `--dry-run` is omitted.
 - The reporter is read-only unless the operator asks for a JSON output file.
 - The plugin injects short runtime context; it does not mutate Hermes source.

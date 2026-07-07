@@ -22,12 +22,24 @@ covered in [User install](getting-started.md) and run outside Hermes.
 ## Discovery and Enablement
 
 Hermes discovers third-party general plugins from plugin directories or Python
-package entry points. A discovered general plugin is opt-in: Hermes loads it
-only after the plugin key is listed under `plugins.enabled`.
+package entry points. A directory plugin belongs under
+`~/.hermes/plugins/<plugin-name>/` and must contain `plugin.yaml` plus
+`__init__.py`. A discovered general plugin is opt-in: Hermes loads it only after
+the plugin key is listed under `plugins.enabled`.
 
-This repository's current release artifact is a `.pyz` CLI bundle, not a Hermes
-plugin installer. The operator must place or package the plugin so Hermes can
-discover it, then enable the discovered plugin key in Hermes config.
+The release bundle includes the ready-to-copy directory at:
+
+```text
+plugin/easter-hermes-sorry-skills-plugin/
+```
+
+Copy that directory to:
+
+```text
+~/.hermes/plugins/easter-hermes-sorry-skills-plugin/
+```
+
+Then enable `easter-hermes-sorry-skills-plugin` in Hermes config.
 
 ## `on_session_start`
 

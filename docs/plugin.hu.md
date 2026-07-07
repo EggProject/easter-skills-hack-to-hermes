@@ -23,14 +23,24 @@ kívül futnak.
 ## Discovery és Bekapcsolás
 
 Hermes harmadik féltől származó general plugineket plugin könyvtárakból vagy
-Python package entry pointokból fedez fel. Egy megtalált general plugin opt-in:
-Hermes csak akkor tölti be, ha a plugin key szerepel a `plugins.enabled`
-listában.
+Python package entry pointokból fedez fel. Egy directory plugin helye
+`~/.hermes/plugins/<plugin-name>/`, és kell bele `plugin.yaml` plusz
+`__init__.py`. Egy megtalált general plugin opt-in: Hermes csak akkor tölti be,
+ha a plugin key szerepel a `plugins.enabled` listában.
 
-A repository jelenlegi release artifactja `.pyz` CLI bundle, nem Hermes plugin
-installer. Az operátornak kell a plugint úgy elhelyeznie vagy csomagolnia, hogy
-Hermes fel tudja fedezni, majd a megtalált plugin keyt engedélyezni kell Hermes
-configban.
+A release bundle tartalmazza a bemásolható könyvtárat:
+
+```text
+plugin/easter-hermes-sorry-skills-plugin/
+```
+
+Ezt ide kell másolni:
+
+```text
+~/.hermes/plugins/easter-hermes-sorry-skills-plugin/
+```
+
+Utána engedélyezd az `easter-hermes-sorry-skills-plugin` keyt Hermes configban.
 
 ## `on_session_start`
 

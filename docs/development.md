@@ -46,8 +46,7 @@ Use the patcher only with `--dry-run` during development handoff:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 ## Documentation Rules
