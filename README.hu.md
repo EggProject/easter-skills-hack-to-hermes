@@ -20,17 +20,17 @@ Támogatott Hermes commit: `30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`.
 
 - Python 3.14 vagy újabb
 - Hermes Agent
-- a repository release csomagja
+- Git
 
 Normál használathoz nem kell `uv`.
 
 ## Telepítés
 
-Csomagold ki a release-t:
+Klónozd a repositoryt:
 
 ```bash
-tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
-cd easter-hermes-sorry-skills-v0.1.0
+git clone https://github.com/EggProject/easter-skills-hack-to-hermes.git
+cd easter-skills-hack-to-hermes
 ```
 
 Másold be a plugint és a `skill-creator` skillt a Hermes könyvtárába:

@@ -19,17 +19,17 @@ Supported Hermes commit: `30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`.
 
 - Python 3.14 or newer
 - Hermes Agent
-- the release archive from this repository
+- Git
 
 You do not need `uv` for normal use.
 
 ## Install
 
-Extract the release:
+Clone the repository:
 
 ```bash
-tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
-cd easter-hermes-sorry-skills-v0.1.0
+git clone https://github.com/EggProject/easter-skills-hack-to-hermes.git
+cd easter-skills-hack-to-hermes
 ```
 
 Copy the plugin and the `skill-creator` skill into Hermes:
