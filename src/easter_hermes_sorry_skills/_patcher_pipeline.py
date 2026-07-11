@@ -89,7 +89,7 @@ def ok_check_result(inputs: OkCheckInputs) -> PatcherResult:
         if site.site_id in sites_already:
             diagnostics.append(msgs.OK_ALREADY_PATCHED.format(site_id=site.site_id))
         else:
-            diagnostics.append(msgs.OK_PATCHED.format(site_id=site.site_id))
+            diagnostics.append(msgs.OK_WOULD_PATCH.format(site_id=site.site_id))
     return _build_result(
         exit_code=inputs.exit_ok_code,
         sites_patched=tuple(sites_patched),

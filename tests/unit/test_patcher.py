@@ -37,6 +37,7 @@ from easter_hermes_sorry_skills._patcher import (
     S1_CAP_SITE,
     S1_CAP_SITE_FALLBACK,
     Anchor,
+    PatcherResult,
     PatchRunInputs,
     Site,
     _atomic_write_bytes,
@@ -2224,6 +2225,45 @@ def test_purge_skills_prompt_snapshot_removes_file(tmp_path: Path) -> None:
     purged2 = purge_skills_prompt_snapshot(tmp_path)
     assert purged2 == snapshot
     assert not snapshot.exists()
+
+
+def test_failed_apply_does_not_purge_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed patch result must be returned without touching the snapshot."""
+    from easter_hermes_sorry_skills import _patcher_pipeline_purge as purge_module
+
+    result = PatcherResult(EXIT_IO, (), (), {}, ("write failed",))
+
+    def _unexpected_purge() -> Path:
+        raise AssertionError("purge must not run after a failed apply")
+
+    monkeypatch.setattr(purge_module, "purge_skills_prompt_snapshot", _unexpected_purge)
+    assert purge_module.apply_skills_cache_purge_to_result(result) is result
+
+
+def test_snapshot_purge_error_becomes_warning(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A purge I/O error must not hide an otherwise successful patch result."""
+    from easter_hermes_sorry_skills import _patcher_pipeline_purge as purge_module
+
+    snapshot = tmp_path / purge_module.SKILLS_PROMPT_SNAPSHOT_FILENAME
+    result = PatcherResult(EXIT_OK, ("S1.cap",), (), {}, ("patched",))
+
+    def _purge_error() -> Path:
+        raise PermissionError("read-only directory")
+
+    monkeypatch.setattr(purge_module, "resolve_skills_prompt_snapshot_path", lambda: snapshot)
+    monkeypatch.setattr(purge_module, "purge_skills_prompt_snapshot", _purge_error)
+    actual = purge_module.apply_skills_cache_purge_to_result(result, lang="en")
+    assert actual.exit_code == EXIT_OK
+    assert actual.sites_patched == ("S1.cap",)
+    assert "could not purge" in actual.diagnostics[-1]
+
+
+def test_dry_run_reports_validation_without_claiming_apply(hermes_checkout: Path) -> None:
+    """Dry-run diagnostics must clearly distinguish validation from writes."""
+    result = run_patch(PatchRunInputs(target=hermes_checkout, dry_run=True))
+    assert result.exit_code == EXIT_OK
+    assert any("validated; patch would be applied" in item for item in result.diagnostics)
+    assert not any("patched successfully" in item for item in result.diagnostics)
 
 
 def test_resolve_skills_prompt_snapshot_path_expands_tilde_in_env(

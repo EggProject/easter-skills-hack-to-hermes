@@ -34,7 +34,7 @@ The build writes:
 | Artifact | Purpose |
 | --- | --- |
 | `dist/easter-hermes-sorry-skills.pyz` | Single-file Python zipapp. |
-| `dist/easter-hermes-sorry-skills-v0.1.0.tar.gz` | Release bundle with wrappers, plugin payload, skill payload, and READMEs. |
+| `dist/easter-hermes-sorry-skills-v0.1.0.tar.gz` | Release bundle with wrappers, plugin and skill payloads, documentation, and licenses. |
 
 `dist/` should contain the latest release artifact after release-facing files
 change.

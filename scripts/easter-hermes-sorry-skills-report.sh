@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/easter-hermes-sorry-skills-report.sh — transparent wrapper around the .pyz entry point
-# See README.md "Release build" section for how to build the .pyz.
+# See docs/operations.md for how to build the .pyz.
 set -euo pipefail
 
 # --- .pyz path feloldása (dev-mode VAGY release-mode) ---

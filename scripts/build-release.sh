@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/build-release.sh — build a release artifact (shiv zipapp + tar.gz)
-# See README.md "Release build" section for when to run this.
+# See docs/operations.md for the release process.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -38,9 +38,8 @@ mkdir -p dist/
 if [ "${ONLY_TAR}" = 0 ]; then
     echo ">>> [1/4] uv sync --locked"
     uv sync --locked
-    echo ">>> [2/4] uv pip install . --no-editable --reinstall --no-deps + 'shiv>=1.0,<2.0' (build-time tool)"
+    echo ">>> [2/4] install the project from the lock-synced environment"
     uv pip install . --no-editable --reinstall --no-deps
-    uv pip install 'shiv>=1.0,<2.0'
 fi
 
 # --- Lépés 2: shiv build (.pyz) ---
@@ -48,21 +47,13 @@ if [ "${ONLY_TAR}" = 0 ]; then
     PYTHON="$(command -v python3)"
     PY_VERSION="$("${PYTHON}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
     SITE_PACKAGES=".venv/lib/python${PY_VERSION}/site-packages"
-    SHIV="${PWD}/.venv/bin/shiv"
-
-    if [ ! -x "${SHIV}" ]; then
-        echo "ERROR: ${SHIV} not found. A 'shiv' telepítése sikertelen volt (Lépés 2 alpont 1)." >&2
-        exit 1
-    fi
-
-    echo ">>> [3/4] shiv --site-packages ${SITE_PACKAGES} --python ${PYTHON} --output-file dist/easter-hermes-sorry-skills.pyz --reproducible ."
-    "${SHIV}" \
+    echo ">>> [3/4] shiv 1.0.8 --site-packages ${SITE_PACKAGES} --python ${PYTHON} --output-file dist/easter-hermes-sorry-skills.pyz --reproducible"
+    uv tool run --from 'shiv==1.0.8' shiv \
         --site-packages "${SITE_PACKAGES}" \
         --python "${PYTHON}" \
         --output-file "dist/easter-hermes-sorry-skills.pyz" \
         --reproducible \
-        --compressed \
-        .
+        --compressed
 fi
 
 # --- Lépés 3: tar.gz csomagolás ---
@@ -89,6 +80,8 @@ if [ "${ONLY_SHIV}" = 0 ]; then
     cp scripts/easter-hermes-sorry-skills-patch-hermes.sh "${RELEASE_ROOT}/scripts/"
     cp scripts/easter-hermes-sorry-skills-report.sh "${RELEASE_ROOT}/scripts/"
     cp README.md README.hu.md "${RELEASE_ROOT}/"
+    cp LICENSE "${RELEASE_ROOT}/"
+    cp -R docs "${RELEASE_ROOT}/docs"
     cp -R skills/skill-creator "${RELEASE_ROOT}/skills/skill-creator"
     cp src/easter_hermes_sorry_skills/plugin.yaml "${PLUGIN_DIR}/plugin.yaml"
     cp -R src/easter_hermes_sorry_skills "${PLUGIN_DIR}/easter_hermes_sorry_skills"

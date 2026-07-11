@@ -34,7 +34,7 @@ A build ezeket írja:
 | Artifact | Cél |
 | --- | --- |
 | `dist/easter-hermes-sorry-skills.pyz` | Single-file Python zipapp. |
-| `dist/easter-hermes-sorry-skills-v0.1.0.tar.gz` | Release bundle wrapperekkel, plugin payloaddal, skill payloaddal és README-kkel. |
+| `dist/easter-hermes-sorry-skills-v0.1.0.tar.gz` | Release bundle wrapperekkel, plugin- és skill payloaddal, dokumentációval és licencekkel. |
 
 A `dist/` mappában release-t érintő változás után a legfrissebb artifact legyen.
 

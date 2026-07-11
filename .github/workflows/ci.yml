@@ -41,17 +41,15 @@ jobs:
 
       - name: Build .pyz for pre-commit wrapper smoke tests
         run: |
-          uv pip install --quiet 'shiv>=1.0,<2.0'
           PYTHON="$(command -v python3)"
           PY_VERSION="$("${PYTHON}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
           SITE_PACKAGES=".venv/lib/python${PY_VERSION}/site-packages"
-          "${PWD}/.venv/bin/shiv" \
+          uv tool run --from 'shiv==1.0.8' shiv \
               --site-packages "${SITE_PACKAGES}" \
               --python "${PYTHON}" \
               --output-file "dist/easter-hermes-sorry-skills.pyz" \
               --reproducible \
-              --compressed \
-              .
+              --compressed
 
       - name: Run pre-commit
         run: uv run --locked pre-commit run --all-files --show-diff-on-failure
@@ -116,17 +114,15 @@ jobs:
 
       - name: Build .pyz for wrapper smoke tests
         run: |
-          uv pip install --quiet 'shiv>=1.0,<2.0'
           PYTHON="$(command -v python3)"
           PY_VERSION="$("${PYTHON}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
           SITE_PACKAGES=".venv/lib/python${PY_VERSION}/site-packages"
-          "${PWD}/.venv/bin/shiv" \
+          uv tool run --from 'shiv==1.0.8' shiv \
               --site-packages "${SITE_PACKAGES}" \
               --python "${PYTHON}" \
               --output-file "dist/easter-hermes-sorry-skills.pyz" \
               --reproducible \
-              --compressed \
-              .
+              --compressed
 
       - name: Run bats smoke tests
         run: bats tests/bats/
