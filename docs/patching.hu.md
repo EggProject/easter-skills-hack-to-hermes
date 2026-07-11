@@ -7,12 +7,17 @@
 A jelenlegi patch set a Hermes `30e947e0a`
 (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`) commitjához van karbantartva.
 
-Pinned checkout validálása:
+Operátori validáláshoz dry-runt használj:
+
+```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
+```
+
+Forrásból fejlesztésnél a lockolt környezetet használd:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 ## Mit Patchel?
@@ -36,7 +41,7 @@ A dry-run tervet ír ki, és nem módosít target fájlokat.
 ⚠ --dry-run mode, patches were NOT applied
 ```
 
-A dry-run kimenet a review artifact. Apply módban ugyanazt a `--target` értéket
+A dry-run kimenet a review artifact. Apply módban ugyanazt a checkoutot
 használd, miután a terv elfogadott.
 
 ## Operátori Apply
@@ -44,8 +49,7 @@ használd, miután a terv elfogadott.
 Apply mód ugyanaz a parancs `--dry-run` nélkül:
 
 ```bash
-uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --target /path/to/hermes-agent
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh
 ```
 
 Ne apply-olj ellenőrizetlen checkoutra. Először validáld a pontos forrásverziót.
@@ -57,4 +61,3 @@ Ne apply-olj ellenőrizetlen checkoutra. Először validáld a pontos forrásver
 | `line drift detected` | Az anchor text elmozdult vagy megváltozott. | Frissítsd a patch site-ot a támogatott Hermes commithoz. |
 | `validation failed` | Egy vagy több patch site nem bizonyítható biztonságosnak. | Ne apply-olj; javítsd az anchorokat és futtasd újra dry-runban. |
 | Nincs target match | Rossz vagy hiányos checkout path. | Ellenőrizd a `--target` értéket. |
-

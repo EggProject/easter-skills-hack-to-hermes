@@ -13,6 +13,26 @@ skills/skill-creator/
 It is intentionally outside the plugin package. Hermes should see it as a flat
 skill named `skill-creator`, not as a plugin-owned bundled skill.
 
+## Install Into Hermes
+
+The release bundle includes this directory:
+
+```text
+skills/skill-creator/
+```
+
+Use it to replace Hermes' installed OpenAI `skill-creator` skill:
+
+```bash
+skill_backup="$HOME/.hermes/skills/skill-creator.backup.$(date +%Y%m%d%H%M%S)"
+[ ! -e "$HOME/.hermes/skills/skill-creator" ] || \
+  mv "$HOME/.hermes/skills/skill-creator" "$skill_backup"
+mkdir -p "$HOME/.hermes/skills"
+cp -R skills/skill-creator "$HOME/.hermes/skills/skill-creator"
+```
+
+The backup step keeps the previous OpenAI version available for manual rollback.
+
 ## Purpose
 
 Use the skill when a model needs to create, improve, package, or evaluate a
@@ -39,4 +59,3 @@ plugin hooks manage reminders, while Hermes owns actual skill loading.
 - [Plugin and hooks](plugin.md)
 - [WOW skill flowcharts](wow-skills-flowcharts.md)
 - [Migration notes](migration-notes.md)
-

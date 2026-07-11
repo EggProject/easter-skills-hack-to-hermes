@@ -72,15 +72,46 @@ if [ "${ONLY_SHIV}" = 0 ]; then
         exit 1
     fi
 
+    RELEASE_NAME="easter-hermes-sorry-skills-v${VERSION}"
     TARBALL="dist/easter-hermes-sorry-skills-v${VERSION}.tar.gz"
-    echo ">>> [4/4] tar -czf ${TARBALL} dist/easter-hermes-sorry-skills.pyz scripts/ README.md README.hu.md"
-    tar -czf "${TARBALL}" \
-        dist/easter-hermes-sorry-skills.pyz \
-        scripts/build-release.sh \
-        scripts/easter-hermes-sorry-skills-patch-hermes.sh \
-        scripts/easter-hermes-sorry-skills-report.sh \
-        README.md \
-        README.hu.md
+    STAGE_DIR="$(mktemp -d)"
+    RELEASE_ROOT="${STAGE_DIR}/${RELEASE_NAME}"
+    PLUGIN_DIR="${RELEASE_ROOT}/plugin/easter-hermes-sorry-skills-plugin"
+
+    mkdir -p \
+        "${RELEASE_ROOT}/dist" \
+        "${RELEASE_ROOT}/scripts" \
+        "${RELEASE_ROOT}/skills" \
+        "${PLUGIN_DIR}"
+
+    cp dist/easter-hermes-sorry-skills.pyz "${RELEASE_ROOT}/dist/"
+    cp scripts/build-release.sh "${RELEASE_ROOT}/scripts/"
+    cp scripts/easter-hermes-sorry-skills-patch-hermes.sh "${RELEASE_ROOT}/scripts/"
+    cp scripts/easter-hermes-sorry-skills-report.sh "${RELEASE_ROOT}/scripts/"
+    cp README.md README.hu.md "${RELEASE_ROOT}/"
+    cp -R skills/skill-creator "${RELEASE_ROOT}/skills/skill-creator"
+    cp src/easter_hermes_sorry_skills/plugin.yaml "${PLUGIN_DIR}/plugin.yaml"
+    cp -R src/easter_hermes_sorry_skills "${PLUGIN_DIR}/easter_hermes_sorry_skills"
+    find "${PLUGIN_DIR}/easter_hermes_sorry_skills" -type d -name '__pycache__' -prune -exec rm -rf {} +
+    find "${PLUGIN_DIR}/easter_hermes_sorry_skills" -type f -name '*.pyc' -delete
+    cat > "${PLUGIN_DIR}/__init__.py" <<'PY'
+"""Hermes directory plugin entry point for release installs."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+_PLUGIN_DIR = str(Path(__file__).resolve().parent)
+if _PLUGIN_DIR not in sys.path:
+    sys.path.insert(0, _PLUGIN_DIR)
+
+from easter_hermes_sorry_skills._register import register as register
+PY
+
+    echo ">>> [4/4] tar -czf ${TARBALL} -C ${STAGE_DIR} ${RELEASE_NAME}"
+    tar -czf "${TARBALL}" -C "${STAGE_DIR}" "${RELEASE_NAME}"
+    rm -rf "${STAGE_DIR}"
 
     echo ">>> Artifact contents:"
     tar -tzf "${TARBALL}" | sed 's/^/    /'

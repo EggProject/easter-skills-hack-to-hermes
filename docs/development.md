@@ -4,6 +4,9 @@
 
 ## Local Environment
 
+This is not the user install path. Use it only when editing this repository,
+running the quality gates, or rebuilding `dist/`.
+
 ```bash
 uv sync --locked --all-extras --dev
 uv run --locked pre-commit install
@@ -43,8 +46,7 @@ Use the patcher only with `--dry-run` during development handoff:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 ## Documentation Rules
@@ -59,4 +61,3 @@ uv run --locked easter-hermes-sorry-skills-patch-hermes \
 
 Work on a feature branch, push it, open or update the PR, and wait for green CI.
 Every new change should be a new commit.
-

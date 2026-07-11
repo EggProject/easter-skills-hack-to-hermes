@@ -2,6 +2,11 @@
 
 [English version](operations.md) | [Dokumentáció](README.hu.md)
 
+Ez az oldal maintainereknek szól handoff vagy release előkészítéshez. A
+[Fejlesztés](development.hu.md) oldalon leírt fejlesztői környezetet használja.
+Végfelhasználóként a [Felhasználói telepítés](getting-started.hu.md) az induló
+pont; az release wrapper scripteket használ, és nem igényel `uv`-t.
+
 ## Ellenőrzés Handoff Előtt
 
 Dokumentáció vagy kód push előtt futtasd a helyi kaput:
@@ -15,8 +20,7 @@ Patch kompatibilitáshoz validáld a támogatott Hermes checkoutot:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 ## Release Artifact Build
@@ -30,7 +34,7 @@ A build ezeket írja:
 | Artifact | Cél |
 | --- | --- |
 | `dist/easter-hermes-sorry-skills.pyz` | Single-file Python zipapp. |
-| `dist/easter-hermes-sorry-skills-v0.1.0.tar.gz` | Release bundle wrapperekkel és README-kkel. |
+| `dist/easter-hermes-sorry-skills-v0.1.0.tar.gz` | Release bundle wrapperekkel, plugin payloaddal, skill payloaddal és README-kkel. |
 
 A `dist/` mappában release-t érintő változás után a legfrissebb artifact legyen.
 
@@ -39,12 +43,15 @@ A `dist/` mappában release-t érintő változás után a legfrissebb artifact l
 A release bundle tartalma:
 
 ```text
+plugin/easter-hermes-sorry-skills-plugin/
+skills/skill-creator/
 scripts/easter-hermes-sorry-skills-patch-hermes.sh
 scripts/easter-hermes-sorry-skills-report.sh
 ```
 
-A wrapperek közeli `dist/` helyeken keresik a `.pyz` fájlt, majd a megfelelő
-entry pointot futtatják.
+A plugin és skill könyvtárakat az operátor másolja be Hermesbe. A wrapperek
+közeli `dist/` helyeken keresik a `.pyz` fájlt, majd a megfelelő entry pointot
+futtatják. A bundle elkészülte után ez a felhasználói futtatási út.
 
 ## CI Forma
 
@@ -61,7 +68,6 @@ A GitHub workflow párhuzamos jobokra bontja a munkát:
 ## Release Checklist
 
 1. Futtasd a teszteket és pre-commitot.
-2. Futtasd a Hermes patcher dry-runt `/tmp/hermes-30e947e0a` ellen.
+2. Futtasd a Hermes patcher dry-runt.
 3. Építsd újra a `dist/` mappát, ha release-t érintő fájl változott.
 4. Pushold a feature branchet és várd meg a zöld CI checkeket.
-

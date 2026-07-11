@@ -16,6 +16,31 @@ provides_hooks:
 `register(ctx)` wires both hooks into Hermes. The package-level plugin does not
 register the migrated `skill-creator` skill.
 
+This page describes runtime enablement only. The release wrapper scripts are
+covered in [User install](getting-started.md) and run outside Hermes.
+
+## Discovery and Enablement
+
+Hermes discovers third-party general plugins from plugin directories or Python
+package entry points. A directory plugin belongs under
+`~/.hermes/plugins/<plugin-name>/` and must contain `plugin.yaml` plus
+`__init__.py`. A discovered general plugin is opt-in: Hermes loads it only after
+the plugin key is listed under `plugins.enabled`.
+
+The release bundle includes the ready-to-copy directory at:
+
+```text
+plugin/easter-hermes-sorry-skills-plugin/
+```
+
+Copy that directory to:
+
+```text
+~/.hermes/plugins/easter-hermes-sorry-skills-plugin/
+```
+
+Then enable `easter-hermes-sorry-skills-plugin` in Hermes config.
+
 ## `on_session_start`
 
 This hook checks whether the target Hermes checkout still has the old skill
@@ -36,7 +61,11 @@ LLM. It is intentionally small:
 Full decision charts and chat examples are preserved in
 [WOW skill flowcharts](wow-skills-flowcharts.md).
 
-## Configuration
+## Plugin-Owned Configuration
+
+`plugins.enabled` controls whether Hermes loads the plugin. The nested
+`plugins.entries.easter-hermes-sorry-skills-plugin.skill_hook` section is the
+configuration this plugin reads for its own hook behavior.
 
 ```yaml
 plugins:
@@ -62,6 +91,9 @@ plugins:
 | `min_score` | `2` | Minimum match score before injection. |
 | `log_level` | `INFO` | Standard Python logging level. |
 
+The repository does not read a root-level
+`easter-hermes-sorry-skills-plugin:` config key.
+
 ## Modes
 
 | Mode | Behavior |
@@ -83,3 +115,9 @@ plugins:
 Set `log_level: DEBUG` while validating hook behavior. Keep production config at
 `INFO` unless diagnostics are needed.
 
+## References
+
+- Hermes Build a Plugin guide: plugin directories, `register(ctx)`, and
+  `ctx.register_hook(...)`.
+- Hermes Plugins feature docs: plugin discovery sources and `plugins.enabled`.
+- Hermes Hooks feature docs: plugin hooks and `pre_llm_call` behavior.

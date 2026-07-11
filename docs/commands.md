@@ -7,10 +7,17 @@
 Patches a Hermes checkout. It writes by default; `--dry-run` changes the run
 into validation only.
 
+User install path:
+
+```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
+```
+
+Development-from-source path:
+
 ```bash
 uv run --locked easter-hermes-sorry-skills-patch-hermes \
-  --dry-run \
-  --target /tmp/hermes-30e947e0a
+  --dry-run
 ```
 
 | Option | Meaning |
@@ -26,6 +33,16 @@ applies the prompt guidance sites used by this package.
 ## `easter-hermes-sorry-skills-report`
 
 Reads Hermes profile and skill metadata and prints a usage report.
+
+User install path:
+
+```bash
+bash scripts/easter-hermes-sorry-skills-report.sh \
+  --sort tokens \
+  --format text
+```
+
+Development-from-source path:
 
 ```bash
 uv run --locked easter-hermes-sorry-skills-report \
@@ -48,5 +65,4 @@ The reporter does not flip config, install skills, or patch Hermes.
 
 The release tarball includes shell wrappers in `scripts/`. They resolve
 `dist/easter-hermes-sorry-skills.pyz` next to the wrapper or current checkout
-and then run the matching Python entry point.
-
+and then run the matching Python entry point. They do not run `uv`.
