@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Easter Hermes sorry skills plugin + migration scripts (renamed from hermes-skill-creator-plugin on 2026-06-23)"
 readme = "README.md"
 requires-python = ">=3.14"
-license = { text = "Proprietary" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Hermes Skills Hack Team" }]
 dependencies = [
     "click>=8.3.3",
@@ -14,8 +15,6 @@ dependencies = [
     "pyyaml>=6",
     "python-frontmatter>=1.1",
     "rich>=13.0",
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +24,8 @@ dev = [
     "mypy>=1.10",
     "wemake-python-styleguide>=1.0",
     "pre-commit>=4.0",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
 ]
 
 [project.scripts]

@@ -527,14 +527,13 @@ def test_main_default_argv_uses_sys_argv(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_main_module_invocation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """__main__ block MUST call main(); covered when imported as a module."""
+    """The module source MUST be loadable without running its main block."""
     import runpy
     import sys
 
     monkeypatch.setattr(check_bilingual, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(sys, "argv", ["check_bilingual.py"])
-    # Exercise the `if __name__ == "__main__":` block via runpy.
-    runpy.run_module("tools.check_bilingual", run_name="__not_main__")
+    runpy.run_path(str(check_bilingual.__file__), run_name="__not_main__")
 
 
 def test_main_with_argv_returns_clean(tmp_path: Path, monkeypatch, capsys) -> None:

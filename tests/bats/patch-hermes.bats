@@ -19,6 +19,20 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
+@test "release build uses only the lock-synced site-packages" {
+    run grep -qF -- '--compressed .' scripts/build-release.sh
+    [ "$status" -ne 0 ]
+    run grep -qF "uv tool run --from 'shiv==1.0.8' shiv" scripts/build-release.sh
+    [ "$status" -eq 0 ]
+}
+
+@test "release bundle includes documentation and license" {
+    run grep -qF 'cp LICENSE "${RELEASE_ROOT}/"' scripts/build-release.sh
+    [ "$status" -eq 0 ]
+    run grep -qF 'cp -R docs "${RELEASE_ROOT}/docs"' scripts/build-release.sh
+    [ "$status" -eq 0 ]
+}
+
 @test "patch: end-to-end --help behaviour" {
     run ./scripts/easter-hermes-sorry-skills-patch-hermes.sh --help
     if [ -f "./dist/easter-hermes-sorry-skills.pyz" ]; then
@@ -31,4 +45,3 @@ setup() {
         [[ "$output" == *"No such file or directory"* ]]
     fi
 }
-

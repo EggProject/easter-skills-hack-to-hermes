@@ -1,124 +1,88 @@
 # easter-hermes-sorry-skills
 
-[Magyar verzio](README.hu.md) | [Docs](docs/README.md) | [License](LICENSE)
+[Magyar leírás](README.hu.md) | [Detailed documentation](docs/README.md) | [License](LICENSE)
 
-![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)
-![Hermes plugin](https://img.shields.io/badge/Hermes-plugin-purple.svg)
-![Release artifact](https://img.shields.io/badge/release-.pyz%20%2B%20wrappers-green.svg)
-![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+This project improves how Hermes Agent works with skills. It adds clearer skill
+guidance to Hermes, reminds the agent when an installed skill is relevant, and
+includes a simple report about enabled skills.
 
-> Supported Hermes commit: `30e947e0a`
-> (`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
+It provides:
 
-## What It Does
+- a patcher for the supported Hermes version;
+- a Hermes plugin that suggests relevant skills before an LLM call;
+- a Hermes-compatible `skill-creator`;
+- a read-only skill report.
 
-`easter-hermes-sorry-skills` is a small compatibility bundle for making Hermes
-Agent skill usage behave more like the expected Claude-style skill workflow. It
-has four parts:
+Supported Hermes commit: `30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`.
 
-| Part | Runtime | Purpose |
-| --- | --- | --- |
-| 🩹 Hermes patcher | Release `.pyz` + shell wrapper | Updates the supported Hermes checkout so skill descriptions and skill-authoring prompts behave correctly. |
-| 🧩 Hermes plugin | Hermes' plugin loader | Registers `on_session_start` and `pre_llm_call` hooks so Hermes gets short skill reminders before LLM calls. |
-| 🛠️ Migrated skill | Hermes skill system | Replaces the installed OpenAI `skill-creator` skill with this Hermes-compatible version. |
-| 📊 Reporter | Release `.pyz` + shell wrapper | Prints read-only skill metadata and token surface diagnostics. |
+## Requirements
 
-The plugin and the migrated `skill-creator` are intentionally separate. The
-plugin only reminds Hermes when `skill-creator` or another enabled skill looks
-relevant; Hermes still owns actual skill loading.
+- Python 3.14 or newer
+- Hermes Agent
+- the release archive from this repository
 
-## User Install
+You do not need `uv` for normal use.
 
-Use the release artifact when you only want to operate the tool. No `uv` setup is
-needed for this path.
+## Install
+
+Extract the release:
 
 ```bash
 tar -xzf dist/easter-hermes-sorry-skills-v0.1.0.tar.gz
 cd easter-hermes-sorry-skills-v0.1.0
-
-bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
-bash scripts/easter-hermes-sorry-skills-report.sh
 ```
 
-The wrapper scripts resolve `dist/easter-hermes-sorry-skills.pyz` and execute the
-packaged Python entry point. They do not create a virtual environment and do not
-run `uv`.
-
-Install the plugin payload into Hermes' user plugin directory:
+Copy the plugin and the `skill-creator` skill into Hermes:
 
 ```bash
-plugin_backup="$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin.backup.$(date +%Y%m%d%H%M%S)"
-[ ! -e "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" ] || \
-  mv "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin" "$plugin_backup"
-mkdir -p "$HOME/.hermes/plugins"
-cp -R plugin/easter-hermes-sorry-skills-plugin "$HOME/.hermes/plugins/easter-hermes-sorry-skills-plugin"
+mkdir -p "$HOME/.hermes/plugins" "$HOME/.hermes/skills"
+cp -R plugin/easter-hermes-sorry-skills-plugin "$HOME/.hermes/plugins/"
+cp -R skills/skill-creator "$HOME/.hermes/skills/"
 ```
 
-Replace Hermes' installed OpenAI `skill-creator` with this Hermes port:
+If either destination already exists, remove it or back it up before copying.
+The [detailed install guide](docs/getting-started.md) includes safe upgrade
+steps.
 
-```bash
-skill_backup="$HOME/.hermes/skills/skill-creator.backup.$(date +%Y%m%d%H%M%S)"
-[ ! -e "$HOME/.hermes/skills/skill-creator" ] || \
-  mv "$HOME/.hermes/skills/skill-creator" "$skill_backup"
-mkdir -p "$HOME/.hermes/skills"
-cp -R skills/skill-creator "$HOME/.hermes/skills/skill-creator"
-```
-
-## Hermes Plugin Enablement
-
-Hermes plugins are loaded by Hermes, not by the wrapper scripts. Official Hermes
-plugin docs describe general plugins as opt-in: a discovered plugin only loads
-after its name appears in `plugins.enabled`.
+Enable the plugin in `~/.hermes/config.yaml`:
 
 ```yaml
 plugins:
   enabled:
     - easter-hermes-sorry-skills-plugin
-  entries:
-    easter-hermes-sorry-skills-plugin:
-      skill_hook:
-        enabled: true
-        mode: adaptive
-        output: shortlist
-        top_k: 3
-        min_score: 2
-        log_level: INFO
 ```
 
-`adaptive` mode runs before LLM calls and injects a short reminder only when the
-latest user message matches enabled skill names or descriptions.
-
-## Developer Setup
-
-Use `uv` only when you are editing the repository, running tests, or rebuilding
-`dist/`.
+Check the Hermes patch without changing files:
 
 ```bash
-uv sync --locked --all-extras --dev
-uv run --locked pytest -q
-uv run --locked pre-commit run --all-files --show-diff-on-failure
-scripts/build-release.sh
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh --dry-run
 ```
 
-The Python test gate enforces 100% branch coverage through `pyproject.toml`.
+If the plan looks correct, apply it:
 
-## Documentation
+```bash
+bash scripts/easter-hermes-sorry-skills-patch-hermes.sh
+```
 
-| Topic | Link |
-| --- | --- |
-| 🧭 Documentation index | [docs/README.md](docs/README.md) |
-| ⚡ User install | [docs/getting-started.md](docs/getting-started.md) |
-| 🧰 Commands | [docs/commands.md](docs/commands.md) |
-| 🧩 Plugin and hooks | [docs/plugin.md](docs/plugin.md) |
-| 🩹 Patching Hermes | [docs/patching.md](docs/patching.md) |
-| 🛠️ Skill creator | [docs/skill-creator.md](docs/skill-creator.md) |
-| 📦 Operations and release | [docs/operations.md](docs/operations.md) |
-| 🧪 Development | [docs/development.md](docs/development.md) |
-| 🧾 Migration notes | [docs/migration-notes.md](docs/migration-notes.md) |
-| 🪝 Hook flowcharts | [docs/wow-skills-flowcharts.md](docs/wow-skills-flowcharts.md) |
+## Skill Report
+
+```bash
+bash scripts/easter-hermes-sorry-skills-report.sh
+```
+
+The reporter only reads Hermes data unless you explicitly request a JSON output
+file.
+
+## More Documentation
+
+- [Installation and upgrades](docs/getting-started.md)
+- [Commands and options](docs/commands.md)
+- [Plugin configuration](docs/plugin.md)
+- [Development](docs/development.md)
+- [Release process](docs/operations.md)
 
 ## License
 
-The repository contains an MIT license in [LICENSE](LICENSE). The
-`pyproject.toml` metadata keeps an internal packaging marker; the repository
-license file is the source license for redistribution.
+The project is distributed under the [MIT License](LICENSE). The migrated
+`skill-creator` retains its own license in
+[`skills/skill-creator/LICENSE.txt`](skills/skill-creator/LICENSE.txt).

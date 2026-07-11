@@ -32,6 +32,8 @@ plugin/easter-hermes-sorry-skills-plugin/
 skills/skill-creator/
 README.md
 README.hu.md
+LICENSE
+docs/
 ```
 
 ## 2. Hermes Plugin Payload Telepítése

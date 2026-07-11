@@ -280,5 +280,6 @@ def _drive_pipeline(
                 exit_ok_code=EXIT_OK,
                 lang=inputs.lang,
             )
-        )
+        ),
+        lang=inputs.lang,
     )
