@@ -88,10 +88,7 @@ def test_detect_cap_state_unpatched_legacy_literal(tmp_path: Path) -> None:
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
     skill_utils.write_text(
-        "def extract_skill_description(desc):\n"
-        "    if len(desc) > 60:\n"
-        "        return desc[:60]\n"
-        "    return desc\n",
+        "def extract_skill_description(desc):\n    if len(desc) > 60:\n        return desc[:60]\n    return desc\n",
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unpatched"

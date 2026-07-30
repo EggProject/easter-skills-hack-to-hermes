@@ -73,6 +73,7 @@ KIND_CAP = "cap"
 # Extracted into named constants so wemake WPS342 (implicit raw string)
 # does not flag the multi-`\n` patterns inside the Site() calls below.
 _NL2 = r"\n\n"
+_E1_TEXT = '    "Skills that aren' "'" r't maintained become liabilities.\n"'
 # E4/E5 anchor blocks use EXPLICIT ``+`` between the implicit-concat
 # fragments (instead of bare adjacency) so the patched file parses
 # cleanly when the E4/E5 insertion lands between the first and
@@ -203,9 +204,7 @@ _PATCHED_DESCRIPTION_LIMIT = 1024
 S1_CAP_SITE = Site(
     site_id="S1.cap",
     file_path=TOOLS_SKILL_UTILS_REL,
-    anchors=(
-        Anchor(line=S1_CAP_LINE, text="SKILL_PROMPT_DESC_LIMIT = 60"),
-    ),
+    anchors=(Anchor(line=S1_CAP_LINE, text="SKILL_PROMPT_DESC_LIMIT = 60"),),
     insertion=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}\n",
     expected_replacement=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}",
     kind=KIND_CAP,
@@ -218,9 +217,7 @@ S1_CAP_SITE = Site(
 S1_CAP_SITE_FALLBACK = Site(
     site_id="S1.cap_fallback",
     file_path=TOOLS_SKILL_UTILS_REL,
-    anchors=(
-        Anchor(line=S1_CAP_LINE, text="SKILL_PROMPT_DESC_LIMIT = 60"),
-    ),
+    anchors=(Anchor(line=S1_CAP_LINE, text="SKILL_PROMPT_DESC_LIMIT = 60"),),
     insertion=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}\n",
     expected_replacement=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}",
     kind=KIND_CAP,
@@ -272,7 +269,7 @@ E1_SKILLS_GUIDANCE = Site(
     anchors=(
         Anchor(
             line=E1_LINE,
-            text='    "Skills that aren\'t maintained become liabilities.\\n"',
+            text=_E1_TEXT,
         ),
     ),
     # The trailing ``+`` continues into the upstream safety-rule literal.

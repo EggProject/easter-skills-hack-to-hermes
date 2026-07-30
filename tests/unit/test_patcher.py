@@ -1274,9 +1274,7 @@ def test_apply_anchor_text_missing_exits_drift(tmp_path: Path, real_hermes_agent
 # --- coverage: cap anchor mismatch is caught by pre-validation ----------
 
 
-def test_apply_cap_anchor_mismatch_caught_by_validation(
-    tmp_path: Path, real_hermes_agent_sentinel: str | None
-) -> None:
+def test_apply_cap_anchor_mismatch_caught_by_validation(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """The shared cap at L784 has the wrong value, so pre-validation
     catches TEXT_DRIFT and aborts before the apply step."""
     checkout = tmp_path / "cap-mismatch"
