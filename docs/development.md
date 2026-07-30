@@ -39,7 +39,7 @@ Never use a live Hermes checkout for development validation when a pinned target
 is available. Validate against:
 
 ```bash
-/tmp/hermes-30e947e0a
+/tmp/hermes-a4973c3f
 ```
 
 Use the patcher only with `--dry-run` during development handoff:

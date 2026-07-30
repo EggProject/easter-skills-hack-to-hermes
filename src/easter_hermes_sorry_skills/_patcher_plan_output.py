@@ -50,18 +50,18 @@ class _SiteDiffFormatter:
         self,
         old_lines: list[str],
         new_lines: list[str],
-        anchor: int,
-        new_count: int,
+        site: Site,
         msgs: Messages,
     ) -> None:
         self.old_lines = old_lines
         self.new_lines = new_lines
-        self.anchor = anchor
-        self.new_count = new_count
+        self.anchor = site.primary_anchor().line
+        self.old_count = len(site.anchors)
+        self.new_count = len(site.insertion.splitlines())
         self.msgs = msgs
 
     def cap(self) -> list[str]:
-        r"""Return the old two-line block plus the replacement lines for a ``cap`` site."""
+        r"""Return the consumed block plus replacement lines for a ``cap`` site."""
         start = self.anchor - 1
         return self._old_cap_lines(start) + self._new_cap_lines(start)
 
@@ -77,8 +77,8 @@ class _SiteDiffFormatter:
         ]
 
     def _old_cap_lines(self, start: int) -> list[str]:
-        r"""Return the two old cap lines consumed by the replacement."""
-        return [self._old_cap_line(start, offset) for offset in range(2)]
+        r"""Return the old cap lines consumed by the replacement."""
+        return [self._old_cap_line(start, offset) for offset in range(self.old_count)]
 
     def _new_cap_lines(self, start: int) -> list[str]:
         r"""Return every inserted replacement line for a cap site."""
@@ -123,9 +123,7 @@ def _site_diff(site: Site, text: str, msgs: Messages) -> list[str]:
         new_lines = "".join(mutate_lines_for_site(site, text)).splitlines()
     except (IndexError, ValueError):
         return []
-    anchor = site.primary_anchor().line
-    new_count = len(site.insertion.splitlines())
-    formatter = _SiteDiffFormatter(old_lines, new_lines, anchor, new_count, msgs)
+    formatter = _SiteDiffFormatter(old_lines, new_lines, site, msgs)
     if site.kind == "cap":
         return formatter.cap()
     return formatter.additive()

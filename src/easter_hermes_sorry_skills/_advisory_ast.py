@@ -11,8 +11,9 @@ from pathlib import Path
 
 # Pin: the cap value in the unpatched agent/skill_utils.py.
 UNPATCHED_CAP = 60
-# Pin: the constant the patched function uses.
-PATCHED_CAP_REFERENCE = "_MAX_DESCRIPTION_LENGTH"
+# Pin: the shared constant patched in current Hermes.
+PATCHED_CAP_REFERENCE = "SKILL_PROMPT_DESC_LIMIT"
+_PATCHED_CAP = 1024
 # Sentinel return values (public so register() can compare without importing
 # leading-underscore names from another module).
 PATCHED_STATE = "patched"
@@ -31,14 +32,36 @@ def _parse_skill_utils_tree(skill_utils: Path) -> ast.AST:
 def _walk_tree_for_marker(tree: ast.AST) -> str | None:
     """Walk ``tree`` and return the first matching cap state, if any."""
     for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef):
-            continue
-        if node.name != _EXTRACT_FUNC_NAME:
-            continue
-        state = _scan_func_for_marker(node)
+        state = _scan_node_for_marker(node)
         if state is not None:
             return state
     return None
+
+
+def _scan_node_for_marker(node: ast.AST) -> str | None:
+    """Return a cap state encoded directly by ``node``, if any."""
+    assignment_state = _scan_assignment_for_marker(node)
+    if assignment_state is not None:
+        return assignment_state
+    if isinstance(node, ast.FunctionDef) and node.name == _EXTRACT_FUNC_NAME:
+        return _scan_func_for_marker(node)
+    return None
+
+
+def _scan_assignment_for_marker(node: ast.AST) -> str | None:
+    """Return the state encoded by a shared-cap assignment, if any."""
+    if not isinstance(node, ast.Assign):
+        return None
+    is_cap_assignment = any(
+        isinstance(target, ast.Name) and target.id == PATCHED_CAP_REFERENCE for target in node.targets
+    )
+    if not is_cap_assignment:
+        return None
+    cap_value = node.value.value if isinstance(node.value, ast.Constant) else None
+    return {
+        _PATCHED_CAP: PATCHED_STATE,
+        UNPATCHED_CAP: UNPATCHED_STATE,
+    }.get(cap_value, UNKNOWN_STATE)
 
 
 def _scan_func_for_marker(func: ast.FunctionDef) -> str | None:

@@ -75,8 +75,8 @@ def mutate_lines_for_site(site: Site, text: str) -> list[str]:
     lines = text.splitlines(keepends=True)
     idx = site.primary_anchor().line - 1
     if site.kind == "cap":
-        new_pair_lines = site.insertion.splitlines(keepends=True)
-        tail_offset = idx + 2
-        return lines[:idx] + new_pair_lines + lines[tail_offset:]
+        replacement_lines = site.insertion.splitlines(keepends=True)
+        tail_offset = idx + len(site.anchors)
+        return lines[:idx] + replacement_lines + lines[tail_offset:]
     lines.insert(idx + 1, site.insertion)
     return lines

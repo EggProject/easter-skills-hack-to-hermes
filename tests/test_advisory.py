@@ -37,7 +37,7 @@ from easter_hermes_sorry_skills._advisory import (
 
 
 def test_detect_cap_state_patched(tmp_path: Path) -> None:
-    """fixture checkout with _MAX_DESCRIPTION_LENGTH in the comparator; returns 'patched'."""
+    """Fixture checkout with the shared limit at 1024 returns 'patched'."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
@@ -45,10 +45,11 @@ def test_detect_cap_state_patched(tmp_path: Path) -> None:
         # fmt: off
         textwrap.dedent(
             """\
+            SKILL_PROMPT_DESC_LIMIT = 1024
+
             def extract_skill_description(desc):
-                _MAX_DESCRIPTION_LENGTH = 1024
-                if len(desc) > _MAX_DESCRIPTION_LENGTH:
-                    return desc[:_MAX_DESCRIPTION_LENGTH]
+                if len(desc) > SKILL_PROMPT_DESC_LIMIT:
+                    return desc[:SKILL_PROMPT_DESC_LIMIT]
                 return desc
             """
         ),
@@ -59,7 +60,7 @@ def test_detect_cap_state_patched(tmp_path: Path) -> None:
 
 
 def test_detect_cap_state_unpatched(tmp_path: Path) -> None:
-    """fixture checkout with literal 60; returns 'unpatched'."""
+    """Fixture checkout with the shared limit at 60 returns 'unpatched'."""
     target = tmp_path / "checkout"
     skill_utils = target / "agent" / "skill_utils.py"
     skill_utils.parent.mkdir(parents=True, exist_ok=True)
@@ -67,9 +68,11 @@ def test_detect_cap_state_unpatched(tmp_path: Path) -> None:
         # fmt: off
         textwrap.dedent(
             """\
+            SKILL_PROMPT_DESC_LIMIT = 60
+
             def extract_skill_description(desc):
-                if len(desc) > 60:
-                    return desc[:60]
+                if len(desc) > SKILL_PROMPT_DESC_LIMIT:
+                    return desc[:SKILL_PROMPT_DESC_LIMIT]
                 return desc
             """
         ),
@@ -77,6 +80,42 @@ def test_detect_cap_state_unpatched(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert detect_cap_state(target) == "unpatched"
+
+
+def test_detect_cap_state_unpatched_legacy_literal(tmp_path: Path) -> None:
+    """The former literal comparator remains detectable as unpatched."""
+    target = tmp_path / "checkout"
+    skill_utils = target / "agent" / "skill_utils.py"
+    skill_utils.parent.mkdir(parents=True, exist_ok=True)
+    skill_utils.write_text(
+        "def extract_skill_description(desc):\n    if len(desc) > 60:\n        return desc[:60]\n    return desc\n",
+        encoding="utf-8",
+    )
+    assert detect_cap_state(target) == "unpatched"
+
+
+def test_detect_cap_state_patched_imported_limit(tmp_path: Path) -> None:
+    """A comparator using the shared cap name is detected as patched."""
+    target = tmp_path / "checkout"
+    skill_utils = target / "agent" / "skill_utils.py"
+    skill_utils.parent.mkdir(parents=True, exist_ok=True)
+    skill_utils.write_text(
+        "def extract_skill_description(desc):\n"
+        "    if len(desc) > SKILL_PROMPT_DESC_LIMIT:\n"
+        "        return desc[:SKILL_PROMPT_DESC_LIMIT]\n"
+        "    return desc\n",
+        encoding="utf-8",
+    )
+    assert detect_cap_state(target) == "patched"
+
+
+def test_detect_cap_state_unknown_shared_limit_value(tmp_path: Path) -> None:
+    """An unexpected shared-cap value is neither patched nor unpatched."""
+    target = tmp_path / "checkout"
+    skill_utils = target / "agent" / "skill_utils.py"
+    skill_utils.parent.mkdir(parents=True, exist_ok=True)
+    skill_utils.write_text("SKILL_PROMPT_DESC_LIMIT = 100\n", encoding="utf-8")
+    assert detect_cap_state(target) == "unknown"
 
 
 def test_detect_cap_state_unknown_no_file(tmp_path: Path) -> None:
@@ -318,4 +357,4 @@ def test_advisory_no_setattr_on_skill_utils() -> None:
 def test_advisory_pin_values() -> None:
     """Pin the cap values per plan D5."""
     assert UNPATCHED_CAP == 60
-    assert PATCHED_CAP_REFERENCE == "_MAX_DESCRIPTION_LENGTH"
+    assert PATCHED_CAP_REFERENCE == "SKILL_PROMPT_DESC_LIMIT"

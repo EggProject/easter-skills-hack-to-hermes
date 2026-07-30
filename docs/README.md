@@ -30,8 +30,8 @@ each page as `.hu.md` files.
 
 ## Safety Model
 
-- The supported Hermes source version is commit `30e947e0a`.
-- Use `--dry-run` before any patch apply; add `--target /tmp/hermes-30e947e0a`
+- The supported Hermes source version is commit `a4973c3f`.
+- Use `--dry-run` before any patch apply; add `--target /tmp/hermes-a4973c3f`
   only for pinned developer validation.
 - The patcher writes when `--dry-run` is omitted.
 - The reporter is read-only unless the operator asks for a JSON output file.

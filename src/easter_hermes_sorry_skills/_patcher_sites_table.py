@@ -5,9 +5,8 @@ TDD tests reference ``easter_hermes_sorry_skills._patcher_sites.Site`` /
 ``_patcher_sites.py`` re-exports them so existing imports continue to work.
 
 The site table is the spec-of-truth (plans/04 §Multi-signal targeting).
-The two-line ``S1.cap`` is a SINGLE ``site_id``
-with two anchors (``a`` + ``b``); both anchors must match for the site
-to be considered patched (partial replacement is drift). Task E sites
+The one-line ``S1.cap`` is a SINGLE ``site_id`` that raises Hermes's
+shared prompt-description limit. Task E sites
 are ADDITIVE-ONLY: the patcher inserts a single new line
 immediately after the primary anchor; existing text is preserved verbatim.
 
@@ -74,6 +73,7 @@ KIND_CAP = "cap"
 # Extracted into named constants so wemake WPS342 (implicit raw string)
 # does not flag the multi-`\n` patterns inside the Site() calls below.
 _NL2 = r"\n\n"
+_E1_TEXT = '    "Skills that aren' "'" r't maintained become liabilities.\n"'
 # E4/E5 anchor blocks use EXPLICIT ``+`` between the implicit-concat
 # fragments (instead of bare adjacency) so the patched file parses
 # cleanly when the E4/E5 insertion lands between the first and
@@ -112,10 +112,9 @@ class Site:
     """A patch site.
 
     A site is identified by ``site_id`` and a list of :class:`Anchor`
-    entries (1 anchor for an append-only Task E site, 2 anchors for
-    the S1.cap atomic pair).
+    entries (1 anchor for each current patch site).
 
-    ``kind`` is ``"cap"`` (replace pair) or ``"append"`` (additive Task
+    ``kind`` is ``"cap"`` (replace anchor span) or ``"append"`` (additive Task
     E line, ADDITIVE-ONLY).
 
     ``file`` is the path RELATIVE to the --target root.
@@ -137,8 +136,7 @@ class Site:
 
 
 # --- canonical line-number constants (plans/04 §Multi-signal) -------------
-S1_CAP_LINE_A = 716
-S1_CAP_LINE_B = 717
+S1_CAP_LINE = 784
 # E0 anchors on the CLOSING ``"""`` of the multi-line docstring at
 # the top of ``agent/prompt_builder.py``. Real Hermes's docstring
 # spans L1 (opening) + L2 (blank) + L3..L4 (body) + L5 (closing),
@@ -148,13 +146,13 @@ S1_CAP_LINE_B = 717
 # matches the real closing line and only the line number had to
 # drift from 2 -> 5 to follow the real upstream layout.
 E0_LINE = 5
-# AC-2.8: E1/E2 anchor lines follow the real Hermes
-# ``prompt_builder.py`` layout for commit 30e947e0a. The E0 insertion
+# E1/E2 anchor lines follow the current Hermes ``prompt_builder.py``
+# layout. The E0 insertion
 # (constant definition) is applied LAST (the patcher sorts sites in
 # DESCENDING line_for_state order), so the original E1/E2 anchors remain
 # valid against the pre-E0 file state.
-E1_LINE = 182
-E2_LINE = 161
+E1_LINE = 195
+E2_LINE = 174
 # E4b anchors on the ``from __future__ import annotations`` line at
 # L19 of ``agent/background_review.py`` (NOT the L17 closing
 # triple-double-quote). Real Hermes's docstring spans L1 (opening)
@@ -172,10 +170,9 @@ E2_LINE = 161
 E4B_LINE = 19
 # Same descending-order logic for E4/E5 in ``agent/background_review.py``
 # (E4b applies last, so the E4/E5 anchors remain valid against the
-# pre-E4b file state). The anchor lines follow the real Hermes commit
-# 30e947e0a layout.
-E4_LINE = 230
-E5_LINE = 317
+# pre-E4b file state).
+E4_LINE = 243
+E5_LINE = 340
 
 # Top-of-file anchor lines for E0 (agent/prompt_builder.py) and E4b
 # (agent/background_review.py). Both anchor on the CLOSING ``"""``
@@ -201,54 +198,30 @@ _E0_ANCHOR_TEXT = '"""'
 # (L19 = ``from __future__ import annotations\n``).
 _E4B_ANCHOR_TEXT = "from __future__ import annotations\n"
 
-# --- the S1.cap site (two-anchor atomic pair) -----------------------------
+# --- the S1.cap site -------------------------------------------------------
 
-_FALLBACK_MAX_DESCRIPTION_LENGTH = 1024
+_PATCHED_DESCRIPTION_LIMIT = 1024
 S1_CAP_SITE = Site(
     site_id="S1.cap",
     file_path=TOOLS_SKILL_UTILS_REL,
-    anchors=(
-        Anchor(line=S1_CAP_LINE_A, text="    if len(desc) > 60:"),
-        Anchor(line=S1_CAP_LINE_B, text='        return desc[:57] + "..."'),
-    ),
-    insertion=(
-        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
-        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
-        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
-    ),
-    # The idempotency check looks for the replacement text:
-    expected_replacement=(
-        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
-        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
-        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
-    ),
+    anchors=(Anchor(line=S1_CAP_LINE, text="SKILL_PROMPT_DESC_LIMIT = 60"),),
+    insertion=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}\n",
+    expected_replacement=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}",
     kind=KIND_CAP,
-    line_for_state=S1_CAP_LINE_A,
+    line_for_state=S1_CAP_LINE,
 )
 
 # AC-2.11 fallback: retained as a compatibility site for callers that
-# inspect the circular-import branch explicitly. It now matches S1.cap's
-# import-free local constant shape, because the pinned Hermes
-# ``agent/skill_utils.py`` module intentionally avoids tools-layer imports.
+# inspect the circular-import branch explicitly. It matches S1.cap's
+# import-free shared-constant replacement.
 S1_CAP_SITE_FALLBACK = Site(
     site_id="S1.cap_fallback",
     file_path=TOOLS_SKILL_UTILS_REL,
-    anchors=(
-        Anchor(line=S1_CAP_LINE_A, text="    if len(desc) > 60:"),
-        Anchor(line=S1_CAP_LINE_B, text='        return desc[:57] + "..."'),
-    ),
-    insertion=(
-        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
-        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
-        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
-    ),
-    expected_replacement=(
-        f"    _MAX_DESCRIPTION_LENGTH = {_FALLBACK_MAX_DESCRIPTION_LENGTH}\n"
-        "    if len(desc) > _MAX_DESCRIPTION_LENGTH:\n"
-        '        return desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."\n'
-    ),
+    anchors=(Anchor(line=S1_CAP_LINE, text="SKILL_PROMPT_DESC_LIMIT = 60"),),
+    insertion=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}\n",
+    expected_replacement=f"SKILL_PROMPT_DESC_LIMIT = {_PATCHED_DESCRIPTION_LIMIT}",
     kind=KIND_CAP,
-    line_for_state=S1_CAP_LINE_A,
+    line_for_state=S1_CAP_LINE,
 )
 
 
@@ -296,16 +269,14 @@ E1_SKILLS_GUIDANCE = Site(
     anchors=(
         Anchor(
             line=E1_LINE,
-            text='    "Skills that aren\'t maintained become liabilities."',
+            text=_E1_TEXT,
         ),
     ),
-    # E1 is appended inside a parenthesized implicit-concat; the next
-    # line is ")" closing the constant. We append ONE line that begins
-    # with a single leading space, concatenating to the previous literal.
-    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE' "\n",
+    # The trailing ``+`` continues into the upstream safety-rule literal.
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE +' "\n",
     # Idempotency: the site is patched iff the appended line is present
-    # verbatim after the L182 anchor.
-    expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE',
+    # verbatim after the L195 anchor.
+    expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE +',
     kind=KIND_APPEND,
     line_for_state=E1_LINE,
 )
@@ -319,8 +290,9 @@ E2_MEMORY_GUIDANCE = Site(
             text=r'    "necessary later, save it as a skill with the skill tool.\n"',
         ),
     ),
-    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"' "\n",
-    expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n"',
+    # The trailing ``+`` continues into the added upstream memory guidance.
+    insertion=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n" +' "\n",
+    expected_replacement=r'    " " + SKILL_CREATOR_CONSULT_RULE + "\n" +',
     kind=KIND_APPEND,
     line_for_state=E2_LINE,
 )

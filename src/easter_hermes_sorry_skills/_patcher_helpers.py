@@ -73,7 +73,7 @@ def file_has_circular_import(
     target checkout and the live ``import tools.skills_tool`` fails in a
     subprocess (the cycle risk is real because a real Python process
     was unable to resolve the module from the target cwd). The fallback
-    is a local constant ``_MAX_DESCRIPTION_LENGTH = 1024``.
+    remains import-free.
 
     The subprocess check replaces the previous string-grep approach
     (which only checked whether ``agent/skill_utils.py`` already

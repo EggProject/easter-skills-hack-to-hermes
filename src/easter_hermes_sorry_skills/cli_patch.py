@@ -4,9 +4,8 @@ Bilingual --help (two-section EN/HU) and a small wrapper around
 :func:`easter_hermes_sorry_skills._patcher.run_patch`.
 
 The patcher applies two classes of changes to a Hermes checkout:
-- S1.cap (PRIMARY): replaces the hard-coded ``60`` cap in
-  ``agent/skill_utils.py``'s ``extract_skill_description`` with a
-  local 1024-character cap.
+- S1.cap (PRIMARY): raises ``agent/skill_utils.py``'s shared
+  ``SKILL_PROMPT_DESC_LIMIT`` from 60 to 1024.
 - 6 Task E sites (ALWAYS-ON, no flag): injects the consult rule
   (``SKILL_CREATOR_CONSULT_RULE``) into the Hermes prompt surfaces
   flagged by Task E.
@@ -52,7 +51,7 @@ from easter_hermes_sorry_skills.cli_patch_options import _add_click_option
 
 HELP_EN = (
     "Patcher applies:\n"
-    "  ✓ S1.cap   replace hard-coded ``60`` cap with a local 1024-character cap\n"
+    "  ✓ S1.cap   raise shared description cap from 60 to 1024 characters\n"
     "  ✓ Task E   6 prompt-injection sites (consult rule for skill-creator)\n"
     "           applied by default, no flag.\n"
     "\n"
@@ -62,7 +61,7 @@ HELP_EN = (
 
 HELP_HU = (
     "A patcher a kovetkezoket vegzi:\n"
-    "  ✓ S1.cap   a hard-coded ``60`` cap-et lokalis 1024 karakteres cap-re csereli\n"
+    "  ✓ S1.cap   a kozos description cap-et 60-rol 1024 karakterre emeli\n"
     "  ✓ Task E   6 prompt-injection hely (skill-creator tanacsado szabaly)\n"
     "           alapertelmezetten fut, nincs flag.\n"
     "\n"
@@ -130,7 +129,7 @@ def resolve_target(target_str: str | None) -> Path | None:
 
 
 def _patch_impl(args: PatchArgs) -> int:
-    """Idempotent Hermes patcher (S1.cap: local 1024 cap-raise).
+    """Idempotent Hermes patcher (S1.cap: shared 1024 cap-raise).
 
     Returns the exit code; the click wrapper raises ``SystemExit`` so
     that test code can call this directly without click's process-exit

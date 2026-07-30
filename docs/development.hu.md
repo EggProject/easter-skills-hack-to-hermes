@@ -39,7 +39,7 @@ Ne használj live Hermes checkoutot fejlesztési validálásra, ha van pinned
 target. Validálási cél:
 
 ```bash
-/tmp/hermes-30e947e0a
+/tmp/hermes-a4973c3f
 ```
 
 Fejlesztési handoff közben a patchert csak `--dry-run` módban futtasd:

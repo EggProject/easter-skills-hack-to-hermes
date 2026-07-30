@@ -12,7 +12,7 @@ dokumentáció most a szállított működést írja le, nem a régi tervezési 
 
 | Döntés | Jelenlegi forma |
 | --- | --- |
-| Hermes pin | A patch kompatibilitás `30e947e0a` commit ellen dokumentált. |
+| Hermes pin | A patch kompatibilitás `a4973c3f` commit ellen dokumentált. |
 | Plugin szétválasztás | A plugin hookokat regisztrál; a migrált skill top-level artifact. |
 | Skill emlékeztető | A `pre_llm_call` rövid adaptive emlékeztetőt ad, nem teljes skill bodyt. |
 | Betöltött skill kezelés | A már betöltött skill-eket conversation historyból felismeri és gyengébben jelzi. |
@@ -32,4 +32,3 @@ magyarázzák, mint a próza:
 
 - [WOW skill flowchartok](wow-skills-flowcharts.md)
 - [Magyar flowchartok](wow-skills-flowcharts.hu.md)
-

@@ -4,8 +4,8 @@
 
 ## Támogatott Cél
 
-A jelenlegi patch set a Hermes `30e947e0a`
-(`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`) commitjához van karbantartva.
+A jelenlegi patch set a Hermes `a4973c3f`
+(`a4973c3f11d9cc92da986cbe150d1e79d094626f`) commitjához van karbantartva.
 
 Operátori validáláshoz dry-runt használj:
 

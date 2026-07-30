@@ -5,8 +5,8 @@ This module is the ORCHESTRATOR; the site table, the apply-side
 primitives, and the pure-function helpers live in sibling modules to
 keep each file under the 500-line hard cap (plans/10 D1):
 
-- :mod:`._patcher_sites` — Site dataclass, the S1.cap two-anchor
-  atomic pair, the 6 Task E sites, and the shared
+- :mod:`._patcher_sites` — Site dataclass, the S1.cap shared-limit
+  replacement, the 6 Task E sites, and the shared
   ``SKILL_CREATOR_CONSULT_RULE`` constant.
 - :mod:`._patcher_apply` — atomic write (``<file>.patch.tmp`` +
   ``os.replace``), the state / rejected / audit sidecars.
@@ -173,8 +173,7 @@ def _run_patch_body(inputs: PatchRunInputs) -> PatcherResult:
     target_path = inputs.target.resolve()
     # AC-2.11: circular-import preflight is now a SIGNAL, not an
     # abort. The pipeline swaps S1.cap for S1.cap_fallback when a
-    # cycle is detected so the patch proceeds with a local
-    # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant.
+    # cycle is detected so the compatibility branch remains observable.
     circular = _check_circular_import(target_path, state, lang=inputs.lang)
     use_fallback_cap = circular.detected
     return _drive_pipeline(inputs, target_path, state, use_fallback_cap)
@@ -189,9 +188,7 @@ def _drive_pipeline(
     # Task E always runs (no opt-out flag); sites_for_mode picks S1.cap + 6 Task E sites.
     all_sites = list(sites_for_mode())
     # AC-2.11: when the circular-import pre-flight fired, swap S1.cap
-    # for S1.cap_fallback so the patch proceeds with a local
-    # ``_MAX_DESCRIPTION_LENGTH = 1024`` constant instead of importing
-    # from ``tools.skills_tool`` (which would cycle).
+    # for the equivalent S1.cap_fallback compatibility site.
     if use_fallback_cap:
         all_sites = [S1_CAP_SITE_FALLBACK if site.site_id == S1_CAP_SITE.site_id else site for site in all_sites]
     persisted: dict[str, str] = {}
