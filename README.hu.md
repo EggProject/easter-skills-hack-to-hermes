@@ -14,7 +14,7 @@ A projekt tartalma:
 - Hermes-kompatibilis `skill-creator`;
 - csak olvasó skill riport.
 
-Támogatott Hermes commit: `30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`.
+Támogatott Hermes commit: `a4973c3f11d9cc92da986cbe150d1e79d094626f`.
 
 ## Mi Kell Hozzá?
 

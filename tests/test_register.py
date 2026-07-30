@@ -95,10 +95,11 @@ def test_register_silent_when_cap_patched(tmp_path: Path, monkeypatch: pytest.Mo
         # fmt: off
         textwrap.dedent(
             """\
+            SKILL_PROMPT_DESC_LIMIT = 1024
+
             def extract_skill_description(desc):
-                _MAX_DESCRIPTION_LENGTH = 1024
-                if len(desc) > _MAX_DESCRIPTION_LENGTH:
-                    return desc[:_MAX_DESCRIPTION_LENGTH]
+                if len(desc) > SKILL_PROMPT_DESC_LIMIT:
+                    return desc[:SKILL_PROMPT_DESC_LIMIT]
                 return desc
             """
         ),
@@ -124,9 +125,11 @@ def test_register_emits_advisory_when_cap_unpatched(tmp_path: Path, monkeypatch:
         # fmt: off
         textwrap.dedent(
             """\
+            SKILL_PROMPT_DESC_LIMIT = 60
+
             def extract_skill_description(desc):
-                if len(desc) > 60:
-                    return desc[:60]
+                if len(desc) > SKILL_PROMPT_DESC_LIMIT:
+                    return desc[:SKILL_PROMPT_DESC_LIMIT]
                 return desc
             """
         ),
@@ -168,9 +171,11 @@ def test_register_emits_advisory_every_time(tmp_path: Path, monkeypatch: pytest.
         # fmt: off
         textwrap.dedent(
             """\
+            SKILL_PROMPT_DESC_LIMIT = 60
+
             def extract_skill_description(desc):
-                if len(desc) > 60:
-                    return desc[:60]
+                if len(desc) > SKILL_PROMPT_DESC_LIMIT:
+                    return desc[:SKILL_PROMPT_DESC_LIMIT]
                 return desc
             """
         ),

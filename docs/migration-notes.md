@@ -12,7 +12,7 @@ the old planning archive.
 
 | Decision | Current form |
 | --- | --- |
-| Hermes pin | Patch compatibility is documented against `30e947e0a`. |
+| Hermes pin | Patch compatibility is documented against `a4973c3f`. |
 | Plugin separation | The plugin registers hooks; the migrated skill is top-level. |
 | Skill reminder | `pre_llm_call` adds short adaptive reminders, not full skill bodies. |
 | Loaded-skill handling | Already loaded skills are detected from conversation history and downgraded. |
@@ -32,4 +32,3 @@ behavior better than prose:
 
 - [WOW skill flowcharts](wow-skills-flowcharts.md)
 - [Hungarian flowcharts](wow-skills-flowcharts.hu.md)
-

@@ -13,7 +13,7 @@ It provides:
 - a Hermes-compatible `skill-creator`;
 - a read-only skill report.
 
-Supported Hermes commit: `30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`.
+Supported Hermes commit: `a4973c3f11d9cc92da986cbe150d1e79d094626f`.
 
 ## Requirements
 

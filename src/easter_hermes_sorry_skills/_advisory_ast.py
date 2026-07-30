@@ -11,8 +11,9 @@ from pathlib import Path
 
 # Pin: the cap value in the unpatched agent/skill_utils.py.
 UNPATCHED_CAP = 60
-# Pin: the constant the patched function uses.
-PATCHED_CAP_REFERENCE = "_MAX_DESCRIPTION_LENGTH"
+# Pin: the shared constant patched in current Hermes.
+PATCHED_CAP_REFERENCE = "SKILL_PROMPT_DESC_LIMIT"
+_PATCHED_CAP = 1024
 # Sentinel return values (public so register() can compare without importing
 # leading-underscore names from another module).
 PATCHED_STATE = "patched"
@@ -31,6 +32,15 @@ def _parse_skill_utils_tree(skill_utils: Path) -> ast.AST:
 def _walk_tree_for_marker(tree: ast.AST) -> str | None:
     """Walk ``tree`` and return the first matching cap state, if any."""
     for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if not isinstance(target, ast.Name) or target.id != PATCHED_CAP_REFERENCE:
+                    continue
+                if isinstance(node.value, ast.Constant) and node.value.value == _PATCHED_CAP:
+                    return PATCHED_STATE
+                if isinstance(node.value, ast.Constant) and node.value.value == UNPATCHED_CAP:
+                    return UNPATCHED_STATE
+                return None
         if not isinstance(node, ast.FunctionDef):
             continue
         if node.name != _EXTRACT_FUNC_NAME:

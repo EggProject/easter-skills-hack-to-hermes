@@ -196,13 +196,13 @@ def test_check_no_writes(hermes_checkout: Path, real_hermes_agent_sentinel: str 
 # --- cap-raise specifics (B2) --------------------------------------------
 
 
-def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """When S1.cap.b is corrupted, --apply exits non-zero AND target
-    file is byte-identical to pre-run."""
+def test_apply_cap_raise_drift_is_atomic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
+    """When the shared limit drifts, --apply exits non-zero AND the
+    target file is byte-identical to pre-run."""
     checkout = tmp_path / "corrupt-cap"
     (checkout / "agent").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 687) + '\n    if len(desc) > 60:\n        return desc[:57] + "ELLIPSIS"\n',
+        "\n".join(["# pad"] * 783) + "\nSKILL_PROMPT_DESC_LIMIT = 61\n",
         encoding="utf-8",
     )
     pre = hashlib.sha256((checkout / "agent" / "skill_utils.py").read_bytes()).hexdigest()
@@ -221,7 +221,7 @@ def test_apply_cap_raise_two_sites_atomic(tmp_path: Path, real_hermes_agent_sent
 def test_apply_cap_raise_max_description_length_defined(
     hermes_checkout: Path, real_hermes_agent_sentinel: str | None
 ) -> None:
-    """After --apply, the cap-raise site defines the runtime cap locally."""
+    """After --apply, the shared runtime cap is 1024."""
     r = run_patch(
         PatchRunInputs(
             target=hermes_checkout,
@@ -230,14 +230,12 @@ def test_apply_cap_raise_max_description_length_defined(
     )
     assert r.exit_code == EXIT_OK
     text = (hermes_checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
-    assert "_MAX_DESCRIPTION_LENGTH" in text
-    # The literal "60" must be gone from the cap-raise site (line 716).
+    assert "SKILL_PROMPT_DESC_LIMIT = 1024" in text
+    # The literal "60" must be gone from the cap-raise site (line 784).
     lines = text.splitlines()
-    assert "60" not in lines[715]
-    assert "_MAX_DESCRIPTION_LENGTH = 1024" in lines[715]
-    # The slice on L717 (now L718 after the new comparator line) is
-    # `desc[:_MAX_DESCRIPTION_LENGTH - 3] + "..."`.
-    assert "_MAX_DESCRIPTION_LENGTH - 3" in "\n".join(lines[715:719])
+    assert "60" not in lines[783]
+    assert "SKILL_PROMPT_DESC_LIMIT = 1024" in lines[783]
+    assert "SKILL_PROMPT_DESC_LIMIT - 3" in text
 
     namespace: dict[str, object] = {}
     code = compile(text, str(hermes_checkout / "agent" / "skill_utils.py"), "exec")
@@ -381,20 +379,16 @@ def test_target_missing_agent_skill_utils_exits_4(tmp_path: Path, real_hermes_ag
 def test_circular_import_preflight_emits_diagnostic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
     """AC-2.11: agent/skill_utils.py already imports from
     tools.skills_tool. The circular-import pre-flight emits a
-    diagnostic AND the patcher proceeds with the FALLBACK S1 site
-    (which uses a local ``_MAX_DESCRIPTION_LENGTH = 1024``). The run
-    exits 0 on --check (the cycle is no longer fatal).
+    diagnostic AND the patcher proceeds with the FALLBACK S1 site.
+    The run exits 0 on --check (the cycle is no longer fatal).
     """
     checkout = tmp_path / "cycle"
     _write_task_e_files(checkout)
-    # Layout mirrors the real Hermes checkout: skill_utils.py has the
-    # cap-raise pair at L716/L717 so the S1.cap_fallback site anchors
-    # match. The cycle marker is on L1 so the preflight fires.
+    # The shared limit is at L784. The cycle marker is on L1.
     lines: list[str] = ["from tools.skills_tool import MAX_DESCRIPTION_LENGTH\n"]
-    for i in range(1, 715):
+    for i in range(1, 783):
         lines.append(f"# pad {i}\n")
-    lines.append("    if len(desc) > 60:\n")
-    lines.append('        return desc[:57] + "..."\n')
+    lines.append("SKILL_PROMPT_DESC_LIMIT = 60\n")
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     r = run_patch(
         PatchRunInputs(
@@ -414,12 +408,12 @@ def test_circular_import_preflight_emits_diagnostic(tmp_path: Path, real_hermes_
 
 
 def test_line_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
-    """Cap-raise comparator matches anchor; the LINE is wrong -> LINE_DRIFT."""
+    """Shared cap matches anchor; the LINE is wrong -> LINE_DRIFT."""
     checkout = tmp_path / "line-drift"
     (checkout / "agent").mkdir(parents=True)
-    # Put the cap-raise site at L10 (not L716) — same anchor text, wrong line.
+    # Put the cap-raise site at L10 (not L784) — same text, wrong line.
     (checkout / "agent" / "skill_utils.py").write_text(
-        "# pad\n" * 9 + "    if len(desc) > 60:\n",
+        "# pad\n" * 9 + "SKILL_PROMPT_DESC_LIMIT = 60\n",
         encoding="utf-8",
     )
     r = run_patch(
@@ -436,7 +430,7 @@ def test_text_drift_exits_2_with_diagnostic(tmp_path: Path, real_hermes_agent_se
     checkout = tmp_path / "text-drift"
     (checkout / "agent").mkdir(parents=True)
     (checkout / "agent" / "skill_utils.py").write_text(
-        "\n".join(["# pad"] * 716) + "\n    if len(desc) > 61:\n",
+        "\n".join(["# pad"] * 783) + "\nSKILL_PROMPT_DESC_LIMIT = 61\n",
         encoding="utf-8",
     )
     r = run_patch(
@@ -467,7 +461,7 @@ def test_e1_skills_guidance_appends_only(hermes_checkout: Path) -> None:
     # shifts down by the number of earlier-line insertions that
     # land above it (E0 + E4b = +2 lines).
     anchor_idx = next(i for i, ln in enumerate(lines) if "aren't maintained become liabilities" in ln)
-    assert lines[anchor_idx] == '    "Skills that aren\'t maintained become liabilities."'
+    assert lines[anchor_idx] == '    "Skills that aren\'t maintained become liabilities.\\n"'
     # The next line is the appended consult-rule line (constant name).
     assert "SKILL_CREATOR_CONSULT_RULE" in lines[anchor_idx + 1]
     # The SKILL_CREATOR_CONSULT_RULE constant is reachable in the module.
@@ -1200,7 +1194,7 @@ def test_site_already_patched_true() -> None:
 
 
 def test_site_already_patched_false() -> None:
-    text = "if len(desc) > 60:\n    return desc[:57] + '...'\n"
+    text = "SKILL_PROMPT_DESC_LIMIT = 60\n"
     assert site_already_patched(text, S1_CAP_SITE) is False
 
 
@@ -1277,22 +1271,20 @@ def test_apply_anchor_text_missing_exits_drift(tmp_path: Path, real_hermes_agent
     assert r.exit_code == EXIT_DRIFT
 
 
-# --- coverage: cap secondary anchor mismatch is caught by pre-validation --
+# --- coverage: cap anchor mismatch is caught by pre-validation ----------
 
 
-def test_apply_cap_secondary_anchor_mismatch_caught_by_validation(
+def test_apply_cap_anchor_mismatch_caught_by_validation(
     tmp_path: Path, real_hermes_agent_sentinel: str | None
 ) -> None:
-    """S1.cap.a is at L716 with the right text; S1.cap.b (L717) is wrong.
-    The pre-validation pass catches this as drift (TEXT_DRIFT on the b
-    anchor) and the run aborts before the apply step."""
+    """The shared cap at L784 has the wrong value, so pre-validation
+    catches TEXT_DRIFT and aborts before the apply step."""
     checkout = tmp_path / "cap-mismatch"
     (checkout / "agent").mkdir(parents=True)
     lines: list[str] = []
-    for i in range(1, 716):
+    for i in range(1, 784):
         lines.append(f"# pad {i}\n")
-    lines.append("    if len(desc) > 60:\n")
-    lines.append("    return desc[:57] + 'XXX'\n")  # WRONG slice
+    lines.append("SKILL_PROMPT_DESC_LIMIT = 61\n")
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     r = run_patch(
         PatchRunInputs(
@@ -1696,10 +1688,10 @@ def test_apply_cap_raise_with_long_description(
 ) -> None:
     """04 §Cap-raise specifics — when extract_skill_description is
     called with a >1024 char description, the patched function
-    returns ~MAX_DESCRIPTION_LENGTH-3 chars (NOT 60 chars)."""
+    returns SKILL_PROMPT_DESC_LIMIT-3 chars (NOT 60 chars)."""
     checkout = tmp_path / "long-desc"
     _write_task_e_files(checkout)
-    # Use the standard fixture: the cap-raise site is at L716/L717.
+    # Use the standard fixture: the shared limit is at L784.
     (checkout / "agent" / "skill_utils.py").write_text(SKILL_UTILS_PATCHED, encoding="utf-8")
     r = run_patch(
         PatchRunInputs(
@@ -1708,12 +1700,12 @@ def test_apply_cap_raise_with_long_description(
         ),
     )
     assert r.exit_code == EXIT_OK
-    # Post-patch: BOTH S1.cap.a and S1.cap.b are applied.
+    # Post-patch: the shared limit is raised and both consumers retain it.
     text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
     lines = text.splitlines()
-    assert "_MAX_DESCRIPTION_LENGTH = 1024" in lines[715]
-    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in lines[716]
-    assert "_MAX_DESCRIPTION_LENGTH - 3" in lines[717]
+    assert "SKILL_PROMPT_DESC_LIMIT = 1024" in lines[783]
+    assert "if len(desc) > SKILL_PROMPT_DESC_LIMIT:" in text
+    assert "SKILL_PROMPT_DESC_LIMIT - 3" in text
 
 
 def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1746,16 +1738,14 @@ def test_target_unwritable_exits_3(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 def test_partial_failure_zero_writes(
     tmp_path: Path,
 ) -> None:
-    """04 §Error paths — S1.cap.a valid, S1.cap.b corrupted; --apply
-    exits non-zero AND target file is byte-identical AND
-    .patch.rejected names S1.cap."""
+    """04 §Error paths — shared cap drift makes --apply exit non-zero
+    while the target remains byte-identical."""
     checkout = tmp_path / "partial"
     (checkout / "agent").mkdir(parents=True)
     lines: list[str] = []
-    for i in range(1, 716):
+    for i in range(1, 784):
         lines.append(f"# pad {i}\n")
-    lines.append("    if len(desc) > 60:\n")
-    lines.append("    return desc[:57] + 'CORRUPTED'\n")
+    lines.append("SKILL_PROMPT_DESC_LIMIT = 61\n")
     target = checkout / "agent" / "skill_utils.py"
     target.write_text("".join(lines), encoding="utf-8")
     pre = hashlib.sha256(target.read_bytes()).hexdigest()
@@ -1907,13 +1897,11 @@ def test_circular_import_preflight_uses_subprocess_check(tmp_path: Path, monkeyp
     _write_task_e_files(checkout)
     # The file does NOT contain the import marker; the subprocess
     # check should still detect the cycle if the import would fail.
-    # Layout mirrors real Hermes: cap-raise anchors at L716/L717 so
-    # S1.cap_fallback validation succeeds after the cycle signal.
+    # The shared limit is at L784 so fallback validation succeeds.
     lines: list[str] = ["# no tools.skills_tool import here\n"]
-    for i in range(1, 715):
+    for i in range(1, 783):
         lines.append(f"# pad {i}\n")
-    lines.append("    if len(desc) > 60:\n")
-    lines.append('        return desc[:57] + "..."\n')
+    lines.append("SKILL_PROMPT_DESC_LIMIT = 60\n")
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
     # tools/skills_tool.py exists but is broken (SyntaxError), so
     # ``import tools.skills_tool`` will fail in the subprocess.
@@ -2005,21 +1993,21 @@ def test_line_drift_failure_uses_actual_line_number_key() -> None:
     """
     from easter_hermes_sorry_skills._patcher_validation import _line_drift_failure
 
-    anchor = Anchor(line=716, text="    if len(desc) > 60:")
-    text = "# pad\n" * 9 + "    if len(desc) > 60:\n"
+    anchor = Anchor(line=784, text="SKILL_PROMPT_DESC_LIMIT = 60")
+    text = "# pad\n" * 9 + "SKILL_PROMPT_DESC_LIMIT = 60\n"
     failure = _line_drift_failure(
         site=S1_CAP_SITE,
         anchor=anchor,
-        line_no=10,  # found on L10 instead of expected L716
+        line_no=10,  # found on L10 instead of expected L784
         text=text,
     )
     assert failure["reason"] == "LINE_DRIFT"
-    assert failure["anchor_line"] == 716
+    assert failure["anchor_line"] == 784
     assert failure["found_at_line"] == 10
     # The dynamic key is the actual line number where the anchor was found.
     assert "actual_at_line_10" in failure
     assert "actual_at_line_<n>" not in failure  # no literal placeholder
-    assert "    if len(desc) > 60:" in failure["actual_at_line_10"]
+    assert "SKILL_PROMPT_DESC_LIMIT = 60" in failure["actual_at_line_10"]
 
 
 def test_text_drift_failure_uses_unknown_sentinel_key() -> None:
@@ -2112,20 +2100,15 @@ def test_line_drift_diagnostic_consumer_reads_dynamic_key() -> None:
 # --- AC-2.11 fallback: S1.cap_fallback + branching logic ----------------
 
 
-def test_s1_cap_fallback_uses_local_constant() -> None:
-    """AC-2.11: ``S1_CAP_SITE_FALLBACK`` uses a local
-    ``_MAX_DESCRIPTION_LENGTH = 1024`` constant (no cross-module
-    import). The anchors are identical to ``S1_CAP_SITE``.
+def test_s1_cap_fallback_uses_shared_constant() -> None:
+    """AC-2.11: ``S1_CAP_SITE_FALLBACK`` raises the shared
+    ``SKILL_PROMPT_DESC_LIMIT`` without adding an import. Its anchors
+    are identical to ``S1_CAP_SITE``.
     """
     assert S1_CAP_SITE_FALLBACK.site_id == "S1.cap_fallback"
     assert S1_CAP_SITE_FALLBACK.kind == "cap"
     assert S1_CAP_SITE_FALLBACK.anchors == S1_CAP_SITE.anchors
-    # The fallback insertion prepends a local constant definition
-    # then uses it in the cap check.
-    assert "_MAX_DESCRIPTION_LENGTH = 1024" in S1_CAP_SITE_FALLBACK.insertion
-    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in S1_CAP_SITE_FALLBACK.insertion
-    # The regular S1.cap cross-module constant is NOT used.
-    assert "    if len(desc) > MAX_DESCRIPTION_LENGTH:\n" not in S1_CAP_SITE_FALLBACK.insertion
+    assert S1_CAP_SITE_FALLBACK.insertion == "SKILL_PROMPT_DESC_LIMIT = 1024\n"
 
 
 def test_s1_cap_fallback_used_when_circular_import_detected(
@@ -2133,15 +2116,14 @@ def test_s1_cap_fallback_used_when_circular_import_detected(
 ) -> None:
     """AC-2.11: when ``file_has_circular_import`` returns True, the
     patcher swaps S1.cap for S1.cap_fallback. The cap-raise site is
-    applied with the local constant instead of exiting on the cycle.
+    applied without adding an import instead of exiting on the cycle.
     """
     checkout = tmp_path / "fallback-apply"
     _write_task_e_files(checkout)
     lines: list[str] = ["# clean file\n"]
-    for i in range(1, 715):
+    for i in range(1, 783):
         lines.append(f"# pad {i}\n")
-    lines.append("    if len(desc) > 60:\n")
-    lines.append('        return desc[:57] + "..."\n')
+    lines.append("SKILL_PROMPT_DESC_LIMIT = 60\n")
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
 
     # Force the circular-import preflight to fire.
@@ -2168,10 +2150,7 @@ def test_s1_cap_fallback_used_when_circular_import_detected(
     )
     assert r.exit_code == EXIT_OK
     text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
-    # The fallback cap-raise uses the LOCAL constant — no import
-    # from tools.skills_tool is needed at runtime.
-    assert "_MAX_DESCRIPTION_LENGTH = 1024" in text
-    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in text
+    assert "SKILL_PROMPT_DESC_LIMIT = 1024" in text
 
 
 def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_sentinel: str | None) -> None:
@@ -2181,10 +2160,9 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     checkout = tmp_path / "normal-apply"
     _write_task_e_files(checkout)
     lines: list[str] = []
-    for i in range(1, 716):
+    for i in range(1, 784):
         lines.append(f"# pad {i}\n")
-    lines.append("    if len(desc) > 60:\n")
-    lines.append('        return desc[:57] + "..."\n')
+    lines.append("SKILL_PROMPT_DESC_LIMIT = 60\n")
     (checkout / "agent" / "skill_utils.py").write_text("".join(lines), encoding="utf-8")
 
     r = run_patch(
@@ -2195,10 +2173,7 @@ def test_s1_cap_used_when_no_circular_import(tmp_path: Path, real_hermes_agent_s
     )
     assert r.exit_code == EXIT_OK
     text = (checkout / "agent" / "skill_utils.py").read_text(encoding="utf-8")
-    # Normal S1.cap now uses the same local constant shape as the fallback,
-    # avoiding a cross-module import into Hermes's lightweight skill_utils.py.
-    assert "if len(desc) > _MAX_DESCRIPTION_LENGTH:" in text
-    assert "_MAX_DESCRIPTION_LENGTH = 1024" in text
+    assert "SKILL_PROMPT_DESC_LIMIT = 1024" in text
     # No cycle diagnostic.
     assert not any("circular import" in d for d in r.diagnostics)
 

@@ -4,8 +4,8 @@
 
 ## Supported Target
 
-The current patch set is maintained for Hermes commit `30e947e0a`
-(`30e947e0a05ef535e4b25a183d8bbe34fd68d1d5`).
+The current patch set is maintained for Hermes commit `a4973c3f`
+(`a4973c3f11d9cc92da986cbe150d1e79d094626f`).
 
 Use dry-run for operator validation:
 

@@ -83,8 +83,8 @@ def detect_cap_state(target_dir: Path) -> str:
 
     target_dir: a USER-OWNED Hermes checkout (NOT ~/.hermes/hermes-agent
     in CI). Reads agent/skill_utils.py with ast.parse; inspects the
-    extract_skill_description function for the literal '60' or the
-    _MAX_DESCRIPTION_LENGTH reference.
+    shared SKILL_PROMPT_DESC_LIMIT assignment, with compatibility
+    handling for the former literal comparator.
     """
     skill_utils = target_dir.joinpath(*_SKILL_UTILS_REL_PARTS)
     if not skill_utils.exists():
